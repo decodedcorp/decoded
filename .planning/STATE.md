@@ -1,30 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Behavioral Intelligence & Dynamic UI
-status: unknown
-stopped_at: Completed m10-01-01-PLAN.md
-last_updated: "2026-03-22T13:35:27.878Z"
+milestone: v8.0
+milestone_name: Monorepo Consolidation & Bun Migration
+status: shipped
+stopped_at: All v8.0 phases completed
+last_updated: "2026-03-23T00:15:00.000Z"
 progress:
-  total_phases: 36
-  completed_phases: 34
-  total_plans: 80
-  completed_plans: 79
+  total_phases: 38
+  completed_phases: 38
+  total_plans: 82
+  completed_plans: 82
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase m10-01 — Package Manager Migration
+**Current focus:** v8.0 shipped — next milestone TBD
 
 ## Current Position
 
-Phase: m10-01 (Package Manager Migration) — EXECUTING
-Plan: 1 of 2
+Phase: v8.0 — SHIPPED (2026-03-23)
+All monorepo consolidation phases complete.
 
 ## Milestone Summary
 
@@ -39,42 +39,52 @@ Plan: 1 of 2
 | v5.0 AI Magazine             | 3      | 11      | Shipped    | 2026-03-12 |
 | v6.0 Behavioral Intelligence | 3      | 10      | Paused     | -          |
 | v7.0 Sticker Canvas          | 3      | 8       | Paused     | -          |
-| **v8.0 Monorepo & Bun**      | **4**  | **TBD** | **Active** | -          |
+| **v8.0 Monorepo & Bun**      | **4**  | **3**   | **Shipped**| 2026-03-23 |
+
+## v8.0 Completion Summary
+
+**What was done:**
+- Backend (Rust/Axum) subtree merged into `packages/backend/`
+- Yarn 4 → bun 1.3.10 migration (2,588 packages, 1.69s install)
+- Turborepo build orchestration (`turbo.json` with build/dev/lint/test)
+- TypeScript build errors fixed (JSX Fragment wrap + Supabase type cast)
+- `middleware.ts` → `proxy.ts` (Next.js 16)
+- README.md + CLAUDE.md updated for monorepo structure
+- `.env.local.example` created
+- GitHub repo: decodedcorp/decoded-monorepo (pushed)
+
+**Deferred to v8.1:**
+- CI/CD workflow integration (GitHub Actions, path-based change detection)
+- Docker configuration unification
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v8.0:
+Recent decisions from v8.0:
 
-- [v8.0 research]: Yarn 4 Berry lockfile has no direct migration path — use pnpm as intermediary (`pnpm import` then `bun install`)
-- [v8.0 research]: `turbo prune --docker` is broken with bun (issues #10782, #11007) — use full COPY pattern in Dockerfiles
-- [v8.0 research]: Backend (packages/backend) must stay OUTSIDE bun workspaces array — thin package.json wrapper for Turborepo only
-- [v8.0 research]: Root workspaces must be explicit list, NOT `packages/*` glob — prevents accidental backend inclusion
-- [v8.0 research]: GSAP Club private registry requires project-level `bunfig.toml` fix (bun bug #9804)
-- [v8.0 research]: git subtree squash strategy must be consistent — pick one and never mix
-- [Phase m10-01]: bun hoisted strategy with publicHoistPattern=[*] to replicate Yarn 4 node-modules behavior
-- [Phase m10-01]: React version split is correct: web@18.3.1 nested, mobile@19.1.0 nested, root hoists 19.1.0
+- [v8.0]: bun hoisted strategy with bunfig.toml
+- [v8.0]: Backend stays OUTSIDE bun workspaces (Cargo independent)
+- [v8.0]: Root workspaces explicit list (not glob) to prevent backend inclusion
+- [v8.0]: Fragment wrapper for ImageDetailContent (TS JSX children inference limit)
+- [v8.0]: proxy.ts replaces middleware.ts (Next.js 16 convention)
 
 ### Pending Todos
 
 **From v2-09-03 Visual QA:**
-
 1. Quick task: Fix images page raw JSON error exposure (API error handling - major UX/security)
 
 ### Blockers/Concerns
 
-- **v8.0 m10-01**: GSAP Club private registry auth breaks under bun (bun bug #9804) — must verify `bunfig.toml` fix before phase complete
-- **v8.0 m10-01**: Version drift risk after pnpm intermediary migration — manual diff of key package versions required
 - **v6.0 (paused)**: Privacy compliance — PIPA/GDPR disclosure required before behavioral tracking ships
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:35:27.875Z
-Stopped at: Completed m10-01-01-PLAN.md
+Last session: 2026-03-23T00:15:00.000Z
+Stopped at: v8.0 shipped
 Resume file: None
 
 ---
 
 _Created: 2026-02-05_
-_Last updated: 2026-03-22 after v8.0 roadmap creation_
+_Last updated: 2026-03-23 after v8.0 shipped_

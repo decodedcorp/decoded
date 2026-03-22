@@ -11,7 +11,7 @@
 - [x] **v5.0 AI Magazine & Archive Expansion** — m7-Phases 01-03 (shipped 2026-03-12)
 - [ ] **v6.0 Behavioral Intelligence & Dynamic UI** — m8-Phases 01-03 (paused)
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
-- [ ] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (in progress)
+- [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 
 ## Phases
 
