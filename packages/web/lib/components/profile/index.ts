@@ -1,0 +1,22 @@
+// Profile page components
+export { ProfileHeader } from "./ProfileHeader";
+export { StatsCards, ProfileStats } from "./StatsCards";
+export { BadgeGrid } from "./BadgeGrid";
+export { RankingList } from "./RankingList";
+export { BadgeModal } from "./BadgeModal";
+export { ActivityItemCard } from "./ActivityItemCard";
+export { ProfileEditModal } from "./ProfileEditModal";
+export { ProfileDesktopLayout } from "./ProfileDesktopLayout";
+export { ActivityTabs, type ActivityTab } from "./ActivityTabs";
+export { ActivityContent } from "./ActivityContent";
+export { EmptyState } from "./EmptyState";
+export { ProfileBio } from "./ProfileBio";
+export { FollowStats } from "./FollowStats";
+export { PostsGrid } from "./PostsGrid";
+export { SpotsList } from "./SpotsList";
+export { SolutionsList } from "./SolutionsList";
+export { SavedGrid } from "./SavedGrid";
+export { TriesGrid } from "./TriesGrid";
+export { StyleDNACard } from "./StyleDNACard";
+export { ArchiveStats } from "./ArchiveStats";
+export { InkEconomyCard } from "./InkEconomyCard";

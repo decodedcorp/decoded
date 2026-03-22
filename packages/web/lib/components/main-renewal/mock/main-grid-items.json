@@ -1,0 +1,118 @@
+[
+  {
+    "id": "grid-001",
+    "imageUrl": "https://picsum.photos/seed/grid-street/600/750",
+    "title": "Urban Layers",
+    "subtitle": "Oversized silhouettes meet structured tailoring",
+    "category": "Street",
+    "link": "/posts/grid-001",
+    "aspectRatio": 1.25,
+    "spots": [
+      {
+        "x": 35,
+        "y": 42,
+        "label": "COS Wool Overcoat",
+        "brand": "COS",
+        "price": "₩389,000",
+        "productLink": "/items/cos-wool-overcoat"
+      },
+      {
+        "x": 60,
+        "y": 78,
+        "label": "New Balance 990v6",
+        "brand": "New Balance",
+        "price": "₩269,000"
+      }
+    ]
+  },
+  {
+    "id": "grid-002",
+    "imageUrl": "https://picsum.photos/seed/grid-minimal/600/600",
+    "title": "Less is More",
+    "subtitle": "The art of quiet luxury",
+    "category": "Minimal",
+    "link": "/posts/grid-002",
+    "aspectRatio": 1.0
+  },
+  {
+    "id": "grid-003",
+    "imageUrl": "https://picsum.photos/seed/grid-archive/600/840",
+    "title": "Vintage Revival",
+    "subtitle": "90s archive pieces reimagined",
+    "category": "Archive",
+    "link": "/posts/grid-003",
+    "aspectRatio": 1.4
+  },
+  {
+    "id": "grid-004",
+    "imageUrl": "https://picsum.photos/seed/grid-y2k/600/480",
+    "title": "Digital Nostalgia",
+    "subtitle": "Y2K aesthetics for the new era",
+    "category": "Y2K",
+    "link": "/posts/grid-004",
+    "aspectRatio": 0.8,
+    "spots": [
+      {
+        "x": 50,
+        "y": 35,
+        "label": "Miu Miu Crystal Top",
+        "brand": "Miu Miu",
+        "price": "₩1,850,000",
+        "productLink": "/items/miumiu-crystal-top"
+      }
+    ]
+  },
+  {
+    "id": "grid-005",
+    "imageUrl": "https://picsum.photos/seed/grid-avant/600/720",
+    "title": "Deconstructed Forms",
+    "subtitle": "Breaking conventions with raw edges",
+    "category": "Avant-Garde",
+    "link": "/posts/grid-005",
+    "aspectRatio": 1.2
+  },
+  {
+    "id": "grid-006",
+    "imageUrl": "https://picsum.photos/seed/grid-sport/600/600",
+    "title": "Athletic Heritage",
+    "subtitle": "Where performance meets style",
+    "category": "Sporty",
+    "link": "/posts/grid-006",
+    "aspectRatio": 1.0
+  },
+  {
+    "id": "grid-007",
+    "imageUrl": "https://picsum.photos/seed/grid-prep/600/900",
+    "title": "New Preppy",
+    "subtitle": "Ivy league with a twist",
+    "category": "Preppy",
+    "link": "/posts/grid-007",
+    "aspectRatio": 1.5,
+    "spots": [
+      {
+        "x": 45,
+        "y": 55,
+        "label": "Thom Browne Cardigan",
+        "brand": "Thom Browne",
+        "price": "₩2,100,000",
+        "productLink": "/items/thom-browne-cardigan"
+      },
+      {
+        "x": 70,
+        "y": 82,
+        "label": "Paraboot Michael",
+        "brand": "Paraboot",
+        "price": "₩498,000"
+      }
+    ]
+  },
+  {
+    "id": "grid-008",
+    "imageUrl": "https://picsum.photos/seed/grid-mono/600/540",
+    "title": "Monochrome Study",
+    "subtitle": "Black and white done right",
+    "category": "Minimal",
+    "link": "/posts/grid-008",
+    "aspectRatio": 0.9
+  }
+]

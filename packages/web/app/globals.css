@@ -1,0 +1,604 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Main Page Design Tokens (from Figma) */
+    --main-bg: #1f1f1f;
+    --main-cta-bg: #242424;
+    --main-accent: #ff6767;
+    --main-text-white: #ffffff;
+    --main-text-gray: #666666;
+    --main-border-radius: 20px;
+
+    /* Main Page Typography */
+    --text-hero: clamp(40px, 8vw, 100px);
+    --text-heading-xl: clamp(32px, 6vw, 80px);
+    --text-heading-lg: clamp(28px, 5vw, 60px);
+    --text-heading-md: clamp(24px, 4vw, 40px);
+    --text-heading-sm: clamp(20px, 3vw, 30px);
+
+    /* Typography - Semantic Heading Sizes (from decoded.pen) */
+    --text-h1: 3rem; /* 48px */
+    --text-h2: 2.25rem; /* 36px */
+    --text-h3: 1.75rem; /* 28px */
+    --text-h4: 1.5rem; /* 24px */
+
+    /* Typography - Body Sizes */
+    --text-body-lg: 1.125rem; /* 18px */
+    --text-body: 1rem; /* 16px */
+    --text-body-sm: 0.875rem; /* 14px */
+    --text-caption: 0.75rem; /* 12px */
+
+    /* Typography - Line Heights */
+    --leading-hero: 1.1;
+    --leading-h1: 1.15;
+    --leading-h2: 1.2;
+    --leading-h3: 1.25;
+    --leading-h4: 1.3;
+    --leading-body: 1.5;
+    --leading-caption: 1.4;
+
+    /* Typography - Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --background: oklch(0.9842 0.0034 247.8575);
+    --foreground: oklch(0.2077 0.0398 265.7549);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.2077 0.0398 265.7549);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.2077 0.0398 265.7549);
+    --primary: oklch(0.9519 0.1739 115.8446);
+    --primary-foreground: oklch(0.2257 0.0038 106.6998);
+    --secondary: oklch(0.9288 0.0126 255.5078);
+    --secondary-foreground: oklch(0.2257 0.0038 106.6998);
+    --muted: oklch(0.9683 0.0069 247.8956);
+    --muted-foreground: oklch(0.45 0 0);
+    --accent: oklch(0.9288 0.0126 255.5078);
+    --accent-foreground: oklch(0.2257 0.0038 106.6998);
+    --destructive: oklch(0.6368 0.2078 25.3313);
+    --destructive-foreground: oklch(0.9842 0.0034 247.8575);
+    --border: oklch(0.9288 0.0126 255.5078);
+    --input: oklch(0.9288 0.0126 255.5078);
+    --ring: oklch(0.7107 0.0351 256.7878);
+    --chart-1: oklch(0.9519 0.1739 115.8446);
+    --chart-2: oklch(0.7058 0 0);
+    --chart-3: oklch(0.7049 0.1867 47.6044);
+    --chart-4: oklch(0.6959 0.1491 162.4796);
+    --chart-5: oklch(0.6368 0.2078 25.3313);
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.2077 0.0398 265.7549);
+    --sidebar-primary: oklch(0.9519 0.1739 115.8446);
+    --sidebar-primary-foreground: oklch(0.2257 0.0038 106.6998);
+    --sidebar-accent: oklch(0.9683 0.0069 247.8956);
+    --sidebar-accent-foreground: oklch(0.5544 0.0407 257.4166);
+    --sidebar-border: oklch(0.9288 0.0126 255.5078);
+    --sidebar-ring: oklch(0.7107 0.0351 256.7878);
+    --font-sans: sans-serif;
+    --font-serif: serif;
+    --font-mono: monospace;
+    --radius: 0.5rem;
+    --shadow-x: 0px;
+    --shadow-y: 4px;
+    --shadow-blur: 10px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.05;
+    --shadow-color: #000000;
+    --shadow-2xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.03);
+    --shadow-xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.03);
+    --shadow-sm:
+      0px 4px 10px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+    --shadow:
+      0px 4px 10px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+    --shadow-md:
+      0px 4px 10px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
+    --shadow-lg:
+      0px 4px 10px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
+    --shadow-xl:
+      0px 4px 10px 0px hsl(0 0% 0% / 0.05),
+      0px 8px 10px -1px hsl(0 0% 0% / 0.05);
+    --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.13);
+    --tracking-normal: normal;
+    --spacing: 0.25rem;
+
+    /* Magazine Theme - Default values, overridden per-issue by JS */
+    --mag-primary: #050505;
+    --mag-accent: #eafd67;
+    --mag-bg: #050505;
+    --mag-text: #f5f5f5;
+  }
+
+  .dark {
+    --background: oklch(0.1822 0 0);
+    --foreground: oklch(0.9288 0.0126 255.5078);
+    --card: oklch(0.2178 0 0);
+    --card-foreground: oklch(0.9288 0.0126 255.5078);
+    --popover: oklch(0.2178 0 0);
+    --popover-foreground: oklch(0.9288 0.0126 255.5078);
+    --primary: oklch(0.9519 0.1739 115.8446);
+    --primary-foreground: oklch(0.2257 0.0038 106.6998);
+    --secondary: oklch(0.2768 0 0);
+    --secondary-foreground: oklch(0.9288 0.0126 255.5078);
+    --muted: oklch(0.2768 0 0);
+    --muted-foreground: oklch(0.75 0 0);
+    --accent: oklch(0.2768 0 0);
+    --accent-foreground: oklch(0.9519 0.1739 115.8446);
+    --destructive: oklch(0.6368 0.2078 25.3313);
+    --destructive-foreground: oklch(0.9842 0.0034 247.8575);
+    --border: oklch(0.2768 0 0);
+    --input: oklch(0.2768 0 0);
+    --ring: oklch(0.9519 0.1739 115.8446);
+    --chart-1: oklch(0.9519 0.1739 115.8446);
+    --chart-2: oklch(0.619 0.0325 248.3513);
+    --chart-3: oklch(0.7049 0.1867 47.6044);
+    --chart-4: oklch(0.6959 0.1491 162.4796);
+    --chart-5: oklch(0.6368 0.2078 25.3313);
+    --sidebar: oklch(0.2178 0 0);
+    --sidebar-foreground: oklch(0.9288 0.0126 255.5078);
+    --sidebar-primary: oklch(0.9519 0.1739 115.8446);
+    --sidebar-primary-foreground: oklch(0.2257 0.0038 106.6998);
+    --sidebar-accent: oklch(0.2768 0 0);
+    --sidebar-accent-foreground: oklch(0.9519 0.1739 115.8446);
+    --sidebar-border: oklch(0.2768 0 0);
+    --sidebar-ring: oklch(0.9519 0.1739 115.8446);
+    --font-sans: sans-serif;
+    --font-serif: serif;
+    --font-mono: monospace;
+    --radius: 0.5rem;
+    --shadow-x: 0px;
+    --shadow-y: 8px;
+    --shadow-blur: 20px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.4;
+    --shadow-color: #000000;
+    --shadow-2xs: 0px 8px 20px 0px hsl(0 0% 0% / 0.2);
+    --shadow-xs: 0px 8px 20px 0px hsl(0 0% 0% / 0.2);
+    --shadow-sm:
+      0px 8px 20px 0px hsl(0 0% 0% / 0.4), 0px 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow:
+      0px 8px 20px 0px hsl(0 0% 0% / 0.4), 0px 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow-md:
+      0px 8px 20px 0px hsl(0 0% 0% / 0.4), 0px 2px 4px -1px hsl(0 0% 0% / 0.4);
+    --shadow-lg:
+      0px 8px 20px 0px hsl(0 0% 0% / 0.4), 0px 4px 6px -1px hsl(0 0% 0% / 0.4);
+    --shadow-xl:
+      0px 8px 20px 0px hsl(0 0% 0% / 0.4), 0px 8px 10px -1px hsl(0 0% 0% / 0.4);
+    --shadow-2xl: 0px 8px 20px 0px hsl(0 0% 0% / 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    letter-spacing: var(--tracking-normal);
+  }
+}
+
+@layer utilities {
+  /* Scrollbar hiding for horizontal scroll containers */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Heading typography presets */
+  .typography-hero {
+    @apply font-serif text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.1] tracking-tight;
+  }
+
+  .typography-h1 {
+    @apply font-serif text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.15] tracking-tight;
+  }
+
+  .typography-h2 {
+    @apply font-serif text-3xl md:text-4xl lg:text-5xl font-semibold leading-[1.2] tracking-tight;
+  }
+
+  .typography-h3 {
+    @apply font-serif text-2xl md:text-3xl font-semibold leading-[1.25];
+  }
+
+  .typography-h4 {
+    @apply font-serif text-xl md:text-2xl font-semibold leading-[1.3];
+  }
+
+  /* Body typography presets */
+  .typography-body {
+    @apply font-sans text-sm md:text-base leading-relaxed;
+  }
+
+  .typography-body-lg {
+    @apply font-sans text-base md:text-lg leading-relaxed;
+  }
+
+  .typography-small {
+    @apply font-sans text-sm leading-normal;
+  }
+
+  .typography-caption {
+    @apply font-sans text-xs leading-snug text-muted-foreground;
+  }
+
+  .typography-overline {
+    @apply font-sans text-xs uppercase tracking-widest font-medium;
+  }
+
+  .typography-label {
+    @apply font-sans text-sm font-medium;
+  }
+}
+
+/* Scroll Animation Classes */
+.js-observe {
+  opacity: 0;
+  transform: translateY(10px) scale(1);
+  transition:
+    opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--stagger, 0ms);
+  will-change: opacity, transform;
+}
+
+.js-observe.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.js-observe.is-hidden {
+  opacity: 0;
+  transform: translateY(10px) scale(1);
+}
+
+/* Image layout stability for CLS optimization */
+.js-observe img[data-src],
+.js-observe img.lazy {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Support aspect-ratio for layout stability */
+.js-observe img[data-src][width][height],
+.js-observe img.lazy[width][height] {
+  aspect-ratio: attr(width) / attr(height);
+}
+
+/* Accessibility: Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .js-observe {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .js-observe.is-visible,
+  .js-observe.is-hidden {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Remove transitions for header components */
+  button,
+  a,
+  input {
+    transition: none !important;
+  }
+}
+
+/* Fashion Scan Connector Data Flow Animation */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+.fs-connector {
+  stroke-dasharray: 4 6;
+  stroke-dashoffset: 0;
+  animation: dash-flow 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-connector {
+    animation: none;
+  }
+}
+
+/* Hologram Scan Animation for Request Flow */
+@keyframes hologram-scan {
+  0% {
+    top: -10%;
+    opacity: 1;
+  }
+  100% {
+    top: 110%;
+    opacity: 0.8;
+  }
+}
+
+@keyframes hologram-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes hologram-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px oklch(0.9519 0.1739 115.8446))
+      drop-shadow(0 0 16px oklch(0.9519 0.1739 115.8446 / 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px oklch(0.9519 0.1739 115.8446))
+      drop-shadow(0 0 24px oklch(0.9519 0.1739 115.8446 / 0.7));
+  }
+}
+
+@keyframes corner-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-hologram-scan {
+  animation: hologram-scan 2.5s ease-in-out infinite;
+}
+
+.animate-hologram-pulse {
+  animation: hologram-pulse 2s ease-in-out infinite;
+}
+
+.animate-hologram-glow {
+  animation: hologram-glow 1.5s ease-in-out infinite;
+}
+
+.animate-corner-pulse {
+  animation: corner-pulse 1s ease-in-out infinite;
+}
+
+/* Scanline pattern (CRT effect) */
+.hologram-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0.9519 0.1739 115.8446 / 0.03) 2px,
+    oklch(0.9519 0.1739 115.8446 / 0.03) 4px
+  );
+}
+
+/* Grid pattern */
+.hologram-grid {
+  background-image:
+    linear-gradient(oklch(0.9519 0.1739 115.8446 / 0.1) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      oklch(0.9519 0.1739 115.8446 / 0.1) 1px,
+      transparent 1px
+    );
+  background-size: 20px 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hologram-scan,
+  .animate-hologram-pulse,
+  .animate-hologram-glow,
+  .animate-corner-pulse {
+    animation: none;
+  }
+}
+
+/* Spot Reveal Animation */
+@keyframes spot-reveal {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes reveal-scan {
+  0% {
+    top: 0%;
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.5;
+  }
+}
+
+.animate-spot-reveal {
+  animation: spot-reveal 0.4s ease-out forwards;
+}
+
+.animate-reveal-scan {
+  animation: reveal-scan 1.2s ease-out forwards;
+}
+
+@keyframes spot-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 var(--spot-ring),
+      0 0 8px var(--spot-glow);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px var(--spot-ring),
+      0 0 16px var(--spot-glow);
+  }
+}
+
+@keyframes spot-float {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+.animate-spot-glow {
+  animation: spot-glow 1.5s ease-in-out infinite;
+}
+
+.animate-spot-float {
+  animation: spot-float 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spot-reveal,
+  .animate-reveal-scan,
+  .animate-spot-glow,
+  .animate-spot-float,
+  .animate-ai-summary-reveal {
+    animation: none;
+  }
+}
+
+/* Bottom Sheet Animation */
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0.3;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* AI Summary Reveal Animation */
+@keyframes ai-summary-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes ai-summary-scan {
+  0% {
+    transform: scaleY(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+.animate-ai-summary-reveal {
+  animation: ai-summary-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card Selection Glow Animation */
+@keyframes card-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px oklch(0.9519 0.1739 115.8446),
+      0 0 24px oklch(0.9519 0.1739 115.8446 / 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 16px oklch(0.9519 0.1739 115.8446),
+      0 0 32px oklch(0.9519 0.1739 115.8446 / 0.4);
+  }
+}
+
+.animate-card-glow {
+  animation: card-glow 2s ease-in-out infinite;
+}
+
+/* Line clamp utility for descriptions */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Main C — Marquee footer animation */
+@keyframes marquee-c {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-c {
+  animation: marquee-c 30s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up,
+  .animate-card-glow,
+  .animate-marquee-c {
+    animation: none;
+  }
+}

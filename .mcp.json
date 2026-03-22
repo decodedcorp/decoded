@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=pdgvuwrxsfwrypadwdlu"
+    },
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp"],
+      "env": {
+        "FIGMA_API_KEY": "figd_cHwJuaHDEBFO4g_glIaUzdBQQl4iNSV_kSPnRaWo"
+      }
+    }
+  }
+}
