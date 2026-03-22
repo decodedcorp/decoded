@@ -1,8 +1,28 @@
-# decoded-app Development Guidelines
+# decoded-monorepo Development Guidelines
 
 ## Overview
 
-Modern web application for image/item discovery and curation with behavioral intelligence, editorial magazine system, virtual try-on (VTON), admin dashboard, and comprehensive design system (v2.0). Features AI-powered item detection, social actions (like/save/comment), personalized content, and collection/studio experiences.
+Monorepo for the decoded platform — image/item discovery and curation with behavioral intelligence, editorial magazine system, virtual try-on (VTON), admin dashboard, and comprehensive design system (v2.0). Features AI-powered item detection, social actions (like/save/comment), personalized content, and collection/studio experiences.
+
+## Monorepo Structure
+
+```text
+decoded-monorepo/
+├── package.json          # Root — bun workspaces, Turborepo
+├── turbo.json            # Build orchestration (build/dev/lint/test)
+├── bunfig.toml           # Bun config (hoisted strategy)
+├── packages/
+│   ├── web/              # Next.js 16 frontend (main app)
+│   ├── shared/           # Shared types, hooks, Supabase queries
+│   ├── mobile/           # Expo 54 React Native app
+│   └── backend/          # Rust/Axum API server (Cargo workspace, independent build)
+├── .planning/            # GSD workflow artifacts
+└── CLAUDE.md             # This file
+```
+
+- **Package Manager**: bun 1.3.10+ (not yarn/npm)
+- **Build Orchestration**: Turborepo
+- **Backend**: Rust/Axum — builds independently via `cargo` (not managed by bun workspaces)
 
 ## Tech Stack
 
@@ -17,7 +37,8 @@ Modern web application for image/item discovery and curation with behavioral int
 - **Theme**: next-themes 0.4.6
 - **Testing**: Playwright 1.58.1 (visual QA)
 - **Linting**: ESLint 9.39.1 (flat config), Prettier 3.6.2
-- **Package Manager**: Yarn 4.9.2 (node-modules linker)
+- **Package Manager**: bun 1.3.10+ (Turborepo orchestration)
+- **Rust Backend**: Axum, SeaORM, tokio
 
 ## Project Structure
 
@@ -368,13 +389,23 @@ Located in `lib/design-system/`:
 ## Commands
 
 ```bash
-yarn dev              # Development server
-yarn build            # Production build
-yarn start            # Start production server
-yarn lint             # ESLint
-yarn format           # Prettier formatting
-yarn format:check     # Check Prettier formatting
-yarn test:visual      # Playwright visual QA tests
+# Monorepo (from root)
+bun run dev           # Development server (all packages via Turborepo)
+bun run build         # Production build (all packages via Turborepo)
+bun run lint          # ESLint (all packages)
+
+# Web package only
+cd packages/web
+bun run dev           # Next.js dev server
+bun run build         # Next.js production build
+bun run lint          # ESLint
+bun run format        # Prettier formatting
+
+# Backend (Rust)
+cd packages/backend
+cargo build           # Build backend
+cargo run             # Run backend server
+cargo test            # Run tests
 ```
 
 ## Code Style
@@ -385,7 +416,7 @@ yarn test:visual      # Playwright visual QA tests
 
 ## Important Notes
 
-- Uses Yarn 4 with node-modules linker - use `yarn` commands (not npm)
+- Uses bun as package manager with Turborepo — use `bun` commands (not yarn/npm)
 - ESLint 9 with flat config (eslint.config.mjs)
 - Environment variables: .env.local (gitignored, see .env.local.example)
 - Supabase integration required for data/auth
