@@ -106,7 +106,7 @@ export function ImageDetailModal({ imageId }: Props) {
   const touchCurrentY = useRef<number>(0);
 
   // GSAP Context for cleanup
-  const ctxRef = useRef<gsap.Context>();
+  const ctxRef = useRef<gsap.Context>(null);
 
   // Image Source Resolution: Priority -> Store (Immediate) -> Fetched Data
   const activeImageSrc =

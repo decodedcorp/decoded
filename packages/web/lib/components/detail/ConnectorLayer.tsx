@@ -18,8 +18,8 @@ type ConnectorData = {
 type Props = {
   items: UiItem[];
   activeIndex: number | null;
-  imageContainerRef: React.RefObject<HTMLDivElement>;
-  cardsContainerRef: React.RefObject<HTMLDivElement>;
+  imageContainerRef: React.RefObject<HTMLDivElement | null>;
+  cardsContainerRef: React.RefObject<HTMLDivElement | null>;
   scrollContainerRef?: RefObject<HTMLElement>;
 };
 

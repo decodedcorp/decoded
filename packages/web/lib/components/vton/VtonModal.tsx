@@ -262,7 +262,7 @@ export function VtonModal() {
     new Set()
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const stageInterval = useRef<ReturnType<typeof setInterval>>();
+  const stageInterval = useRef<ReturnType<typeof setInterval>>(null);
 
   // Restore local state from backgroundJob when modal reopens with an active job
   const restoredFromJobRef = useRef<string | null>(null);

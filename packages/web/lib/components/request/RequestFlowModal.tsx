@@ -23,7 +23,7 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   // GSAP Context for cleanup
-  const ctxRef = useRef<gsap.Context>();
+  const ctxRef = useRef<gsap.Context>(null);
 
   const handleClose = useCallback(() => {
     if (!ctxRef.current) return;
