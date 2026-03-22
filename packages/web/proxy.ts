@@ -4,7 +4,7 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
 import { checkIsAdmin } from "@/lib/supabase/admin";
 
 /**
- * Admin route protection middleware.
+ * Admin route protection proxy (Next.js 16).
  *
  * Protects all /admin/* routes server-side by verifying:
  * 1. User has an active Supabase session (authenticated)
@@ -16,7 +16,7 @@ import { checkIsAdmin } from "@/lib/supabase/admin";
  * The middleware client also propagates refreshed session cookies on every
  * request, keeping auth state consistent.
  */
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createSupabaseMiddlewareClient(req, res);
 

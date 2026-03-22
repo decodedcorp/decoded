@@ -16,6 +16,7 @@ out/
 # Build
 dist/
 build/
+*.tsbuildinfo
 
 # Rust
 packages/backend/target/
