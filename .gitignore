@@ -30,6 +30,7 @@ packages/backend/target/
 
 # Claude Code
 .claude/settings.local.json
+.claude/skills/gstack/
 
 # Debug
 npm-debug.log*
