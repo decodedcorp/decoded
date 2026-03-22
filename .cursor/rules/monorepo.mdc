@@ -1,0 +1,34 @@
+---
+description: decoded-monorepo conventions
+globs: "**/*"
+---
+
+# decoded-monorepo
+
+## Structure
+- `packages/web/` — Next.js 16 frontend
+- `packages/shared/` — Shared types, hooks, Supabase queries
+- `packages/mobile/` — Expo 54 React Native
+- `packages/backend/` — Rust/Axum API server (independent Cargo workspace)
+
+## Package Manager
+- **bun** (not yarn/npm). Use `bun run`, `bun add`, `bunx`.
+- Turborepo orchestrates cross-package tasks: `bun run dev`, `bun run build`
+
+## Key Conventions
+- TypeScript strict mode
+- Conventional Commits: feat:, fix:, docs:, refactor:, test:, chore:
+- ESLint 9 flat config
+- `proxy.ts` (not middleware.ts) — Next.js 16
+- Design system components: `packages/web/lib/design-system/`
+- Supabase queries: `packages/web/lib/supabase/queries/`
+- State management: Zustand stores in `packages/web/lib/stores/`
+
+## Backend (Rust)
+- Builds via `cargo` (not bun)
+- Axum 0.8, SeaORM, tokio, Meilisearch
+- `cd packages/backend && cargo build`
+
+## Environment
+- Copy `packages/web/.env.local.example` → `.env.local`
+- Never commit .env files

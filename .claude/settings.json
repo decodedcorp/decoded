@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun:*)",
+      "Bash(bun run:*)",
+      "Bash(bunx:*)",
+      "Bash(turbo:*)",
+      "Bash(cargo:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx playwright:*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Agent"
+    ],
+    "deny": [
+      "Bash(rm -rf packages/)",
+      "Bash(git push --force origin main)",
+      "Bash(cargo publish:*)"
+    ]
+  },
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".next",
+      "packages/backend/target"
+    ]
+  }
+}
