@@ -1,0 +1,8 @@
+[install]
+# Use hoisted strategy for Next.js + Expo compatibility
+# Matches existing Yarn 4 nodeLinker: node-modules behavior
+strategy = "hoisted"
+
+# Force full hoisting for Expo Metro bundler compatibility
+# Metro cannot resolve packages under node_modules/.bun/ symlinks
+publicHoistPattern = ["*"]

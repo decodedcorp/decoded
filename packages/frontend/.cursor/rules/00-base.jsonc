@@ -1,0 +1,28 @@
+{
+  "name": "base-rules",
+  "description": "Global rules for this repository - language, style, and explanation requirements",
+  "priority": 0,
+  "patterns": ["**/*"],
+  "config": {
+    "language": {
+      "conversation": "Korean",
+      "code": "English",
+      "comments": "English",
+      "commits": "English",
+    },
+    "style": {
+      "explain_changes": true,
+      "small_commits": true,
+      "show_before_after": true,
+    },
+    "instructions": [
+      "Use Korean for high-level explanations and conversation.",
+      "Use English for all code, comments, commands, and commit messages.",
+      "Prefer small, composable functions.",
+      "Always explain why a change is needed, not only how.",
+      "Show before/after code snippets when refactoring.",
+      "Explain risk and impact of changes.",
+      "Reference docs/ai-playbook/01-principles.md for core principles.",
+    ],
+  },
+}

@@ -1,0 +1,13 @@
+{
+  "headline": "당신의 SNS를 한 권의 잡지로",
+  "snsNames": ["Instagram", "Facebook", "YouTube", "TikTok", "Pinterest", "X"],
+  "subtext": "AI가 당신만의 스타일 매거진을 만들어드립니다",
+  "ctaLabel": "나만의 매거진 만들기",
+  "images": [
+    "https://picsum.photos/seed/banner1/400/600",
+    "https://picsum.photos/seed/banner2/400/600",
+    "https://picsum.photos/seed/banner3/400/600",
+    "https://picsum.photos/seed/banner4/400/600",
+    "https://picsum.photos/seed/banner5/400/600"
+  ]
+}

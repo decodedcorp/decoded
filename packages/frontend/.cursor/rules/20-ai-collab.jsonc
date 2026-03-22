@@ -1,0 +1,35 @@
+{
+  "name": "ai-collab",
+  "description": "Guidelines for AI-assisted changes and multi-AI collaboration",
+  "priority": 20,
+  "patterns": ["**/*"],
+  "config": {
+    "workflow": {
+      "read_specs_first": true,
+      "summarize_changes": true,
+      "document_for_other_tools": true,
+    },
+    "instructions": [
+      "When refactoring existing code, list risks and add minimal tests.",
+      "Summarize each batch of changes as bullet points for documentation tools (Gemini, Codex).",
+      "Read relevant specs from specs/ directory before starting implementation.",
+      "Follow tool profiles in docs/ai-playbook/ for appropriate use cases.",
+      "After implementation, create change summary for documentation generation.",
+      "Reference docs/ai-playbook/02-workflow-overview.md for tool integration.",
+      "When working with specs, ensure changes align with spec requirements.",
+      "Document assumptions and open questions when implementing.",
+      "Maintain consistency with project rules and conventions.",
+    ],
+    "change_summary": {
+      "required": true,
+      "format": "markdown",
+      "include": [
+        "Files modified",
+        "Key changes",
+        "Breaking changes",
+        "Tests added",
+        "Documentation needed",
+      ],
+    },
+  },
+}
