@@ -1,0 +1,10 @@
+# 마이그레이션 크레이트 — SeaORM 매크로/생성 코드의 unwrap 은 허용
+# (부모 디렉터리 clippy.toml 대신 이 파일이 적용됨)
+
+disallowed-methods = []
+
+disallowed-macros = [
+    { path = "std::println", reason = "tracing::info! / tracing::debug! 를 사용하세요" },
+    { path = "std::dbg", reason = "tracing::debug! 를 사용하세요" },
+    { path = "std::eprintln", reason = "tracing::warn! 또는 tracing::error! 를 사용하세요" },
+]

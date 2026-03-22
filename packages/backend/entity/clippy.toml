@@ -1,0 +1,9 @@
+# entity 크레이트 — 생성 엔티티·SeaORM 패턴에서 unwrap 이 나올 수 있음 (API 서버 src/ 와 분리)
+
+disallowed-methods = []
+
+disallowed-macros = [
+    { path = "std::println", reason = "tracing::info! / tracing::debug! 를 사용하세요" },
+    { path = "std::dbg", reason = "tracing::debug! 를 사용하세요" },
+    { path = "std::eprintln", reason = "tracing::warn! 또는 tracing::error! 를 사용하세요" },
+]

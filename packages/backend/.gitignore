@@ -1,0 +1,40 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock
+
+# Environment
+.env
+.env.local
+.env.prod
+.env*.local
+.env.dev
+.env.staging
+
+# Keep example only
+!.env.example
+
+# IDE / 에이전트
+.vscode/
+.idea/
+.cursor/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Test coverage
+*.profraw
+*.profdata
