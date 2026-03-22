@@ -1,0 +1,6 @@
+[install]
+strategy = "hoisted"
+
+[install.scopes]
+# Expo Metro compatibility
+publicHoistPattern = ["*"]
