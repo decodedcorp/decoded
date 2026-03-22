@@ -230,6 +230,7 @@ export function ImageDetailContent({
 
   return (
     <div className="detail-content relative" style={magazineCssVars}>
+      <>
       {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
       <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
         <span className="font-serif text-[10px] uppercase tracking-[1em] text-primary/5 writing-mode-vertical-rl rotate-180 opacity-50">
@@ -265,7 +266,7 @@ export function ImageDetailContent({
         <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
           <div className="relative overflow-hidden rounded-xl">
             <Image
-              src={imageUrl}
+              src={imageUrl!}
               alt="Post image"
               width={384}
               height={0}
@@ -472,6 +473,7 @@ export function ImageDetailContent({
           </div>
         </div>
       )}
+      </>
     </div>
   );
 }

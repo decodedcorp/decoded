@@ -323,7 +323,8 @@ export async function fetchTrendingKeywordsServer(
     .order("created_at", { ascending: false })
     .limit(50);
 
-  posts = result.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  posts = result.data as any;
   error = result.error;
 
   if (!error && posts) {
