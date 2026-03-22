@@ -20,12 +20,13 @@ decoded-monorepo/
 
 | Layer | Stack |
 |-------|-------|
-| **Frontend** | Next.js 16, React 18, TypeScript 5.9, Tailwind CSS, Zustand, React Query |
-| **Backend** | Rust, Axum 0.8, SeaORM, tokio, Meilisearch |
+| **Frontend** | Next.js 16.2, React 19.2, TypeScript 5.9, Tailwind CSS 3.4, Zustand 5, React Query 5 |
+| **Backend** | Rust, Axum 0.8, SeaORM 1.1, tokio, Meilisearch |
 | **Database** | Supabase (PostgreSQL), Cloudflare R2 (storage) |
 | **Mobile** | Expo 54, React Native |
-| **Build** | Turborepo, bun 1.3+ |
+| **Build** | Turborepo, bun 1.3+, Node.js 22 LTS |
 | **Testing** | Playwright |
+| **Linting** | ESLint 10, Prettier 3.6 |
 
 ## Quick Start
 

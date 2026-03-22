@@ -26,19 +26,20 @@ decoded-monorepo/
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16.0.7, React 18.3.1, TypeScript 5.9.3
-- **Styling**: Tailwind CSS 3.4.18, tailwind-merge 3.4.0, @tailwindcss/typography 0.5.19
-- **State**: Zustand 4.5.7, React Query 5.90.11, React Query DevTools 5.91.1
+- **Frontend**: Next.js 16.2.1, React 19.2.4, TypeScript 5.9.3
+- **Styling**: Tailwind CSS 3.4.19, tailwind-merge 3.4.0, @tailwindcss/typography 0.5.19
+- **State**: Zustand 5.0.12, React Query 5.90.11, React Query DevTools 5.91.1
 - **Backend**: Supabase 2.86.0, Auth Helpers 0.15.0
 - **Animations**: GSAP 3.13.0, Motion 12.23.12, Lenis 1.3.15, @use-gesture/react 10.3.1
-- **UI Libraries**: Lucide React 0.555.0, React Icons 5.5.0, Radix UI, Sonner 2.0.7, shadcn 3.5.0
-- **3D/Media**: Three.js 0.167.1, Spline (@splinetool/react-spline), browser-image-compression 2.0.2
+- **UI Libraries**: Lucide React 0.577.0, React Icons 5.5.0, Radix UI, Sonner 2.0.7, shadcn 4.1.0
+- **3D/Media**: Three.js 0.183.2, Spline (@splinetool/react-spline), browser-image-compression 2.0.2
 - **Content**: react-markdown 10.1.0, recharts 3.7.0
 - **Theme**: next-themes 0.4.6
 - **Testing**: Playwright 1.58.1 (visual QA)
-- **Linting**: ESLint 9.39.1 (flat config), Prettier 3.6.2
+- **Linting**: ESLint 10.1.0 (flat config, Node 22+), Prettier 3.6.2
 - **Package Manager**: bun 1.3.10+ (Turborepo orchestration)
-- **Rust Backend**: Axum, SeaORM, tokio
+- **Node.js**: 22.22.1 LTS (via nvm)
+- **Rust Backend**: Axum 0.8, SeaORM 1.1, tokio
 
 ## Project Structure
 

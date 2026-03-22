@@ -18,7 +18,8 @@ globs: "**/*"
 ## Key Conventions
 - TypeScript strict mode
 - Conventional Commits: feat:, fix:, docs:, refactor:, test:, chore:
-- ESLint 9 flat config
+- ESLint 10 flat config (requires Node 22+)
+- React 19 — `useRef(null)` required, `RefObject<T | null>`
 - `proxy.ts` (not middleware.ts) — Next.js 16
 - Design system components: `packages/web/lib/design-system/`
 - Supabase queries: `packages/web/lib/supabase/queries/`
