@@ -1,0 +1,144 @@
+{
+  "dashboard": {
+    "title": "Request Metrics",
+    "tags": ["metrics", "requests"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "graph",
+        "gridPos": {
+          "h": 4,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(rate({container=~\"decoded-api.*\", message=~\"Request completed.*\"}[5m]))",
+            "refId": "A",
+            "legendFormat": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Average Response Time",
+        "type": "graph",
+        "gridPos": {
+          "h": 4,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "avg(duration_ms) by (uri) / 1000",
+            "refId": "A",
+            "legendFormat": "{{uri}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "HTTP Status Codes",
+        "type": "piechart",
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 0,
+          "y": 4
+        },
+        "targets": [
+          {
+            "expr": "sum by (status) (count_over_time({container=~\"decoded-api.*\", message=~\"Request completed.*\"}[5m]))",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Slow Requests (>500ms)",
+        "type": "logs",
+        "gridPos": {
+          "h": 6,
+          "w": 16,
+          "x": 8,
+          "y": 4
+        },
+        "targets": [
+          {
+            "expr": "{container=~\"decoded-api.*\"} | json | duration_ms > 500",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 5,
+        "title": "Top Endpoints by Request Count",
+        "type": "table",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 10
+        },
+        "targets": [
+          {
+            "expr": "topk(10, sum by (uri) (count_over_time({container=~\"decoded-api.*\", message=~\"Request completed.*\"}[1h])))",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Error Rate by Endpoint",
+        "type": "table",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 10
+        },
+        "targets": [
+          {
+            "expr": "sum by (uri) (count_over_time({container=~\"decoded-api.*\", level=\"error\"}[1h]))",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    }
+  }
+}
+

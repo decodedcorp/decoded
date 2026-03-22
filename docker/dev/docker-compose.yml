@@ -1,0 +1,63 @@
+name: decoded-api-dev
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: decoded-api-dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../src:/app/src
+      - ../../Cargo.toml:/app/Cargo.toml
+      - ../../Cargo.lock:/app/Cargo.lock
+      - ../../build.rs:/app/build.rs
+      - ../../proto:/app/proto
+      - ../../entity:/app/entity
+      - ../../migration:/app/migration
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/target
+    networks:
+      - api-network-dev
+    env_file:
+      - ../../.env.dev
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch-dev
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch-data-dev:/meili_data
+    networks:
+      - api-network-dev
+    environment:
+      - MEILI_ENV=development
+      - MEILI_MASTER_KEY=dev-master-key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  api-network-dev:
+    driver: bridge
+
+volumes:
+  meilisearch-data-dev:
+  cargo-cache:
+  target-cache:
+

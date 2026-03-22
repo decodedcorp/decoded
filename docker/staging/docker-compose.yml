@@ -1,0 +1,135 @@
+name: decoded-api-staging
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/staging/Dockerfile
+    container_name: decoded-api-staging
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    networks:
+      - api-network-staging
+    env_file:
+      - ../../.env.staging
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch-staging
+    restart: unless-stopped
+    ports:
+      - "7701:7700"
+    volumes:
+      - meilisearch-data-staging:/meili_data
+    networks:
+      - api-network-staging
+    environment:
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki-staging
+    restart: unless-stopped
+    ports:
+      - "3101:3100"
+    volumes:
+      - loki-data-staging:/loki
+      - ../../docker/configs/loki-config.yml:/etc/loki/local-config.yaml
+    networks:
+      - api-network-staging
+    command: -config.file=/etc/loki/local-config.yaml
+    environment:
+      - LOKI_LIMITS_CONFIG_RETENTION_PERIOD=168h  # 7일 (스테이징)
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail-staging
+    restart: unless-stopped
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../docker/configs/promtail-config.yml:/etc/promtail/config.yml
+    networks:
+      - api-network-staging
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-staging
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data-staging:/var/lib/grafana
+      - ../../docker/configs/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ../../docker/configs/grafana-dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ../../docker/configs/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - api-network-staging
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          memory: 64M
+
+networks:
+  api-network-staging:
+    driver: bridge
+
+volumes:
+  meilisearch-data-staging:
+  loki-data-staging:
+  grafana-data-staging:
+

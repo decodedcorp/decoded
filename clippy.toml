@@ -1,0 +1,13 @@
+# Clippy — decoded-api (API 서버) 패키지 루트에서 로드됩니다.
+# migration/, entity/ 는 각 디렉터리의 clippy.toml 로 unwrap 규칙을 완화합니다.
+
+disallowed-methods = [
+    { path = "std::option::Option::unwrap", reason = "? 또는 if let Some / ok_or_else 로 처리하세요" },
+    { path = "std::result::Result::unwrap", reason = "? 연산자 또는 .map_err() 로 AppError 등으로 변환하세요" },
+]
+
+disallowed-macros = [
+    { path = "std::println", reason = "tracing::info! / tracing::debug! 를 사용하세요" },
+    { path = "std::dbg", reason = "tracing::debug! 를 사용하세요" },
+    { path = "std::eprintln", reason = "tracing::warn! 또는 tracing::error! 를 사용하세요" },
+]

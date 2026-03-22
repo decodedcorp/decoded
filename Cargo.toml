@@ -1,0 +1,131 @@
+[workspace]
+resolver = "2"
+members = ["migration", "entity"]
+
+[workspace.dependencies]
+# Web Framework
+axum = { version = "0.8.8", features = ["macros"] }
+axum-extra = { version = "0.10", features = ["multipart"] }
+tokio = { version = "1.36", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Database
+sea-orm = { version = "1.1.19", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+sea-orm-migration = { version = "1.1.19", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Search
+meilisearch-sdk = "0.32.0"
+
+# Storage (Cloudflare R2)
+aws-sdk-s3 = { version = "1.119.0", features = ["behavior-version-latest"] }
+aws-config = "1.5"
+
+# Auth
+jsonwebtoken = "9"
+base64 = "0.22"
+
+# Batch
+tokio-cron-scheduler = "0.13"
+
+# Utils
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+async-trait = "0.1"
+validator = { version = "0.20", features = ["derive"] }
+dotenvy = "0.15"
+reqwest = { version = "0.12", features = ["json"] }
+
+# API Documentation
+utoipa = { version = "5.3", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
+
+# Template Engine
+tera = "1"
+
+# Cache
+moka = { version = "0.12", features = ["future"] }
+
+# Image Processing
+image = "0.25"
+
+# Metadata Extraction
+scraper = "0.25"
+toml = "0.8"
+notify = "6.1"
+url = "2.5"
+
+# Testing
+mockall = "0.13"
+tokio-test = "0.4"
+
+[package]
+name = "decoded-api"
+version = "0.5.1"
+edition = "2021"
+license = "MIT"
+default-run = "decoded-api"
+
+[dependencies]
+axum = { workspace = true }
+axum-extra = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sea-orm = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+meilisearch-sdk = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+aws-config = { workspace = true }
+jsonwebtoken = { workspace = true }
+tokio-cron-scheduler = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait = { workspace = true }
+validator = { workspace = true }
+dotenvy = { workspace = true }
+reqwest = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+tera = { workspace = true }
+image = { workspace = true }
+moka = { version = "0.12", features = ["future"] }
+scraper = { workspace = true }
+toml = { workspace = true }
+notify = { workspace = true }
+url = { workspace = true }
+
+# Workspace members
+migration = { path = "migration" }
+entity = { path = "entity" }
+base64 = { workspace = true, features = ["default"] }
+tonic = "0.14.2"
+prost = "0.14.3"
+tonic-prost = "0.14.2"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }
+regex = "1"
+
+[build-dependencies]
+tonic-prost-build = "0.14.2"
+
+# 도메인 `mod tests { }` 패턴은 module_inception 경고가 나므로 허용
+[lints.clippy]
+module_inception = "allow"
+
+# CI/pre-push: 사용하지 않는 import 는 오류
+[lints.rust]
+unused_imports = "deny"

@@ -1,0 +1,133 @@
+name: decoded-api-prod
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: decoded-api-prod
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - api-network-prod
+    env_file:
+      - ../../.env.prod
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch-prod
+    restart: unless-stopped
+    ports:
+      - "7702:7700"
+    volumes:
+      - meilisearch-data-prod:/meili_data
+    networks:
+      - api-network-prod
+    environment:
+      - MEILI_ENV=production
+      - MEEIL_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki-prod
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data-prod:/loki
+      - ../../docker/configs/loki-config.yml:/etc/loki/local-config.yaml
+    networks:
+      - api-network-prod
+    command: -config.file=/etc/loki/local-config.yaml
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail-prod
+    restart: unless-stopped
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../docker/configs/promtail-config.yml:/etc/promtail/config.yml
+    networks:
+      - api-network-prod
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data-prod:/var/lib/grafana
+      - ../../docker/configs/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ../../docker/configs/grafana-dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ../../docker/configs/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - api-network-prod
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+networks:
+  api-network-prod:
+    driver: bridge
+
+volumes:
+  meilisearch-data-prod:
+  loki-data-prod:
+  grafana-data-prod:
+

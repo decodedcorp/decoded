@@ -1,0 +1,41 @@
+# cargo-deny — `cargo install cargo-deny` 후 `cargo deny check`
+# https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+yanked = "warn"
+# 직접 의존성에만 적용 (과도한 transitive 알림 완화)
+unmaintained = "workspace"
+ignore = [
+    # aws-smithy-http-client → hyper-rustls 0.24 → rustls 0.21 → rustls-webpki 0.101.x 고정
+    { id = "RUSTSEC-2026-0049", reason = "AWS SDK 체인이 webpki 0.101 사용; SDK 업데이트 시 재검토" },
+]
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+    "OpenSSL",
+    "NCSA",
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.8
+# workspace 멤버 중 publish = false 는 라이선스 필드 검사 생략
+private = { ignore = true }
+
+[bans]
+multiple-versions = "warn"
+# path workspace 멤버(migration, entity)는 와일드카드로 분류되므로 허용
+wildcards = "warn"
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
