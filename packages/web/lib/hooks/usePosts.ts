@@ -10,15 +10,13 @@ import {
   type PostDetail,
   type LegacyPostDetail,
 } from "@/lib/supabase/queries/posts";
-import { listPosts } from "@/lib/api/generated/posts/posts";
-import { updatePost, deletePost } from "@/lib/api/posts";
+import { listPosts, updatePost as updatePostGenerated, deletePost as deletePostGenerated } from "@/lib/api/generated/posts/posts";
 import type {
   Post,
   PostsListResponse,
   PostsListParams,
-  PostResponse,
 } from "@/lib/api/mutation-types";
-import type { UpdatePostDto } from "@/lib/api/generated/models";
+import type { UpdatePostDto, PostResponse } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -151,10 +149,11 @@ export function useUpdatePost() {
 
   return useMutation({
     mutationFn: ({ postId, data }: { postId: string; data: UpdatePostDto }) =>
-      updatePost(postId, data),
-    onSuccess: (updatedPost, { postId }) => {
-      // Update cache with new data
-      queryClient.setQueryData(postKeys.detail(postId), updatedPost);
+      updatePostGenerated(postId, data),
+    onSuccess: (_, { postId }) => {
+      // Invalidate detail — postKeys.detail holds Supabase PostDetail shape,
+      // not PostResponse, so setQueryData would be a cross-boundary type mismatch
+      queryClient.invalidateQueries({ queryKey: postKeys.detail(postId) });
       // Invalidate lists to reflect changes
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
     },
@@ -172,7 +171,7 @@ export function useDeletePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (postId: string) => deletePost(postId),
+    mutationFn: (postId: string) => deletePostGenerated(postId),
     onSuccess: (_, postId) => {
       // Remove from detail cache
       queryClient.removeQueries({ queryKey: postKeys.detail(postId) });
