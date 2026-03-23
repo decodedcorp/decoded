@@ -1,5 +1,15 @@
 # Project Milestones: decoded-app
 
+## v9.0 Type-Safe API Generation (Shipped: 2026-03-23)
+
+**Phases completed:** 41 phases, 94 plans, 21 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v5.0 AI Magazine & Archive Expansion (Shipped: 2026-03-12)
 
 **Delivered:** AI 매거진 프론트엔드 풀스택 구현 — LayoutJSON 렌더링 엔진, 3D Bookshelf/Spline Studio 컬렉션, Decoding Ritual 애니메이션, Cinema-to-Action 메인페이지 리뉴얼
@@ -7,6 +17,7 @@
 **Phases completed:** m7-01, m7-02, m7-03 (3 phases, 11 plans)
 
 **Key accomplishments:**
+
 - Magazine theme system (#eafd67 neon) + LayoutJSON types + MagazineRenderer layout engine with 6 components and GSAP orchestration
 - 3D Bookshelf collection page with CSS perspective + GSAP spine pop-out interactions
 - Decoding Ritual animation system — particles, style keywords, glow progress, cinematic sequence
@@ -15,6 +26,7 @@
 - HTML overlay system — IssueDetailPanel (responsive mobile/desktop), CollectionShareSheet, EmptyStudio CTA, BookshelfViewFallback
 
 **Stats:**
+
 - 200 files changed, +18,997 / -515 lines
 - 3 phases, 11 plans, 53 commits
 - 8 days (2026-03-05 → 2026-03-12)
@@ -32,6 +44,7 @@
 **Phases completed:** v4-01 to v4-09 (13 plans total)
 
 **Key accomplishments:**
+
 - Archived v2.1.0 spec snapshot (56 files) + stale path audit (60 issues documented)
 - Built 5 shared foundation docs (component-registry, data-models, api-contracts, store-map, injection-guide)
 - Delivered 14 screen specs across 4 bundles (detail, discovery, creation-AI, user) with verified file paths
@@ -40,6 +53,7 @@
 - Consolidated clean spec structure — 7-entry root, retired 8 legacy bundle dirs
 
 **Stats:**
+
 - 173 files created/modified
 - +22,277 lines of documentation (0 code changes)
 - 9 phases, 13 plans, 29 requirements (100% coverage)
@@ -58,6 +72,7 @@
 **Phases completed:** v3-01 to v3-06 (12 plans total)
 
 **Key accomplishments:**
+
 - Admin route protection with Supabase middleware + is_admin defense-in-depth
 - Dashboard with 5 KPI cards, Recharts traffic chart, today summary (real + mock data)
 - AI Audit with paginated list, hotspot detail modal, inline editing
@@ -66,6 +81,7 @@
 - Server log viewer with filtering, URL-synced pagination, terminal streaming
 
 **Stats:**
+
 - 97 files created/modified
 - +14,605 lines of TypeScript/React
 - 6 phases, 12 plans, ~38 tasks
@@ -105,6 +121,7 @@
   - Type-safe exports from design-system barrel
 
 **Tech Debt Accepted:**
+
 - 15 orphaned components (exported but not integrated into app pages)
 - Integration score: 35% (8/23 actively used)
 - Duplicate implementations for some components (LoginCard, StepIndicator)
@@ -156,6 +173,7 @@
 **Phases completed:** Phase 6 (Foundation) + Tracks A-D (Parallel) = 13 plans total
 
 **Execution Strategy:**
+
 - Phase 6: Sequential on main branch (API client patterns)
 - Tracks A-D: Parallel via git worktrees (독립 기능 영역)
 
@@ -186,6 +204,7 @@
   - Search suggestions (popular/recent)
 
 **Requirements covered:** 34 requirements
+
 - PROF-01~05, POST-01~02, SPOT-01~04, SOLN-01~06
 - VOTE-01~05, CMNT-01~04, RANK-01~03, BDGE-01~03
 - EARN-01~05, SRCH-01~02
@@ -248,6 +267,7 @@
   - CLAUDE.md design system guidelines
 
 **Components implemented:** 25+ design system components
+
 - Typography: Heading, Text
 - Inputs: Input, SearchInput
 - Cards: Card, ProductCard, GridCard, FeedCard, ProfileHeaderCard
@@ -255,6 +275,7 @@
 - Footer: DesktopFooter
 
 **Components deferred to v2.1:** ~60 (from decoded.pen analysis)
+
 - Tags, StepIndicator, Hotspot, EmptyState, ErrorState
 - OAuthButton variants, ArtistCard, StatCard, Badge
 - And more specialized components
