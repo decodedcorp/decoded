@@ -1,9 +1,9 @@
 ---
 phase: 40
 slug: codegen-pipeline-and-custom-mutator
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-23
 ---
 
@@ -36,22 +36,26 @@ created: 2026-03-23
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 40-01-01 | 01 | 1 | INFRA-02 | unit + typecheck | `bun run typecheck` | ❌ W0 | ⬜ pending |
-| 40-02-01 | 02 | 1 | INFRA-04, INFRA-05 | codegen + typecheck | `bun run generate:api && bun run typecheck` | ❌ W0 | ⬜ pending |
-| 40-03-01 | 03 | 2 | INFRA-03, SPEC-04 | pipeline + smoke | `turbo generate && bun run typecheck` | ❌ W0 | ⬜ pending |
+| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
+|---------|------|------|-------------|-----------|-------------------|--------|
+| 40-01-T1 | 01 | 1 | INFRA-02 | file + typecheck | `test -f packages/web/lib/api/mutator/custom-instance.ts && cd packages/web && bun run typecheck` | pending |
+| 40-01-T2 | 01 | 1 | INFRA-04, INFRA-05 | config validation | `grep -q "afterAllFilesWrite" packages/web/orval.config.ts && grep -q "fileExtension.*\.zod\.ts" packages/web/orval.config.ts` | pending |
+| 40-02-T1 | 02 | 2 | INFRA-03 | script + config | `grep -q '"generate:api"' packages/web/package.json && grep -q '"generate:api"' package.json && grep -q '"generate"' turbo.json` | pending |
+| 40-02-T2 | 02 | 2 | SPEC-04 | pipeline + smoke | `cd packages/web && bun run generate:api && bun run typecheck && test "$(grep -rc 'api/v1/api/v1' lib/api/generated/ 2>/dev/null \| awk -F: '{s+=$2}END{print s}')" = "0"` | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `packages/web/lib/api/generated/` — directory created by codegen (Plan 40-02 output)
-- [ ] `packages/web/lib/api/mutator.ts` — custom mutator file (Plan 40-01 output)
+All Wave 0 artifacts are created by plan tasks — no external pre-requisites:
 
-*Existing vitest + typecheck infrastructure covers validation needs.*
+- [x] `packages/web/lib/api/mutator/custom-instance.ts` — created by 40-01-T1
+- [x] `packages/web/orval.config.ts` hooks block — created by 40-01-T2
+- [x] `packages/web/lib/api/generated/` — populated by 40-02-T2 (orval generate)
+
+*Existing vitest + typecheck infrastructure covers validation needs. No additional test scaffolding required.*
 
 ---
 
@@ -66,11 +70,11 @@ created: 2026-03-23
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify commands
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
