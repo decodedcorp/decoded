@@ -10,7 +10,7 @@ globs: "**/*"
 - `packages/shared/` — Shared types, hooks, Supabase queries
 - `packages/mobile/` — Expo 54 React Native
 - `packages/api-server/` — Rust/Axum API server (independent Cargo workspace)
-- `packages/ai-server/` — Python AI / gRPC (Poetry; former decoded-ai)
+- `packages/ai-server/` — Python AI / gRPC (uv; former decoded-ai)
 
 ## Package Manager
 - **bun** (not yarn/npm). Use `bun run`, `bun add`, `bunx`.
@@ -32,7 +32,7 @@ globs: "**/*"
 - `cd packages/api-server && cargo build`
 
 ## AI server (Python)
-- Poetry in `packages/ai-server`; `poetry run python -m src.main` or `bun run dev:ai-server` from root
+- uv in `packages/ai-server`; `uv run python -m src.main` or `bun run dev:ai-server` from root (after `uv sync`)
 
 ## Environment
 - Copy `packages/web/.env.local.example` → `.env.local`
