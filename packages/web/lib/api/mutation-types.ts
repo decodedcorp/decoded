@@ -3,9 +3,6 @@
  * These have NO generated equivalents — they are used by code paths
  * excluded from Orval generation (binary uploads, server functions,
  * Supabase-direct mutations).
- *
- * Phase 42 will migrate mutations to generated hooks and further
- * reduce this file.
  */
 
 // ============================================================
@@ -219,15 +216,6 @@ export interface PostsListParams {
 }
 
 // ============================================================
-// Post Update/Delete API Types
-// PATCH /api/v1/posts/{post_id}
-// ============================================================
-
-export interface PostResponse extends Post {
-  // Full post response after update (same as Post type)
-}
-
-// ============================================================
 // Extract Post Metadata API (for post creation)
 // POST /api/v1/posts/extract-metadata
 // ============================================================
@@ -239,128 +227,6 @@ export interface ExtractPostMetadataRequest {
 export interface ExtractPostMetadataResponse {
   title?: string;
   media_metadata: MediaMetadataItem[];
-}
-
-// ============================================================
-// Spot API Types (mutation paths)
-// POST /api/v1/posts/{post_id}/spots
-// PATCH /api/v1/spots/{spot_id}
-// DELETE /api/v1/spots/{spot_id}
-// ============================================================
-
-export interface Spot {
-  id: string;
-  post_id: string;
-  position_left: string; // e.g., "45.5%"
-  position_top: string; // e.g., "30.2%"
-  category_id: string;
-  category?: unknown; // Populated on GET
-  solution_count: number;
-  created_at: string;
-}
-
-export interface SpotListResponse {
-  data: Spot[];
-}
-
-// ============================================================
-// Solution API Types (mutation paths)
-// POST /api/v1/spots/{spot_id}/solutions
-// PATCH /api/v1/solutions/{solution_id}
-// DELETE /api/v1/solutions/{solution_id}
-// ============================================================
-
-export interface Solution {
-  id: string;
-  spot_id: string;
-  user_id: string;
-  user?: PostUser; // Populated on GET
-  product_url: string;
-  affiliate_url: string | null;
-  product_name: string | null;
-  brand: string | null;
-  price: number | null;
-  currency: string | null;
-  image_url: string | null;
-  vote_count: number;
-  is_adopted: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-/** GET /api/v1/spots/{spot_id}/solutions - Backend returns array directly */
-export interface SolutionListItem {
-  id: string;
-  user: PostUser;
-  match_type?: string | null;
-  link_type?: string | null;
-  title: string;
-  metadata?: Record<string, unknown> | null;
-  thumbnail_url?: string | null;
-  original_url?: string | null;
-  affiliate_url?: string | null;
-  vote_stats: { accurate: number; different: number };
-  is_verified: boolean;
-  is_adopted: boolean;
-  created_at: string;
-}
-
-/** Backend CreateSolutionDto - original_url, affiliate_url, title, metadata, description, thumbnail_url */
-export interface CreateSolutionDto {
-  original_url: string;
-  affiliate_url?: string | null;
-  title?: string | null;
-  metadata?: Record<string, unknown> | null;
-  description?: string | null;
-  comment?: string | null;
-  thumbnail_url?: string | null;
-}
-
-/** Manual UpdateSolutionDto — Phase 42 will replace with generated mutation */
-export interface ManualUpdateSolutionDto {
-  product_url?: string;
-  product_name?: string;
-  brand?: string;
-  price?: number;
-  currency?: string;
-  image_url?: string;
-}
-
-// Solution metadata extraction
-export interface ExtractMetadataRequest {
-  url: string;
-}
-
-export interface ExtractMetadataResponse {
-  url?: string;
-  title?: string | null;
-  description?: string | null;
-  thumbnail_url?: string | null;
-  image?: string | null;
-  site_name?: string | null;
-  /** 제휴 링크 지원 여부 (백엔드 MetadataResponse) */
-  is_affiliate_supported?: boolean;
-  extra_metadata?: { price?: string; currency?: string; brand?: string } | null;
-  /** @deprecated use title */
-  product_name?: string | null;
-  /** @deprecated use title */
-  brand?: string | null;
-  /** @deprecated use extra_metadata.price */
-  price?: number | null;
-  /** @deprecated use extra_metadata.currency */
-  currency?: string | null;
-  /** @deprecated use thumbnail_url */
-  image_url?: string | null;
-}
-
-// Affiliate link conversion
-export interface ConvertAffiliateRequest {
-  url: string;
-}
-
-export interface ConvertAffiliateResponse {
-  affiliate_url: string;
-  original_url: string;
 }
 
 // ============================================================
