@@ -324,9 +324,8 @@ Plans:
 
 Plans:
 
-- [ ] 40-01: `lib/api/mutator.ts` 구현 — Supabase JWT 주입, empty-string baseURL, 에러 핸들링 (INFRA-02)
-- [ ] 40-02: `orval.config.ts` 완성 — tags-split, 업로드 제외, Zod config 블록, afterAllFilesWrite (INFRA-04, INFRA-05)
-- [ ] 40-03: Turborepo 파이프라인 + generate 스크립트 + 스모크 테스트 (INFRA-03, SPEC-04)
+- [ ] 40-01-PLAN.md — Custom mutator + orval.config.ts hooks + .gitignore (INFRA-02, INFRA-04, INFRA-05)
+- [ ] 40-02-PLAN.md — Turborepo pipeline + generate script + smoke test (INFRA-03, SPEC-04)
 
 ### Phase 41: Read Hook Migration
 
@@ -411,7 +410,7 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | m10-03: Turborepo Integration & Unified Dev   | v8.0      | 0/TBD          | Not started   | -          |
 | m10-04: Docker & CI/CD Unification            | v8.0      | 0/TBD          | Not started   | -          |
 | 39: Setup and Spec Validation                 | v9.0      | 0/2            | Planning done | -          |
-| 40: Codegen Pipeline and Custom Mutator       | v9.0      | 0/TBD          | Not started   | -          |
+| 40: Codegen Pipeline and Custom Mutator       | v9.0      | 0/2            | Planning done | -          |
 | 41: Read Hook Migration                       | v9.0      | 0/TBD          | Not started   | -          |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 0/TBD          | Not started   | -          |
 | 43: CI Hardening and Tooling                  | v9.0      | 0/TBD          | Not started   | -          |
