@@ -340,14 +340,14 @@ Plans:
 4. admin 도메인(dashboard, ai-cost, audit, pipeline, server-logs)에서 수동 파일이 삭제되고 생성 훅으로 교체된다
 5. `lib/api/types.ts`가 삭제되고 모든 타입이 `lib/api/generated/model/`에서 import된다 — 타입 중복 충돌이 import aliasing으로 해결된다
 
-**Plans**: 2 plans
+**Plans**: 4 plans
 
 Plans:
 
-- [ ] 41-01: badges, rankings, categories Read 마이그레이션 + types.ts 타입 중복 감사 (MIG-01, MIG-08)
-- [ ] 41-02: comments, spots, solutions Read 마이그레이션 (MIG-02)
-- [ ] 41-03: users, posts Read 마이그레이션 (MIG-03)
-- [ ] 41-04: admin 도메인 Read 마이그레이션 + types.ts 삭제 (MIG-04, MIG-08)
+- [ ] 41-01-PLAN.md — badges, rankings, categories Read 마이그레이션 + types.ts 타입 중복 감사 (MIG-01, MIG-08)
+- [ ] 41-02-PLAN.md — comments, spots, solutions Read 마이그레이션 (MIG-02)
+- [ ] 41-03-PLAN.md — users, posts Read 마이그레이션 (MIG-03)
+- [ ] 41-04-PLAN.md — admin 도메인 Read 마이그레이션 + types.ts 삭제 (MIG-04, MIG-08)
 
 ### Phase 42: Mutation Migration and Cache Wiring
 
