@@ -7,7 +7,7 @@
 
 ### Infrastructure (코드 생성 파이프라인)
 
-- [ ] **INFRA-01**: Orval, axios, zod 패키지 설치 및 orval.config.ts 작성 (react-query + zod 두 config 블록)
+- [x] **INFRA-01**: Orval, axios, zod 패키지 설치 및 orval.config.ts 작성 (react-query + zod 두 config 블록)
 - [ ] **INFRA-02**: 커스텀 mutator 구현 (Supabase JWT 인증 + baseURL="" Next.js 프록시 라우팅 + 에러 핸들링 — 기존 lib/api/client.ts apiClient() 대체)
 - [ ] **INFRA-03**: generate:api bun 스크립트 + Turborepo 파이프라인 통합 (빌드 전 자동 실행)
 - [ ] **INFRA-04**: Zod 스키마 생성 설정 (별도 config 블록, .zod.ts 확장자, 응답/요청 body 검증)
@@ -17,7 +17,7 @@
 
 - [ ] **SPEC-01**: 백엔드 OpenAPI 스펙 버전 확인 (3.0 vs 3.1) 및 utoipa nullable 이슈 검증
 - [ ] **SPEC-02**: 전체 엔드포인트 operationId 검증 (존재 + 중복 없음 + camelCase verbNoun 패턴) 및 태그 매핑 검증
-- [ ] **SPEC-03**: 업로드/multipart 엔드포인트 명시적 목록화 (POST /posts/upload 등) 및 Orval config 제외 설정
+- [x] **SPEC-03**: 업로드/multipart 엔드포인트 명시적 목록화 (POST /posts/upload 등) 및 Orval config 제외 설정
 - [ ] **SPEC-04**: 파이프라인 스모크 테스트 (단일 엔드포인트로 생성 → 빌드 → 실행 검증)
 - [ ] **SPEC-05**: 무한 스크롤 엔드포인트 식별 및 pagination 파라미터 확인 (cursor/page/offset)
 
@@ -80,14 +80,14 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 39 | Pending |
+| INFRA-01 | Phase 39 | Complete |
 | INFRA-02 | Phase 40 | Pending |
 | INFRA-03 | Phase 40 | Pending |
 | INFRA-04 | Phase 40 | Pending |
 | INFRA-05 | Phase 40 | Pending |
 | SPEC-01 | Phase 39 | Pending |
 | SPEC-02 | Phase 39 | Pending |
-| SPEC-03 | Phase 39 | Pending |
+| SPEC-03 | Phase 39 | Complete |
 | SPEC-04 | Phase 40 | Pending |
 | SPEC-05 | Phase 39 | Pending |
 | MIG-01 | Phase 41 | Pending |

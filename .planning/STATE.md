@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.0
-milestone_name: Type-Safe API Generation
-status: ready_to_plan
-stopped_at: Roadmap created — Phase 39 ready to plan
-last_updated: "2026-03-23T18:30:00.000Z"
+milestone: v6.0
+milestone_name: Behavioral Intelligence & Dynamic UI
+status: unknown
+stopped_at: Completed 39-01-PLAN.md
+last_updated: "2026-03-23T10:38:31.875Z"
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 37
+  completed_phases: 34
+  total_plans: 82
+  completed_plans: 80
 ---
 
 # Project State
@@ -19,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** v9.0 Type-Safe API Generation — Phase 39: Setup and Spec Validation
+**Current focus:** Phase 39 — setup-spec-validation
 
 ## Current Position
 
-Phase: 39 of 43 (Setup and Spec Validation)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-03-23 — Roadmap created, 28 requirements mapped to 5 phases
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 39 (setup-spec-validation) — EXECUTING
+Plan: 1 of 2
 
 ## Milestone Summary
 
@@ -51,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Recent decisions from v8.0:
+
 - [v8.0]: bun hoisted strategy with bunfig.toml
 - [v8.0]: Backend stays OUTSIDE bun workspaces (Cargo independent)
 - [v8.0]: Root workspaces explicit list (not glob) to prevent backend inclusion
@@ -58,11 +55,15 @@ Recent decisions from v8.0:
 - [v8.0]: proxy.ts replaces middleware.ts (Next.js 16 convention)
 
 v9.0 key constraints (from research):
+
 - [v9.0]: Use zod v3 (not v4) — Orval Zod v4 compat bugs #2249/#2304 active
 - [v9.0]: mutator baseURL must be empty string — OpenAPI paths already include /api/v1/
 - [v9.0]: Upload endpoints excluded from Orval permanently (binary/multipart not representable)
 - [v9.0]: Never put generated hooks in packages/shared (No QueryClient set error — TanStack #3595)
 - [v9.0]: Migrate per-endpoint atomically — no dual hooks on same endpoint simultaneously
+- [Phase 39]: zod pinned to ^3.25 (NOT v4) — Orval zod v4 compat bugs #2249/#2304 active
+- [Phase 39]: httpClient: axios explicit in orval.config.ts — Orval 8 defaults to fetch without this setting
+- [Phase 39]: input.target '../api-server/openapi.json' — Orval resolves paths relative to config file (packages/web/)
 
 ### Blockers/Concerns
 
@@ -73,12 +74,13 @@ v9.0 key constraints (from research):
 ### Pending Todos
 
 **From v2-09-03 Visual QA:**
+
 1. Quick task: Fix images page raw JSON error exposure (API error handling - major UX/security)
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:30:00.000Z
-Stopped at: Roadmap created — 5 phases (39-43), 28/28 requirements mapped
+Last session: 2026-03-23T10:38:31.872Z
+Stopped at: Completed 39-01-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`
