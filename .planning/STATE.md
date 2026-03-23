@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 41-01-PLAN.md
-last_updated: "2026-03-23T13:39:51.582Z"
+stopped_at: Completed 41-02-PLAN.md
+last_updated: "2026-03-23T13:47:45.979Z"
 progress:
   total_phases: 39
   completed_phases: 36
   total_plans: 88
-  completed_plans: 84
+  completed_plans: 85
 ---
 
 # Project State
@@ -73,6 +73,9 @@ v9.0 key constraints (from research):
 - [Phase 41-01]: Import-alias pattern for generated hooks: import with 'as *Generated' suffix to avoid name collision
 - [Phase 41-01]: Cache key preservation: pass profileKeys.badges()/rankings()/CATEGORIES_QUERY_KEY into generated hook's query.queryKey
 - [Phase 41-01]: null-to-undefined coercion in badge-mapper: generated types use string|null, store Badge.description expects string|undefined
+- [Phase 41-02]: Split import pattern: read hooks from generated, mutation functions still from manual API files
+- [Phase 41-02]: SolutionLike.metadata widened to unknown; parseSolutionMetadata accepts unknown — generated SolutionListItem.metadata is unknown per OpenAPI spec
+- [Phase 41-02]: setQueryData<any> on spot mutation hooks for transition period — Phase 42 will wire mutations to generated types
 
 ### Blockers/Concerns
 
@@ -89,8 +92,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:39:51.579Z
-Stopped at: Completed 41-01-PLAN.md
+Last session: 2026-03-23T13:47:45.976Z
+Stopped at: Completed 41-02-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`

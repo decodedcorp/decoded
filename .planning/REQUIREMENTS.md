@@ -24,7 +24,7 @@
 ### Migration (수동 코드 → 생성 코드 교체)
 
 - [x] **MIG-01**: Read hook 마이그레이션 — badges, rankings, categories 도메인
-- [ ] **MIG-02**: Read hook 마이그레이션 — comments, spots, solutions 도메인
+- [x] **MIG-02**: Read hook 마이그레이션 — comments, spots, solutions 도메인
 - [ ] **MIG-03**: Read hook 마이그레이션 — users, posts 도메인
 - [ ] **MIG-04**: Read hook 마이그레이션 — admin 도메인 (dashboard, ai-cost, audit, pipeline, server-logs)
 - [ ] **MIG-05**: Mutation hook 마이그레이션 — POST/PATCH/DELETE + onSuccess 캐시 무효화 연결
@@ -91,7 +91,7 @@
 | SPEC-04 | Phase 40 | Complete |
 | SPEC-05 | Phase 39 | Complete |
 | MIG-01 | Phase 41 | Complete |
-| MIG-02 | Phase 41 | Pending |
+| MIG-02 | Phase 41 | Complete |
 | MIG-03 | Phase 41 | Pending |
 | MIG-04 | Phase 41 | Pending |
 | MIG-05 | Phase 42 | Pending |
