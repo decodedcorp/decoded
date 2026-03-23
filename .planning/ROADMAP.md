@@ -358,16 +358,16 @@ Plans:
 
 1. 모든 POST/PATCH/DELETE 훅이 생성된 `useMutation` 훅으로 교체되고 `onSuccess` 콜백이 call site에서 구현된다
 2. `useUpdateProfile` 등 Zustand 스토어를 동기화하는 mutation의 `onSuccess`에서 스토어 업데이트가 여전히 실행된다 — 프로필 수정 후 헤더 아바타가 즉시 업데이트된다
-3. `lib/api/client.ts`와 `lib/hooks/*.ts` wrapper 파일이 모두 삭제된다
+3. `lib/api/comments.ts`, `lib/api/spots.ts`, `lib/api/solutions.ts` 수동 API wrapper 파일이 삭제된다 (client.ts는 postLikes/savedPosts/posts가 아직 사용하여 보존)
 4. Supabase 직접 쿼리와 Orval 생성 쿼리 간의 캐시 무효화 경계가 문서화되고 `queryClient.invalidateQueries()`가 필요한 지점에 명시적으로 배치된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
-- [ ] 42-01: Mutation 훅 마이그레이션 — POST/PATCH/DELETE, onSuccess 캐시 무효화 call site 이전 (MIG-05)
-- [ ] 42-02: Zustand 스토어 동기화 패턴 보존 + 캐시 경계 문서화 (MIG-06, MIG-09)
-- [ ] 42-03: 수동 코드 삭제 — lib/api/client.ts, lib/api/*.ts, lib/hooks/*.ts (MIG-07)
+- [ ] 42-01-PLAN.md — Mutation 훅 마이그레이션: comments/spots/solutions/posts 도메인 + 캐시 경계 문서화 (MIG-05, MIG-09)
+- [ ] 42-02-PLAN.md — useUpdateProfile REST 전환 + Zustand 스토어 동기화 보존 (MIG-06)
+- [ ] 42-03-PLAN.md — 수동 API wrapper 삭제: comments.ts, spots.ts, solutions.ts + index.ts 정리 (MIG-07)
 
 ### Phase 43: CI Hardening and Tooling
 
@@ -412,7 +412,7 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 39: Setup and Spec Validation                 | v9.0      | 0/2            | Planning done | -          |
 | 40: Codegen Pipeline and Custom Mutator       | v9.0      | 0/2            | Planning done | -          |
 | 41: Read Hook Migration                       | v9.0      | 0/TBD          | Not started   | -          |
-| 42: Mutation Migration and Cache Wiring       | v9.0      | 0/TBD          | Not started   | -          |
+| 42: Mutation Migration and Cache Wiring       | v9.0      | 0/3            | Planning done | -          |
 | 43: CI Hardening and Tooling                  | v9.0      | 0/TBD          | Not started   | -          |
 
 ---
