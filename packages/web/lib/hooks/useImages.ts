@@ -17,7 +17,8 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { fetchPosts, fetchPostDetail, fetchPostMagazine } from "@/lib/api/posts";
+import { fetchPostMagazine } from "@/lib/api/posts";
+import { listPosts, getPost } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
 import type {
   CategoryFilter,

@@ -10,7 +10,8 @@ import {
   type PostDetail,
   type LegacyPostDetail,
 } from "@/lib/supabase/queries/posts";
-import { fetchPosts, updatePost, deletePost } from "@/lib/api/posts";
+import { listPosts } from "@/lib/api/generated/posts/posts";
+import { updatePost, deletePost } from "@/lib/api/posts";
 import type {
   Post,
   PostsListResponse,
@@ -110,7 +111,7 @@ export function useInfinitePosts(params: UseInfinitePostsParams = {}) {
     queryFn: async ({ pageParam }): Promise<PostsPage> => {
       const page = (pageParam as number) ?? 1;
 
-      const apiParams: PostsListParams = {
+      const response = await listPosts({
         page,
         per_page: perPage,
         sort,
@@ -119,12 +120,10 @@ export function useInfinitePosts(params: UseInfinitePostsParams = {}) {
         context,
         category,
         user_id: userId,
-      };
-
-      const response: PostsListResponse = await fetchPosts(apiParams);
+      });
 
       return {
-        items: response.data,
+        items: response.data as any as Post[],
         currentPage: response.pagination.current_page,
         totalPages: response.pagination.total_pages,
         hasMore:

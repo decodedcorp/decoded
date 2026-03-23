@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { fetchPostDetail } from "@/lib/api/posts";
+import { getPost } from "@/lib/api/generated/posts/posts";
 import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/types";
 import type { StyleCardData } from "./StyleCard";
 import { cn } from "@/lib/utils";
@@ -251,14 +251,11 @@ export function DecodedSolutionsSection({
     const ids = idsKey ? idsKey.split(",") : [];
     if (ids.length === 0) return;
     let cancelled = false;
-    Promise.allSettled(ids.map((id) => fetchPostDetail(id))).then((results) => {
+    Promise.allSettled(ids.map((id) => getPost(id))).then((results) => {
       if (cancelled) return;
       const list = results
-        .filter(
-          (r): r is PromiseFulfilledResult<PostDetailResponse> =>
-            r.status === "fulfilled"
-        )
-        .map((r) => r.value);
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<unknown>).value as PostDetailResponse);
       setDetails(list);
     });
     return () => {

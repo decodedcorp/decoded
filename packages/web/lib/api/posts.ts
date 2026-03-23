@@ -19,7 +19,6 @@ import {
   PostsListParams,
   UpdatePostDto,
   PostResponse,
-  PostDetailResponse,
   PostMagazineResponse,
   ApiError,
 } from "./types";
@@ -381,13 +380,13 @@ export async function createPostWithSolution(
 }
 
 // ============================================================
-// Fetch Posts List
+// Fetch Posts List (server-side only)
 // GET /api/v1/posts
-// 인증 불필요
+// For use in server components where generated hooks (React Query) are not available
 // ============================================================
 
 /**
- * Build query string from PostsListParams
+ * Build query string from PostsListParams (used by fetchPostsServer)
  */
 function buildPostsQueryString(params?: PostsListParams): string {
   if (!params) return "";
@@ -410,21 +409,6 @@ function buildPostsQueryString(params?: PostsListParams): string {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : "";
-}
-
-/**
- * Fetch posts list from API
- */
-export async function fetchPosts(
-  params?: PostsListParams
-): Promise<PostsListResponse> {
-  const queryString = buildPostsQueryString(params);
-
-  return apiClient<PostsListResponse>({
-    path: `/api/v1/posts${queryString}`,
-    method: "GET",
-    requiresAuth: false,
-  });
 }
 
 /**
@@ -460,21 +444,6 @@ export async function fetchPostsServer(
   }
 
   return response.json();
-}
-
-// ============================================================
-// Fetch Post Detail (spots + top_solution per spot)
-// GET /api/v1/posts/{postId}
-// ============================================================
-
-export async function fetchPostDetail(
-  postId: string
-): Promise<PostDetailResponse> {
-  return apiClient<PostDetailResponse>({
-    path: `/api/v1/posts/${postId}`,
-    method: "GET",
-    requiresAuth: false,
-  });
 }
 
 // ============================================================
