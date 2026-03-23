@@ -12,6 +12,7 @@
 - [ ] **v6.0 Behavioral Intelligence & Dynamic UI** — m8-Phases 01-03 (paused)
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
+- [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
 
 ## Phases
 
@@ -93,6 +94,19 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 - [ ] **Phase m10-03: Turborepo Integration & Unified Dev** - turbo.json 설정, backend thin wrapper, bunx turbo dev 통합 기동
 - [ ] **Phase m10-04: Docker & CI/CD Unification** - docker-compose 루트 통합, path-based GitHub Actions 워크플로우
 
+<details>
+<summary>✅ v9.0 Type-Safe API Generation (Phases 39-43) — SHIPPED 2026-03-24</summary>
+
+See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
+
+- [x] Phase 39: Setup and Spec Validation (2/2 plans) — completed 2026-03-23
+- [x] Phase 40: Codegen Pipeline and Custom Mutator (2/2 plans) — completed 2026-03-23
+- [x] Phase 41: Read Hook Migration (4/4 plans) — completed 2026-03-23
+- [x] Phase 42: Mutation Migration and Cache Wiring (3/3 plans) — completed 2026-03-23
+- [x] Phase 43: CI Hardening and Tooling (3/3 plans) — completed 2026-03-24
+
+</details>
+
 ## Phase Details
 
 ### Phase m8-01: Event Tracking Infrastructure
@@ -166,7 +180,7 @@ Plans:
 4. 하단 네비게이션이 표시되며 기존 `/lab/main-b` LabBottomNav 패턴을 재사용한다
 5. 기존 서버 쿼리(posts, items, trending keywords)로 실제 데이터가 표시된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -185,7 +199,7 @@ Plans:
 3. 카드를 클릭하고 드래그하면 캔버스 내 위치가 변경되며, 놓으면 inertia throw로 자연스럽게 멈춘다 (GSAP Draggable + InertiaPlugin)
 4. StickerPeel로 스티커를 벗기면 뒷면에 아이템 브랜드명, 가격, CTA 버튼이 표시된다
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 
@@ -205,7 +219,7 @@ Plans:
 3. 아이템 카드 근처에 말풍선 형태의 가격태그 스티커가 브랜드명과 가격 정보를 표시한다
 4. 카드에 테이프 스트립 또는 washi 보더 데코레이터가 적용되어 handmade 콜라주 질감이 완성된다
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 
@@ -226,7 +240,7 @@ Plans:
 4. `bun run dev`로 Next.js dev 서버가 localhost:3000에서 정상 기동된다
 5. `bun run build`로 프로덕션 빌드가 성공하고 GSAP Club 프라이빗 레지스트리 패키지가 포함된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -244,7 +258,7 @@ Plans:
 2. `cd packages/api-server && cargo build`가 성공하고 백엔드 바이너리가 생성된다
 3. Backend의 pre-push hooks와 justfile 경로가 모노레포 루트 기준으로 올바르게 수정되어 `cd packages/api-server && cargo test`가 실행된다
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 ### Phase m10-03: Turborepo Integration & Unified Dev
 
@@ -259,7 +273,7 @@ Plans:
 4. packages/api-server/package.json에 `cargo build/dev/test/clippy`가 npm scripts로 선언되어 있으며 Turborepo가 이를 오케스트레이션한다
 5. 통합 `.env.local.example`에 프론트엔드와 백엔드 환경변수가 모두 문서화되어 있다
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 ### Phase m10-04: Docker & CI/CD Unification
 
@@ -274,12 +288,14 @@ Plans:
 4. backend-ci.yml에서 `cargo fmt --check`, `cargo clippy`, `cargo test`가 모두 통과한다
 5. frontend-ci.yml에서 `bun install --frozen-lockfile`, `bunx turbo run build`, `bun run lint`가 모두 통과한다
 
-**Plans**: TBD
+**Plans**: 3 plans
+
 
 ## Progress
 
 **Execution Order:**
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
+v9.0: 39 → 40 → 41 → 42 → 43
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
@@ -290,11 +306,16 @@ v8.0: m10-01 → m10-02 → m10-03 → m10-04
 | m9-02: StickerPeel Interactivity & Drag       | v7.0      | 0/3            | Not started   | -          |
 | m9-03: Visual Polish                          | v7.0      | 0/3            | Not started   | -          |
 | m10-01: Package Manager Migration             | v8.0      | 0/2            | Planning done | -          |
-| m10-02: Backend Repository Merge              | v8.0      | 0/TBD          | Not started   | -          |
+| m10-02: Backend Repository Merge             | v8.0      | 0/TBD          | Not started   | -          |
 | m10-03: Turborepo Integration & Unified Dev   | v8.0      | 0/TBD          | Not started   | -          |
 | m10-04: Docker & CI/CD Unification            | v8.0      | 0/TBD          | Not started   | -          |
+| 39: Setup and Spec Validation                 | v9.0      | 2/2            | Complete      | 2026-03-23 |
+| 40: Codegen Pipeline and Custom Mutator       | v9.0      | 2/2            | Complete      | 2026-03-23 |
+| 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
+| 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
+| 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-22 (m10-01 planned: 2 plans in 2 waves)_
+_Last updated: 2026-03-23 (v9.0 Phases 39-43 added, 28 requirements mapped)_

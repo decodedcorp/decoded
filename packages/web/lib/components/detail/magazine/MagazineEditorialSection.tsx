@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import type { PostMagazineEditorialSection } from "@/lib/api/types";
+import type { PostMagazineEditorialSection } from "@/lib/api/mutation-types";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);

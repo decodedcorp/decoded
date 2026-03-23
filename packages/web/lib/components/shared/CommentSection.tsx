@@ -10,7 +10,7 @@ import {
   useCreateComment,
   useDeleteComment,
 } from "@/lib/hooks/useComments";
-import type { CommentResponse } from "@/lib/api/comments";
+import type { CommentResponse } from "@/lib/api/generated/models";
 
 export interface CommentSectionProps {
   postId: string;
@@ -37,7 +37,7 @@ function CommentItem({
   const hasReplies = comment.replies && comment.replies.length > 0;
   const displayName =
     comment.user.display_name || comment.user.username || "User";
-  const createdAt = new Date(comment.created_at * 1000).toISOString();
+  const createdAt = new Date(comment.created_at).toISOString();
   const isOwner = currentUserId === comment.user_id;
 
   return (

@@ -9,7 +9,7 @@ import { ExternalLink } from "lucide-react";
 import type {
   PostMagazineSpotItem,
   PostMagazineRelatedItem,
-} from "@/lib/api/types";
+} from "@/lib/api/mutation-types";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);

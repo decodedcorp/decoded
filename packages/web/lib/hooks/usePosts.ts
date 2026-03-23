@@ -10,14 +10,13 @@ import {
   type PostDetail,
   type LegacyPostDetail,
 } from "@/lib/supabase/queries/posts";
-import { fetchPosts, updatePost, deletePost } from "@/lib/api/posts";
+import { listPosts, updatePost as updatePostGenerated, deletePost as deletePostGenerated } from "@/lib/api/generated/posts/posts";
 import type {
   Post,
   PostsListResponse,
   PostsListParams,
-  UpdatePostDto,
-  PostResponse,
-} from "@/lib/api/types";
+} from "@/lib/api/mutation-types";
+import type { UpdatePostDto, PostResponse } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -110,7 +109,7 @@ export function useInfinitePosts(params: UseInfinitePostsParams = {}) {
     queryFn: async ({ pageParam }): Promise<PostsPage> => {
       const page = (pageParam as number) ?? 1;
 
-      const apiParams: PostsListParams = {
+      const response = await listPosts({
         page,
         per_page: perPage,
         sort,
@@ -119,12 +118,10 @@ export function useInfinitePosts(params: UseInfinitePostsParams = {}) {
         context,
         category,
         user_id: userId,
-      };
-
-      const response: PostsListResponse = await fetchPosts(apiParams);
+      });
 
       return {
-        items: response.data,
+        items: response.data as any as Post[],
         currentPage: response.pagination.current_page,
         totalPages: response.pagination.total_pages,
         hasMore:
@@ -152,10 +149,11 @@ export function useUpdatePost() {
 
   return useMutation({
     mutationFn: ({ postId, data }: { postId: string; data: UpdatePostDto }) =>
-      updatePost(postId, data),
-    onSuccess: (updatedPost, { postId }) => {
-      // Update cache with new data
-      queryClient.setQueryData(postKeys.detail(postId), updatedPost);
+      updatePostGenerated(postId, data),
+    onSuccess: (_, { postId }) => {
+      // Invalidate detail — postKeys.detail holds Supabase PostDetail shape,
+      // not PostResponse, so setQueryData would be a cross-boundary type mismatch
+      queryClient.invalidateQueries({ queryKey: postKeys.detail(postId) });
       // Invalidate lists to reflect changes
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
     },
@@ -173,7 +171,7 @@ export function useDeletePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (postId: string) => deletePost(postId),
+    mutationFn: (postId: string) => deletePostGenerated(postId),
     onSuccess: (_, postId) => {
       // Remove from detail cache
       queryClient.removeQueries({ queryKey: postKeys.detail(postId) });

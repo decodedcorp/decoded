@@ -16,6 +16,15 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$_self")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
+echo "=== 0. API Spec Drift Check ==="
+if [ -f "../api-server/openapi.json" ]; then
+  bun run generate:api
+  echo "    Regeneration complete — TypeScript check will catch drift"
+else
+  echo "    WARNING: ../api-server/openapi.json not found — skipping generation"
+  echo "    (api-server directory required for spec drift detection)"
+fi
+
 echo "=== 1. ESLint ==="
 bun run lint
 

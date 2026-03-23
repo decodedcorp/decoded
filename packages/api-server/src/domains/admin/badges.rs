@@ -156,6 +156,7 @@ pub async fn delete_badge(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/badges",
+    operation_id = "admin_list_badges",
     tag = "admin",
     security(
         ("bearer_auth" = [])

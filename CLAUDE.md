@@ -47,6 +47,26 @@ Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · S
 - **Supabase** required for typical data/auth flows
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
 
+## Generated API Code
+
+> `packages/web/lib/api/generated/` is auto-generated. **NEVER manually edit** these files.
+
+| Rule | Detail |
+|------|--------|
+| Source of truth | `packages/api-server/openapi.json` (Rust backend utoipa) |
+| Generator | Orval 8.5.3 -- config: `packages/web/orval.config.ts` |
+| Regenerate | `cd packages/web && bun run generate:api` |
+| Git status | Gitignored (only `.gitkeep` tracked) -- always regenerated locally |
+| Extend behavior | Edit `lib/api/mutator/custom-instance.ts` or `orval.config.ts` -- not generated files |
+| Zod schemas | `lib/api/generated/zod/decodedApi.zod.ts` -- single file, all endpoint schemas |
+| Upload endpoints | Excluded from generation (4 multipart POST endpoints) -- see `orval.config.ts` transformer |
+
+When adding a new API endpoint:
+1. Update the backend OpenAPI spec (`packages/api-server/`)
+2. Copy the updated `openapi.json` to `packages/api-server/openapi.json`
+3. Run `cd packages/web && bun run generate:api`
+4. Import the generated hook from `@/lib/api/generated/{tag}/{operationId}`
+
 ## Git workflow
 
 요약: `main` 직접 push 금지, PR로만 머지. 브랜치 접두사·커밋·리뷰 절차는 **[docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md)**.

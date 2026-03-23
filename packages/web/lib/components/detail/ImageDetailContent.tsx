@@ -3,7 +3,7 @@
 import { RefObject, useCallback, useMemo, useRef, useState } from "react";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
-import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/types";
+import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/mutation-types";
 import type { Json } from "@/lib/supabase/types";
 import { normalizeItem, solutionToShopItem } from "./types";
 import type { UiItem } from "./types";

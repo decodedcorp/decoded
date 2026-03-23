@@ -4,7 +4,8 @@
  */
 
 import { create } from "zustand";
-import type { UserResponse, UserStatsResponse } from "@/lib/api/types";
+import type { UserResponse } from "@/lib/api/generated/models";
+import type { UserStatsResponse } from "@/lib/api/generated/models";
 
 // Types
 export interface ProfileUser {

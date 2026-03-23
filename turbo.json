@@ -1,9 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "generate:api": {
+      "outputs": ["lib/api/generated/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate:api"],
       "outputs": [".next/**", "dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["generate:api"]
     },
     "dev": {
       "cache": false,
@@ -12,6 +18,8 @@
     "lint": {
       "dependsOn": ["^build"]
     },
-    "test": {}
+    "test": {
+      "dependsOn": ["generate:api"]
+    }
   }
 }

@@ -81,7 +81,7 @@ export interface SolutionLike {
   thumbnail_url?: string | null;
   original_url?: string | null;
   affiliate_url?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: unknown;
 }
 
 /**

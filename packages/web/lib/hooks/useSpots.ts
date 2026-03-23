@@ -4,18 +4,17 @@
  */
 
 import {
-  useQuery,
   useMutation,
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
 import {
-  fetchSpots,
-  createSpot,
-  updateSpot,
-  deleteSpot,
-} from "@/lib/api/spots";
-import type { Spot, CreateSpotDto, UpdateSpotDto } from "@/lib/api/types";
+  useListSpots as useListSpotsGenerated,
+  createSpot as createSpotGenerated,
+  updateSpot as updateSpotGenerated,
+  deleteSpot as deleteSpotGenerated,
+} from "@/lib/api/generated/spots/spots";
+import type { SpotListItem, CreateSpotDto, UpdateSpotDto } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -33,14 +32,15 @@ export const spotKeys = {
 
 export function useSpots(
   postId: string,
-  options?: Omit<UseQueryOptions<Spot[], Error>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<SpotListItem[], Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: spotKeys.list(postId),
-    queryFn: () => fetchSpots(postId),
-    enabled: !!postId,
-    staleTime: 1000 * 60, // 1 minute
-    ...options,
+  return useListSpotsGenerated(postId, {
+    query: {
+      queryKey: spotKeys.list(postId),
+      enabled: !!postId,
+      staleTime: 1000 * 60, // 1 minute
+      ...options,
+    },
   });
 }
 
@@ -58,13 +58,8 @@ export function useCreateSpot() {
 
   return useMutation({
     mutationFn: ({ postId, data }: CreateSpotVariables) =>
-      createSpot(postId, data),
-    onSuccess: (newSpot, { postId }) => {
-      // Add to cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
-        old ? [...old, newSpot] : [newSpot]
-      );
-      // Invalidate to ensure fresh data
+      createSpotGenerated(postId, data),
+    onSuccess: (_, { postId }) => {
       queryClient.invalidateQueries({ queryKey: spotKeys.list(postId) });
     },
     onError: (error) => {
@@ -88,14 +83,9 @@ export function useUpdateSpot() {
 
   return useMutation({
     mutationFn: ({ spotId, data }: UpdateSpotVariables) =>
-      updateSpot(spotId, data),
-    onSuccess: (updatedSpot, { postId }) => {
-      // Update in cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
-        old
-          ? old.map((spot) => (spot.id === updatedSpot.id ? updatedSpot : spot))
-          : [updatedSpot]
-      );
+      updateSpotGenerated(spotId, data),
+    onSuccess: (_, { postId }) => {
+      queryClient.invalidateQueries({ queryKey: spotKeys.list(postId) });
     },
     onError: (error) => {
       console.error("[useUpdateSpot] Failed to update spot:", error);
@@ -116,12 +106,9 @@ export function useDeleteSpot() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ spotId }: DeleteSpotVariables) => deleteSpot(spotId),
-    onSuccess: (_, { spotId, postId }) => {
-      // Remove from cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
-        old ? old.filter((spot) => spot.id !== spotId) : []
-      );
+    mutationFn: ({ spotId }: DeleteSpotVariables) => deleteSpotGenerated(spotId),
+    onSuccess: (_, { postId }) => {
+      queryClient.invalidateQueries({ queryKey: spotKeys.list(postId) });
     },
     onError: (error) => {
       console.error("[useDeleteSpot] Failed to delete spot:", error);

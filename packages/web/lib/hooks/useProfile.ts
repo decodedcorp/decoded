@@ -4,39 +4,40 @@
  */
 
 import {
-  useQuery,
   useInfiniteQuery,
   useMutation,
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
 import {
-  fetchMe,
-  updateMe,
-  fetchUserStats,
-  fetchUserActivities,
-  fetchUserById,
-} from "@/lib/api/users";
-import { fetchMyBadges } from "@/lib/api/badges";
-import { fetchMyRanking } from "@/lib/api/rankings";
-import {
-  UpdateUserDto,
-  UserResponse,
-  UserStatsResponse,
-  PaginatedActivitiesResponse,
-  ActivitiesListParams,
-  UserActivityType,
-} from "@/lib/api/types";
+  useGetMyProfile,
+  useGetMyStats,
+  useGetUserProfile,
+  getMyActivities,
+  updateMyProfile,
+} from "@/lib/api/generated/users/users";
+import { useMyBadges as useMyBadgesGenerated } from "@/lib/api/generated/badges/badges";
+import { useMyRankingDetail as useMyRankingDetailGenerated } from "@/lib/api/generated/rankings/rankings";
+import type { MyBadgesResponse } from "@/lib/api/generated/models";
+import type { MyRankingDetailResponse } from "@/lib/api/generated/models";
+import type { UserResponse, UserStatsResponse } from "@/lib/api/generated/models";
+import type { UpdateUserDto } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
 // ============================================================
 
+interface ActivitiesKeyParams {
+  type?: string;
+  perPage?: number;
+  enabled?: boolean;
+}
+
 export const profileKeys = {
   all: ["profile"] as const,
   me: () => [...profileKeys.all, "me"] as const,
   stats: () => [...profileKeys.all, "stats"] as const,
-  activities: (params?: ActivitiesListParams) =>
+  activities: (params?: ActivitiesKeyParams) =>
     [...profileKeys.all, "activities", params] as const,
   user: (userId: string) => [...profileKeys.all, "user", userId] as const,
   badges: () => [...profileKeys.all, "badges"] as const,
@@ -50,11 +51,12 @@ export const profileKeys = {
 export function useMe(
   options?: Omit<UseQueryOptions<UserResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.me(),
-    queryFn: fetchMe,
-    staleTime: 1000 * 60 * 5, // 5 minutes (profile changes less frequently)
-    ...options,
+  return useGetMyProfile({
+    query: {
+      queryKey: profileKeys.me(),
+      staleTime: 1000 * 60 * 5, // 5 minutes (profile changes less frequently)
+      ...options,
+    },
   });
 }
 
@@ -68,20 +70,21 @@ export function useUserStats(
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery({
-    queryKey: profileKeys.stats(),
-    queryFn: fetchUserStats,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    ...options,
+  return useGetMyStats({
+    query: {
+      queryKey: profileKeys.stats(),
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      ...options,
+    },
   });
 }
 
 // ============================================================
-// useUserActivities - Paginated activities
+// useUserActivities - Paginated activities (infinite query using raw function)
 // ============================================================
 
 interface UseUserActivitiesParams {
-  type?: UserActivityType;
+  type?: string;
   perPage?: number;
   enabled?: boolean;
 }
@@ -89,16 +92,16 @@ interface UseUserActivitiesParams {
 export function useUserActivities(params?: UseUserActivitiesParams) {
   return useInfiniteQuery({
     queryKey: profileKeys.activities(params),
-    queryFn: async ({ pageParam }): Promise<PaginatedActivitiesResponse> => {
+    queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
-      return fetchUserActivities({
-        type: params?.type,
+      return getMyActivities({
+        type: params?.type as any,
         page,
         per_page: params?.perPage ?? 20,
       });
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.pagination.current_page < lastPage.pagination.total_pages
+    getNextPageParam: (lastPage: any) =>
+      lastPage.pagination?.current_page < lastPage.pagination?.total_pages
         ? lastPage.pagination.current_page + 1
         : undefined,
     initialPageParam: 1,
@@ -115,12 +118,13 @@ export function useUser(
   userId: string,
   options?: Omit<UseQueryOptions<UserResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.user(userId),
-    queryFn: () => fetchUserById(userId),
-    enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
+  return useGetUserProfile(userId, {
+    query: {
+      queryKey: profileKeys.user(userId),
+      enabled: !!userId,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      ...options,
+    },
   });
 }
 
@@ -129,16 +133,14 @@ export function useUser(
 // ============================================================
 
 export function useMyBadges(
-  options?: Omit<
-    UseQueryOptions<import("@/lib/api/types").MyBadgesResponse, Error>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<MyBadgesResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.badges(),
-    queryFn: fetchMyBadges,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
+  return useMyBadgesGenerated({
+    query: {
+      queryKey: profileKeys.badges(),
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      ...options,
+    },
   });
 }
 
@@ -147,16 +149,14 @@ export function useMyBadges(
 // ============================================================
 
 export function useMyRanking(
-  options?: Omit<
-    UseQueryOptions<import("@/lib/api/types").ApiMyRankingDetail, Error>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<MyRankingDetailResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.rankings(),
-    queryFn: fetchMyRanking,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    ...options,
+  return useMyRankingDetailGenerated({
+    query: {
+      queryKey: profileKeys.rankings(),
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      ...options,
+    },
   });
 }
 
@@ -171,6 +171,7 @@ import {
   type UserProfileExtras,
   type SocialAccount,
 } from "@/lib/supabase/queries/profile";
+import { useQuery } from "@tanstack/react-query";
 
 export const profileDashboardKeys = {
   extras: (userId: string) => [...profileKeys.all, "extras", userId] as const,
@@ -214,7 +215,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateUserDto) => updateMe(data),
+    mutationFn: (data: UpdateUserDto) => updateMyProfile(data),
     onSuccess: (updatedUser) => {
       // Update React Query cache
       queryClient.setQueryData(profileKeys.me(), updatedUser);

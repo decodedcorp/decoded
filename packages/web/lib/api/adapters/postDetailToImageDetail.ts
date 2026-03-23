@@ -4,7 +4,7 @@
  * ImageDetailModal/ImageDetailContent가 기대하는 ImageDetail 구조로 변환
  */
 
-import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/types";
+import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/generated/models";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
 import type { ItemRow } from "@/lib/components/detail/types";
 

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { FileText, MapPin, Lightbulb } from "lucide-react";
-import type { UserActivityItem, UserActivityType } from "@/lib/api/types";
+import type { PaginatedResponseUserActivityItemDataItem, UserActivityType } from "@/lib/api/generated/models";
 
+// Accept generated activity item type (title is string | null | undefined)
 interface ActivityItemCardProps {
-  item: UserActivityItem;
+  item: PaginatedResponseUserActivityItemDataItem;
 }
 
 const TYPE_LABELS: Record<UserActivityType, string> = {

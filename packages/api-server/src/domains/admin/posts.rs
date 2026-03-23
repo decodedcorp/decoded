@@ -45,6 +45,7 @@ pub struct PostStatusUpdate {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/posts",
+    operation_id = "admin_list_posts",
     tag = "admin",
     security(
         ("bearer_auth" = [])

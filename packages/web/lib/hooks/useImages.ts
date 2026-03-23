@@ -17,7 +17,8 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { fetchPosts, fetchPostDetail, fetchPostMagazine } from "@/lib/api/posts";
+import { fetchPostMagazine } from "@/lib/api/posts";
+import { listPosts, getPost } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
 import type {
   CategoryFilter,
@@ -29,7 +30,7 @@ import type {
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
 import type { ItemRow } from "@/lib/components/detail/types";
-import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/types";
+import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/mutation-types";
 
 /**
  * @deprecated Use useInfiniteFilteredImages with unified adapter instead.

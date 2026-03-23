@@ -6,7 +6,7 @@
  */
 
 import { apiClient, getAuthToken } from "./client";
-import {
+import type {
   UploadResponse,
   AnalyzeRequest,
   AnalyzeResponse,
@@ -17,12 +17,9 @@ import {
   CreatePostWithSolutionRequest,
   PostsListResponse,
   PostsListParams,
-  UpdatePostDto,
-  PostResponse,
-  PostDetailResponse,
   PostMagazineResponse,
-  ApiError,
-} from "./types";
+} from "./mutation-types";
+import { ApiError } from "./mutation-types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -381,13 +378,13 @@ export async function createPostWithSolution(
 }
 
 // ============================================================
-// Fetch Posts List
+// Fetch Posts List (server-side only)
 // GET /api/v1/posts
-// 인증 불필요
+// For use in server components where generated hooks (React Query) are not available
 // ============================================================
 
 /**
- * Build query string from PostsListParams
+ * Build query string from PostsListParams (used by fetchPostsServer)
  */
 function buildPostsQueryString(params?: PostsListParams): string {
   if (!params) return "";
@@ -410,21 +407,6 @@ function buildPostsQueryString(params?: PostsListParams): string {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : "";
-}
-
-/**
- * Fetch posts list from API
- */
-export async function fetchPosts(
-  params?: PostsListParams
-): Promise<PostsListResponse> {
-  const queryString = buildPostsQueryString(params);
-
-  return apiClient<PostsListResponse>({
-    path: `/api/v1/posts${queryString}`,
-    method: "GET",
-    requiresAuth: false,
-  });
 }
 
 /**
@@ -463,21 +445,6 @@ export async function fetchPostsServer(
 }
 
 // ============================================================
-// Fetch Post Detail (spots + top_solution per spot)
-// GET /api/v1/posts/{postId}
-// ============================================================
-
-export async function fetchPostDetail(
-  postId: string
-): Promise<PostDetailResponse> {
-  return apiClient<PostDetailResponse>({
-    path: `/api/v1/posts/${postId}`,
-    method: "GET",
-    requiresAuth: false,
-  });
-}
-
-// ============================================================
 // Fetch Post Magazine
 // GET /api/v1/post-magazines/{magazineId}
 // ============================================================
@@ -492,44 +459,3 @@ export async function fetchPostMagazine(
   });
 }
 
-// ============================================================
-// Update Post
-// PATCH /api/v1/posts/{postId}
-// 인증 필요
-// ============================================================
-
-/**
- * Update a post
- * PATCH /api/v1/posts/{postId}
- * Requires authentication
- */
-export async function updatePost(
-  postId: string,
-  data: UpdatePostDto
-): Promise<PostResponse> {
-  return apiClient<PostResponse>({
-    path: `/api/v1/posts/${postId}`,
-    method: "PATCH",
-    body: data,
-    requiresAuth: true,
-  });
-}
-
-// ============================================================
-// Delete Post
-// DELETE /api/v1/posts/{postId}
-// 인증 필요
-// ============================================================
-
-/**
- * Delete a post
- * DELETE /api/v1/posts/{postId}
- * Requires authentication
- */
-export async function deletePost(postId: string): Promise<void> {
-  await apiClient<void>({
-    path: `/api/v1/posts/${postId}`,
-    method: "DELETE",
-    requiresAuth: true,
-  });
-}

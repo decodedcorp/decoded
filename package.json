@@ -26,6 +26,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "ci:local": "bash scripts/git-pre-push.sh",
+    "generate:api": "turbo run generate:api",
     "deploy:backend": "bash scripts/deploy-backend.sh"
   },
   "devDependencies": {

@@ -50,3 +50,7 @@ test-results/
 
 # Local dev log files (optional tail -f workflows)
 .logs/
+
+# Orval generated API client (regenerated from OpenAPI spec)
+packages/web/lib/api/generated/
+!packages/web/lib/api/generated/.gitkeep

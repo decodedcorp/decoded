@@ -4,30 +4,47 @@
  */
 
 import {
-  useQuery,
   useQueries,
   useMutation,
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
 import {
-  fetchSolutions,
-  createSolution,
-  updateSolution,
-  deleteSolution,
-  adoptSolution,
-  unadoptSolution,
-  extractSolutionMetadata,
-  convertAffiliate,
-} from "@/lib/api/solutions";
+  useListSolutions as useListSolutionsGenerated,
+  listSolutions,
+  createSolution as createSolutionGenerated,
+  updateSolution as updateSolutionGenerated,
+  deleteSolution as deleteSolutionGenerated,
+  extractMetadata as extractMetadataGenerated,
+  convertAffiliate as convertAffiliateGenerated,
+} from "@/lib/api/generated/solutions/solutions";
+import {
+  adoptSolution as adoptSolutionGenerated,
+  unadoptSolution as unadoptSolutionGenerated,
+} from "@/lib/api/generated/votes/votes";
 import type {
-  Solution,
-  SolutionListItem,
+  SolutionListItem as GeneratedSolutionListItem,
   CreateSolutionDto,
   UpdateSolutionDto,
-  ExtractMetadataResponse,
-  ConvertAffiliateResponse,
-} from "@/lib/api/types";
+  MetadataResponse,
+  AffiliateLinkResponse,
+} from "@/lib/api/generated/models";
+
+/**
+ * Cache Invalidation Boundaries (MIG-09)
+ *
+ * REST API cache (Orval generated hooks):
+ *   Keys: solutionKeys, spotKeys, commentKeys, postKeys.lists()
+ *   Invalidated by: REST mutations below
+ *
+ * Supabase direct query cache:
+ *   Keys: postKeys.detail(id) via fetchPostWithSpotsAndSolutions
+ *   Cross-boundary: useAdoptSolution/useUnadoptSolution explicitly
+ *   invalidate ["posts", "detail"] — this is intentional.
+ *
+ * Server-side fetches (fetchPostsServer):
+ *   No React Query cache — uses Next.js revalidate header only.
+ */
 
 // ============================================================
 // Query Keys
@@ -46,16 +63,17 @@ export const solutionKeys = {
 export function useSolutions(
   spotId: string,
   options?: Omit<
-    UseQueryOptions<SolutionListItem[], Error>,
+    UseQueryOptions<GeneratedSolutionListItem[], Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery({
-    queryKey: solutionKeys.list(spotId),
-    queryFn: () => fetchSolutions(spotId),
-    enabled: !!spotId,
-    staleTime: 1000 * 60, // 1 minute
-    ...options,
+  return useListSolutionsGenerated(spotId, {
+    query: {
+      queryKey: solutionKeys.list(spotId),
+      enabled: !!spotId,
+      staleTime: 1000 * 60, // 1 minute
+      ...options,
+    },
   });
 }
 
@@ -68,16 +86,16 @@ export function useAllSolutionsForSpots(spotIds: string[]) {
   const results = useQueries({
     queries: spotIds.map((spotId) => ({
       queryKey: solutionKeys.list(spotId),
-      queryFn: () => fetchSolutions(spotId),
+      queryFn: () => listSolutions(spotId),
       enabled: !!spotId,
       staleTime: 1000 * 60,
     })),
   });
   const isLoading = results.some((r) => r.isLoading);
-  const spotSolutionsMap = new Map<string, SolutionListItem[]>();
+  const spotSolutionsMap = new Map<string, GeneratedSolutionListItem[]>();
   spotIds.forEach((spotId, i) => {
     const data = results[i]?.data;
-    if (data?.length) spotSolutionsMap.set(spotId, data);
+    if (data?.length) spotSolutionsMap.set(spotId, data as GeneratedSolutionListItem[]);
   });
   const allSolutionsWithSpot = spotIds.flatMap((spotId) => {
     const sols = spotSolutionsMap.get(spotId) ?? [];
@@ -100,7 +118,7 @@ export function useCreateSolution() {
 
   return useMutation({
     mutationFn: ({ spotId, data }: CreateSolutionVariables) =>
-      createSolution(spotId, data),
+      createSolutionGenerated(spotId, data),
     onSuccess: (_, { spotId }) => {
       // Invalidate to refetch list (backend returns SolutionListItem, create returns Solution)
       queryClient.invalidateQueries({ queryKey: solutionKeys.list(spotId) });
@@ -126,7 +144,7 @@ export function useUpdateSolution() {
 
   return useMutation({
     mutationFn: ({ solutionId, data }: UpdateSolutionVariables) =>
-      updateSolution(solutionId, data),
+      updateSolutionGenerated(solutionId, data),
     onSuccess: (_, { spotId }) => {
       queryClient.invalidateQueries({ queryKey: solutionKeys.list(spotId) });
     },
@@ -150,7 +168,7 @@ export function useDeleteSolution() {
 
   return useMutation({
     mutationFn: ({ solutionId }: DeleteSolutionVariables) =>
-      deleteSolution(solutionId),
+      deleteSolutionGenerated(solutionId),
     onSuccess: (_, { spotId }) => {
       queryClient.invalidateQueries({ queryKey: solutionKeys.list(spotId) });
     },
@@ -175,7 +193,7 @@ export function useAdoptSolution() {
 
   return useMutation({
     mutationFn: ({ solutionId, matchType }: AdoptSolutionVariables) =>
-      adoptSolution(solutionId, { match_type: matchType }),
+      adoptSolutionGenerated(solutionId, { match_type: matchType }),
     onSuccess: (_, { spotId }) => {
       queryClient.invalidateQueries({ queryKey: solutionKeys.list(spotId) });
       queryClient.invalidateQueries({ queryKey: ["posts", "detail"] });
@@ -200,7 +218,7 @@ export function useUnadoptSolution() {
 
   return useMutation({
     mutationFn: ({ solutionId }: UnadoptSolutionVariables) =>
-      unadoptSolution(solutionId),
+      unadoptSolutionGenerated(solutionId),
     onSuccess: (_, { spotId }) => {
       queryClient.invalidateQueries({ queryKey: solutionKeys.list(spotId) });
       queryClient.invalidateQueries({ queryKey: ["posts", "detail"] });
@@ -213,8 +231,8 @@ export function useUnadoptSolution() {
 // ============================================================
 
 export function useExtractMetadata() {
-  return useMutation<ExtractMetadataResponse, Error, string>({
-    mutationFn: (url: string) => extractSolutionMetadata(url),
+  return useMutation<MetadataResponse, Error, string>({
+    mutationFn: (url: string) => extractMetadataGenerated({ url }),
     onError: (error) => {
       console.error("[useExtractMetadata] Failed to extract metadata:", error);
     },
@@ -226,8 +244,8 @@ export function useExtractMetadata() {
 // ============================================================
 
 export function useConvertAffiliate() {
-  return useMutation<ConvertAffiliateResponse, Error, string>({
-    mutationFn: (url: string) => convertAffiliate(url),
+  return useMutation<AffiliateLinkResponse, Error, string>({
+    mutationFn: (url: string) => convertAffiliateGenerated({ url }),
     onError: (error) => {
       console.error(
         "[useConvertAffiliate] Failed to convert affiliate:",
