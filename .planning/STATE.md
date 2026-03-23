@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 41-03-PLAN.md
-last_updated: "2026-03-23T13:57:08.244Z"
+stopped_at: Completed 41-04-PLAN.md
+last_updated: "2026-03-23T14:09:11.601Z"
 progress:
   total_phases: 39
-  completed_phases: 36
+  completed_phases: 37
   total_plans: 88
-  completed_plans: 86
+  completed_plans: 87
 ---
 
 # Project State
@@ -79,6 +79,8 @@ v9.0 key constraints (from research):
 - [Phase 41]: updateMe inlined into useProfile.ts instead of keeping users.ts alive — cleanest deletion boundary; Phase 42 will replace with generated useUpdateMyProfile mutation
 - [Phase 41]: useUserActivities uses getMyActivities raw function in useInfiniteQuery — generated hook is regular useQuery, infinite pagination requires manual composition
 - [Phase 41]: usePostMagazine in useImages.ts unchanged — fetchPostMagazine has no generated equivalent (post-magazines endpoint not in OpenAPI spec)
+- [Phase 41-04]: types.ts deleted per ROADMAP SC-5; mutation-types.ts holds manual types for mutations/uploads/server functions; ManualUpdateSolutionDto introduced since generated UpdateSolutionDto has incompatible shape
+- [Phase 41-04]: PostDetailResponse/SpotWithTopSolution/TopSolutionSummary imported from generated/models; UpdatePostDto/UpdateUserDto/UserStatsResponse/CreateSpotDto/UpdateSpotDto also from generated/models
 
 ### Blockers/Concerns
 
@@ -95,8 +97,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:57:08.241Z
-Stopped at: Completed 41-03-PLAN.md
+Last session: 2026-03-23T14:09:11.598Z
+Stopped at: Completed 41-04-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`
