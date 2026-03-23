@@ -25,6 +25,7 @@ build/
 htmlcov/
 .coverage
 coverage.xml
+tests.log
 
 # Model files
 fixtures/models/*.dat
@@ -41,6 +42,7 @@ src/models/**/*.dat
 firebase_service_account_key.json
 
 .dev.env
+!.dev.env.example
 .prod.env
 .env
 
