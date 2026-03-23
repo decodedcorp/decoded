@@ -53,3 +53,4 @@ test-results/
 
 # Orval generated API client (regenerated from OpenAPI spec)
 packages/web/lib/api/generated/
+!packages/web/lib/api/generated/.gitkeep
