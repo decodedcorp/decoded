@@ -3,7 +3,7 @@
 import { memo, useState, useCallback } from "react";
 import { Link2, Tag, DollarSign, X, Check, Loader2 } from "lucide-react";
 import type { SpotSolutionData } from "@/lib/stores/requestStore";
-import { extractSolutionMetadata } from "@/lib/api/solutions";
+import { extractMetadata } from "@/lib/api/generated/solutions/solutions";
 
 interface SolutionInputFormProps {
   spotId: string;
@@ -53,13 +53,13 @@ export const SolutionInputForm = memo(
 
       setIsExtracting(true);
       try {
-        const meta = await extractSolutionMetadata(url);
+        const meta = await extractMetadata({ url });
         if (meta.title) setTitle(meta.title);
         if (meta.description) setDescription(meta.description);
         const thumb = meta.thumbnail_url ?? meta.image;
         if (thumb) setThumbnailUrl(thumb);
-        const priceVal = meta.price ?? meta.extra_metadata?.price;
-        const curr = meta.currency ?? meta.extra_metadata?.currency ?? "KRW";
+        const priceVal = meta.extra_metadata?.price;
+        const curr = meta.extra_metadata?.currency ?? "KRW";
         if (priceVal != null) {
           const num =
             typeof priceVal === "number"

@@ -2,8 +2,8 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Link2, Loader2, Check, X, AlertTriangle } from "lucide-react";
-import { extractSolutionMetadata, convertAffiliate } from "@/lib/api/solutions";
-import type { ExtractMetadataResponse } from "@/lib/api/mutation-types";
+import { extractMetadata, convertAffiliate } from "@/lib/api/generated/solutions/solutions";
+import type { MetadataResponse } from "@/lib/api/generated/models";
 
 export interface SolutionLinkFormData {
   original_url: string;
@@ -32,7 +32,7 @@ function isValidUrl(str: string): boolean {
  * OG Preview Card - 마우스 반응 카드
  * 제휴 링크 여부는 백엔드(extract-metadata) 응답 is_affiliate_supported 사용
  */
-function OGPreviewCard({ meta }: { meta: ExtractMetadataResponse }) {
+function OGPreviewCard({ meta }: { meta: MetadataResponse }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 });
 
@@ -129,7 +129,7 @@ export const SolutionLinkForm = memo(
   ({ spotId, onSave, onCancel }: SolutionLinkFormProps) => {
     const [url, setUrl] = useState("");
     const [isExtracting, setIsExtracting] = useState(false);
-    const [meta, setMeta] = useState<ExtractMetadataResponse | null>(null);
+    const [meta, setMeta] = useState<MetadataResponse | null>(null);
     const [isConverting, setIsConverting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -140,7 +140,7 @@ export const SolutionLinkForm = memo(
       setIsExtracting(true);
       setMeta(null);
       try {
-        const result = await extractSolutionMetadata(trimmed);
+        const result = await extractMetadata({ url: trimmed });
         setMeta({
           ...result,
           url: result.url ?? trimmed,
@@ -167,7 +167,7 @@ export const SolutionLinkForm = memo(
         if (meta.is_affiliate_supported === true) {
           setIsConverting(true);
           try {
-            const res = await convertAffiliate(url.trim());
+            const res = await convertAffiliate({ url: url.trim() });
             affiliateUrl = res.affiliate_url;
           } finally {
             setIsConverting(false);
