@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 41-04-PLAN.md
-last_updated: "2026-03-23T14:10:09.737Z"
+stopped_at: Completed 42-01-PLAN.md
+last_updated: "2026-03-23T15:05:00.000Z"
 progress:
-  total_phases: 39
+  total_phases: 40
   completed_phases: 37
-  total_plans: 88
-  completed_plans: 87
+  total_plans: 91
+  completed_plans: 88
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 41 — read-hook-migration
+**Current focus:** Phase 42 — mutation-migration-cache-wiring
 
 ## Current Position
 
-Phase: 41 (read-hook-migration) — EXECUTING
-Plan: 1 of 4
+Phase: 42 (mutation-migration-cache-wiring) — EXECUTING
+Plan: 2 of 3
 
 ## Milestone Summary
 
@@ -81,6 +81,11 @@ v9.0 key constraints (from research):
 - [Phase 41]: usePostMagazine in useImages.ts unchanged — fetchPostMagazine has no generated equivalent (post-magazines endpoint not in OpenAPI spec)
 - [Phase 41-04]: types.ts deleted per ROADMAP SC-5; mutation-types.ts holds manual types for mutations/uploads/server functions; ManualUpdateSolutionDto introduced since generated UpdateSolutionDto has incompatible shape
 - [Phase 41-04]: PostDetailResponse/SpotWithTopSolution/TopSolutionSummary imported from generated/models; UpdatePostDto/UpdateUserDto/UserStatsResponse/CreateSpotDto/UpdateSpotDto also from generated/models
+- [Phase 42-01]: setQueryData<any> on spot mutations replaced with invalidateQueries — SpotResponse (mutation return) and SpotListItem (query cache) have incompatible shapes
+- [Phase 42-01]: setQueryData on post detail replaced with invalidateQueries — postKeys.detail holds Supabase PostDetail shape, not generated PostResponse (cross-boundary type mismatch)
+- [Phase 42-01]: ManualUpdateSolutionDto replaced with generated UpdateSolutionDto in UpdateSolutionVariables — generated shape is the OpenAPI spec shape
+- [Phase 42-01]: extractMetadata/convertAffiliate generated fns take DTO objects ({url}) not bare strings — all callers updated accordingly
+- [Phase 42-01]: SolutionInputForm meta.price/currency removed — generated MetadataResponse has no top-level price/currency (only in extra_metadata.LinkMetadata)
 
 ### Blockers/Concerns
 
@@ -97,11 +102,11 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T14:09:11.598Z
-Stopped at: Completed 41-04-PLAN.md
+Last session: 2026-03-23T15:05:00Z
+Stopped at: Completed 42-01-PLAN.md
 Resume file: None
 
-Next step: `/gsd:plan-phase 39`
+Next step: Execute 42-02-PLAN.md
 
 ---
 
