@@ -1,0 +1,56 @@
+---
+description: Next.js API route conventions
+globs: "packages/web/app/api/**/*.ts"
+---
+
+# API Route Conventions
+
+## Handler Format
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  // Auth check if needed
+  // Validate input
+  // Business logic
+  // Return response
+}
+```
+
+## Auth Pattern
+```typescript
+import { createClient } from '@/lib/supabase/server';
+
+const supabase = await createClient();
+const { data: { user }, error } = await supabase.auth.getUser();
+if (!user) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+```
+
+## Error Response Format
+```typescript
+NextResponse.json(
+  { error: 'Error code', message: 'Human-readable description' },
+  { status: 400 }
+);
+```
+
+## Pagination (cursor-based)
+```typescript
+const cursor = request.nextUrl.searchParams.get('cursor');
+const limit = Number(request.nextUrl.searchParams.get('limit')) || 20;
+```
+
+## Route Organization
+- Base path: `app/api/v1/`
+- RESTful: `GET` (list/read), `POST` (create), `PATCH` (update), `DELETE` (remove)
+- Dynamic segments: `[postId]`, `[userId]`
+- Nested resources: `posts/[postId]/spots`, `spots/[spotId]/solutions`
+
+## Best Practices
+- Validate request body with type guards or zod schemas
+- Use `NextResponse.json()` for all responses
+- Set appropriate status codes (200, 201, 400, 401, 404, 500)
+- Log errors server-side before returning generic error messages
+- Use `export const dynamic = 'force-dynamic'` for non-cacheable routes

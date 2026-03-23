@@ -1,0 +1,58 @@
+---
+description: React component conventions for decoded web package
+globs: "packages/web/**/*.tsx"
+---
+
+# React Component Conventions
+
+## Server vs Client Components
+- Default to Server Components. Only add `'use client'` when needed.
+- `'use client'` triggers: useState, useEffect, event handlers, browser APIs, Zustand stores
+- Push `'use client'` boundary as far down the component tree as possible
+
+## Design System
+- Import from `@/lib/design-system` (barrel export)
+- Use `Heading`, `Text`, `Card`, `Input`, `Badge`, `Tabs`, `BottomSheet` etc.
+- Use design tokens (`spacing`, `colors`, `typography`) over hardcoded values
+- Use `cn()` utility (from `@/lib/utils`) for className merging
+
+## Component Structure
+```tsx
+// Props interface — extend HTML attributes when wrapping DOM elements
+interface MyComponentProps extends React.HTMLAttributes<HTMLDivElement> {
+  title: string;
+  variant?: 'default' | 'compact';
+}
+
+export function MyComponent({ title, variant = 'default', className, ...props }: MyComponentProps) {
+  return (
+    <div className={cn('base-styles', className)} {...props}>
+      <Heading variant="h3">{title}</Heading>
+    </div>
+  );
+}
+```
+
+## React 19 Specifics
+- `useRef<T | null>(null)` — null initial value required
+- `RefObject<T | null>` — includes null in type
+- All request APIs async: `await cookies()`, `await headers()`, `await params`
+
+## Suspense & Loading
+- Create `loading.tsx` or Skeleton components for Suspense boundaries
+- Use `CardSkeleton` from design system for card loading states
+
+## Accessibility
+- All images: `alt` text required
+- Interactive elements: `aria-label` when text not visible
+- Keyboard navigation: focusable interactive elements
+- Color contrast: use design system color tokens
+
+## Hooks
+- Location: `lib/hooks/` (general) or `lib/hooks/admin/` (admin-specific)
+- Naming: `useXxx` pattern (e.g., `useImages`, `usePostLike`)
+- Data fetching: React Query (`useQuery`, `useMutation`)
+
+## State Management
+- Zustand stores in `lib/stores/` (e.g., `authStore.ts`, `searchStore.ts`)
+- Pattern: `create<T>()((set, get) => ({ ... }))`
