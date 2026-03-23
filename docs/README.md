@@ -19,6 +19,7 @@
 | DB 스키마 사용법 | `docs/database/` | 실제 사용 패턴 |
 | API 엔드포인트 | `docs/api/` | 구현된 API 문서 |
 | 디자인 시스템 | `docs/design-system/` | UI 토큰 및 컴포넌트 |
+| 에이전트 참조 (LLM) | `docs/agent/` | 라우트/API/훅/DS 인벤토리 (맵은 루트 `CLAUDE.md`) |
 | TypeScript 타입 | `specs/shared/data-models.md` | 설계 의도 타입 정의 |
 | 기능 명세 | `specs/{bundle}/spec.md` | 요구사항 및 설계 |
 | 화면 설계 | `specs/{bundle}/screens/` | UI/UX 명세 |
