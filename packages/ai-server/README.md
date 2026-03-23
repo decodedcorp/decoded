@@ -785,7 +785,7 @@ ARQ Worker → 백그라운드 처리 → Backend 콜백
 ### 1. 환경 변수 설정
 
 - `.prod.env`, `.dev.env` 등 환경 파일을 준비하세요.
-- 예시 변수: `APP_ENV`, `REDIS_PASSWORD`, `DECODED_BACKEND_ACCESS_TOKEN` 등
+- 예시 변수: `APP_ENV`, `REDIS_PASSWORD`, `API_SERVER_ACCESS_TOKEN` 등
 
 ### 2. Docker Compose로 실행
 

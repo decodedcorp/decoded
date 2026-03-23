@@ -9,6 +9,11 @@ use crate::services::{
     SearchClient, StorageClient,
 };
 
+/// Reads `primary` env, then legacy alias if unset (migration from older names).
+fn env_primary_or_legacy(primary: &str, legacy: &str) -> Option<String> {
+    std::env::var(primary).ok().or_else(|| std::env::var(legacy).ok())
+}
+
 /// 애플리케이션 설정
 #[derive(Debug, Clone)]
 pub struct AppConfig {
@@ -111,8 +116,8 @@ impl AppConfig {
                 port: std::env::var("PORT")
                     .unwrap_or_else(|_| "8000".to_string())
                     .parse()?,
-                grpc_port: std::env::var("GRPC_PORT")
-                    .unwrap_or_else(|_| "50052".to_string())
+                grpc_port: env_primary_or_legacy("API_SERVER_GRPC_PORT", "GRPC_PORT")
+                    .unwrap_or_else(|| "50052".to_string())
                     .parse()?,
                 rust_log: std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
                 log_format: {
@@ -181,12 +186,12 @@ impl AppConfig {
                     .unwrap_or_else(|_| String::new()),
             },
             ai_service: AiServiceConfig {
-                url: std::env::var("DECODED_AI_GRPC_URL")
-                    .unwrap_or_else(|_| "http://localhost:50051".to_string()),
+                url: env_primary_or_legacy("AI_SERVER_GRPC_URL", "DECODED_AI_GRPC_URL")
+                    .unwrap_or_else(|| "http://localhost:50051".to_string()),
             },
             agent_service: AgentServiceConfig {
-                url: std::env::var("DECODED_AGENT_URL")
-                    .unwrap_or_else(|_| "http://localhost:11000".to_string()),
+                url: env_primary_or_legacy("AGENT_SERVICE_URL", "DECODED_AGENT_URL")
+                    .unwrap_or_else(|| "http://localhost:11000".to_string()),
             },
             embedding: EmbeddingConfig {
                 openai_api_key: std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| String::new()),

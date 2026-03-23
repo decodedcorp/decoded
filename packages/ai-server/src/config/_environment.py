@@ -11,6 +11,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _apply_legacy_env_aliases() -> None:
+    """If new env keys are unset, copy from deprecated names (api-server / docs migration)."""
+    pairs = [
+        ("API_SERVER_HTTP_URL", "DECODED_BACKEND_URL"),
+        ("API_SERVER_ACCESS_TOKEN", "DECODED_BACKEND_ACCESS_TOKEN"),
+        ("API_SERVER_GRPC_HOST", "GRPC_BACKEND_HOST"),
+        ("API_SERVER_GRPC_PORT", "GRPC_BACKEND_PORT"),
+    ]
+    for new_key, old_key in pairs:
+        if new_key not in os.environ and old_key in os.environ:
+            os.environ[new_key] = os.environ[old_key]
+
+
 # Environment Settings
 class Environment(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -29,13 +42,13 @@ class Environment(BaseModel):
 
     QUEUE_BATCH_SIZE: int = 10
 
-    DECODED_BACKEND_URL: str
-    DECODED_BACKEND_ACCESS_TOKEN: str
+    API_SERVER_HTTP_URL: str
+    API_SERVER_ACCESS_TOKEN: str
 
     SELENIUM_URL: str
 
-    GRPC_BACKEND_HOST: str
-    GRPC_BACKEND_PORT: int
+    API_SERVER_GRPC_HOST: str
+    API_SERVER_GRPC_PORT: int
 
     # External API Configuration
     PERPLEXITY_API_KEY: str = ""
@@ -103,6 +116,7 @@ class Environment(BaseModel):
                 load_dotenv(dev)
             elif exists(dotenv_path):
                 load_dotenv(dotenv_path)
+        _apply_legacy_env_aliases()
         return Environment(**os.environ)
 
     @property
@@ -131,11 +145,11 @@ class Environment(BaseModel):
 
     @property
     def backend_url(self) -> str:
-        return self.DECODED_BACKEND_URL
+        return self.API_SERVER_HTTP_URL
 
     @property
     def decoded_backend_access_token(self) -> str:
-        return self.DECODED_BACKEND_ACCESS_TOKEN
+        return self.API_SERVER_ACCESS_TOKEN
 
     @property
     def llm_host(self) -> str:
@@ -154,12 +168,20 @@ class Environment(BaseModel):
         return self.SELENIUM_URL
 
     @property
+    def api_server_grpc_host(self) -> str:
+        return self.API_SERVER_GRPC_HOST
+
+    @property
+    def api_server_grpc_port(self) -> int:
+        return self.API_SERVER_GRPC_PORT
+
+    @property
     def grpc_backend_host(self) -> str:
-        return self.GRPC_BACKEND_HOST
+        return self.API_SERVER_GRPC_HOST
 
     @property
     def grpc_backend_port(self) -> int:
-        return self.GRPC_BACKEND_PORT
+        return self.API_SERVER_GRPC_PORT
 
     # External API Properties
     @property
@@ -216,12 +238,12 @@ class Environment(BaseModel):
         try:
             set_key(
                 join(getcwd(), ".env"),
-                "DECODED_BACKEND_ACCESS_TOKEN",
+                "API_SERVER_ACCESS_TOKEN",
                 token,
             )
         except Exception as e:
             logger.warning(f"Error updating .env file: {e}")
 
         # 중요: 인스턴스 변수 직접 업데이트
-        self.DECODED_BACKEND_ACCESS_TOKEN = token
-        os.environ["DECODED_BACKEND_ACCESS_TOKEN"] = token
+        self.API_SERVER_ACCESS_TOKEN = token
+        os.environ["API_SERVER_ACCESS_TOKEN"] = token

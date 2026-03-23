@@ -408,8 +408,8 @@ bun run dev:local-deps       # Docker deps only (see scripts/local-deps-up.sh)
 bun run dev:local-fe         # Next only (same as dev:web)
 bun run dev:local-be         # API + AI together; logs -> .logs/local/api.log & ai.log (tail -f in other terminals)
 # Local host env templates: packages/api-server/.env.dev.example , packages/ai-server/.dev.env.example
-# Port alignment (호스트 실행): MEILISEARCH_URL=http://localhost:7700 ; DECODED_AI_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
-#   API GRPC_PORT must equal AI GRPC_BACKEND_PORT ; AI Redis localhost:6303 + SEARXNG localhost:4000 with local-deps
+# Port alignment (호스트 실행): MEILISEARCH_URL=http://localhost:7700 ; AI_SERVER_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
+#   API API_SERVER_GRPC_PORT must equal AI API_SERVER_GRPC_PORT ; 레거시 GRPC_PORT / GRPC_BACKEND_* 도 아직 지원. AI Redis localhost:6303 + SEARXNG localhost:4000 with local-deps
 # just local-help            # prints tail -f hints (root Justfile)
 
 # Web package only

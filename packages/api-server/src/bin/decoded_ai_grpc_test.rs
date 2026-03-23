@@ -8,7 +8,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
         .init();
-    let url = "http://127.0.0.1:50052".to_string();
+    let url = std::env::var("AI_SERVER_GRPC_URL")
+        .or_else(|_| std::env::var("DECODED_AI_GRPC_URL"))
+        .unwrap_or_else(|_| "http://127.0.0.1:50052".to_string());
     let client = DecodedAIGrpcClient::new(url)?;
 
     let urls = [
