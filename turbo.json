@@ -18,6 +18,8 @@
     "lint": {
       "dependsOn": ["^build"]
     },
-    "test": {}
+    "test": {
+      "dependsOn": ["generate:api"]
+    }
   }
 }
