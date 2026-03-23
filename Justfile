@@ -22,6 +22,14 @@ local-deps:
 local-deps-down:
     bash "{{ repo }}/scripts/local-deps-down.sh"
 
+# Git pre-push — 모노레포 로컬 CI (프론트 슬롯 + ai-server + api-server)
+hook:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    chmod +x "{{ repo }}/scripts/git-pre-push.sh" "{{ repo }}/.githooks/pre-push" "{{ repo }}/packages/ai-server/scripts/pre-push.sh"
+    git -C "{{ repo }}" config core.hooksPath .githooks
+    echo "OK: git config core.hooksPath=.githooks (repo: {{ repo }})"
+
 # 온보딩용 안내
 local-help:
     @echo "0) Env: .env.dev + .dev.env (see .env.dev.example / .dev.env.example in each package)"
@@ -32,3 +40,5 @@ local-help:
     @echo "3) 터미널 D: just local-fe"
     @echo "   local-be 종료: 터미널 A에서 Ctrl+C"
     @echo "전체 한 터미널: bun run dev  (turbo, 로그 한 스트림)"
+    @echo "push 전 로컬 CI: just hook  후 bun run ci:local  (또는 git push 가 훅 실행)"
+

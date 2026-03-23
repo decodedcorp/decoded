@@ -28,7 +28,7 @@ export DATABASE_URL="postgresql://..."
 
 ## 로컬 품질 게이트
 
-- [`scripts/pre-push.sh`](../scripts/pre-push.sh): `fmt`, `clippy -D warnings`, **`cargo test --lib`** (단위만), **`cargo-deny`**, **`cargo-tarpaulin`**(라인 커버리지 **10%** 미만 시 실패; `lib`만, `src/entities/*` 제외 — 각각 `cargo install cargo-deny`, `cargo install cargo-tarpaulin` 필요), **`check-migration-sync.sh`**(`DATABASE_URL`·`psql` 필수; `backend/.env` 또는 `.env.dev`에서 로드 가능). `decoded-api` / `migration` / `entity`의 `Cargo.toml`에 `[lints.rust] unused_imports = "deny"`가 있어 **미사용 import는 Clippy 단계에서 실패**합니다.
+- [`scripts/pre-push.sh`](../scripts/pre-push.sh): `fmt`, `clippy -D warnings`, **`cargo test --lib`** (단위만), **`cargo-deny`**, **`cargo-tarpaulin`**(라인 커버리지 **10%** 미만 시 실패; `lib`만, `src/entities/*` 제외 — 각각 `cargo install cargo-deny`, `cargo install cargo-tarpaulin` 필요), **`check-migration-sync.sh`**(`DATABASE_URL`·`psql` 필수; `packages/api-server/.env` 또는 `.env.dev`에서 로드 가능). 모노레포 전체 흐름은 루트 `scripts/git-pre-push.sh` / `bun run ci:local` — [GIT_WORKFLOW.md](GIT_WORKFLOW.md). `decoded-api` / `migration` / `entity`의 `Cargo.toml`에 `[lints.rust] unused_imports = "deny"`가 있어 **미사용 import는 Clippy 단계에서 실패**합니다.
 
 ### 커버리지 측정 (로컬)
 

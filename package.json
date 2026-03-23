@@ -24,7 +24,8 @@
     "build:api-server": "cd packages/api-server && cargo build --release",
     "build:backend": "bun run build:api-server",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "ci:local": "bash scripts/git-pre-push.sh"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

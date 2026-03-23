@@ -5,6 +5,9 @@
     "dev": "uv run python -m src.main",
     "test": "uv run pytest",
     "lint": "uv run flake8 src",
-    "format": "uv run black ."
+    "format": "uv run black .",
+    "format:check": "uv run black --check src tests",
+    "test:ci": "uv run pytest -m \"not integration and not e2e and not performance and not external_api and not requires_redis and not requires_network\"",
+    "ci:local": "bash scripts/pre-push.sh"
   }
 }
