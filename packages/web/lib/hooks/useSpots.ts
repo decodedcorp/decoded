@@ -4,13 +4,15 @@
  */
 
 import {
-  useQuery,
   useMutation,
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
 import {
-  fetchSpots,
+  useListSpots as useListSpotsGenerated,
+} from "@/lib/api/generated/spots/spots";
+import type { SpotListItem } from "@/lib/api/generated/models";
+import {
   createSpot,
   updateSpot,
   deleteSpot,
@@ -33,14 +35,15 @@ export const spotKeys = {
 
 export function useSpots(
   postId: string,
-  options?: Omit<UseQueryOptions<Spot[], Error>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<SpotListItem[], Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: spotKeys.list(postId),
-    queryFn: () => fetchSpots(postId),
-    enabled: !!postId,
-    staleTime: 1000 * 60, // 1 minute
-    ...options,
+  return useListSpotsGenerated(postId, {
+    query: {
+      queryKey: spotKeys.list(postId),
+      enabled: !!postId,
+      staleTime: 1000 * 60, // 1 minute
+      ...options,
+    },
   });
 }
 
@@ -61,7 +64,7 @@ export function useCreateSpot() {
       createSpot(postId, data),
     onSuccess: (newSpot, { postId }) => {
       // Add to cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
+      queryClient.setQueryData<any>(spotKeys.list(postId), (old: Spot[] | undefined) =>
         old ? [...old, newSpot] : [newSpot]
       );
       // Invalidate to ensure fresh data
@@ -91,7 +94,7 @@ export function useUpdateSpot() {
       updateSpot(spotId, data),
     onSuccess: (updatedSpot, { postId }) => {
       // Update in cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
+      queryClient.setQueryData<any>(spotKeys.list(postId), (old: Spot[] | undefined) =>
         old
           ? old.map((spot) => (spot.id === updatedSpot.id ? updatedSpot : spot))
           : [updatedSpot]
@@ -119,7 +122,7 @@ export function useDeleteSpot() {
     mutationFn: ({ spotId }: DeleteSpotVariables) => deleteSpot(spotId),
     onSuccess: (_, { spotId, postId }) => {
       // Remove from cache
-      queryClient.setQueryData<Spot[]>(spotKeys.list(postId), (old) =>
+      queryClient.setQueryData<any>(spotKeys.list(postId), (old: Spot[] | undefined) =>
         old ? old.filter((spot) => spot.id !== spotId) : []
       );
     },

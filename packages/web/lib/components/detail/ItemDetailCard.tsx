@@ -163,7 +163,7 @@ export function ItemDetailCard({
 
   /** 솔루션 metadata(Record)를 키-값 리스트로 변환 */
   const parseSolutionMetadata = (
-    meta: Record<string, unknown> | null | undefined
+    meta: unknown
   ): { key: string; value: string }[] => {
     if (!meta || typeof meta !== "object") return [];
     return Object.entries(meta)

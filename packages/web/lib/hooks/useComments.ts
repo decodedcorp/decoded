@@ -1,9 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  fetchComments,
+  useListComments as useListCommentsGenerated,
+} from "@/lib/api/generated/comments/comments";
+import type { CommentResponse } from "@/lib/api/generated/models";
+import {
   createComment,
   deleteComment,
-  type CommentResponse,
   type CreateCommentDto,
 } from "@/lib/api/comments";
 
@@ -13,10 +15,11 @@ export const commentKeys = {
 };
 
 export function useComments(postId: string) {
-  return useQuery({
-    queryKey: commentKeys.list(postId),
-    queryFn: () => fetchComments(postId),
-    enabled: !!postId,
+  return useListCommentsGenerated(postId, {
+    query: {
+      queryKey: commentKeys.list(postId),
+      enabled: !!postId,
+    },
   });
 }
 

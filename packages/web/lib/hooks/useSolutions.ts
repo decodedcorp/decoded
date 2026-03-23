@@ -4,14 +4,17 @@
  */
 
 import {
-  useQuery,
   useQueries,
   useMutation,
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
 import {
-  fetchSolutions,
+  useListSolutions as useListSolutionsGenerated,
+  listSolutions,
+} from "@/lib/api/generated/solutions/solutions";
+import type { SolutionListItem as GeneratedSolutionListItem } from "@/lib/api/generated/models";
+import {
   createSolution,
   updateSolution,
   deleteSolution,
@@ -22,7 +25,6 @@ import {
 } from "@/lib/api/solutions";
 import type {
   Solution,
-  SolutionListItem,
   CreateSolutionDto,
   UpdateSolutionDto,
   ExtractMetadataResponse,
@@ -46,16 +48,17 @@ export const solutionKeys = {
 export function useSolutions(
   spotId: string,
   options?: Omit<
-    UseQueryOptions<SolutionListItem[], Error>,
+    UseQueryOptions<GeneratedSolutionListItem[], Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery({
-    queryKey: solutionKeys.list(spotId),
-    queryFn: () => fetchSolutions(spotId),
-    enabled: !!spotId,
-    staleTime: 1000 * 60, // 1 minute
-    ...options,
+  return useListSolutionsGenerated(spotId, {
+    query: {
+      queryKey: solutionKeys.list(spotId),
+      enabled: !!spotId,
+      staleTime: 1000 * 60, // 1 minute
+      ...options,
+    },
   });
 }
 
@@ -68,16 +71,16 @@ export function useAllSolutionsForSpots(spotIds: string[]) {
   const results = useQueries({
     queries: spotIds.map((spotId) => ({
       queryKey: solutionKeys.list(spotId),
-      queryFn: () => fetchSolutions(spotId),
+      queryFn: () => listSolutions(spotId),
       enabled: !!spotId,
       staleTime: 1000 * 60,
     })),
   });
   const isLoading = results.some((r) => r.isLoading);
-  const spotSolutionsMap = new Map<string, SolutionListItem[]>();
+  const spotSolutionsMap = new Map<string, GeneratedSolutionListItem[]>();
   spotIds.forEach((spotId, i) => {
     const data = results[i]?.data;
-    if (data?.length) spotSolutionsMap.set(spotId, data);
+    if (data?.length) spotSolutionsMap.set(spotId, data as GeneratedSolutionListItem[]);
   });
   const allSolutionsWithSpot = spotIds.flatMap((spotId) => {
     const sols = spotSolutionsMap.get(spotId) ?? [];
