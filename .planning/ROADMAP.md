@@ -101,7 +101,7 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 - [x] **Phase 39: Setup and Spec Validation** - Orval 설치, OpenAPI spec 검증, operationId/nullable 이슈 해결 (completed 2026-03-23)
 - [x] **Phase 40: Codegen Pipeline and Custom Mutator** - 커스텀 mutator 구현, orval.config.ts 완성, 스모크 테스트 (completed 2026-03-23)
 - [x] **Phase 41: Read Hook Migration** - GET 엔드포인트 도메인별 순차 마이그레이션 (badges → admin) (completed 2026-03-23)
-- [ ] **Phase 42: Mutation Migration and Cache Wiring** - POST/PATCH/DELETE 마이그레이션, Zustand 동기화, 수동 코드 삭제
+- [x] **Phase 42: Mutation Migration and Cache Wiring** - POST/PATCH/DELETE 마이그레이션, Zustand 동기화, 수동 코드 삭제 (completed 2026-03-23)
 - [ ] **Phase 43: CI Hardening and Tooling** - CI drift 감지, .gitignore, Zod 검증 테스트, 에이전트 문서화
 
 ## Phase Details

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 42-02-PLAN.md
-last_updated: "2026-03-23T14:52:26.818Z"
+stopped_at: Completed 42-03-PLAN.md
+last_updated: "2026-03-23T14:58:22.974Z"
 progress:
   total_phases: 40
-  completed_phases: 37
+  completed_phases: 38
   total_plans: 91
-  completed_plans: 89
+  completed_plans: 90
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 42 — mutation-migration-cache-wiring
+**Current focus:** Phase 43 — next phase
 
 ## Current Position
 
-Phase: 42 (mutation-migration-cache-wiring) — EXECUTING
-Plan: 3 of 3
+Phase: 42 (mutation-migration-cache-wiring) — COMPLETE
+Plan: 3 of 3 (all complete)
 
 ## Milestone Summary
 
@@ -87,6 +87,9 @@ v9.0 key constraints (from research):
 - [Phase 42-01]: extractMetadata/convertAffiliate generated fns take DTO objects ({url}) not bare strings — all callers updated accordingly
 - [Phase 42-01]: SolutionInputForm meta.price/currency removed — generated MetadataResponse has no top-level price/currency (only in extra_metadata.LinkMetadata)
 - [Phase 42-02]: updateMyProfile(data) called directly as mutationFn — generated raw function compatible with UpdateUserDto; supabaseBrowserClient import removed; setQueryData now type-safe (both GET and PATCH return UserResponse)
+- [Phase 42-03]: Solution/Spot manual types removed from mutation-types.ts — no consumers outside deleted files; generated equivalents in @/lib/api/generated/models
+- [Phase 42-03]: PostResponse (manual) removed from mutation-types.ts — usePosts.ts imports from generated/models; only used by now-deleted updatePost function
+- [Phase 42-03]: fetchPostsServer/fetchPostMagazine added to index.ts barrel — server-only post functions valid as public exports
 
 ### Blockers/Concerns
 
@@ -103,8 +106,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T14:52:26.813Z
-Stopped at: Completed 42-02-PLAN.md
+Last session: 2026-03-23T14:58:22.971Z
+Stopped at: Completed 42-03-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md

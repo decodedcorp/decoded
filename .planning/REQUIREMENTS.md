@@ -28,8 +28,8 @@
 - [x] **MIG-03**: Read hook 마이그레이션 — users, posts 도메인
 - [x] **MIG-04**: Read hook 마이그레이션 — admin 도메인 (dashboard, ai-cost, audit, pipeline, server-logs)
 - [x] **MIG-05**: Mutation hook 마이그레이션 — POST/PATCH/DELETE + onSuccess 캐시 무효화 연결
-- [ ] **MIG-06**: Zustand 스토어 동기화 업데이트 (mutation onSuccess에서 store 업데이트 패턴 보존 — useUpdateProfile 등)
-- [ ] **MIG-07**: 기존 lib/api/*.ts 및 lib/api/types.ts 삭제 (마이그레이션 완료 후)
+- [x] **MIG-06**: Zustand 스토어 동기화 업데이트 (mutation onSuccess에서 store 업데이트 패턴 보존 — useUpdateProfile 등)
+- [x] **MIG-07**: 기존 lib/api/*.ts 및 lib/api/types.ts 삭제 (마이그레이션 완료 후)
 - [x] **MIG-08**: 마이그레이션 중 타입 이름 중복 해결 (생성 타입 vs 기존 types.ts — import type aliasing)
 - [x] **MIG-09**: Supabase 직접 쿼리 vs Orval 생성 쿼리 캐시 무효화 경계 정의
 
@@ -95,8 +95,8 @@
 | MIG-03 | Phase 41 | Complete |
 | MIG-04 | Phase 41 | Complete |
 | MIG-05 | Phase 42 | Complete |
-| MIG-06 | Phase 42 | Pending |
-| MIG-07 | Phase 42 | Pending |
+| MIG-06 | Phase 42 | Complete |
+| MIG-07 | Phase 42 | Complete |
 | MIG-08 | Phase 41 | Complete |
 | MIG-09 | Phase 42 | Complete |
 | CI-01 | Phase 43 | Pending |
