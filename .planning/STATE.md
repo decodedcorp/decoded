@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 39-01-PLAN.md
-last_updated: "2026-03-23T10:38:31.875Z"
+stopped_at: Completed 39-02-PLAN.md
+last_updated: "2026-03-23T12:08:19.823Z"
 progress:
   total_phases: 37
-  completed_phases: 34
+  completed_phases: 35
   total_plans: 82
-  completed_plans: 80
+  completed_plans: 81
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 39 (setup-spec-validation) — EXECUTING
-Plan: 1 of 2
+Phase: 39 (setup-spec-validation) — COMPLETE
+Plan: 2 of 2
 
 ## Milestone Summary
 
@@ -64,11 +64,15 @@ v9.0 key constraints (from research):
 - [Phase 39]: zod pinned to ^3.25 (NOT v4) — Orval zod v4 compat bugs #2249/#2304 active
 - [Phase 39]: httpClient: axios explicit in orval.config.ts — Orval 8 defaults to fetch without this setting
 - [Phase 39]: input.target '../api-server/openapi.json' — Orval resolves paths relative to config file (packages/web/)
+- [Phase 39]: OpenAPI 3.1.0 confirmed — Orval 8.5.3 handles natively, no preprocessing script needed
+- [Phase 39]: 4 duplicate operationIds found (list_posts, list_badges, list_solutions, list_spots) — backend PR required before Phase 40 codegen; fix via explicit operation_id = 'admin_list_*' in utoipa annotations
+- [Phase 39]: Backend local dev port is 8000 (not 3001 as documented); spec URL: http://localhost:8000/api-docs/openapi.json
 
 ### Blockers/Concerns
 
-- **Phase 39 (potentially blocking):** OpenAPI spec may be 3.1 (utoipa 4.x) which requires preprocessing before Orval can generate valid Zod — must inspect live spec first
-- **Phase 39 (potentially blocking):** operationId values may have Handler/snake_case suffixes — may require backend PR before codegen is usable
+- **Phase 39 RESOLVED:** OpenAPI spec is 3.1.0 — Orval 8.5.3 handles natively, no preprocessing needed
+- **Phase 39 RESOLVED:** No Handler/snake_case suffix issues found in operationIds
+- **Phase 40 BLOCKED:** 4 duplicate operationIds in openapi.json (list_posts, list_badges, list_solutions, list_spots). Fix: backend PR adding `operation_id = "admin_list_*"` to admin handler utoipa annotations, then re-download packages/api-server/openapi.json
 - **v6.0 (paused)**: Privacy compliance — PIPA/GDPR disclosure required before behavioral tracking ships
 
 ### Pending Todos
@@ -79,8 +83,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T10:38:31.872Z
-Stopped at: Completed 39-01-PLAN.md
+Last session: 2026-03-23T12:08:19.820Z
+Stopped at: Completed 39-02-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`

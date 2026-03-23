@@ -15,11 +15,11 @@
 
 ### Spec Validation (OpenAPI 스펙 준비)
 
-- [ ] **SPEC-01**: 백엔드 OpenAPI 스펙 버전 확인 (3.0 vs 3.1) 및 utoipa nullable 이슈 검증
-- [ ] **SPEC-02**: 전체 엔드포인트 operationId 검증 (존재 + 중복 없음 + camelCase verbNoun 패턴) 및 태그 매핑 검증
+- [x] **SPEC-01**: 백엔드 OpenAPI 스펙 버전 확인 (3.0 vs 3.1) 및 utoipa nullable 이슈 검증
+- [x] **SPEC-02**: 전체 엔드포인트 operationId 검증 (존재 + 중복 없음 + camelCase verbNoun 패턴) 및 태그 매핑 검증
 - [x] **SPEC-03**: 업로드/multipart 엔드포인트 명시적 목록화 (POST /posts/upload 등) 및 Orval config 제외 설정
 - [ ] **SPEC-04**: 파이프라인 스모크 테스트 (단일 엔드포인트로 생성 → 빌드 → 실행 검증)
-- [ ] **SPEC-05**: 무한 스크롤 엔드포인트 식별 및 pagination 파라미터 확인 (cursor/page/offset)
+- [x] **SPEC-05**: 무한 스크롤 엔드포인트 식별 및 pagination 파라미터 확인 (cursor/page/offset)
 
 ### Migration (수동 코드 → 생성 코드 교체)
 
@@ -85,11 +85,11 @@
 | INFRA-03 | Phase 40 | Pending |
 | INFRA-04 | Phase 40 | Pending |
 | INFRA-05 | Phase 40 | Pending |
-| SPEC-01 | Phase 39 | Pending |
-| SPEC-02 | Phase 39 | Pending |
+| SPEC-01 | Phase 39 | Complete |
+| SPEC-02 | Phase 39 | Complete |
 | SPEC-03 | Phase 39 | Complete |
 | SPEC-04 | Phase 40 | Pending |
-| SPEC-05 | Phase 39 | Pending |
+| SPEC-05 | Phase 39 | Complete |
 | MIG-01 | Phase 41 | Pending |
 | MIG-02 | Phase 41 | Pending |
 | MIG-03 | Phase 41 | Pending |
