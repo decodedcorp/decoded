@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 42-01-PLAN.md
-last_updated: "2026-03-23T15:05:00.000Z"
+stopped_at: Completed 42-02-PLAN.md
+last_updated: "2026-03-23T14:52:26.818Z"
 progress:
   total_phases: 40
   completed_phases: 37
   total_plans: 91
-  completed_plans: 88
+  completed_plans: 89
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 42 (mutation-migration-cache-wiring) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Milestone Summary
 
@@ -86,6 +86,7 @@ v9.0 key constraints (from research):
 - [Phase 42-01]: ManualUpdateSolutionDto replaced with generated UpdateSolutionDto in UpdateSolutionVariables — generated shape is the OpenAPI spec shape
 - [Phase 42-01]: extractMetadata/convertAffiliate generated fns take DTO objects ({url}) not bare strings — all callers updated accordingly
 - [Phase 42-01]: SolutionInputForm meta.price/currency removed — generated MetadataResponse has no top-level price/currency (only in extra_metadata.LinkMetadata)
+- [Phase 42-02]: updateMyProfile(data) called directly as mutationFn — generated raw function compatible with UpdateUserDto; supabaseBrowserClient import removed; setQueryData now type-safe (both GET and PATCH return UserResponse)
 
 ### Blockers/Concerns
 
@@ -102,11 +103,11 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T15:05:00Z
-Stopped at: Completed 42-01-PLAN.md
+Last session: 2026-03-23T14:52:26.813Z
+Stopped at: Completed 42-02-PLAN.md
 Resume file: None
 
-Next step: Execute 42-02-PLAN.md
+Next step: Execute 42-03-PLAN.md
 
 ---
 
