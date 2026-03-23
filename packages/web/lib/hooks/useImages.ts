@@ -30,7 +30,7 @@ import type {
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
 import type { ItemRow } from "@/lib/components/detail/types";
-import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/types";
+import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/mutation-types";
 
 /**
  * @deprecated Use useInfiniteFilteredImages with unified adapter instead.

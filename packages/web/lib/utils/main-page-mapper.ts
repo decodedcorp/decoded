@@ -4,7 +4,7 @@
  * Updated to use new schema with 'posts' table
  */
 
-import type { Post } from "@/lib/api/types";
+import type { Post } from "@/lib/api/mutation-types";
 import type { HeroSlide } from "@/lib/data/heroSlides";
 import type {
   PostData,

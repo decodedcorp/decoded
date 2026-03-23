@@ -7,11 +7,8 @@
  */
 
 import { apiClient } from "./client";
-import type {
-  Spot,
-  CreateSpotDto,
-  UpdateSpotDto,
-} from "./types";
+import type { Spot } from "./mutation-types";
+import type { CreateSpotDto, UpdateSpotDto } from "./generated/models";
 
 // ============================================================
 // Create Spot

@@ -17,7 +17,8 @@ import {
   updateSpot,
   deleteSpot,
 } from "@/lib/api/spots";
-import type { Spot, CreateSpotDto, UpdateSpotDto } from "@/lib/api/types";
+import type { Spot } from "@/lib/api/mutation-types";
+import type { CreateSpotDto, UpdateSpotDto } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys

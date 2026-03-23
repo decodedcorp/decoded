@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import type { ContextType, MediaSourceType } from "@/lib/api/types";
+import type { ContextType, MediaSourceType } from "@/lib/api/mutation-types";
 
 const MEDIA_TYPES = [
   { value: "user_upload", label: "직접 촬영" },

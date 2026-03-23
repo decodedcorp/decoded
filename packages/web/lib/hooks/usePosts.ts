@@ -16,9 +16,9 @@ import type {
   Post,
   PostsListResponse,
   PostsListParams,
-  UpdatePostDto,
   PostResponse,
-} from "@/lib/api/types";
+} from "@/lib/api/mutation-types";
+import type { UpdatePostDto } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys

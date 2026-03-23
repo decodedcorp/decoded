@@ -12,12 +12,12 @@ import { apiClient } from "./client";
 import type {
   Solution,
   CreateSolutionDto,
-  UpdateSolutionDto,
+  ManualUpdateSolutionDto,
   ExtractMetadataRequest,
   ExtractMetadataResponse,
   ConvertAffiliateRequest,
   ConvertAffiliateResponse,
-} from "./types";
+} from "./mutation-types";
 
 // ============================================================
 // Create Solution
@@ -51,7 +51,7 @@ export async function createSolution(
  */
 export async function updateSolution(
   solutionId: string,
-  data: UpdateSolutionDto
+  data: ManualUpdateSolutionDto
 ): Promise<Solution> {
   return apiClient<Solution>({
     path: `/api/v1/solutions/${solutionId}`,

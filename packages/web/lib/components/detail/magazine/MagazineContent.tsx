@@ -1,11 +1,10 @@
 "use client";
 
-import type { PostMagazineLayout } from "@/lib/api/types";
+import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/mutation-types";
 import { MagazineTitleSection } from "./MagazineTitleSection";
 import { MagazineEditorialSection } from "./MagazineEditorialSection";
 import { MagazineCelebSection } from "./MagazineCelebSection";
 import { MagazineItemsSection } from "./MagazineItemsSection";
-import type { RelatedEditorialItem } from "@/lib/api/types";
 import { MagazineRelatedSection } from "./MagazineRelatedSection";
 
 type Props = {

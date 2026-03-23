@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Post } from "@/lib/api/types";
+import type { Post } from "@/lib/api/mutation-types";
 import { formatRelativeTime } from "@/lib/utils";
 
 type Props = {

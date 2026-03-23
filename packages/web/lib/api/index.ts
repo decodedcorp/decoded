@@ -7,8 +7,8 @@
 export { apiClient, getAuthToken } from "./client";
 export type { ApiClientOptions } from "./client";
 
-// Types
-export * from "./types";
+// Mutation types (manual types for mutations, uploads, and server-side functions)
+export * from "./mutation-types";
 
 // Post APIs
 export {

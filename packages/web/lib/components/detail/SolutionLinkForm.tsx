@@ -3,7 +3,7 @@
 import { memo, useState, useCallback, useRef } from "react";
 import { Link2, Loader2, Check, X, AlertTriangle } from "lucide-react";
 import { extractSolutionMetadata, convertAffiliate } from "@/lib/api/solutions";
-import type { ExtractMetadataResponse } from "@/lib/api/types";
+import type { ExtractMetadataResponse } from "@/lib/api/mutation-types";
 
 export interface SolutionLinkFormData {
   original_url: string;

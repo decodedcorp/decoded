@@ -20,7 +20,7 @@ import { useMyRankingDetail as useMyRankingDetailGenerated } from "@/lib/api/gen
 import type { MyBadgesResponse } from "@/lib/api/generated/models";
 import type { MyRankingDetailResponse } from "@/lib/api/generated/models";
 import type { UserResponse, UserStatsResponse } from "@/lib/api/generated/models";
-import { UpdateUserDto } from "@/lib/api/types";
+import type { UpdateUserDto } from "@/lib/api/generated/models";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 
 // ============================================================

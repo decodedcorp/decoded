@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { getPost } from "@/lib/api/generated/posts/posts";
-import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/types";
+import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/generated/models";
 import type { StyleCardData } from "./StyleCard";
 import { cn } from "@/lib/utils";
 import { SpotMarker } from "@/lib/design-system";

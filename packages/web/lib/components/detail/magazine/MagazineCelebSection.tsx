@@ -6,7 +6,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import Image from "next/image";
 import Link from "next/link";
-import type { PostMagazineCelebWithItem } from "@/lib/api/types";
+import type { PostMagazineCelebWithItem } from "@/lib/api/mutation-types";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);

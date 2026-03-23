@@ -6,7 +6,7 @@
  */
 
 import { apiClient, getAuthToken } from "./client";
-import {
+import type {
   UploadResponse,
   AnalyzeRequest,
   AnalyzeResponse,
@@ -17,11 +17,11 @@ import {
   CreatePostWithSolutionRequest,
   PostsListResponse,
   PostsListParams,
-  UpdatePostDto,
   PostResponse,
   PostMagazineResponse,
-  ApiError,
-} from "./types";
+} from "./mutation-types";
+import { ApiError } from "./mutation-types";
+import type { UpdatePostDto } from "./generated/models";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 

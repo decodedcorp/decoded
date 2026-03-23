@@ -26,10 +26,10 @@ import {
 import type {
   Solution,
   CreateSolutionDto,
-  UpdateSolutionDto,
+  ManualUpdateSolutionDto,
   ExtractMetadataResponse,
   ConvertAffiliateResponse,
-} from "@/lib/api/types";
+} from "@/lib/api/mutation-types";
 
 // ============================================================
 // Query Keys
@@ -121,7 +121,7 @@ export function useCreateSolution() {
 interface UpdateSolutionVariables {
   solutionId: string;
   spotId: string; // Needed for cache invalidation
-  data: UpdateSolutionDto;
+  data: ManualUpdateSolutionDto;
 }
 
 export function useUpdateSolution() {
