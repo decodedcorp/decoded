@@ -43,7 +43,7 @@
 
 ### Testing
 
-- [ ] **TEST-01**: Zod 스키마 유효성 검증 테스트 (생성된 스키마 vs 실제 API 응답)
+- [x] **TEST-01**: Zod 스키마 유효성 검증 테스트 (생성된 스키마 vs 실제 API 응답)
 
 ### Tooling (에이전트 워크플로우 최적화)
 
@@ -104,7 +104,7 @@
 | CI-03 | Phase 43 | Complete |
 | CI-04 | Phase 43 | Complete |
 | CI-05 | Phase 43 | Complete |
-| TEST-01 | Phase 43 | Pending |
+| TEST-01 | Phase 43 | Complete |
 | TOOL-01 | Phase 43 | Complete |
 | TOOL-02 | Phase 43 | Complete |
 | TOOL-03 | Phase 43 | Complete |
