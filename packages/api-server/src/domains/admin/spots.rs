@@ -33,6 +33,7 @@ pub struct AdminSpotListQuery {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/spots",
+    operation_id = "admin_list_spots",
     tag = "admin",
     security(("bearer_auth" = [])),
     params(

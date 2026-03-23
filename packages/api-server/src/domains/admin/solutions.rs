@@ -58,6 +58,7 @@ pub struct SolutionStatusUpdate {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/solutions",
+    operation_id = "admin_list_solutions",
     tag = "admin",
     security(
         ("bearer_auth" = [])
