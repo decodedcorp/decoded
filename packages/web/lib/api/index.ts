@@ -36,11 +36,10 @@ export {
 } from "./users";
 
 // Spot APIs
-export { fetchSpots, createSpot, updateSpot, deleteSpot } from "./spots";
+export { createSpot, updateSpot, deleteSpot } from "./spots";
 
 // Solution APIs
 export {
-  fetchSolutions,
   createSolution,
   updateSolution,
   deleteSolution,

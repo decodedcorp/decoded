@@ -25,14 +25,6 @@ export interface CreateCommentDto {
   parent_id?: string | null;
 }
 
-export async function fetchComments(
-  postId: string
-): Promise<CommentResponse[]> {
-  return apiClient<CommentResponse[]>({
-    path: `/api/v1/posts/${postId}/comments`,
-  });
-}
-
 export async function createComment(
   postId: string,
   dto: CreateCommentDto

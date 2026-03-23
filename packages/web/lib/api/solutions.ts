@@ -11,7 +11,6 @@
 import { apiClient } from "./client";
 import type {
   Solution,
-  SolutionListItem,
   CreateSolutionDto,
   UpdateSolutionDto,
   ExtractMetadataRequest,
@@ -19,22 +18,6 @@ import type {
   ConvertAffiliateRequest,
   ConvertAffiliateResponse,
 } from "./types";
-
-// ============================================================
-// List Solutions
-// GET /api/v1/spots/{spot_id}/solutions
-// ============================================================
-
-/** Backend returns array directly (Vec<SolutionListItem>) */
-export async function fetchSolutions(
-  spotId: string
-): Promise<SolutionListItem[]> {
-  return apiClient<SolutionListItem[]>({
-    path: `/api/v1/spots/${spotId}/solutions`,
-    method: "GET",
-    requiresAuth: false, // Public data
-  });
-}
 
 // ============================================================
 // Create Solution
