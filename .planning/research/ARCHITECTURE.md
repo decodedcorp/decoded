@@ -1,450 +1,523 @@
 # Architecture Research
 
-**Domain:** Mixed-language monorepo consolidation (JS/TS + Rust/Cargo) with Turborepo + bun
-**Researched:** 2026-03-22
-**Confidence:** MEDIUM — Turborepo+Cargo integration lacks official first-class support; patterns are community-established workarounds verified across multiple sources
+**Domain:** Type-safe API client generation (Orval + Zod) integrated into existing Next.js monorepo
+**Researched:** 2026-03-23
+**Confidence:** HIGH (Orval v8.5.3 official docs verified, existing codebase read directly)
 
 ## Standard Architecture
 
 ### System Overview
 
 ```
-decoded-monorepo/                           <- bun workspace root
-├── packages/
-│   ├── web/                                <- @decoded/web (bun workspace member)
-│   │   ├── package.json
-│   │   └── ...Next.js 16 source
-│   ├── shared/                             <- @decoded/shared (bun workspace member)
-│   │   ├── package.json
-│   │   └── ...shared TS types/queries
-│   ├── mobile/                             <- @decoded/mobile (bun workspace member)
-│   │   ├── package.json
-│   │   └── ...Expo source
-│   └── backend/                            <- @decoded/backend (NOT a bun workspace member)
-│       ├── package.json                    <- thin JS wrapper for Turborepo visibility only
-│       ├── Cargo.toml                      <- Cargo workspace root (independent)
-│       ├── Cargo.lock
-│       └── src/
-├── turbo.json                              <- task graph (JS tasks + Cargo npm-script wrappers)
-├── package.json                            <- root: "packageManager": "bun@1.x", workspaces
-├── bun.lock                                <- text lockfile (bun v1.2+ default, replaces yarn.lock)
-├── docker-compose.yml                      <- root-level: backend + Postgres + Meilisearch
-├── .env.local                              <- dev secrets template (gitignored)
-└── .github/workflows/
-    ├── backend-ci.yml                      <- Rust-specific: cargo test + clippy
-    └── frontend-ci.yml                     <- JS: bun install + turbo build
+┌─────────────────────────────────────────────────────────────────┐
+│                      UI Layer (React Components)                 │
+│  lib/components/[feature]/   app/[route]/                        │
+│  Components consume hooks exactly as today — NO component changes│
+├─────────────────────────────────────────────────────────────────┤
+│                     Hook Layer (React Query)                     │
+├────────────────────────────┬────────────────────────────────────┤
+│  EXISTING (keep as-is)     │  GENERATED (new, replace gradually) │
+│  lib/hooks/useProfile.ts   │  lib/api/generated/               │
+│  lib/hooks/usePosts.ts     │    posts/posts.ts   (hooks)        │
+│  lib/hooks/useImages.ts    │    users/users.ts   (hooks)        │
+│  lib/hooks/useSpots.ts     │    spots/spots.ts   (hooks)        │
+│  lib/hooks/useComments.ts  │    solutions/...    (hooks)        │
+│  ...                       │  lib/api/generated/model/          │
+│                            │    post.ts  user.ts  spot.ts       │
+│                            │  lib/api/generated/zod/            │
+│                            │    posts.zod.ts  users.zod.ts      │
+├────────────────────────────┴────────────────────────────────────┤
+│                   API Client / Mutator Layer                     │
+├────────────────────────────┬────────────────────────────────────┤
+│  EXISTING (deprecate after │  NEW (single mutator for all        │
+│  migration per domain)     │  generated hooks)                   │
+│  lib/api/client.ts         │  lib/api/mutator.ts                │
+│  lib/api/posts.ts          │    - Next.js proxy-aware            │
+│  lib/api/users.ts          │    - Supabase JWT injection         │
+│  lib/api/badges.ts ...     │    - Shared error handling          │
+├────────────────────────────┴────────────────────────────────────┤
+│               Next.js API Proxy Layer (completely unchanged)     │
+│  app/api/v1/posts/route.ts   app/api/v1/users/route.ts          │
+│  app/api/v1/spots/route.ts   app/api/v1/admin/...               │
+│  All proxy routes stay — they are the stable URL contract        │
+├─────────────────────────────────────────────────────────────────┤
+│             State Layer (Zustand — completely unchanged)          │
+│  lib/stores/authStore.ts   lib/stores/behaviorStore.ts           │
+│  lib/stores/vtonStore.ts   lib/stores/magazineStore.ts           │
+│  Zustand stores never call API directly; unchanged in v9.0       │
+└─────────────────────────────────────────────────────────────────┘
+                    ↕ proxy forwards to
+┌─────────────────────────────────────────────────────────────────┐
+│             Backend: packages/api-server (Rust/Axum)            │
+│             OpenAPI spec at https://dev.decoded.style            │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-**Confirmed architectural decision (from PROJECT.md):**
-
-> "Backend stays outside Yarn workspace — Cargo workspace is independent, bun manages JS packages only"
-
-`packages/api-server/package.json` exists exclusively as a Turborepo adapter. Cargo manages the Rust dependency graph independently.
 
 ### Component Responsibilities
 
-| Component                       | Responsibility                               | Implementation                                                             |
-| ------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/api-server/package.json` | Turborepo entry point for Cargo tasks        | Wraps `cargo build`, `cargo run`, `cargo test` as npm scripts              |
-| Root `turbo.json`               | Task dependency graph + cache config         | `build`, `dev`, `lint`, `test` tasks; backend tasks set `cache: false`     |
-| Root `package.json`             | bun workspace declaration (JS packages only) | `workspaces` lists web/shared/mobile explicitly, excludes backend          |
-| `bun.lock`                      | Deterministic JS dependency lockfile         | Text format; Turborepo 2.6 supports granular cache analysis of this format |
-| `docker-compose.yml`            | Backend + infrastructure services for dev    | Independent of Turborepo; invoked by backend npm `dev` script              |
-| `.env.local` at `packages/web/` | Next.js environment variables                | Resolved by Next.js from its working directory, not monorepo root          |
+| Component | Responsibility | Change in v9.0 |
+|-----------|---------------|----------------|
+| `lib/api/generated/` | Orval-generated React Query hooks + model types | NEW — produced by codegen |
+| `lib/api/generated/model/` | TypeScript type definitions generated from OpenAPI schemas | NEW — replaces `lib/api/types.ts` |
+| `lib/api/generated/[tag]/[tag].zod.ts` | Zod validation schemas per domain | NEW — used for request body validation |
+| `lib/api/mutator.ts` | Shared fetch wrapper injected into all generated hooks | NEW — replaces per-file auth logic |
+| `orval.config.ts` | Orval code generation configuration | NEW in `packages/web/` |
+| `lib/api/client.ts` | Existing manual apiClient fetch wrapper | KEEP during migration; delete after |
+| `lib/api/posts.ts` etc. | Manual API function files per domain | DEPRECATE per domain; delete after migration |
+| `lib/api/types.ts` | Manual TypeScript DTO types | DEPRECATE; delete after model/ replaces it |
+| `lib/hooks/` | Existing React Query hooks | KEEP during migration; replace one domain at a time |
+| `app/api/v1/` | Next.js proxy routes | UNCHANGED — generated hooks call same `/api/v1/*` URLs |
+| `lib/stores/` | Zustand client state | UNCHANGED — no API calls inside stores |
 
 ## Recommended Project Structure
 
 ```
-decoded-monorepo/
-├── packages/
-│   ├── web/
-│   │   ├── package.json         # name: @decoded/web
-│   │   ├── .env.local           # Next.js env vars (NEXT_PUBLIC_*, API_BASE_URL, etc.)
-│   │   └── ...
-│   ├── shared/
-│   │   ├── package.json         # name: @decoded/shared
-│   │   └── ...
-│   ├── mobile/
-│   │   ├── package.json         # name: @decoded/mobile
-│   │   └── ...
-│   └── backend/
-│       ├── package.json         # name: @decoded/backend (Turborepo adapter only)
-│       ├── Cargo.toml           # Cargo workspace root
-│       ├── Cargo.lock
-│       ├── Dockerfile           # existing backend Dockerfile
-│       └── src/
-├── turbo.json
-├── package.json                 # "workspaces": ["packages/web","packages/shared","packages/mobile"]
-├── bun.lock                     # generated by bun install (replaces yarn.lock)
-├── docker-compose.yml
-├── .env.local.example           # combined template documenting ALL env vars
-└── .github/
-    └── workflows/
-        ├── backend-ci.yml
-        └── frontend-ci.yml
+packages/web/
+├── orval.config.ts                  # NEW: Orval generation config (root of packages/web)
+├── lib/
+│   ├── api/
+│   │   ├── generated/               # NEW: Orval output directory — ADD TO .gitignore
+│   │   │   ├── model/               # Generated TypeScript types (one file per schema)
+│   │   │   │   ├── post.ts
+│   │   │   │   ├── user.ts
+│   │   │   │   ├── spot.ts
+│   │   │   │   ├── solution.ts
+│   │   │   │   └── index.ts         # Barrel export
+│   │   │   ├── posts/               # Generated hooks per tag (tags-split mode)
+│   │   │   │   ├── posts.ts         # useGetPosts, useCreatePost, useDeletePost...
+│   │   │   │   └── posts.zod.ts     # Zod schemas for posts requests/responses
+│   │   │   ├── users/
+│   │   │   │   ├── users.ts
+│   │   │   │   └── users.zod.ts
+│   │   │   ├── spots/
+│   │   │   │   ├── spots.ts
+│   │   │   │   └── spots.zod.ts
+│   │   │   ├── solutions/
+│   │   │   ├── badges/
+│   │   │   ├── rankings/
+│   │   │   ├── admin/
+│   │   │   └── index.ts             # Barrel export for all generated code
+│   │   ├── mutator.ts               # NEW: shared fetch mutator for generated hooks
+│   │   ├── client.ts                # EXISTING: keep during migration
+│   │   ├── posts.ts                 # EXISTING: deprecate after posts/ migrated
+│   │   ├── users.ts                 # EXISTING: deprecate after users/ migrated
+│   │   ├── types.ts                 # EXISTING: deprecate after model/ replaces it
+│   │   └── index.ts                 # Update exports as migration progresses
+│   └── hooks/
+│       ├── usePosts.ts              # EXISTING: thin wrapper or swap queryFn
+│       ├── useProfile.ts            # EXISTING: thin wrapper or swap queryFn
+│       └── ...                      # Swap per domain; delete wrappers when stable
 ```
 
 ### Structure Rationale
 
-- **`packages` array in root `package.json` is explicit, not a glob.** Using `"packages/*"` as a glob would include `packages/api-server`, causing bun to attempt resolving its Cargo-only nature as a JS workspace. Explicit listing prevents this.
-- **`packages/web/.env.local` not monorepo root.** Next.js resolves `.env.local` relative to its `cwd` (i.e., `packages/web/` when `next dev` runs). Turborepo also recommends per-package env files over a root `.env`. The root `.env.local.example` serves only as documentation.
-- **`docker-compose.yml` at root.** The backend's `package.json` dev script references it with `../../docker-compose.yml`. This mirrors the existing backend deployment pattern (Docker in production).
-- **Separate CI workflows by language.** Rust CI uses `rustup` + `cargo`; JS CI uses `bun` + `turbo`. Mixing them on the same job adds ~2-3 min to every frontend PR from unnecessary Rust toolchain setup.
+- **`lib/api/generated/` in `packages/web/` — not `packages/shared/`:** Generated hooks depend on `@tanstack/react-query`. React Query hooks require a `QueryClientProvider` in the component tree. The mobile app (Expo 54) has a different React Query setup, and sharing hooks across packages causes the documented "No QueryClient set" error (TanStack/query issues #3595, #7965). The mobile app also uses React Native — web-specific patterns (`window.location.origin`, Next.js proxy cookies) cannot be shared. Keep generated code colocated with the consuming app.
+
+- **`tags-split` mode:** One folder per OpenAPI tag with separate files for hooks and Zod schemas. Keeps domains independently navigable. Avoids a single giant file that is impossible to diff during code review.
+
+- **`lib/api/mutator.ts` as the single auth layer:** All generated hooks share one custom mutator. This replaces the per-file auth logic spread across `client.ts`, `posts.ts`, and `users.ts`. The existing `client.ts` pattern (check session, inject `Authorization: Bearer`) is preserved exactly.
+
+- **`lib/api/generated/` gitignored:** Generated files must not be committed. They are produced at build/pre-push time from the OpenAPI spec. Committing them creates stale drift risk — when the backend changes a field, TypeScript would still compile against the stale type.
 
 ## Architectural Patterns
 
-### Pattern 1: Cargo-via-package.json Wrapper (the only viable Turborepo+Rust pattern)
+### Pattern 1: Custom Fetch Mutator (Auth Injection)
 
-**What:** `packages/api-server/package.json` exposes Cargo commands as npm scripts. Turborepo treats these as regular tasks because it requires `package.json` scripts to include a directory in its task graph. Native Rust support in Turborepo is an open RFC (issue #683, open as of Oct 2025) with no implementation timeline.
+**What:** A single function that Orval injects into every generated hook as the HTTP transport. It handles JWT retrieval from Supabase, the Next.js proxy base URL, and error normalization. This directly replaces the logic in `lib/api/client.ts:apiClient()`.
 
-**When to use:** Required for any Rust package that must participate in Turborepo's task ordering.
+**When to use:** Required. This is the primary integration point between Orval-generated code and the existing Supabase auth system.
 
-**Trade-offs:** Turborepo cannot hash Cargo inputs/outputs intelligently. Cargo's own incremental compilation handles Rust caching. Turborepo caching for backend tasks must be disabled.
+**Trade-offs:** Centralizes auth in one place (good). The mutator runs on every request including public ones — the Supabase `getSession()` call adds a small async overhead. Acceptable given the existing code already does this on every request.
 
-**Example `packages/api-server/package.json`:**
+**Example:**
+```typescript
+// lib/api/mutator.ts
+import { supabaseBrowserClient } from "@/lib/supabase/client";
 
-```json
-{
-  "name": "@decoded/backend",
-  "version": "0.0.0",
-  "private": true,
-  "scripts": {
-    "build": "cargo build --release",
-    "dev": "docker-compose -f ../../docker-compose.yml up backend --build",
-    "test": "cargo test",
-    "lint": "cargo clippy -- -D warnings",
-    "type-check": "cargo check"
+export interface RequestConfig {
+  url: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  params?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  data?: unknown;
+  signal?: AbortSignal;
+}
+
+export const decodedFetcher = async <T>(config: RequestConfig): Promise<T> => {
+  const { url, method, params, headers = {}, data, signal } = config;
+
+  // Inject Supabase JWT — same as existing lib/api/client.ts:getAuthToken()
+  const { data: { session } } = await supabaseBrowserClient.auth.getSession();
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
   }
+
+  // Build URL with query params (Orval passes params separately from the URL)
+  // Use relative URL so requests route through Next.js proxy (avoids CORS)
+  const fullUrl = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) {
+        fullUrl.searchParams.set(k, String(v));
+      }
+    });
+  }
+
+  const response = await fetch(fullUrl.toString(), {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: data ? JSON.stringify(data) : undefined,
+    signal,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      message: `HTTP ${response.status}: ${response.statusText}`,
+    }));
+    throw new Error(error.message ?? `API Error: ${response.status}`);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json();
+};
+```
+
+```typescript
+// packages/web/orval.config.ts
+import { defineConfig } from "orval";
+
+export default defineConfig({
+  "decoded-api": {
+    input: {
+      // Download spec from backend at codegen time; or use local file during dev
+      target: "https://dev.decoded.style/api-docs/openapi.json",
+    },
+    output: {
+      mode: "tags-split",               // One folder per OpenAPI tag
+      target: "lib/api/generated",      // Hooks go here
+      schemas: "lib/api/generated/model", // TypeScript types go here
+      client: "react-query",
+      httpClient: "fetch",              // Use fetch (not axios) to match existing code
+      clean: true,                      // Delete stale generated files on each run
+      prettier: true,                   // Format output (uses packages/web/.prettierrc)
+      override: {
+        mutator: {
+          path: "lib/api/mutator.ts",
+          name: "decodedFetcher",
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+          signal: true,                 // Include AbortSignal for request cancellation
+          options: {
+            staleTime: 60000,           // 1 minute — matches existing hooks
+            gcTime: 300000,             // 5 minutes — matches existing hooks
+          },
+        },
+        zod: {
+          generate: {
+            response: true,             // Validate API responses at runtime
+            body: true,                 // Validate request bodies before send
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+### Pattern 2: Thin Wrapper Migration (Existing Hook Preservation)
+
+**What:** During migration, keep `lib/hooks/` hooks but replace their `queryFn` with calls to generated API functions rather than manual `lib/api/` functions. Components continue using the same hook API — zero component changes.
+
+**When to use:** For hooks with business logic beyond a raw fetch: `useInfinitePosts` (page mapping), `useCreatePost` (multi-step), `useTrackDwellTime` (side effects). Generated hooks are pure API wrappers; the mapping logic stays in the existing hook.
+
+**Trade-offs:** Maintains backward compatibility, allows domain-by-domain rollout. Thin redundancy during migration is acceptable. Remove wrappers after validation is complete.
+
+**Example:**
+```typescript
+// lib/hooks/usePosts.ts — AFTER swapping queryFn (thin wrapper)
+
+// Previously: import { fetchPosts } from "@/lib/api/posts"
+// After:      import the raw fetch function from generated code
+import { getPostsQueryOptions } from "@/lib/api/generated/posts/posts";
+
+export function useInfinitePosts(params: UseInfinitePostsParams) {
+  return useInfiniteQuery({
+    queryKey: ["posts", "infinite", params],
+    queryFn: async ({ pageParam }) => {
+      // Use generated queryFn internally; keep custom page-mapping logic
+      const response = await getPostsQueryOptions({ page: pageParam as number, ...mappedParams }).queryFn!();
+      return {
+        items: response.data,
+        currentPage: response.pagination.current_page,
+        hasMore: response.pagination.current_page < response.pagination.total_pages,
+      };
+    },
+    // ... rest of infinite query config
+  });
 }
 ```
 
-**Example `turbo.json` (root):**
+### Pattern 3: Zod Runtime Validation at Mutation Boundary
 
-```json
-{
-  "$schema": "https://turbo.build/schema.json",
-  "globalEnv": [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "API_BASE_URL"
-  ],
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
-    },
-    "dev": {
-      "persistent": true,
-      "cache": false
-    },
-    "lint": {},
-    "test": {
-      "dependsOn": ["^build"]
-    },
-    "@decoded/backend#build": {
-      "cache": false
-    },
-    "@decoded/backend#dev": {
-      "cache": false,
-      "persistent": true
-    }
+**What:** Use generated Zod schemas to validate user-supplied request bodies before they leave the component. Responses are already typed by TypeScript — runtime Zod validation of responses is optional.
+
+**When to use:** For mutation hooks (POST/PATCH) where user input is involved. Catches malformed form data before a network round-trip. Not needed for GET hooks where TypeScript types suffice.
+
+**Trade-offs:** Adds a parse step on each mutation. Cost is negligible for form submissions. Do not use for high-frequency reads.
+
+**Example:**
+```typescript
+// In a component — validate before calling mutation
+import { createPostBody } from "@/lib/api/generated/posts/posts.zod";
+import { useCreatePost } from "@/lib/api/generated/posts/posts";
+
+const { mutate: createPost } = useCreatePost();
+
+const handleSubmit = (formData: unknown) => {
+  const parsed = createPostBody.safeParse(formData);
+  if (!parsed.success) {
+    toast.error(parsed.error.issues[0].message);
+    return;
   }
-}
+  createPost({ data: parsed.data });
+};
 ```
 
-### Pattern 2: Build Order via Turborepo Task Graph
+### Pattern 4: Cache Invalidation in Generated Mutation Hooks
 
-**What:** Turborepo's `"dependsOn": ["^build"]` microsyntax makes `packages/web` wait for `packages/shared` to finish. Backend has no JS dependencies, so it builds in parallel with JS packages by default.
+**What:** Generated `useCreate*` and `useUpdate*` hooks do not automatically invalidate related queries. Add `onSuccess` cache invalidation via the `mutation` option prop — same pattern as existing `useMutation` hooks.
 
-**When to use:** All multi-package builds where one package imports from another.
+**When to use:** Every mutation that modifies data that other queries display. This is the same pattern used today in `useUpdatePost` and `useDeletePost`.
 
-**Build order (Turborepo-resolved):**
+**Trade-offs:** Cache invalidation logic must be added manually at the call site (not in the generated file). This is intentional — the generated file regenerates and would overwrite any manual additions.
 
-```
-Phase 1 (parallel — no dependencies):
-  packages/shared#build     (TS compilation → dist/)
-  packages/api-server#build    (cargo build --release)
+**Example:**
+```typescript
+// Component or feature hook wrapping the generated mutation
+const queryClient = useQueryClient();
 
-Phase 2 (parallel — after shared completes):
-  packages/web#build        (next build, imports @decoded/shared)
-  packages/mobile#build     (expo export, imports @decoded/shared)
-```
-
-**Trade-offs:** The `^` syntax resolves only within the bun workspace graph. `packages/api-server` is outside that graph — Turborepo runs it as an independent task, not a dependency of any JS package. If `packages/web` must wait for backend to be available at runtime during dev, use `dependsOn: ["@decoded/backend#dev"]` on the web dev task.
-
-### Pattern 3: Docker Compose for Backend Dev, Native Cargo for CI
-
-**What:** Development uses `docker-compose up backend` (no local Rust toolchain required). CI builds natively with `cargo build --release` for correctness and cache efficiency.
-
-**When to use:** When frontend engineers should not need Rust installed locally. The existing backend is already Docker-deployed in production — this maintains consistency.
-
-**Trade-offs:** Docker adds ~5-10s startup in dev vs native `cargo run`. Acceptable given the team separation between frontend and backend engineers.
-
-**Example `docker-compose.yml` (root):**
-
-```yaml
-version: "3.9"
-services:
-  backend:
-    build:
-      context: ./packages/api-server
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    env_file:
-      - packages/web/.env.local
-    depends_on:
-      - postgres
-      - meilisearch
-    volumes:
-      - ./packages/api-server/src:/app/src # optional: live reload with cargo-watch
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: decoded_dev
-      POSTGRES_USER: decoded
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  meilisearch:
-    image: getmeili/meilisearch:latest
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
-
-volumes:
-  postgres_data:
-```
-
-### Pattern 4: Path-Based CI Split (dorny/paths-filter)
-
-**What:** A single `detect-changes` job runs `dorny/paths-filter` to output boolean flags. Downstream jobs use `if: needs.detect-changes.outputs.backend == 'true'` to conditionally execute. This avoids running the Rust toolchain on every frontend PR.
-
-**When to use:** Any monorepo where different packages use different languages or toolchains.
-
-**Trade-offs:** Adds one extra job at the start of every CI run (~30s). Saves 2-5 min of Rust toolchain setup on frontend-only PRs.
-
-**Example `.github/workflows/backend-ci.yml`:**
-
-```yaml
-name: Backend CI
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - "packages/api-server/**"
-      - ".github/workflows/backend-ci.yml"
-  pull_request:
-    paths:
-      - "packages/api-server/**"
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/api-server
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
-        with:
-          path: packages/api-server/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/api-server/Cargo.lock') }}
-      - run: cargo clippy -- -D warnings
-      - run: cargo test
-      - run: cargo build --release
-```
-
-**Example `.github/workflows/frontend-ci.yml`:**
-
-```yaml
-name: Frontend CI
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - "packages/web/**"
-      - "packages/shared/**"
-      - "packages/mobile/**"
-      - "turbo.json"
-      - "bun.lock"
-      - ".github/workflows/frontend-ci.yml"
-  pull_request:
-    paths:
-      - "packages/web/**"
-      - "packages/shared/**"
-      - "packages/mobile/**"
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - run: bun turbo build --filter=web --filter=shared
-      - run: bun turbo lint
+const { mutate: deletePost } = useDeletePost({
+  mutation: {
+    onSuccess: (_, postId) => {
+      queryClient.removeQueries({ queryKey: getPostQueryKey(postId) });
+      queryClient.invalidateQueries({ queryKey: getPostsQueryKey() });
+    },
+  },
+});
 ```
 
 ## Data Flow
 
-### Build Invocation Flow (Development)
+### Request Flow (Generated Hook Path)
 
 ```
-Developer: bun dev
-    |
-    v
-Root package.json "dev": "turbo dev --parallel"
-    |
-    +------------------------+---------------------------+
-    |                        |                           |
-    v                        v                           v
-@decoded/web#dev         @decoded/shared#dev        @decoded/backend#dev
-next dev (port 3000)     tsc --watch                docker-compose up backend
-Hot reload: yes          Hot reload: yes            Rust hot reload: cargo-watch (optional)
+Component calls useGetPosts({ params })
+    ↓ (from lib/api/generated/posts/posts.ts)
+React Query executes queryFn
+    ↓
+decodedFetcher({ url: "/api/v1/posts", method: "GET", params })
+    ↓ calls supabaseBrowserClient.auth.getSession() — injects JWT
+fetch("http://localhost:3000/api/v1/posts?page=1&...")
+    ↓
+Next.js Proxy Route: app/api/v1/posts/route.ts (UNCHANGED)
+    ↓ reads API_BASE_URL server env var, forwards request
+Rust/Axum Backend: https://dev.decoded.style/api/v1/posts
+    ↓ returns JSON
+decodedFetcher returns typed T (typed by Orval from OpenAPI schema)
+    ↓
+React Query stores in cache with queryKey ["posts", "list", params]
+    ↓
+Component receives { data, isLoading, isError }
 ```
 
-### Environment Variable Flow
+Critical insight: the Next.js proxy layer (`app/api/v1/`) is unchanged. Generated hooks use relative URLs (same as the existing `lib/api/client.ts` with `API_BASE_URL = ""`). The proxy is the stable contract between browser and backend — it handles CORS, server-side secrets, and FormData forwarding.
+
+### State Management (Unchanged)
 
 ```
-.env.local.example (root — documentation only, gitignored template)
-    |
-    v (developer copies to)
-packages/web/.env.local
-    |
-    +---> Next.js resolves automatically (NEXT_PUBLIC_* and server vars)
-    +---> docker-compose.yml: env_file: packages/web/.env.local (passed to backend container)
-    +---> turbo.json globalEnv: [...] (cache hash includes these variables)
+Zustand Stores (authStore, vtonStore, magazineStore, behaviorStore ...)
+    │
+    │ remain isolated from API calls
+    │ only update via React Query onSuccess callbacks
+    │ or direct user actions (UI events)
+    │
+    ↓ no changes to any lib/stores/ files during v9.0 migration
 ```
 
-**Important:** `turbo.json`'s `globalEnv` must list every environment variable that affects build output. If a var changes but is not listed, Turborepo incorrectly serves a cached build that doesn't reflect the change.
-
-### Bun Migration Flow
+### Migration Data Flow
 
 ```
-Current state: yarn.lock + .yarnrc.yml + packages managed by Yarn 4
+Phase A: Generated code exists alongside manual code
+  components → existing lib/hooks/ → lib/api/[domain].ts → apiClient
+  (migration target) → generated lib/api/generated/ → decodedFetcher → proxy
 
-Migration steps (sequential):
-  1. Delete: yarn.lock, .yarnrc.yml, .yarn/ directory
-  2. Modify: root package.json "packageManager": "bun@1.2.x"
-  3. Modify: root package.json "workspaces" to explicit list (exclude backend)
-  4. Run: bun install  ->  generates bun.lock (text format)
-  5. Add: turbo as dev dependency (bun add -d turbo)
-  6. Create: turbo.json at root
-  7. Modify: root package.json scripts to use "turbo" commands
-  8. Verify: all packages resolve correctly (bun run --filter @decoded/web dev)
+Phase B: Swap queryFn in existing hooks to generated functions
+  components → lib/hooks/usePosts.ts (wrapper) → generated queryFn → proxy
 
-WARNING: bun does NOT read yarn.lock for version pinning.
-All dependencies resolve to latest compatible versions in one go.
-Run a full build + test suite after migration to catch any breaking upgrades.
+Phase C: Point components directly at generated hooks where wrappers are trivial
+  components → lib/api/generated/posts/posts.ts (useGetPosts) → proxy
+
+Phase D: Delete manual files; generated model/ is type SSOT
+  DELETE: lib/api/client.ts, lib/api/posts.ts, lib/api/users.ts, lib/api/types.ts
+  RESULT: lib/api/generated/model/ is the single source of truth for all API types
 ```
 
 ## Integration Points
 
-### JS Workspace ↔ Cargo Workspace Boundary
+### External Services
 
-| Boundary                               | Communication                                 | Notes                                                                                            |
-| -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `packages/web` → `packages/api-server`    | HTTP via `API_BASE_URL` env var               | No shared code. Next.js API routes proxy requests. Pattern unchanged from pre-monorepo.          |
-| `packages/shared` → `packages/api-server` | None                                          | Rust types defined independently in Cargo workspace. No code sharing across language boundary.   |
-| `turbo.json` → `packages/api-server`      | npm script delegation                         | Turborepo calls `cargo build/test` via `package.json` scripts. Cache disabled for backend tasks. |
-| `docker-compose.yml` → Cargo           | `docker build` context at `packages/api-server/` | Backend Dockerfile compiles Rust from source. Existing Dockerfile unchanged.                     |
-| GitHub Actions → Both                  | `paths:` trigger on CI workflows              | Separate `.yml` files per language. No shared toolchain setup job.                               |
+| Service | Integration Pattern | Change in v9.0 |
+|---------|---------------------|----------------|
+| OpenAPI spec at `dev.decoded.style` | Input to Orval at codegen time only — not a runtime dependency | NEW: spec fetched during `bun run generate` |
+| Supabase Auth | `decodedFetcher` calls `supabaseBrowserClient.auth.getSession()` — same as `lib/api/client.ts:getAuthToken()` | Mutator replicates existing pattern |
+| Next.js Proxy (`app/api/v1/`) | Generated hooks call relative `/api/v1/*` URLs — proxy unchanged | No change |
+| Rust/Axum Backend | Reached only through Next.js proxy — browser never calls it directly | No change |
 
-### New and Modified Config Files
+### Internal Boundaries
 
-| File                                | Status          | Purpose                                                                              |
-| ----------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
-| `turbo.json` (root)                 | NEW             | Task graph: build, dev, lint, test + backend-specific overrides                      |
-| `package.json` (root)               | MODIFIED        | `packageManager` → `bun@1.x`; `workspaces` → explicit list; scripts → turbo commands |
-| `packages/api-server/package.json`     | NEW             | Thin Turborepo adapter wrapping Cargo commands as npm scripts                        |
-| `bun.lock`                          | NEW             | Replaces `yarn.lock` after `bun install`                                             |
-| `docker-compose.yml` (root)         | NEW or MODIFIED | Root-level; consolidates backend + infrastructure services                           |
-| `packages/web/.env.local`           | VERIFY LOCATION | Must be in `packages/web/`, not monorepo root                                        |
-| `.env.local.example` (root)         | MODIFIED        | Combined template documenting all env vars across all services                       |
-| `.yarnrc.yml`                       | DELETED         | Yarn 4 config; no longer needed after bun migration                                  |
-| `.yarn/` directory                  | DELETED         | Yarn 4 cache/plugins                                                                 |
-| `.github/workflows/backend-ci.yml`  | NEW             | Rust: `cargo clippy`, `cargo test`, `cargo build --release`                          |
-| `.github/workflows/frontend-ci.yml` | NEW             | Replaces existing; `bun install` + `turbo build`                                     |
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `lib/api/generated/` ↔ `lib/hooks/` | Direct import (thin wrapper or replacement) | Both coexist during migration; wrappers deleted after |
+| `lib/api/generated/` ↔ `lib/stores/` | None — stores do not call API directly | Stores updated via React Query `onSuccess` callbacks, unchanged |
+| `lib/api/generated/model/` ↔ `lib/api/types.ts` | Parallel during migration; `types.ts` deleted at end | Do not re-export from both; prefer generated types immediately |
+| `lib/api/mutator.ts` ↔ `lib/api/client.ts` | Independent during migration — different functions | `mutator.ts` is a clean rewrite; `client.ts` stays until all manual functions are gone |
+| `orval.config.ts` ↔ Turborepo | `generate` task declared in `turbo.json`, cached by spec hash | Input fingerprint: downloaded spec file; output: `lib/api/generated/` |
 
-## Scaling Considerations
+### New and Modified Files
 
-| Scale                       | Architecture Adjustments                                                                        |
-| --------------------------- | ----------------------------------------------------------------------------------------------- |
-| Current dev team            | Single docker-compose for backend, bun+Turborepo for JS, local CI caching                       |
-| Growing team (5+ engineers) | Add Turborepo Remote Cache (Vercel) — cache JS builds centrally; saves 2-4 min per CI run       |
-| Multiple backend services   | Add services to docker-compose; add matching `packages/service-x/package.json` wrappers         |
-| Monorepo cache optimization | GitHub Actions `actions/cache` on `packages/api-server/target/` for Cargo; separate from Turborepo |
+| File | Status | Purpose |
+|------|--------|---------|
+| `packages/web/orval.config.ts` | NEW | Orval generation config |
+| `packages/web/lib/api/mutator.ts` | NEW | Shared fetch wrapper for all generated hooks |
+| `packages/web/lib/api/generated/` | NEW (gitignored) | Orval output: hooks, model types, Zod schemas |
+| `packages/web/.gitignore` | MODIFIED | Add `lib/api/generated/` |
+| `packages/web/package.json` | MODIFIED | Add `"generate": "orval"` script; add `orval` devDependency |
+| `turbo.json` (root) | MODIFIED | Add `generate` task with `dependsOn: []` (no Turborepo deps; spec is external) |
+| `packages/web/lib/api/client.ts` | UNCHANGED during migration | Deleted in Phase D |
+| `packages/web/lib/api/types.ts` | UNCHANGED during migration | Deleted in Phase D |
+| `packages/web/lib/api/[domain].ts` | UNCHANGED during migration | Deleted per domain as migration completes |
 
-### Scaling Priorities
+## Build Order for Migration
 
-1. **First bottleneck: Turborepo cache misses in CI for backend.** Because `@decoded/backend#build` has `cache: false`, every CI run rebuilds Rust from scratch. Mitigate with `actions/cache` keyed on `Cargo.lock` hash. A warm Cargo cache reduces backend CI from ~8 min to ~1 min.
-2. **Second bottleneck: `bun.lock` merge conflicts.** Multiple engineers adding dependencies simultaneously causes text lockfile conflicts. Enforce `bun install --frozen-lockfile` in CI to detect and reject out-of-sync lockfiles early.
+The migration is phased to keep the app deployable at each step.
+
+**Phase 1 — Scaffold (no behavior change to production)**
+1. Install `orval` as devDependency in `packages/web`: `bun add -d orval`
+2. Create `packages/web/orval.config.ts` (see Pattern 1 above)
+3. Create `packages/web/lib/api/mutator.ts`
+4. Add `"generate": "orval"` to `packages/web/package.json` scripts
+5. Add `lib/api/generated/` to `packages/web/.gitignore`
+6. Run `bun run generate` — confirm files appear in `lib/api/generated/`
+7. Run `bun run typecheck` — fix any type collisions between generated `model/` and existing `lib/api/types.ts` (expect name overlaps; use `import type` aliasing temporarily)
+8. Add `generate` step before typecheck in `packages/web/scripts/pre-push.sh`
+
+**Phase 2 — Validate parity (no production change)**
+1. Import one generated hook in isolation (e.g., in `app/debug/supabase/page.tsx`)
+2. Confirm generated `useGetPosts` returns same shape as `fetchPosts` today
+3. Confirm auth token injected correctly (check Network tab in browser)
+4. Confirm query keys are compatible with existing cache (safe to coexist)
+5. Document any shape differences between generated model/ and existing types.ts
+
+**Phase 3 — Migrate read hooks domain by domain**
+
+Recommended order (least complex to most):
+
+```
+badges → rankings → categories → comments → spots → solutions → users → posts → admin
+```
+
+For each domain:
+- Replace `queryFn` in `lib/hooks/use[Domain].ts` with generated fetch function
+- Keep hook signature unchanged — zero component changes
+- Delete `lib/api/[domain].ts`
+- Run `bun run typecheck` + `bun run test:visual` on affected pages
+
+**Phase 4 — Migrate mutation hooks**
+
+Mutations need extra care because they have `onSuccess` cache invalidation and store syncing logic:
+- Use generated `useCreate[Resource]` as the base hook
+- Pass `onSuccess`, `onError` via the `mutation` option at the call site
+- Migrate `useUpdateProfile` last (it syncs with `profileStore` on success)
+
+**Phase 5 — Cleanup**
+1. Delete `lib/api/client.ts` (replaced by `mutator.ts`)
+2. Delete `lib/api/types.ts` (replaced by `lib/api/generated/model/`)
+3. Delete remaining `lib/api/[domain].ts` files
+4. Update `lib/api/index.ts` to export only from `generated/`
+5. Remove type aliases added in Phase 1 to handle overlaps
+6. Run full build: `bun run build` — confirm success
+7. Run `bun run test:visual` — confirm no visual regressions
+
+**Dependency graph for build order:**
+
+```
+mutator.ts must exist BEFORE generate runs (orval imports and validates it)
+generate must succeed BEFORE typecheck (generated types feed type-checking)
+typecheck must pass BEFORE migration begins (baseline correctness)
+domain migrations are sequential, not parallel (safer debugging)
+cleanup is the final gate (all domains migrated and verified first)
+```
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Adding packages/api-server to bun workspaces
+### Anti-Pattern 1: Generated Code in `packages/shared`
 
-**What people do:** Use `"workspaces": ["packages/*"]` in root `package.json`, inadvertently including `packages/api-server`.
+**What people do:** Put Orval-generated hooks in `packages/shared` so mobile app can theoretically reuse them.
 
-**Why it's wrong:** bun attempts to treat `packages/api-server` as a JS package. While it may not crash, it creates unnecessary symlinks and confuses dependency resolution. More importantly, the Turborepo workspace graph picks up the package but bun has no understanding of Cargo dependencies.
+**Why it is wrong:** React Query hooks require `QueryClientProvider` in the component tree. Sharing hooks across package boundaries causes the "No QueryClient set" error (TanStack/query issues #3595, #7965). The mobile app uses Expo with a different React Query setup and React Native — web-specific patterns (`window.location.origin`, Next.js proxy cookies, browser fetch) cannot be shared.
 
-**Do this instead:** Use an explicit list: `"workspaces": ["packages/web", "packages/shared", "packages/mobile"]`. Keep `packages/api-server` outside the JS workspace while still present in the filesystem for Turborepo to discover via its own `package.json` lookup.
+**Do this instead:** Keep generated hooks in `packages/web/lib/api/generated/`. If mobile needs API type definitions, share only the plain TypeScript model types (no hooks, no React dependencies) via `packages/shared/types/`. Zod schemas are also safe to share (no framework dependency) if mobile input validation is needed.
 
-### Anti-Pattern 2: Root .env.local for all packages
+### Anti-Pattern 2: Committing Generated Files
 
-**What people do:** Place a single `.env.local` at the monorepo root expecting Next.js and all tools to pick it up.
+**What people do:** Commit `lib/api/generated/` to avoid needing spec access at build time.
 
-**Why it's wrong:** Next.js resolves `.env.local` relative to the Next.js project root (`packages/web/`). When Turborepo runs `next dev` from within `packages/web/`, variables in the monorepo root `.env.local` are silently ignored. Turborepo itself also recommends against root env files.
+**Why it is wrong:** Generated files drift from the spec between manual regenerations. When the backend changes a field, TypeScript still compiles against the stale generated type — the type safety guarantee disappears silently.
 
-**Do this instead:** `packages/web/.env.local` for Next.js variables. Pass backend variables explicitly in `docker-compose.yml` via `env_file` or `environment` keys. Keep root `.env.local.example` as a documentation-only template.
+**Do this instead:** Add `lib/api/generated/` to `.gitignore`. Run `bun run generate` as part of pre-push CI (`just ci-web`) and as a Turborepo prebuild step. The OpenAPI spec at `dev.decoded.style` is the authoritative source; codegen must run against it.
 
-### Anti-Pattern 3: Enabling Turborepo caching for Cargo builds
+### Anti-Pattern 3: Removing the Next.js Proxy Layer
 
-**What people do:** Configure `"outputs": ["target/release/**"]` for `@decoded/backend#build` expecting Turborepo to cache Rust artifacts.
+**What people do:** Point the Orval mutator directly at `https://dev.decoded.style` to "simplify" the stack.
 
-**Why it's wrong:** Cargo's `target/` directory is typically 2-5GB and Cargo already has its own incremental compilation cache. Uploading/downloading multi-GB artifacts via Turborepo's remote cache is slower than rebuilding locally. Turborepo cannot parse `Cargo.lock` for fine-grained change detection.
+**Why it is wrong:** The proxy (`app/api/v1/`) exists to avoid CORS (browser cannot reach the Rust backend directly), inject `API_BASE_URL` server secrets, and handle FormData for file uploads. The browser has no access to server-only env vars. Bypassing the proxy breaks file upload endpoints and exposes the backend URL.
 
-**Do this instead:** Set `"cache": false` for backend tasks in `turbo.json`. Cache `packages/api-server/target/` using `actions/cache` in the GitHub Actions backend workflow, keyed on `Cargo.lock`.
+**Do this instead:** Keep `decodedFetcher` using relative URLs (empty base). File upload endpoints (`/api/v1/posts/upload`, `/api/v1/posts` with FormData) require a custom override or remain in the manual `lib/api/posts.ts` — Orval cannot auto-generate multipart form handling.
 
-### Anti-Pattern 4: Running Cargo directly in the Turborepo dev task for all engineers
+### Anti-Pattern 4: Full Cutover Before Validation
 
-**What people do:** Set the backend `dev` script to `cargo run` or `cargo watch`, requiring every engineer to have Rust installed.
+**What people do:** Delete all of `lib/hooks/` and `lib/api/` in one commit to "clean up" technical debt.
 
-**Why it's wrong:** Frontend engineers should not need the Rust toolchain. Rust compilation is platform-sensitive (Windows especially), adding onboarding friction and inconsistent behavior across machines.
+**Why it is wrong:** Existing hooks contain business logic beyond raw fetch: `useInfinitePosts` page-mapping, `useCreatePost` multi-step flow, `useUpdateProfile` store syncing. Generated hooks are pure API calls. Mapping logic must be verified to exist (or explicitly rewritten) before deleting the originals.
 
-**Do this instead:** Backend `dev` script invokes `docker-compose up backend --build`. Only engineers modifying Rust code need `rustup`. Everyone else uses the Docker image, which is already the production deployment model.
+**Do this instead:** Follow the phased migration. Generate first, validate parity, swap per domain, delete only after each domain's visual QA passes.
 
-### Anti-Pattern 5: Migrating bun.lock incrementally alongside yarn.lock
+### Anti-Pattern 5: Generating Infinite Query Without OpenAPI Pagination Markers
 
-**What people do:** Run `bun install` while `yarn.lock` still exists, keeping both lockfiles during a "gradual" migration.
+**What people do:** Expect Orval to auto-generate `useInfiniteQuery` hooks for paginated endpoints.
 
-**Why it's wrong:** bun does NOT read `yarn.lock` for version pinning. Running `bun install` with `yarn.lock` present resolves all dependencies to the latest compatible semver versions — it does not reproduce the exact pinned versions from the Yarn lockfile. Having both lockfiles creates CI confusion about which one is authoritative.
+**Why it is wrong:** Orval generates `useInfiniteQuery` only when the operation has `useInfiniteQueryParam` configured in `orval.config.ts`, or when the OpenAPI spec uses pagination extensions. Without explicit config, it generates a plain `useQuery`. The infinite scroll logic in `useInfinitePosts` must remain as a wrapper.
 
-**Do this instead:** Delete `yarn.lock` and `.yarnrc.yml` before running `bun install`. Treat the migration as a single atomic step. Run the full build + visual QA tests after to catch any package version regressions.
+**Do this instead:** Add `override.operations["GetPosts"].query.useInfinite = true` and `useInfiniteQueryParam: "page"` in `orval.config.ts` for each paginated endpoint. Alternatively, keep the existing infinite query hooks as thin wrappers that call the generated base fetch function.
 
 ## Sources
 
-- Turborepo issue #683 — Rust/other language support (RFC, open Oct 2025): [https://github.com/vercel/turborepo/issues/683](https://github.com/vercel/turborepo/issues/683) — HIGH confidence
-- Turborepo 2.6 release (Bun lockfile stable support): [https://turborepo.dev/blog/turbo-2-6](https://turborepo.dev/blog/turbo-2-6) — HIGH confidence
-- Turborepo structuring a repository (packageManager + workspace requirements): [https://turborepo.dev/docs/crafting-your-repository/structuring-a-repository](https://turborepo.dev/docs/crafting-your-repository/structuring-a-repository) — HIGH confidence
-- Turborepo environment variables (globalEnv, passThroughEnv): [https://turborepo.dev/docs/crafting-your-repository/using-environment-variables](https://turborepo.dev/docs/crafting-your-repository/using-environment-variables) — HIGH confidence
-- Bun workspaces configuration: [https://bun.com/docs/guides/install/workspaces](https://bun.com/docs/guides/install/workspaces) — HIGH confidence
-- dorny/paths-filter GitHub Actions: [https://github.com/dorny/paths-filter](https://github.com/dorny/paths-filter) — HIGH confidence
-- Monorepo path filters in GitHub Actions (Dec 2025): [https://oneuptime.com/blog/post/2025-12-20-monorepo-path-filters-github-actions/view](https://oneuptime.com/blog/post/2025-12-20-monorepo-path-filters-github-actions/view) — MEDIUM confidence
-- spa5k monorepo-typescript-rust example (pnpm + NextJS + Rust + Turborepo): [https://github.com/spa5k/monorepo-typescript-rust](https://github.com/spa5k/monorepo-typescript-rust) — MEDIUM confidence (pnpm, not bun; patterns transferable)
-- Turborepo Docker guide (turbo prune): [https://turborepo.dev/docs/guides/tools/docker](https://turborepo.dev/docs/guides/tools/docker) — HIGH confidence
-- Turborepo configuration reference (tasks, cache, env): [https://turborepo.dev/docs/reference/configuration](https://turborepo.dev/docs/reference/configuration) — HIGH confidence
+- Orval v8.5.3 official documentation (verified March 2026): https://orval.dev/
+- Orval React Query guide: https://www.orval.dev/guides/react-query
+- Orval output configuration reference: https://orval.dev/docs/reference/configuration/output/
+- Orval Zod generation guide: https://www.orval.dev/guides/client-with-zod
+- Orval GitHub repo (v8.5.3, March 6 2026): https://github.com/orval-labs/orval
+- TanStack Query shared library issue (hooks across packages): https://github.com/TanStack/query/issues/3595
+- TanStack Query QueryClient provider issue: https://github.com/TanStack/query/issues/7965
+- Orval Zod generation deep-wiki: https://deepwiki.com/orval-labs/orval/5.1-zod-generation-configuration
+- Existing codebase (read directly): `packages/web/lib/api/client.ts`, `lib/api/types.ts`, `lib/hooks/usePosts.ts`, `lib/hooks/useProfile.ts`, `app/api/v1/posts/route.ts`
 
 ---
 
-_Architecture research for: decoded-app v8.0 — Monorepo Consolidation & Bun Migration_
-_Researched: 2026-03-22_
+*Architecture research for: decoded-monorepo v9.0 — Orval + Zod Type-Safe API Generation*
+*Researched: 2026-03-23*

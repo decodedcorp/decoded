@@ -1,27 +1,26 @@
 # Stack Research
 
-**Domain:** Monorepo Consolidation & Bun Migration — merging Rust/Axum backend into JS monorepo, Yarn 4 → bun, Turborepo orchestration (decoded-app v8.0)
-**Researched:** 2026-03-22
-**Confidence:** HIGH (bun 1.3.11 verified from official blog; Turborepo 2.7 verified from official blog; migration path for Yarn 4 → bun verified from GitHub issues)
+**Domain:** Type-Safe API Client Generation — Orval + Zod for decoded-monorepo v9.0
+**Researched:** 2026-03-23
+**Confidence:** HIGH (Orval v8.5.3 verified from GitHub releases; zod v4.x verified from npm; axios 1.13.x verified from npm)
 
 ---
 
 ## Context: Existing Stack — Do Not Re-Research
 
-The following are already installed and validated. Zero changes needed:
+Already installed and validated as of v8.0 monorepo consolidation. Zero changes to these:
 
-| Package     | Version  | Status             |
-| ----------- | -------- | ------------------ |
-| Next.js     | 16.0.7   | Stays              |
-| React       | 18.3.1   | Stays              |
-| TypeScript  | 5.9.3    | Stays              |
-| Yarn        | 4.9.2    | REPLACING with bun |
-| Supabase    | 2.86.0   | Stays              |
-| Zustand     | 4.5.7    | Stays              |
-| React Query | 5.90.11  | Stays              |
-| GSAP        | 3.13.0   | Stays              |
-| Motion      | 12.23.12 | Stays              |
-| Playwright  | 1.58.1   | Stays              |
+| Package | Version | Status |
+|---------|---------|--------|
+| Next.js | 16.2.1 | Stays |
+| React | 19.2.4 | Stays |
+| TypeScript | 5.9.3 | Stays |
+| @tanstack/react-query | 5.90.11 | Stays — Orval generates into this |
+| bun | 1.3.10+ | Stays — package manager |
+| Turborepo | (in use) | Stays — add `generate` task |
+| Supabase | 2.86.0 | Stays — NOT being migrated this milestone |
+
+The existing manual API client in `packages/web/lib/api/` uses raw `fetch` with a custom `apiClient()` wrapper that injects Supabase JWT tokens. Orval's generated client must integrate with the same auth pattern — not introduce a second HTTP client with a different auth mechanism.
 
 ---
 
@@ -29,366 +28,237 @@ The following are already installed and validated. Zero changes needed:
 
 ### Core Technologies
 
-| Technology  | Version               | Purpose                                                | Why Recommended                                                                                                                                                                                                                   |
-| ----------- | --------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| bun         | 1.3.11                | Package manager + JS runtime replacing Yarn 4          | 28x faster installs than npm on Linux; native workspaces; single binary with bundler/test runner; workspace-aware `--filter` flag; bun.lock text format (human-readable, git-diffable); official current version as of March 2026 |
-| Turborepo   | 2.8.x (latest 2.8.20) | Build orchestration, task caching, change-detection CI | Task-level remote caching; `--affected` flag for CI (only rebuild changed packages); Devtools graph visualizer in 2.7; Rust engine internally for fast hashing; officially supports bun as package manager                        |
-| git subtree | built-in git          | Merge backend repo with full commit history preserved  | Preserves upstream commit history in `packages/api-server/`; no extra tooling; prefixes all upstream commits under the subtree path; simpler than git submodules (no `.gitmodules` file, no special clone steps)                     |
-| cargo-watch | 8.4.0                 | Rust hot-reload during development                     | Watches `src/` and re-runs `cargo run` on change; standard tool for Axum dev; pairs with `systemfd` for connection-preserving reload                                                                                              |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| orval | ^8.5.3 | CLI that reads OpenAPI spec and emits TypeScript React Query hooks + Zod schemas | Industry standard for OpenAPI-to-TypeScript codegen as of 2025-2026; generates one hook per endpoint; supports react-query v5, Zod v3/v4, custom mutators; v8 is the current stable major; actively maintained (v8.5.3 released March 6, 2025) |
+| zod | ^3.25 | Runtime validation library for generated schemas | Orval's Zod v4 support (added in Orval 7.10) has active edge-case bugs with certain string formats (issue #2249, #2304 as of July 2025); Zod v3 support in Orval is battle-tested and stable; use ^3.25 until Orval Zod v4 compatibility is confirmed stable |
+| axios | ^1.13.6 | HTTP client used as the default by Orval-generated code | Orval's react-query generator defaults to axios for the underlying HTTP calls; interceptors allow injecting the Supabase JWT token centrally (one place vs per-call); current stable is 1.13.6 with full bun compatibility |
 
-### Supporting Libraries / Dev Tools
+### Supporting Libraries
 
-| Tool              | Version                          | Purpose                                                       | When to Use                                                                                                                                                                          |
-| ----------------- | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| concurrently      | 9.x                              | Run frontend + backend dev servers in one terminal            | `bun dev` at root delegates to `concurrently "bun --cwd packages/web dev" "cargo watch -x run --manifest-path packages/api-server/Cargo.toml"`; no process manager needed for local dev |
-| systemfd          | 0.9.x (Rust crate)               | Socket passing for zero-downtime Axum reload                  | Optional: `systemfd --no-pid -s http::8080 -- cargo watch -x run` — preserves open connections when Axum binary reloads; useful if frontend dev frequently triggers API calls        |
-| docker compose    | v2 (bundled with Docker Desktop) | Run all services (frontend, backend, Supabase local) together | Use for integration testing and CI; not required for day-to-day dev                                                                                                                  |
-| oven-sh/setup-bun | GitHub Action                    | Install bun in CI                                             | Official GitHub Action from the bun team; replace `actions/setup-node` for JS steps                                                                                                  |
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| @types/axios | (bundled in axios 1.x) | TypeScript types | Included — no separate install needed since axios 1.x ships its own types |
 
----
+### Development Tools
 
-## Architecture Decision: Backend Stays Outside bun Workspace
-
-**This is the most important constraint for this milestone.**
-
-The Rust backend (`packages/api-server/`) must NOT be added to bun's `workspaces` array. Cargo manages the Rust workspace independently. bun only manages JS packages.
-
-```json
-// Root package.json — workspaces includes ONLY JS packages
-{
-  "name": "decoded",
-  "private": true,
-  "packageManager": "bun@1.3.11",
-  "workspaces": ["packages/web", "packages/shared"]
-}
-```
-
-Turborepo, however, CAN include the backend as a "package" — it just needs a `package.json` in `packages/api-server/` that exposes a `build` script wrapping `cargo build --release`.
-
-```json
-// packages/api-server/package.json — thin wrapper, not a bun workspace
-{
-  "name": "backend",
-  "scripts": {
-    "build": "cargo build --release",
-    "dev": "cargo watch -x run",
-    "check": "cargo check"
-  }
-}
-```
-
-**Why this works:** Turborepo reads `package.json` scripts from any directory — it is not restricted to bun workspace members. The backend `package.json` is not listed in root `workspaces`, so bun ignores it for dependency installation, but Turborepo can still orchestrate its tasks.
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| orval CLI (from `orval` package) | Run `orval` to regenerate API client from OpenAPI spec | Installed as dev dependency; invoked via `bun run generate:api` |
+| `bunx orval` | One-off generation without global install | Works because orval ships a CLI binary |
 
 ---
 
-## Migration Path: Yarn 4 → bun
+## Architecture: Two-Config Pattern
 
-### Lock File Conversion (Critical)
+Orval uses **two separate output configurations** in one `orval.config.ts` to generate react-query hooks AND Zod schemas in parallel without naming conflicts:
 
-There is **no direct Yarn 4 (Berry) → bun.lock migration tool** as of March 2026. PR #25245 in the bun repo is open but not yet merged. The approved community workaround uses pnpm as an intermediary:
+```typescript
+// packages/web/orval.config.ts
+import { defineConfig } from 'orval';
 
-```bash
-# Step 1: Install pnpm temporarily
-npm install -g pnpm
-
-# Step 2: Convert yarn.lock (Berry) to pnpm lockfile
-pnpm import
-
-# Step 3: Delete yarn lockfile and Yarn config
-rm yarn.lock
-rm .yarnrc.yml
-
-# Step 4: bun reads the pnpm lockfile and generates bun.lock
-bun install
-
-# Step 5: Remove pnpm lockfile, keep only bun.lock
-rm pnpm-lock.yaml
-```
-
-Source: GitHub issue oven-sh/bun#21356 (MEDIUM confidence — community workaround, not official tool)
-
-### Package Manager Field
-
-Set `"packageManager": "bun@1.3.11"` in root `package.json`. Note: Corepack does NOT support bun yet (as of March 2026), so this field is informational only — it will not be enforced by Node.js tooling. For enforcement, add a `.bun-version` file:
-
-```
-# .bun-version
-1.3.11
-```
-
-### Script Updates
-
-All `yarn` commands in CI and scripts become `bun` equivalents:
-
-| Old (Yarn 4)                 | New (bun)                        |
-| ---------------------------- | -------------------------------- |
-| `yarn install`               | `bun install`                    |
-| `yarn workspace web add pkg` | `bun add --cwd packages/web pkg` |
-| `yarn workspace web run dev` | `bun --filter=web dev`           |
-| `yarn run lint`              | `bun run lint`                   |
-| `yarn dlx turbo`             | `bunx turbo`                     |
-
----
-
-## Turborepo Configuration
-
-### turbo.json (Root)
-
-```json
-{
-  "$schema": "https://turbo.build/schema.json",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "target/release/**"]
+export default defineConfig({
+  // Config 1: React Query hooks (primary — replaces lib/api/ files)
+  decodedApi: {
+    input: {
+      target: 'https://dev.decoded.style/api-docs/openapi.json',
     },
-    "dev": {
-      "cache": false,
-      "persistent": true
+    output: {
+      mode: 'tags-split',           // One folder per OpenAPI tag (posts/, users/, etc.)
+      target: 'lib/api/generated',  // Output directory for hooks
+      schemas: 'lib/api/generated/model', // TypeScript type definitions
+      client: 'react-query',        // Generates useQuery / useMutation hooks
+      clean: true,                  // Delete stale generated files on each run
+      prettier: true,               // Auto-format output
+      override: {
+        mutator: {
+          path: './lib/api/custom-client.ts', // Custom axios instance with JWT injection
+          name: 'customClient',
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+          signal: true,             // AbortController support
+        },
+      },
     },
-    "check": {
-      "dependsOn": ["^check"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "test:visual": {
-      "dependsOn": ["build"],
-      "outputs": ["test-results/**"]
-    }
   },
-  "globalPassThroughEnv": [
-    "RUSTC_WRAPPER",
-    "CARGO_INCREMENTAL",
-    "CARGO_BUILD_JOBS",
-    "RUSTFLAGS",
-    "RUST_LOG",
-    "DATABASE_URL"
-  ]
-}
+
+  // Config 2: Zod schemas for runtime validation (separate output to avoid conflicts)
+  decodedApiZod: {
+    input: {
+      target: 'https://dev.decoded.style/api-docs/openapi.json',
+    },
+    output: {
+      mode: 'tags-split',
+      target: 'lib/api/generated',
+      client: 'zod',               // Generates Zod schemas only (no hooks)
+      fileExtension: '.zod.ts',    // Prevents naming collision with hook files
+      override: {
+        zod: {
+          generate: {
+            response: true,        // Validate API responses at runtime
+            body: true,            // Validate request bodies before sending
+            query: false,          // Skip query param schemas (less value, more noise)
+          },
+        },
+      },
+    },
+  },
+});
 ```
 
-**Key decisions:**
+**Why two configs instead of one:**
 
-- `"persistent": true` on `dev` tells Turborepo the task runs forever (does not exit) — required for dev servers
-- `"cache": false` on `dev` disables caching for the dev task (correct — live output must never be cached)
-- `globalPassThroughEnv` exposes Rust-specific env vars to the backend task without making them part of the cache hash
+- `client: 'react-query'` and `client: 'zod'` are mutually exclusive in a single config block
+- Using `fileExtension: '.zod.ts'` in the zod config prevents file name collisions with hook files
+- Both configs read from the same OpenAPI spec URL — no duplication of the source
 
-### Running Tasks
+### Custom Client (auth injection)
 
-```bash
-# Full dev (frontend + backend)
-bunx turbo dev
+The `mutator` in Config 1 points to a custom axios instance that replicates the existing `apiClient()` auth pattern. This is the **only HTTP client** — the existing `lib/api/client.ts` fetch-based client is replaced by this:
 
-# Build all
-bunx turbo build
+```typescript
+// packages/web/lib/api/custom-client.ts
+import Axios, { AxiosRequestConfig } from 'axios';
+import { supabaseBrowserClient } from '@/lib/supabase/client';
 
-# Only affected packages (CI)
-bunx turbo build --affected
+const INSTANCE = Axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
+});
 
-# Only frontend
-bunx turbo build --filter=web
+INSTANCE.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabaseBrowserClient.auth.getSession();
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  return config;
+});
 
-# Rust check only
-bunx turbo check --filter=backend
+export const customClient = <T>(config: AxiosRequestConfig): Promise<T> => {
+  return INSTANCE(config).then(({ data }) => data);
+};
 ```
 
----
-
-## git subtree: Backend Merge
-
-### Initial Merge Command
-
-```bash
-# Run from monorepo root
-git subtree add \
-  --prefix=packages/api-server \
-  https://github.com/decodedcorp/backend \
-  main \
-  --squash
-```
-
-**`--squash` vs without:**
-
-- `--squash`: condenses all upstream history into a single merge commit — cleaner monorepo history, but loses individual upstream commit granularity
-- Without `--squash`: preserves every upstream commit scoped to `packages/api-server/` — full history available, but noisier `git log`
-
-**Recommendation: use `--squash` for initial merge.** The backend has 44 migrations and 19 domains — full history import would pollute the monorepo log. Individual commit history remains available in the original backend repo.
-
-### Subsequent Upstream Pulls
-
-```bash
-# Pull updates from backend repo after initial merge
-git subtree pull \
-  --prefix=packages/api-server \
-  https://github.com/decodedcorp/backend \
-  main \
-  --squash
-```
-
-### What to Keep From the Backend Repo
-
-| File                 | Action                                                                      |
-| -------------------- | --------------------------------------------------------------------------- |
-| `Cargo.toml`         | Keep — Cargo workspace root                                                 |
-| `Cargo.lock`         | Keep — NEVER add to .gitignore; Cargo.lock for binaries should be committed |
-| `src/`               | Keep — all Rust source                                                      |
-| `.env.example`       | Keep — merge into root `.env.local.example`                                 |
-| `Dockerfile`         | Keep at `packages/api-server/Dockerfile`                                       |
-| `.github/workflows/` | Archive — replace with monorepo-level CI                                    |
-| `README.md`          | Archive or merge into root                                                  |
-
----
-
-## CI/CD: GitHub Actions with bun + Turborepo
-
-### Root Workflow Pattern
-
-```yaml
-# .github/workflows/ci.yml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for --affected to work
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
-
-      - name: Install JS dependencies
-        run: bun install
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run affected builds
-        run: bunx turbo build --affected
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-```
-
-**Key notes:**
-
-- `fetch-depth: 0` is required — Turborepo's `--affected` compares against base branch; shallow clones break this
-- `dtolnay/rust-toolchain@stable` is the canonical GitHub Action for installing Rust — faster than `rustup` manual install because it caches toolchain components
-- `TURBO_TOKEN` + `TURBO_TEAM` enable Vercel Remote Cache — dramatically reduces CI time after first run
-
-### Path-Based Triggering
-
-Turborepo's `--affected` flag handles change detection internally. You do NOT need `dorny/paths-filter` or manual path matching — Turborepo compares the PR head vs base and only runs tasks for changed packages.
+**Key constraint:** The existing `lib/api/client.ts` routes through Next.js API proxy (`API_BASE_URL = ""`). The custom client must preserve this pattern — `baseURL` should be the empty string (routes through `/api/v1/...` proxy) not the direct Rust backend URL, unless the proxy is being removed in v9.0.
 
 ---
 
 ## Installation
 
 ```bash
-# 1. Install bun globally (replace Yarn 4)
-curl -fsSL https://bun.sh/install | bash
-# or via brew: brew install bun
+# In packages/web — all are web-package-scoped dependencies
+cd packages/web
 
-# 2. Install Turborepo (dev dependency at root)
-bun add -D turbo -w
+# Dev dependency: Orval CLI
+bun add -D orval
 
-# 3. Install concurrently (dev dependency at root)
-bun add -D concurrently -w
+# Runtime: axios (HTTP client for generated code)
+bun add axios
 
-# 4. Install cargo-watch (Rust tool, separate from bun)
-cargo install cargo-watch
-
-# 5. (Optional) Install systemfd for connection-preserving reload
-cargo install systemfd
-
-# 6. Migrate lock file (one-time)
-npm install -g pnpm && pnpm import && rm yarn.lock .yarnrc.yml && bun install && rm pnpm-lock.yaml
+# Runtime: Zod (schema validation for generated schemas)
+bun add zod
 ```
+
+### Add generate script to packages/web/package.json
+
+```json
+{
+  "scripts": {
+    "generate:api": "orval"
+  }
+}
+```
+
+### Add to turbo.json (root)
+
+```json
+{
+  "tasks": {
+    "generate:api": {
+      "cache": false,
+      "outputs": ["lib/api/generated/**"]
+    }
+  }
+}
+```
+
+The `cache: false` is intentional — generated output should always re-run against the live spec. If the spec is stable, change to `"inputs": ["orval.config.ts"]` with cache enabled.
+
+### Add generated files to .gitignore
+
+```
+# Orval generated files — committed only if you want stable snapshots
+packages/web/lib/api/generated/
+```
+
+Decision point: whether to commit generated files (stable snapshot) or gitignore them (always regenerate). Recommendation: **gitignore and regenerate in CI `prebuild`**, same pattern as GraphQL codegen.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended          | Alternative            | When to Use Alternative                                                                                                                         |
-| -------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| bun workspaces       | pnpm workspaces        | If team is on Windows and bun Windows support is not mature enough; pnpm workspace + Turborepo is the "safe" 2026 choice                        |
-| git subtree --squash | git submodules         | Never for this use case — submodules require special clone steps and confuse contributors; subtree is superior for monorepo consolidation       |
-| git subtree --squash | josh / git-filter-repo | If full commit history preservation is required; josh scales better for very large repos, but adds tooling complexity not needed here           |
-| Turborepo            | Nx                     | If project needs code generators, advanced plugins, or large team governance features; Nx is heavier but more powerful for enterprise monorepos |
-| Turborepo            | Makefiles              | If team prefers language-agnostic task runners; Makefiles have no dependency graph or caching — not suitable here                               |
-| concurrently         | overmind               | overmind (requires tmux) is better for terminal multiplexing; concurrently is simpler and works in all terminals including CI                   |
-| cargo-watch          | watchexec              | watchexec is more general; cargo-watch is Cargo-native and auto-handles `cargo` subcommand syntax — prefer for Rust projects                    |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| orval | openapi-typescript + openapi-fetch | If project wants zero-dependency type generation without hooks; openapi-typescript generates types only; no hooks, no Zod — requires more manual wiring |
+| orval | openapi-zod-client (astahmer) | If project uses zodios HTTP client instead of axios/react-query; heavier dependency; smaller community |
+| orval | swagger-typescript-api | Older tool, less active maintenance, no Zod integration; avoid |
+| axios (via Orval default) | fetch (native) | Use native fetch if axios interceptors are overkill; Orval supports `httpClient: 'fetch'` but `runtimeValidation: true` with fetch is a newer feature with less battle-testing; axios + interceptors is the proven path for auth injection |
+| zod v3 | zod v4 | Use zod v4 when Orval's compatibility layer fully stabilizes (track issue #2042 and #2249); as of March 2026, v4 has edge-case bugs in Orval's generated output for certain OpenAPI string formats |
 
 ---
 
-## What NOT to Use
+## What NOT to Add
 
-| Avoid                                                          | Why                                                                                              | Use Instead                                                                                |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Adding `packages/api-server` to bun `workspaces`                  | bun would attempt to install Cargo crates as npm dependencies — will fail silently or error      | Keep backend out of `workspaces`; give it a thin `package.json` for Turborepo scripts only |
-| `yarn.lock` after migration                                    | bun will NOT use yarn.lock; leaving it causes confusion about which lockfile is authoritative    | Delete `yarn.lock` and `.yarnrc.yml` as part of migration; commit `bun.lock` instead       |
-| `--no-squash` on initial subtree merge (44 migrations backend) | Imports ~1000+ commits into monorepo log, making `git log` noisy                                 | Use `--squash` for initial merge; future pulls can be --squash too                         |
-| `npm` or `npx` after bun migration                             | Invoking npm after bun migration generates a `package-lock.json` and breaks bun.lock consistency | Use `bun` / `bunx` everywhere; add `.npmrc` rule if needed to block npm usage              |
-| Turborepo `--filter` with Yarn catalog syntax after migration  | Yarn 4 catalogs are not bun-native; migrating resolves versions into standard semver ranges      | After migration, standard version ranges work; no catalog-specific Turborepo config needed |
-| Corepack for bun version enforcement                           | Corepack does not support bun as of March 2026                                                   | Use `.bun-version` file + CI `oven-sh/setup-bun@v2` with explicit version pinning          |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| A second HTTP client library (e.g., ky, got, unfetch) | Project already uses native fetch in lib/api/; Orval generated code uses axios; adding a third HTTP client would create three competing patterns | Use axios exclusively for generated code; keep Supabase client (which manages its own HTTP) separate |
+| openapi-generator (Java CLI) | Requires JVM; generates verbose boilerplate Java-style code; no bun integration | Orval (Node.js, bun-compatible CLI) |
+| rtk-query codegen | Only useful if project uses Redux Toolkit; this project uses Zustand + React Query — RTK Query would be a conflicting state layer | N/A |
+| @orval/zod (separate npm scope package) | This is Orval's internal monorepo package — not intended for direct installation by consumers; the `orval` package includes the zod generator | Just install `orval` — it includes all generators |
+| Global orval install (`bun add -g orval`) | Global tool versions can drift from project's pinned version; different devs get different outputs | Use local devDependency + `bun run generate:api` script |
+| Committing the OpenAPI spec JSON locally | The spec lives at `https://dev.decoded.style`; downloading and committing creates a stale local copy that diverges | Point `input.target` at the live URL directly; fail fast if backend is unreachable |
 
 ---
 
-## Stack Patterns by Variant
+## Bun Compatibility Notes
 
-**If running dev locally (day-to-day):**
-
-- Use `bunx turbo dev` from repo root
-- Turborepo runs `packages/web` Next.js dev server + `packages/api-server` cargo-watch concurrently
-- No Docker needed for local dev
-
-**If running integration tests or full-stack CI:**
-
-- Use `docker compose up` to spin up backend + Supabase local + Next.js in containers
-- Turborepo handles build ordering; Docker Compose handles runtime networking
-
-**If the backend repo has ongoing parallel development during migration:**
-
-- Keep using `git subtree pull --prefix=packages/api-server ... --squash` for syncing upstream changes
-- Once the backend team is fully working from the monorepo, the original repo becomes read-only
-
-**If Cargo.lock conflicts during subtree merge:**
-
-- DO NOT delete Cargo.lock — it is intentional for binary crates
-- Resolve conflicts manually by accepting the most recent Cargo.lock version
-- Run `cargo check` after resolution to verify dependency graph
+- `orval` CLI is a Node.js binary distributed via npm; bun can install and run it without issues (`bunx orval` or via `bun run generate:api` script)
+- `axios` v1.x explicitly added a `bun` condition to its `exports` field — loads the Node.js build (not browser build) when running under bun
+- `zod` v3.x has no bun-specific issues — pure TypeScript library
+- Turborepo's `generate:api` task can include orval as a pipeline step with `dependsOn: []` (runs independently, not part of build chain unless spec changes trigger builds)
 
 ---
 
 ## Version Compatibility
 
-| Package           | Compatible With          | Notes                                                                                                                        |
-| ----------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| bun@1.3.11        | Turborepo 2.8.x          | Confirmed: Turborepo officially supports bun; `bunx turbo` works                                                             |
-| bun@1.3.11        | Next.js 16               | Compatible; bun can run Next.js dev and build commands directly                                                              |
-| bun@1.3.11        | Yarn 4 workspaces format | Partially compatible — workspace globs in package.json are the same format; lock file is NOT compatible (requires migration) |
-| Turborepo 2.8.x   | Rust-based tasks         | Compatible via `package.json` script wrapper; Turborepo does not natively parse Cargo.toml but can run `cargo` scripts       |
-| cargo-watch@8.4.0 | Axum (Rust)              | Standard pairing; watches `src/` and re-runs `cargo run`                                                                     |
-| git subtree       | Git history preservation | Built into git — no version constraint; available on all platforms                                                           |
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| orval@^8.5.3 | @tanstack/react-query@^5 | Orval v8 targets TanStack Query v5 API (useQuery, useMutation signatures); v4 React Query would require Orval v6/v7 |
+| orval@^8.5.3 | zod@^3.25 | Stable; v3 is the fully-tested path |
+| orval@^8.5.3 | zod@^4.x | Beta-level support added in Orval 7.10; active edge-case bugs as of late 2025 (string format schemas); validate before adopting |
+| orval@^8.5.3 | TypeScript@^5.9 | Compatible; Orval generates modern TypeScript |
+| orval@^8.5.3 | Next.js@^16 | No framework-level conflict; generated files are plain TypeScript; `app/` Router compatible |
+| axios@^1.13.6 | bun@^1.3 | Compatible; axios 1.x ships `bun` export condition |
+| zod@^3.25 | React 19 | No dependency on React; pure schema library |
 
 ---
 
 ## Sources
 
-- https://bun.com/blog/bun-v1.3.11 — bun 1.3.11 official release notes (HIGH confidence — official source)
-- https://bun.com/docs/pm/workspaces — bun workspaces documentation (HIGH confidence — official docs)
-- https://turborepo.dev/blog/turbo-2-7 — Turborepo 2.7 release with Devtools and bun support (HIGH confidence — official blog)
-- https://turborepo.dev/docs/reference/configuration — turbo.json globalPassThroughEnv, persistent, cache options (HIGH confidence — official docs)
-- https://turborepo.dev/docs/crafting-your-repository/constructing-ci — GitHub Actions CI patterns with --affected (HIGH confidence — official docs)
-- https://github.com/oven-sh/bun/issues/21356 — Yarn 4 (Berry) to bun.lock migration status and pnpm intermediary workaround (MEDIUM confidence — community workaround, PR #25245 pending)
-- https://github.com/vercel/turborepo/issues/683 — Turborepo support for Rust/non-JS backends via package.json wrappers (MEDIUM confidence — community discussion)
-- https://github.com/spa5k/monorepo-typescript-rust — Working example of Turborepo + Rust backend in monorepo using pnpm (MEDIUM confidence — community example)
-- https://crates.io/crates/cargo-watch — cargo-watch 8.4.0 current version (HIGH confidence — official crates.io registry)
-- https://socket.dev/blog/bun-1-2-19-adds-isolated-installs-for-better-monorepo-support — Bun isolated installs for monorepos (MEDIUM confidence — verified secondary source)
-- https://medium.com/@andrejkurocenko/merging-multiple-repositories-into-a-monorepo-using-git-subtree-without-losing-history-0c019046498e — git subtree merge pattern for history-preserving consolidation (MEDIUM confidence — community article)
+- https://github.com/orval-labs/orval/releases — Orval v8.5.3 release date (March 6, 2025), latest stable (HIGH confidence — official repo)
+- https://deepwiki.com/orval-labs/orval/5-zod-schema-validation — Orval Zod architecture: two-phase generation, @orval/zod internal package, Zod v3/v4 compatibility layer (MEDIUM confidence — DeepWiki analysis of official repo)
+- https://www.orval.dev/reference/configuration/output — Output config: `client`, `mode`, `override.zod`, `override.query`, `override.mutator`, `fileExtension` (HIGH confidence — official docs)
+- https://github.com/orval-labs/orval/blob/master/samples/react-query/custom-fetch/orval.config.ts — Official sample: react-query + custom fetch mutator pattern (HIGH confidence — official sample)
+- https://www.orval.dev/guides/client-with-zod — Two-config pattern for react-query + zod parallel generation; `.zod.ts` extension to avoid conflicts (HIGH confidence — official guide)
+- https://x.com/SoartecL/status/1920068137266954374 — Orval Zod v4 support added in 7.10 (MEDIUM confidence — official team tweet)
+- https://github.com/orval-labs/orval/issues/2249 — Orval Zod v4 string format edge-case bug (July 2025) (HIGH confidence — official issue tracker)
+- https://github.com/orval-labs/orval/issues/2304 — Orval Zod v4 + Hono validator error (HIGH confidence — official issue tracker)
+- https://www.npmjs.com/package/zod — Zod v4.3.6 latest, v3 still active and stable (HIGH confidence — official npm registry)
+- https://github.com/axios/axios/releases — Axios 1.13.6 latest as of March 2026 (HIGH confidence — official GitHub releases)
+- https://prototyp.digital/blog/generating-api-client-openapi-swagger-definitions — Complete orval.config example with tags-split, custom mutator, react-query (MEDIUM confidence — community article, verified against official docs)
 
 ---
 
-_Stack research for: decoded-app v8.0 Monorepo Consolidation & Bun Migration_
-_Researched: 2026-03-22_
+*Stack research for: decoded-monorepo v9.0 Type-Safe API Generation (Orval + Zod)*
+*Researched: 2026-03-23*

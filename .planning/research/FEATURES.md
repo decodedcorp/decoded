@@ -1,8 +1,18 @@
 # Feature Research
 
-**Domain:** Mixed-language monorepo — JS + Rust consolidation with bun migration (v8.0)
-**Researched:** 2026-03-22
-**Confidence:** MEDIUM overall. Turborepo multi-language support HIGH (official docs confirmed). Bun + Turborepo prune MEDIUM (known lockfile bug as of late 2025, canary fix in progress). Git subtree mechanics HIGH (well-documented). CI path filtering HIGH (multiple sources agree).
+**Domain:** API code generation — Orval + Zod for OpenAPI-driven TypeScript client generation
+**Researched:** 2026-03-23
+**Confidence:** HIGH (Orval official docs + DeepWiki architecture analysis + multiple production implementation references)
+
+## Context: What We Are Replacing
+
+The existing `packages/web/lib/api/` layer is a hand-written fetch client:
+
+- `client.ts` — shared `apiClient<T>()` wrapper using `fetch`, Supabase JWT injection, empty `API_BASE_URL` to route through the Next.js `/api/v1/` proxy
+- Per-resource files (`posts.ts`, `users.ts`, `spots.ts`, `badges.ts`, `rankings.ts`, etc.) — typed request functions wrapping `apiClient`
+- React Query hooks in `lib/hooks/` that wrap the above per-resource functions
+
+Orval replaces the per-resource files and the React Query hook layer. The custom auth injection logic from `client.ts` migrates into an Orval **mutator function**.
 
 ---
 
@@ -10,184 +20,207 @@
 
 ### Table Stakes (Users Expect These)
 
-"Users" here are the development team — engineers expect these to work correctly in a merged monorepo. Missing any of these = the repo feels broken, not consolidated.
+Features that any Orval + Zod integration must deliver. Missing these means the tooling does not function as a code generation pipeline.
 
-| Feature                                                    | Why Expected                                                                                                                                                                                         | Complexity | Notes                                                                                                                                                                                                                                                |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **git subtree merge with history preserved**               | Losing Rust backend commit history defeats the point of consolidation. 44 DB migrations + 19 domains need traceable provenance.                                                                      | LOW        | `git subtree add --prefix=packages/api-server <remote> main` — no squash. History becomes part of monorepo log. Future upstream pulls possible via `git subtree pull`.                                                                                  |
-| **Single root `bun dev` starts both frontend and backend** | Engineers expect `bun dev` at root to start the full stack. Requiring two terminal windows is friction that defeats unified workflow.                                                                | MEDIUM     | Turborepo `bun run dev` at root → concurrent `next dev` (packages/web) + `cargo watch -x run` (packages/api-server). Rust process managed as a side process, not a bun script directly.                                                                 |
-| **Shared environment variable management**                 | Frontend (Next.js) and backend (Axum) share secrets like DATABASE_URL, Supabase keys, API tokens. Duplicating them across multiple .env files causes drift and secret sync failures.                 | MEDIUM     | Root `.env` + per-package `.env.local` for package-specific overrides. Turborepo `globalEnv` in `turbo.json` for cache keying. Docker Compose `env_file` references root `.env`.                                                                     |
-| **Turborepo build orchestration**                          | Engineers expect `bun run build` at root to build in correct dependency order: shared → web → backend (or independent). Without orchestration, builds run sequentially or fail on missing artifacts. | MEDIUM     | `turbo.json` defines `build` pipeline. Rust package gets minimal `package.json` wrapper with `"build": "cargo build --release"`. Turborepo caches `target/release/` outputs.                                                                         |
-| **Docker Compose unification**                             | Backend already has Docker multi-env setup. Frontend has none. Unified Compose brings the full stack up with one command for staging/prod parity.                                                    | MEDIUM     | Root `docker-compose.yml` with services: `web` (Next.js), `backend` (Rust/Axum), `db` (Postgres). Backend Dockerfile uses `cargo-chef` for layer caching. Per-env override files (`docker-compose.staging.yml`).                                     |
-| **CI/CD path-based change detection**                      | Without path filtering, every commit rebuilds and re-tests the entire monorepo including the Rust backend — CI times balloon from minutes to 10–20 minutes.                                          | MEDIUM     | GitHub Actions: `paths:` filter per workflow. `dorny/paths-filter` for dynamic detection. Turborepo `--filter='...[origin/main]'` for incremental task runs. Separate workflows for `packages/web`, `packages/api-server`, `packages/shared`.           |
-| **Yarn 4 → bun workspace migration**                       | Existing `package.json` workspaces must be understood by bun. `yarn.lock` → `bun.lock` conversion. All `yarn workspace @decoded/web` scripts become `bun run --filter @decoded/web`.                 | HIGH       | bun 1.2+ supports `bun workspaces`. `packageManager` field changes to `"bun@1.3.10"`. Scripts in root `package.json` updated. `yarn.lock` removed; `bun install` regenerates lockfile. Mobile package (Expo) must be verified for bun compatibility. |
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **React Query hook generation** | The project already uses React Query throughout. Orval must emit `useQuery`/`useMutation` hooks, not bare fetch functions. Engineers expect drop-in replacements, not a new calling convention. | LOW | `client: 'react-query'` in config. Generates one `use[OperationId]` hook per OpenAPI path. GET → `useQuery`, POST/PUT/PATCH/DELETE → `useMutation`. |
+| **TypeScript model generation from OpenAPI** | Every endpoint needs typed request/response shapes. Writing these by hand against `https://dev.decoded.style` is what v9.0 replaces. | LOW | Orval reads the spec at generation time and emits `.ts` interface/type files into a `models/` directory. All 30+ endpoint shapes are covered automatically. |
+| **Custom mutator for auth + proxy routing** | Existing `client.ts` injects Supabase JWT and uses an empty `API_BASE_URL` so all requests route via the Next.js `/api/v1/` proxy (avoiding CORS and keeping backend URL server-side). Generated hooks must preserve this behavior. | MEDIUM | `output.override.mutator` config points to a hand-written `mutator.ts`. The mutator receives `AxiosRequestConfig` and returns `Promise<T>`. It replaces the entire transport layer for all generated hooks. |
+| **Single `generate:api` script** | Developers need one command to regenerate all clients when the backend spec changes. | LOW | `orval --config orval.config.ts` runs from `packages/web/`. Add to `package.json` scripts as `generate:api` and add to Turborepo pipeline before `build`. |
+| **Query key generation** | React Query cache invalidation requires stable, predictable keys. The existing manual hooks use ad hoc string arrays. | LOW | Auto-generated: `get[OperationId]QueryKey()` function per endpoint. Default key is the route path as an array (e.g. `['/posts/{postId}', { postId }]`). Can switch to operation ID with `useOperationIdAsQueryKey: true`. |
+| **tags-split output mode** | 30+ endpoints across ~10 domain tags (posts, users, spots, solutions, admin, badges, rankings, vton, events, categories). Flat single-file output is unmanageable at this scale. | LOW | `mode: 'tags-split'` creates one folder per OpenAPI tag (matching backend organization), then splits implementation/schemas/mocks within each folder. Matches the existing per-domain structure in `lib/api/`. |
+| **Separate schemas directory** | Model types must be importable from both generated hooks and other non-hook code (stores, utilities). Mixing them into the same file as hooks creates awkward imports. | LOW | `output.schemas: './src/generated/models'` puts all type definitions in a dedicated path. `output.operationSchemas` for operation-specific param/body types. |
+| **Index barrel exports** | Consumers import from a single path per tag, not from internal generated file paths that may change on next generation. | LOW | `indexFiles: true` (default) generates `index.ts` in each tag folder. `workspace` option generates a root `index.ts` with all exports. |
+| **Post-generation formatting** | Generated files must pass the existing pre-push CI (`just ci-web` runs ESLint + Prettier + tsc). Unformatted generated code will fail CI immediately. | LOW | `output.hooks.afterAllFilesWrite: ['prettier --write', 'eslint --fix']` runs formatters automatically after every generation. |
 
 ---
 
 ### Differentiators (Competitive Advantage)
 
-Features that make this consolidation meaningfully better than a naive "copy files" approach.
+Features that go beyond the minimum and significantly improve developer experience, type safety, or test coverage.
 
-| Feature                                           | Value Proposition                                                                                                                                                                                                                  | Complexity | Notes                                                                                                                                                                                                                                        |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Turborepo remote caching**                      | Cache build artifacts (both JS and Rust) across CI runs and developer machines. Rust compilation is slow (~3–5 min cold). Remote cache eliminates cold rebuilds for unchanged code.                                                | MEDIUM     | Vercel Remote Cache (free tier available) or self-hosted. `turbo.json` `outputs` must include `target/release/` for Rust. `TURBO_TOKEN` + `TURBO_TEAM` env vars in CI. First run populates cache; subsequent runs skip compilation entirely. |
-| **`just` or `Makefile` for cross-language tasks** | Turborepo orchestrates JS tasks. Rust tasks need `cargo`-native commands (`cargo test`, `cargo clippy`, `cargo fmt`). A `just` Justfile or root `Makefile` bridges the gap: `just test-all` runs both `bun test` and `cargo test`. | LOW        | `just` (Rust-based task runner) fits the Rust ecosystem natively. Alternative: root `Makefile`. Either gives team a single `make dev`, `make test`, `make lint` that calls into both toolchains.                                             |
-| **cargo-watch for Rust hot reload**               | Equivalent of Next.js HMR for Rust backend. `cargo-watch -x run` rebuilds and restarts Axum server on file save. Without this, backend development requires manual `cargo run` after each change.                                  | LOW        | `cargo install cargo-watch`. Added to Docker dev image. `bun dev` script calls `cargo watch` as a child process (via `concurrently` or similar). Significantly improves Rust DX in the unified environment.                                  |
-| **Shared type generation from OpenAPI spec**      | Backend already has OpenAPI spec at `dev.decoded.style`. Auto-generate TypeScript types from it into `packages/shared/` on build. Eliminates manual type synchronization between Rust API and Next.js frontend.                    | HIGH       | `openapi-typescript` CLI (well-maintained, 2026 current). Run as part of `prebuild` in `packages/shared`. Types land in `packages/shared/types/api.ts`. Frontend imports from `@decoded/shared`. This is the highest-value long-term payoff. |
-| **`.nvmrc` / `rust-toolchain.toml` pinning**      | Pin exact Node.js and Rust toolchain versions in the repo root. Engineers joining the project get the same versions as CI. Prevents "works on my machine" failures especially important for Rust editions (2021/2024).             | LOW        | `.nvmrc` for Node (or `volta` field in `package.json`). `rust-toolchain.toml` already exists in backend — moves to `packages/api-server/` or root. `bun` version pinned via `packageManager` field.                                             |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Zod response validation** | Runtime type checking catches backend contract violations at the API boundary — before the data reaches components and causes cryptic render errors. | MEDIUM | Requires a second Orval config block with `client: 'zod'`. Generates `{operationName}Response` Zod schema. Must be wired into the mutator via `.parse()` on the response. Orval auto-detects Zod v3 vs v4 from `package.json` (v7.10.0+). |
+| **Zod request body validation** | Validate user-submitted data before it hits the network. Especially valuable for the upload/detect flow where invalid payloads cause confusing backend errors. | MEDIUM | Generates `{operationName}Body` Zod schemas. Call `schema.parse(body)` before invoking the mutation. Errors surface in the component with a clear validation message rather than a 400 from the server. |
+| **Auto-invalidation on mutation success** | Orval can generate `useInvalidate[Operation]` helpers that precisely target the affected query keys. Eliminates manual `queryClient.invalidateQueries()` calls in mutation `onSuccess` handlers. | MEDIUM | `output.override.query.useInvalidate: true`. The generated invalidator knows the correct query key because it is generated from the same spec as the query hook. |
+| **useInfiniteQuery for paginated endpoints** | Images grid and feed use infinite scroll. The cursor/offset parameter must be plumbed through correctly. Manual implementation today has this wired by hand. | MEDIUM | `output.override.query.useInfinite: true` + `useInfiniteQueryParam: 'cursor'` (or whichever param the backend uses). Generates `useInfinite[OperationId]` hooks alongside regular `use[OperationId]` hooks. |
+| **usePrefetch hooks for SSR** | Post detail and profile pages are good candidates for server-side prefetching. Generated `usePrefetch[OperationId]` can be called in route handlers to populate the React Query cache before the page renders. | MEDIUM | `output.override.query.usePrefetch: true`. Returns a function compatible with `queryClient.prefetchQuery`. Requires careful `"use client"` boundary management — the hook wrapper must live in a client component. |
+| **Zod coercion for query params** | URL query parameters arrive as strings. Coercion converts `"42"` → `42` and `"true"` → `true` automatically, without manual parsing in the component. | LOW | `output.override.zod.coerce: true` scoped to `query` context only. Avoids unwanted coercion on response bodies where type accuracy matters. |
+| **Zod strict mode on critical responses** | Detect when the backend sends unexpected fields — surfaces API contract drift immediately rather than silently ignoring extra data. | LOW | `output.override.zod.strict: true` scoped to `response` context for high-risk endpoints (auth, user profile). Generates `.strict()` (v3) or `strictObject()` (v4). Do not enable globally — see anti-features. |
+| **useOperationIdAsQueryKey** | Operation IDs (e.g. `getPostById`) produce human-readable query keys in React Query DevTools instead of raw route paths. Significantly easier to debug cache state. | LOW | `output.override.query.useOperationIdAsQueryKey: true`. One line of config. Only downside: operation IDs must be stable in the OpenAPI spec. |
+| **MSW mock generation** | Generated MSW handlers (`*.msw.ts`) and Faker-based mock data functions (`get[OperationId]ResponseMock()`) enable integration tests and component-level testing without a running backend. | HIGH | `output.mock: true`. Generates `*.msw.ts` files alongside hooks. Requires `@faker-js/faker` and `msw` (neither currently in the stack). MSW mock data will not satisfy strict Zod schemas — these must be used in separate test environments. |
 
 ---
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-| Feature                                      | Why Requested                                                                                                                     | Why Problematic                                                                                                                                                                                                                                                                          | Alternative                                                                                                                                                                                                                                             |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`turbo prune` for Docker builds with bun** | Turborepo's `prune` command generates a minimal lockfile subset for Docker layer caching. Engineers want optimized Docker builds. | As of late 2025, `turbo prune` with bun generates corrupted `bun.lock` files (GitHub issue #11007, #11266). `--frozen-lockfile` fails in pruned Docker contexts. This is an active bug, not a stable feature.                                                                            | Use `COPY packages/api-server/ packages/api-server/ COPY packages/web/ packages/web/` directly in multi-stage Dockerfiles without `turbo prune`. Accept slightly larger Docker layers until the bun prune bug is fixed. Revisit in Turborepo 2.x canary.      |
-| **Cargo workspace at repo root**             | "One workspace to rule them all" — makes `cargo build` work from root.                                                            | Cargo workspaces and bun workspaces are separate systems. Trying to merge them at the root (`[workspace]` in root `Cargo.toml`) causes confusion: bun ignores Cargo, but developers expect `cargo build` at root. Adds `Cargo.lock` at root which conflicts with JS tooling assumptions. | Keep `Cargo.toml` (workspace root) inside `packages/api-server/`. `cargo build` runs from `packages/api-server/`. Turborepo wraps it via `package.json` script. Clean separation — each tool has its own root.                                                |
-| **git submodule instead of subtree**         | "Keep backend as a separate repo, just reference it" — preserves ability to push upstream easily.                                 | Submodules require every developer to run `git submodule update --init` after cloning. CI pipelines need explicit submodule init steps. Detached HEAD state causes confusion. Most engineers find submodules confusing in practice.                                                      | git subtree gives the same history preservation and upstream-sync capability via `git subtree pull`, but the backend code lives directly in the tree. No extra init step. No detached HEAD. Simpler workflow at the cost of slightly larger clone size. |
-| **Single `.env` for all packages at root**   | "One file is simpler than N files" — easier to audit secrets.                                                                     | Next.js requires `.env.local` in the package directory (or project root relative to `next.config.js`). Axum reads env vars from the shell or its own `.env`. A single root file requires custom loading logic in both runtimes and is not a standard pattern for either.                 | Root `.env` for truly shared secrets (DATABASE*URL, shared API keys). Per-package `.env.local` for package-specific config (NEXT_PUBLIC*\* for web, LOG_LEVEL for backend). Docker Compose `env_file` combines both using array syntax.                 |
-| **Nx instead of Turborepo**                  | Nx has first-class multi-language support, explicit Rust plugin, and more granular task control.                                  | The project already decided on Turborepo (PROJECT.md Key Decisions). Switching to Nx at this point adds ~1 week of migration overhead with no immediate benefit. Turborepo's multi-language support via `package.json` wrapper is sufficient for one Rust service.                       | Stay with Turborepo. Use `package.json` wrapper pattern for `packages/api-server/` as documented in official Turborepo multi-language guide. If Rust backend grows to 3+ services, re-evaluate Nx or Moon at that point.                                   |
-| **bun as Rust build runner**                 | "bun can run scripts so let bun manage cargo"                                                                                     | bun `package.json` scripts that call `cargo` work fine for simple cases, but bun does not understand Rust toolchain requirements, `rust-toolchain.toml`, or Cargo feature flags. Using bun as the primary interface for Rust builds obscures build failures.                             | Use `cargo` directly for Rust builds. bun/Turborepo calls `cargo build --release` as an opaque shell command. Turborepo caches the output directory. Rust engineers run `cargo` commands natively in `packages/api-server/`.                               |
+Features that seem appealing but create concrete problems for this project.
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Editing generated files manually** | Tempting to patch a quirk in a generated hook inline | Generated files are fully overwritten on the next `generate:api` run. Any manual fix is silently lost. Creates a false confidence that something is fixed. | Fix the upstream OpenAPI spec or use `output.override` config to customize generation behavior. Generated files are build artifacts, not source code. |
+| **Committing generated files to version control** | Feels like a safety net — "at least the generated files are there if generation fails" | Generated files produce large, noisy diffs on every spec change. Merge conflicts are frequent and meaningless. The spec is the source of truth. | Add `packages/web/src/generated/` to `.gitignore`. Regenerate in CI as part of the `build` pipeline task. CI fails fast if spec is unreachable. |
+| **Enabling Zod validation on all contexts simultaneously** | Seems maximally safe — validate everything everywhere | Response validation adds parse overhead on every API call. Enabling strict mode globally causes parse failures on minor backend additions (new optional field → strict schema rejects it). Particularly painful during active backend development. | Enable Zod selectively: coerce for query params (low risk, high value), response validation only for auth/user endpoints (highest drift risk), skip strict mode entirely until the OpenAPI spec is stable. |
+| **Single-file output mode** | Simple — one import, easy to understand | 30+ endpoints in one file produces a massive generated file. IDE performance (autocomplete, type checking) degrades. Tree-shaking fails. Merge conflicts on regeneration are unresolvable. | Use `tags-split` mode which mirrors the existing per-domain organization in `lib/api/`. The folder structure is immediately recognizable to the team. |
+| **generateEachHttpStatus: true** | Want Zod schemas for 400/404/500 error shapes too | With 30+ endpoints, generating schemas for every HTTP status produces 150-200+ schemas. Most error shapes are identical (a generic `ErrorResponse` type) or are never machine-validated. Generation time increases significantly. | Generate only 2xx response schemas (the default). Handle error shapes generically in the mutator's error interceptor, the same way `client.ts` currently does. |
+| **Replacing the Next.js /api/v1/ proxy with direct backend calls** | Orval can be configured to call `https://dev.decoded.style` directly from the browser | The Next.js proxy exists for three reasons: (1) CORS — the backend does not whitelist browser origins, (2) secrets — `API_BASE_URL` is a server-side env var that must not leak to the browser, (3) centralized auth flow. Bypassing it breaks all three. | Configure the mutator `baseURL` to `""` (empty string). All generated hooks continue routing via `/api/v1/` exactly as the current manual `client.ts` does. |
+| **Zod generateEachHttpStatus for admin routes** | Admin dashboard has complex status flows | Admin routes behind auth middleware have additional behavioral complexity. Strict per-status Zod schemas for ~15 admin endpoints adds ~90 schemas that change frequently as the admin API evolves. | Handle admin error responses with the generic error pattern in the mutator. Admin-specific error shapes belong in the admin hook layer, not in generated schemas. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[git subtree merge]
-    └──required by──> [Unified development workflow]
-                          └──required by──> [Single bun dev command]
-                          └──required by──> [Docker Compose unification]
+[Custom Mutator (mutator.ts)]
+    └──required-by──> [React Query Hook Generation]
+    └──required-by──> [TypeScript Model Generation]  (mutator is the transport layer)
+    └──required-by──> [Zod Response Validation]      (mutator runs .parse() on response)
 
-[bun workspace migration]
-    └──required by──> [Turborepo build orchestration]
-                          └──required by──> [Remote caching]
-                          └──required by──> [CI/CD path-based detection]
+[React Query Hook Generation]
+    └──enables──> [Query Key Generation]
+    └──enables──> [Auto-Invalidation on Mutation]
+    └──enables──> [useInfiniteQuery for Pagination]
+    └──enables──> [usePrefetch Hooks]
 
-[Turborepo build orchestration]
-    └──enhances──> [Docker Compose unification]   (turbo run build feeds Docker)
+[tags-split Output Mode]
+    └──requires──> [OpenAPI tags defined on backend endpoints]
+    └──enables──> [Index Barrel Exports per tag]
 
-[Shared env var management]
-    └──required by──> [Single bun dev command]  (both services need secrets)
-    └──required by──> [Docker Compose unification]
+[Zod Schema Generation (separate config block, client: 'zod')]
+    └──requires──> [zod package installed]
+    └──enables──> [Zod Response Validation]
+    └──enables──> [Zod Request Body Validation]
+    └──enhances──> [Zod Coercion for Query Params]
+    └──enhances──> [Zod Strict Mode on Responses]
 
-[openapi-typescript type generation]
-    └──requires──> [packages/shared package exists]
-    └──requires──> [Backend OpenAPI spec stable]
-    └──enhances──> [bun workspace migration]  (types auto-flow through workspaces)
+[afterAllFilesWrite Formatting]
+    └──requires──> [Prettier configured in packages/web]
+    └──requires──> [ESLint flat config in packages/web]
+    └──prevents──> [CI failure on generated file style]
 
-[cargo-watch]
-    └──enhances──> [Single bun dev command]  (hot reload for Rust)
-    └──conflicts──> [Docker dev mode]  (cargo-watch runs natively, not in container for local dev)
+[MSW Mock Generation]
+    └──requires──> [@faker-js/faker installed]
+    └──requires──> [msw installed]
+    └──conflicts──> [Zod Strict Mode]  (Faker data fails strict schemas)
+
+[useInfiniteQuery]
+    └──requires──> [Backend cursor/offset param documented in OpenAPI spec]
+
+[Auto-Invalidation on Mutation]
+    └──requires──> [useOperationIdAsQueryKey OR matching query key]
+    └──note──> [Only invalidates Orval-generated queries; hand-written queries need manual invalidation]
 ```
 
 ### Dependency Notes
 
-- **git subtree must happen before any tooling changes.** Once the backend code lands in `packages/api-server/`, bun migration and Turborepo setup can reference it. Doing bun migration before subtree merge means updating configuration twice.
-- **bun workspace migration must happen before Turborepo setup.** Turborepo reads `packageManager` from root `package.json` to determine which package manager to use. Setting up `turbo.json` before migrating to bun produces ambiguous behavior.
-- **OpenAPI type generation is independent.** It can be added in any phase after `packages/shared` exists. It is the highest-value long-term feature but not required for unified dev workflow.
-- **cargo-watch conflicts with Docker-first development.** Choose one local dev model: either run services natively (cargo-watch + bun dev) or run all services in Docker Compose. Docker dev introduces rebuild latency on every Rust change. Native dev is faster but requires both Rust toolchain and bun installed locally.
+- **Custom mutator must be implemented before any generated hook is usable.** Without it, generated hooks call raw axios with no auth token and no proxy routing. The mutator is the first deliverable in v9.0.
+- **Zod generation is a separate Orval config block.** `client: 'zod'` mode generates only validation schemas, not hooks. It runs in the same `orval.config.ts` as a second named entry alongside the `client: 'react-query'` entry. Both read the same spec, output to different directories.
+- **tags-split requires backend OpenAPI tags.** Verify that `https://dev.decoded.style/openapi.json` has tags defined on every operation before committing to this mode. If tags are missing, Orval falls back to a single file — acceptable temporarily but must be fixed in the spec.
+- **MSW mocks and strict Zod cannot coexist in the same test environment.** Faker generates plausible but not spec-perfect data. Enable MSW mocks in a separate test `orval.config.test.ts` without Zod strict mode.
+- **Auto-invalidation only covers Orval-generated query hooks.** The Supabase direct queries in `packages/shared/supabase/queries/` are not touched by Orval and are not auto-invalidated by generated mutation hooks.
 
 ---
 
 ## MVP Definition
 
-This milestone is infrastructure, not a user-facing feature. "MVP" means: the minimum changes that produce a working unified development environment.
+### Launch With (v9.0)
 
-### Launch With (v1 — unified monorepo)
+Minimum to replace all manual `lib/api/` clients and validate the generation pipeline end-to-end.
 
-- [ ] **git subtree merge** — `packages/api-server/` with full Rust history. Non-destructive, reversible.
-- [ ] **bun workspace migration** — `package.json` `packageManager` updated, `yarn.lock` → `bun.lock`, existing scripts verified working.
-- [ ] **Root `turbo.json` with build/dev/lint pipelines** — `packages/web` and `packages/api-server` both registered as packages.
-- [ ] **Single `bun dev` command** — starts Next.js dev server + Rust backend (via `cargo watch` or simple `cargo run`).
-- [ ] **Root `.env` + per-package `.env.local` structure** — engineers know exactly where each secret lives.
-- [ ] **Docker Compose unified** — `docker compose up` starts web + backend + db. Works for staging/prod.
+- [ ] **Custom mutator** (`lib/api/generated/mutator.ts`) — Supabase JWT injection from session, empty baseURL for proxy routing, error handling matching current `client.ts` behavior
+- [ ] **Orval config** (`packages/web/orval.config.ts`) — `client: 'react-query'`, `mode: 'tags-split'`, points at backend OpenAPI spec, outputs to `src/generated/`
+- [ ] **`generate:api` bun script** — wired into `packages/web/package.json` and Turborepo pipeline (runs before `build`)
+- [ ] **React Query hook generation** — all 30+ endpoints generating `use[OperationId]` hooks with correct query/mutation split
+- [ ] **TypeScript model generation** — all request/response types in `src/generated/models/`, manual types in `lib/api/types.ts` deleted
+- [ ] **afterAllFilesWrite formatting** — Prettier + ESLint run on generated files automatically
+- [ ] **Full migration of `lib/hooks/`** — all hooks that wrap `lib/api/` functions replaced with direct imports from generated hooks
+- [ ] **Delete `lib/api/*.ts`** — posts, users, spots, solutions, badges, rankings, categories, postLikes, savedPosts, comments, and the adapters folder removed after migration is verified
+- [ ] **`.gitignore` update** — `packages/web/src/generated/` excluded from version control
 
-### Add After Validation (v1.x)
+### Add After Validation (v9.x)
 
-- [ ] **CI/CD path-based change detection** — add `dorny/paths-filter` and separate workflows once team confirms the unified setup is stable.
-- [ ] **Turborepo remote caching** — connect Vercel Remote Cache after the CI workflow is confirmed working.
-- [ ] **`just` / `Makefile` cross-language tasks** — convenience layer once base is stable.
+Add once the generation pipeline is confirmed working in production and CI.
 
-### Future Consideration (v2+)
+- [ ] **Zod request body validation** — second Orval config block with `client: 'zod'`, wire `{operationName}Body.parse()` into upload and create flows. Trigger: first runtime type mismatch caught in staging.
+- [ ] **Zod response validation** — enable for auth and user endpoints first. Trigger: backend spec change causes silent data corruption in the UI.
+- [ ] **useInfiniteQuery for images and feed** — enable once cursor parameter confirmed in OpenAPI spec. Trigger: infinite scroll regression caused by manual implementation gap.
+- [ ] **Auto-invalidation on mutation** — `useInvalidate` helpers for post create, like, save mutations. Trigger: stale cache complaints from QA.
+- [ ] **useOperationIdAsQueryKey** — enable for improved DevTools legibility. Trigger: debugging session complexity grows.
 
-- [ ] **OpenAPI → TypeScript type generation** — high value but requires OpenAPI spec stabilization and `packages/shared` structure agreed upon.
-- [ ] **Rust-native CI caching** — `sccache` or `cargo-cache` for Rust build artifact caching in CI (independent of Turborepo remote cache).
+### Future Consideration (v10+)
+
+Defer until v9.0 migration is fully proven and the team has confidence in the generation workflow.
+
+- [ ] **MSW mock generation** — requires adding `@faker-js/faker` and `msw` to the dev stack. High value for component testing but significant setup investment.
+- [ ] **usePrefetch for SSR** — enables server-side prefetching for detail pages. Defer until App Router data fetching patterns are formalized in this project.
+- [ ] **Zod strict mode on responses** — risk of false-positive failures during active backend development. Enable once the OpenAPI spec is declared stable.
+- [ ] **Zod coercion for query params** — nice-to-have for explore/search. Low priority since current manual parameter handling works correctly.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature                                  | Dev Team Value | Implementation Cost | Priority |
-| ---------------------------------------- | -------------- | ------------------- | -------- |
-| git subtree merge (history preserved)    | HIGH           | LOW                 | P1       |
-| bun workspace migration                  | HIGH           | MEDIUM              | P1       |
-| Turborepo build orchestration            | HIGH           | MEDIUM              | P1       |
-| Single `bun dev` unified command         | HIGH           | MEDIUM              | P1       |
-| Shared env var management                | HIGH           | LOW                 | P1       |
-| Docker Compose unification               | HIGH           | MEDIUM              | P1       |
-| CI/CD path-based change detection        | HIGH           | MEDIUM              | P2       |
-| cargo-watch for Rust hot reload          | MEDIUM         | LOW                 | P2       |
-| Turborepo remote caching                 | MEDIUM         | LOW                 | P2       |
-| `just` / `Makefile` cross-language tasks | MEDIUM         | LOW                 | P2       |
-| `.nvmrc` / `rust-toolchain.toml` pinning | LOW            | LOW                 | P2       |
-| OpenAPI → TypeScript type generation     | HIGH           | HIGH                | P3       |
-| Rust-native CI caching (sccache)         | MEDIUM         | MEDIUM              | P3       |
+| Feature | Developer Value | Implementation Cost | Priority |
+|---------|----------------|---------------------|----------|
+| Custom mutator (auth + proxy) | HIGH | MEDIUM | P1 |
+| React Query hook generation | HIGH | LOW | P1 |
+| TypeScript model generation | HIGH | LOW | P1 |
+| `generate:api` script + Turborepo pipeline | HIGH | LOW | P1 |
+| tags-split file organization | HIGH | LOW | P1 |
+| afterAllFilesWrite formatting | HIGH | LOW | P1 |
+| Migration: delete `lib/api/*.ts` | HIGH | MEDIUM | P1 |
+| Migration: replace `lib/hooks/` | HIGH | MEDIUM | P1 |
+| Zod request body validation | MEDIUM | MEDIUM | P2 |
+| Zod response validation | MEDIUM | MEDIUM | P2 |
+| Auto-invalidation on mutation | MEDIUM | LOW | P2 |
+| useInfiniteQuery for pagination | MEDIUM | MEDIUM | P2 |
+| useOperationIdAsQueryKey | LOW | LOW | P2 |
+| usePrefetch hooks | LOW | MEDIUM | P3 |
+| MSW mock generation | LOW | HIGH | P3 |
+| Zod strict mode on responses | LOW | LOW | P3 |
+| Zod coercion for query params | LOW | LOW | P3 |
 
 **Priority key:**
-
-- P1: Required for v8.0 milestone completion
-- P2: Should add within v8.0 once P1 is stable
-- P3: High value but deferred — separate milestone or v8.1
-
----
-
-## Ecosystem Reference
-
-The mixed-language monorepo pattern is well-established in 2026. Key reference implementations:
-
-| Pattern                                           | Used By                           | Our Approach                                             |
-| ------------------------------------------------- | --------------------------------- | -------------------------------------------------------- |
-| Turborepo multi-language via package.json wrapper | Vercel, community                 | Rust `packages/api-server/package.json` wraps `cargo build` |
-| git subtree for repo consolidation                | Common in OSS monorepo migrations | `git subtree add --prefix=packages/api-server`              |
-| Docker Compose with per-language Dockerfiles      | Standard industry practice        | Root `docker-compose.yml`, per-service Dockerfiles       |
-| Path-based CI with `dorny/paths-filter`           | GitHub community standard         | Separate workflows per `packages/*` directory            |
-| bun workspaces (Yarn 4 replacement)               | Growing adoption 2025–2026        | `packageManager: "bun@1.3.10"` in root `package.json`    |
+- P1: Required for v9.0 milestone — migration is incomplete without these
+- P2: Ship when core is validated — significant DX or safety improvement
+- P3: Future milestone — valuable but not blocking
 
 ---
 
-## Dependencies on Existing Codebase
+## Existing Code Impact Map
 
-| Existing Asset                       | How v8.0 Touches It                                                                                                               |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| Root `package.json` (`yarn@4.9.2`)   | `packageManager` field changes to `bun@1.3.10`. Workspaces array unchanged.                                                       |
-| `yarn.lock`                          | Deleted. `bun install` generates `bun.lock` as replacement.                                                                       |
-| `.yarnrc.yml`                        | Removed. bun uses `.bunfig.toml` for equivalent config.                                                                           |
-| `packages/web/package.json` scripts  | `yarn workspace @decoded/web` calls replaced by `bun run --filter @decoded/web` in root scripts.                                  |
-| `packages/shared/`                   | Unchanged — bun treats it as a workspace package identically to yarn.                                                             |
-| `packages/mobile/` (Expo)            | Verify Expo SDK compatibility with bun before migrating. Expo has bun support but some plugins use postinstall hooks that differ. |
-| Frontend `API_BASE_URL` env var      | Already proxies ~70% of API calls to Rust backend. No change needed post-merge.                                                   |
-| GitHub Actions `.github/workflows/`  | New path-filter logic added. Existing workflows updated from `yarn` to `bun` commands.                                            |
-| Backend Docker setup (separate repo) | Dockerfile and docker-compose files move to `packages/api-server/` in monorepo. Root `docker-compose.yml` references them.           |
+The following files in `packages/web` are directly affected by or must be integrated with the generated output.
+
+| Existing File/Directory | Relation to Orval Generation | Action |
+|------------------------|------------------------------|--------|
+| `lib/api/client.ts` | Contains auth injection + proxy routing logic | Auth logic moves into `mutator.ts`. `client.ts` is deleted after migration is verified. |
+| `lib/api/posts.ts`, `users.ts`, `spots.ts`, etc. | Per-resource typed fetch wrappers | Replaced entirely by generated hooks. Delete after each domain is migrated. |
+| `lib/api/types.ts` | Manual request/response type definitions | Replaced by generated model files in `src/generated/models/`. Delete when all types are covered. |
+| `lib/api/adapters/` | Data transformation adapters between API and UI | Evaluate case-by-case. If transformations are needed, keep them as utilities that consume generated types rather than raw API functions. |
+| `lib/hooks/*.ts` | React Query hooks wrapping `lib/api/` functions | Replaced by direct imports from generated `use[OperationId]` hooks. Files deleted after migration. |
+| `lib/hooks/admin/*.ts` | Admin-specific data hooks | Same pattern. Generated hooks replace manual wrapping. |
+| `app/api/v1/**` | Next.js server-side proxy routes | Keep unchanged. The mutator must route through these. `API_BASE_URL` stays `""` in mutator config. |
+| `packages/shared/supabase/queries/` | Supabase direct queries (images, items) | Not replaced by Orval. These target Supabase directly, not the Rust backend REST API. Keep as-is. |
 
 ---
 
 ## Sources
 
-- [Turborepo Multi-Language Guide](https://turborepo.dev/docs/guides/multi-language) — official documentation. HIGH confidence. Package.json wrapper pattern for Rust/Cargo confirmed.
-- [Turborepo with Docker](https://turborepo.dev/docs/guides/tools/docker) — official Docker guide. HIGH confidence. `turbo prune` limitations with bun noted.
-- [turbo prune bun lockfile bug #11007](https://github.com/vercel/turborepo/issues/11007) — active GitHub issue. HIGH confidence (firsthand report). Do NOT use turbo prune with bun until resolved.
-- [turbo prune bun lockfile corruption #11266](https://github.com/vercel/turborepo/issues/11266) — second confirmation of same bug.
-- [Turborepo 2.5 release — bun prune support](https://turborepo.com/blog/turbo-2-5) — bun prune added in 2.5, but lockfile bugs remain. MEDIUM confidence.
-- [Bun workspaces guide](https://bun.com/docs/guides/install/workspaces) — official bun docs. HIGH confidence.
-- [dorny/paths-filter](https://github.com/dorny/paths-filter) — GitHub Actions path filtering. HIGH confidence (widely adopted, actively maintained).
-- [git subtree merge without losing history](https://medium.com/@andrejkurocenko/merging-multiple-repositories-into-a-monorepo-using-git-subtree-without-losing-history-0c019046498e) — practical guide. MEDIUM confidence.
-- [GitHub Docs: git subtree merges](https://docs.github.com/en/get-started/using-git/about-git-subtree-merges) — official GitHub docs. HIGH confidence.
-- [Best Monorepo Tools 2026 — PkgPulse](https://www.pkgpulse.com/blog/best-monorepo-tools-2026) — ecosystem overview. LOW confidence (blog, not official source), corroborates Turborepo recommendation.
-- [Dealing with Turborepo + Bun Hell — fgbyte](https://www.fgbyte.com/blog/02-bun-turborepo-hell/) — practitioner experience. MEDIUM confidence. Corroborates workspace dependency issues.
-- [GitHub Actions monorepo CI/CD 2026](https://dev.to/pockit_tools/github-actions-in-2026-the-complete-guide-to-monorepo-cicd-and-self-hosted-runners-1jop) — patterns guide. MEDIUM confidence.
+- [Orval React Query Guide](https://www.orval.dev/guides/react-query) — hook generation pattern, query key naming, infinite query config (HIGH confidence — official docs)
+- [Orval Output Configuration Reference](https://www.orval.dev/reference/configuration/output) — mode options, client types, override structure, hooks config (HIGH confidence — official docs)
+- [Orval Zod Schema Validation Architecture (DeepWiki)](https://deepwiki.com/orval-labs/orval/5-zod-schema-validation) — two-phase generation, schema naming conventions, five schema types per operation (HIGH confidence — sourced from Orval codebase)
+- [Orval Zod Generation Configuration (DeepWiki)](https://deepwiki.com/orval-labs/orval/5.1-zod-generation-configuration) — strict, coerce, preprocess, per-context overrides, Zod v3/v4 auto-detection (HIGH confidence)
+- [Orval Output Modes (DeepWiki)](https://deepwiki.com/orval-labs/orval/2.2-output-modes) — tags-split recommended for large APIs (HIGH confidence — sourced from Orval codebase analysis)
+- [Orval Custom Axios Guide](https://www.orval.dev/guides/custom-axios) — mutator function signature `<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<T>` (HIGH confidence — official docs)
+- [Prototyp: Generating API client from OpenAPI/Swagger with Orval and TanStack Query](https://prototyp.digital/blog/generating-api-client-openapi-swagger-definitions) — migration workflow, production patterns (MEDIUM confidence)
+- [Andy Primawan: Generate TypeScript SDKs and React Query Hooks for Next.js with Orval](https://andyprimawan.com/generate-typescript-sdks-and-react-query-hooks-for-nextjs-with-orval-and-openapi-specs/) — full Next.js config with auth interceptors (MEDIUM confidence)
+- [Neteye Blog: Summoning Orval](https://www.neteye-blog.com/2025/09/summoning-orval-binding-backend-and-frontend-by-magic/) — CI/CD integration, afterAllFilesWrite pattern (MEDIUM confidence)
+- [Zod v4 compatibility issue tracker](https://github.com/orval-labs/orval/issues/2042) — Orval v7.10.0+ adds Zod v4 auto-detection (HIGH confidence — primary source)
+- [Orval invalidation from mutations discussion](https://github.com/anymaniax/orval/discussions/506) — useInvalidate hook behavior and manual invalidation patterns (MEDIUM confidence)
 
 ---
 
-_Feature research for: v8.0 Monorepo Consolidation & Bun Migration — decoded-app (JS + Rust mixed-language monorepo)_
-_Researched: 2026-03-22_
+*Feature research for: Orval + Zod API client generation (v9.0 milestone)*
+*Researched: 2026-03-23*
