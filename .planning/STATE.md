@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 40-02-PLAN.md
-last_updated: "2026-03-23T12:57:44.419Z"
+stopped_at: Completed 41-01-PLAN.md
+last_updated: "2026-03-23T13:39:51.582Z"
 progress:
-  total_phases: 38
+  total_phases: 39
   completed_phases: 36
-  total_plans: 84
-  completed_plans: 83
+  total_plans: 88
+  completed_plans: 84
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 41 — next phase of v9.0 API Generation
+**Current focus:** Phase 41 — read-hook-migration
 
 ## Current Position
 
-Phase: 40 (codegen-pipeline-and-custom-mutator) — COMPLETE
-Plan: 2 of 2 (all plans done)
+Phase: 41 (read-hook-migration) — EXECUTING
+Plan: 1 of 4
 
 ## Milestone Summary
 
@@ -70,6 +70,9 @@ v9.0 key constraints (from research):
 - [Phase 40-codegen-pipeline-and-custom-mutator]: baseURL empty string in customInstance — OpenAPI paths include /api/v1/ prefix to prevent double-prefix
 - [Phase 40-codegen-pipeline-and-custom-mutator]: hooks block is sibling of input/output in orval.config.ts — placing inside output causes silent failure
 - [Phase 40]: Turbo task name must exactly match package script name — generate:api task name required (not generate) for Turborepo to dispatch correctly
+- [Phase 41-01]: Import-alias pattern for generated hooks: import with 'as *Generated' suffix to avoid name collision
+- [Phase 41-01]: Cache key preservation: pass profileKeys.badges()/rankings()/CATEGORIES_QUERY_KEY into generated hook's query.queryKey
+- [Phase 41-01]: null-to-undefined coercion in badge-mapper: generated types use string|null, store Badge.description expects string|undefined
 
 ### Blockers/Concerns
 
@@ -86,8 +89,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:56:16.859Z
-Stopped at: Completed 40-02-PLAN.md
+Last session: 2026-03-23T13:39:51.579Z
+Stopped at: Completed 41-01-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`
