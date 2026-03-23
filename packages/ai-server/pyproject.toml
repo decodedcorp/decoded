@@ -44,20 +44,18 @@ dependencies = [
     "tenacity (>=9.0)",
 ]
 
-[tool.poetry]
-package-mode = false
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5,<9",
+    "ipykernel>=6.29.5,<7",
+    "pillow>=11.1.0,<12",
+    "black>=24.0.0,<26",
+    "flake8>=7.0.0,<8",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
-ipykernel = "^6.29.5"
-poethepoet = "^0.33.0"
-pillow = "^11.1.0"
+[tool.uv]
+package = false
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poe.tasks]
-test = "pytest"
-lint = "flake8"
-format = "black ."
+requires = ["hatchling>=1.26.0"]
+build-backend = "hatchling.build"

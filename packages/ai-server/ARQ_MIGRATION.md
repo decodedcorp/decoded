@@ -122,7 +122,7 @@ gRPC Request → ARQ Job Queue
 
 ```bash
 # 의존성 설치
-poetry install
+uv sync
 
 # 실행 (ARQ 워커 자동 시작)
 python src/main.py

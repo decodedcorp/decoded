@@ -16,7 +16,7 @@ decoded-monorepo/
 │   ├── shared/       ← 공유 타입/쿼리 (bun workspace)
 │   ├── mobile/       ← Expo 54 (bun workspace)
 │   ├── api-server/   ← Rust/Axum API (Cargo; thin package.json for Turborepo)
-│   └── ai-server/    ← Python AI / gRPC (Poetry; former decoded-ai)
+│   └── ai-server/    ← Python AI / gRPC (uv; former decoded-ai)
 ├── package.json      ← bun workspaces + Turborepo 패키지 엔트리
 ├── turbo.json        ← Turborepo (build/dev/lint/test)
 └── bunfig.toml       ← bun 설정

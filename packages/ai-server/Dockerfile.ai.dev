@@ -7,26 +7,21 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --no-cache-dir uv
+
 WORKDIR /app
 
-# Poetry 설치
-RUN pip install poetry
-
-# Poetry 가상환경 비활성화
-RUN poetry config virtualenvs.create false
-
-# 소스 코드 및 의존성 파일 복사
-COPY src/ /app/src/
-COPY README.md /app/
-COPY pyproject.toml poetry.lock ./
+# 의존성 파일 복사 및 설치 (개발 그룹 포함)
+COPY pyproject.toml uv.lock ./
 RUN mkdir -p /app/db
 RUN mkdir -p /app/logs
+RUN uv sync --frozen
 
-# Poetry로 의존성 설치
-RUN poetry lock && poetry install --no-root
+COPY src/ /app/src/
+COPY README.md /app/
 
 ENV PYTHONPATH=/app
 
 EXPOSE 10000 50052
 
-CMD ["poetry", "run", "python", "-m", "src.main"]
+CMD ["uv", "run", "python", "-m", "src.main"]

@@ -10,7 +10,7 @@ Image/item discovery and curation platform with behavioral intelligence, editori
 | `packages/shared` | Shared TypeScript types, Supabase queries, hooks |
 | `packages/mobile` | Expo 54 React Native app |
 | `packages/api-server` | Rust (Axum) — HTTP API, gRPC **client** to the AI service |
-| `packages/ai-server` | Python (Poetry) — inference, metadata, gRPC **server** (legacy repo: decoded-ai) |
+| `packages/ai-server` | Python (uv) — inference, metadata, gRPC **server** (legacy repo: decoded-ai) |
 
 ## Architecture
 
@@ -21,7 +21,7 @@ decoded-monorepo/
 │   ├── shared/       Shared types, hooks, Supabase queries
 │   ├── mobile/       Expo 54 — React Native app
 │   ├── api-server/   Rust/Axum — REST + gRPC client to AI
-│   └── ai-server/    Python — inference, gRPC (Poetry)
+│   └── ai-server/    Python — inference, gRPC (uv)
 ├── turbo.json        Turborepo task orchestration
 ├── bunfig.toml       bun config
 └── package.json      Workspaces root (bun + thin wrappers for api/ai-server)
@@ -33,7 +33,7 @@ decoded-monorepo/
 |-------|-------|
 | **Frontend** | Next.js 16.2, React 19.2, TypeScript 5.9, Tailwind CSS 3.4, Zustand 5, React Query 5 |
 | **API** | Rust, Axum 0.8, SeaORM 1.1, tokio, Meilisearch |
-| **AI / gRPC** | Python 3.11+, Poetry, FastAPI, gRPC, Redis, ARQ (see `packages/ai-server`) |
+| **AI / gRPC** | Python 3.11+, uv, FastAPI, gRPC, Redis, ARQ (see `packages/ai-server`) |
 | **Database** | Supabase (PostgreSQL), Cloudflare R2 (storage) |
 | **Mobile** | Expo 54, React Native |
 | **Build** | Turborepo, bun 1.3+, Node.js 22 LTS |
@@ -46,7 +46,7 @@ decoded-monorepo/
 
 - [bun](https://bun.sh) 1.3+
 - [Rust](https://rustup.rs) (for `packages/api-server`)
-- [Poetry](https://python-poetry.org/) (for `packages/ai-server`)
+- [uv](https://docs.astral.sh/uv/) (for `packages/ai-server`)
 
 ### Install (repo root)
 
@@ -82,11 +82,11 @@ Legacy aliases: `bun run dev:backend` / `bun run build:backend` → same as `*:a
 
 ```bash
 cd packages/ai-server
-poetry install
-poetry run python -m src.main
+uv sync
+uv run python -m src.main
 ```
 
-From repo root: `bun run dev:ai-server` (requires Poetry on PATH).
+From repo root: `bun run dev:ai-server` (requires `uv` on PATH).
 
 Docker Compose lives under `packages/ai-server/`; **build context** is that directory. See [`packages/ai-server/README.md`](packages/ai-server/README.md).
 
@@ -95,7 +95,7 @@ Docker Compose lives under `packages/ai-server/`; **build context** is that dire
 ```bash
 bun run dev              # JS packages via Turborepo
 bun run dev:api-server   # Rust API (cargo watch)
-bun run dev:ai-server    # Python AI (Poetry)
+bun run dev:ai-server    # Python AI (uv)
 bun run build            # Production build (Turborepo)
 bun run lint             # Lint tasks where defined
 ```
@@ -108,7 +108,7 @@ Image discovery, editorial magazine, VTON, social actions, admin, design system 
 
 ### `packages/ai-server` — Python AI / gRPC
 
-Inference, link/image metadata, editorial pipelines, gRPC. **Poetry** project; not published to npm.
+Inference, link/image metadata, editorial pipelines, gRPC. **uv** Python project; not published to npm.
 
 ### `packages/api-server` — Rust API
 

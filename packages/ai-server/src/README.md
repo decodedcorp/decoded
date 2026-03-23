@@ -22,11 +22,12 @@ flowchart LR
 ```
 
 ## Dependencies
-- poetry 1.8.4 버전으로 설치
+- [uv](https://docs.astral.sh/uv/) 설치
 
 ```bash
-poetry install
-poetry shell
+uv sync
+# 선택: uv가 만든 가상환경 활성화
+source .venv/bin/activate
 ```
 
 ## Add new model

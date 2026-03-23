@@ -120,8 +120,8 @@ pytest tests/manager/test_llama.py
 ### Linting and Formatting
 
 ```bash
-poetry run poe lint    # Linting with flake8
-poetry run poe format  # Formatting with black
+uv run flake8 src      # Linting with flake8
+uv run black .         # Formatting with black
 ```
 
 ## Important Implementation Details
