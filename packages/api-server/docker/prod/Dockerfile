@@ -8,39 +8,23 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     build-essential \
     protobuf-compiler \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 의존성 캐싱 최적화
-# 먼저 Cargo.toml과 Cargo.lock만 복사
-COPY Cargo.toml Cargo.lock build.rs ./
-COPY entity/Cargo.toml ./entity/
-COPY migration/Cargo.toml ./migration/
-COPY proto ./proto
-
-# 더미 main.rs로 의존성 빌드
-RUN mkdir -p src entity/src migration/src && \
-    echo "fn main() {}" > src/main.rs && \
-    echo "fn main() {}" > entity/src/lib.rs && \
-    echo "fn main() {}" > migration/src/lib.rs && \
-    cargo build --release && \
-    rm -rf src entity/src migration/src
-
-# 실제 소스코드 복사 및 빌드
+# 전체 소스 한 번에 복사 후 release 빌드 (더미 캐시 단계는 migration/entity와 충돌할 수 있어 사용하지 않음)
 COPY . .
 
-# Release 빌드 (최적화 옵션)
 RUN cargo build --release && \
     strip target/release/decoded-api
 
-# Stage 2: Runtime
-FROM debian:bookworm-slim
+# Stage 2: Runtime — builder(rust:1.91-slim)와 동일 계열 glibc 필요 (bookworm 런타임은 GLIBC 불일치 가능)
+FROM rust:1.91-slim
 
-# 런타임 의존성만 설치
+# 런타임 의존성만 설치 (Rust 이미지는 빌드 도구 포함이므로 프로덕션에서는 distroless 대신 glibc 정합용으로 사용)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl3 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -51,9 +35,6 @@ RUN useradd -m -u 1001 appuser
 
 # 빌드된 바이너리 복사
 COPY --from=builder /app/target/release/decoded-api .
-
-# LLM 템플릿 파일 복사 (필요한 경우)
-COPY --from=builder /app/src/services/llm/templates ./templates
 
 # 소유권 변경
 RUN chown -R appuser:appuser /app

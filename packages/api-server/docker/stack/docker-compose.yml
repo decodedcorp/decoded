@@ -1,0 +1,128 @@
+# Decoded backend: api + ai + Meilisearch + Redis + SearXNG (multi-container).
+# From repo root: bash scripts/deploy-backend.sh dev up --build
+# Requires packages/api-server/.env.dev + packages/ai-server/.dev.env
+
+name: decoded-backend
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: decoded-backend-api-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../../.env.dev
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      MEILISEARCH_URL: http://meilisearch:7700
+      AI_SERVER_GRPC_URL: http://ai:50051
+      API_SERVER_GRPC_PORT: "50052"
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    networks:
+      - decoded-backend
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  ai:
+    build:
+      context: ../../../ai-server
+      dockerfile: Dockerfile.ai.prod
+    container_name: decoded-backend-ai-dev
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    expose:
+      - "50051"
+    env_file:
+      - ../../../ai-server/.dev.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      SEARXNG_API_URL: http://searxng:8080
+      API_SERVER_HTTP_URL: http://api:8080
+      API_SERVER_GRPC_HOST: api
+      API_SERVER_GRPC_PORT: "50052"
+      AI_GRPC_LISTEN_PORT: "50051"
+      APP_ENV: prod
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    networks:
+      - decoded-backend
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: decoded-backend-meilisearch-dev
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch-data-dev:/meili_data
+    networks:
+      - decoded-backend
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-dev-master-key}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: decoded-backend-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6303:6379"
+    networks:
+      - decoded-backend
+    env_file:
+      - ../../../ai-server/.dev.env
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$${REDIS_PASSWORD}" --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: decoded-backend-searxng-dev
+    restart: unless-stopped
+    ports:
+      - "4000:8080"
+    volumes:
+      - ../../../ai-server/searxng:/etc/searxng:rw
+    networks:
+      - decoded-backend
+
+networks:
+  decoded-backend:
+    driver: bridge
+
+volumes:
+  meilisearch-data-dev:

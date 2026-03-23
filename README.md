@@ -88,7 +88,8 @@ uv run python -m src.main
 
 From repo root: `bun run dev:ai-server` (requires `uv` on PATH).
 
-Docker Compose lives under `packages/ai-server/`; **build context** is that directory. See [`packages/ai-server/README.md`](packages/ai-server/README.md).
+**Backend stack (Docker)** — `api` + `ai` + Meilisearch + Redis + SearXNG in one Compose: [`packages/api-server/docker/stack/README.md`](packages/api-server/docker/stack/README.md), **`scripts/deploy-backend.sh`**.  
+AI package docs: [`packages/ai-server/README.md`](packages/ai-server/README.md).
 
 ### Monorepo scripts
 
@@ -98,6 +99,7 @@ bun run dev:api-server   # Rust API (cargo watch)
 bun run dev:ai-server    # Python AI (uv)
 bun run build            # Production build (Turborepo)
 bun run lint             # Lint tasks where defined
+bun run deploy:backend -- dev up --build   # multi-container stack (see docker/stack README)
 ```
 
 ## Packages (summary)
@@ -126,6 +128,7 @@ Expo 54 React Native.
 
 - **[CLAUDE.md](CLAUDE.md)** — conventions, routes, commands, design system
 - **[docs/BACKEND-ONBOARDING.md](docs/BACKEND-ONBOARDING.md)** — API server in the monorepo
+- **[packages/api-server/docker/stack/README.md](packages/api-server/docker/stack/README.md)** — Docker Compose stack (api, ai, meili, redis, searxng), deploy script
 - **`packages/api-server/`** — Rust API docs, ADRs, `AGENTS.md`
 - **`packages/ai-server/README.md`** — AI service architecture and Docker
 
