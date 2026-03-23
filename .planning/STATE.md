@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: Monorepo Consolidation & Bun Migration
-status: shipped
-stopped_at: All v8.0 phases completed
-last_updated: "2026-03-23T00:15:00.000Z"
+milestone: v9.0
+milestone_name: Type-Safe API Generation
+status: defining_requirements
+stopped_at: Defining requirements
+last_updated: "2026-03-23T18:00:00.000Z"
 progress:
-  total_phases: 38
-  completed_phases: 38
-  total_plans: 82
-  completed_plans: 82
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -19,12 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** v8.0 shipped — next milestone TBD
+**Current focus:** v9.0 Type-Safe API Generation — Orval + Zod 기반 API 클라이언트 자동 생성
 
 ## Current Position
 
-Phase: v8.0 — SHIPPED (2026-03-23)
-All monorepo consolidation phases complete.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v9.0 started
 
 ## Milestone Summary
 
@@ -39,23 +41,8 @@ All monorepo consolidation phases complete.
 | v5.0 AI Magazine             | 3      | 11      | Shipped    | 2026-03-12 |
 | v6.0 Behavioral Intelligence | 3      | 10      | Paused     | -          |
 | v7.0 Sticker Canvas          | 3      | 8       | Paused     | -          |
-| **v8.0 Monorepo & Bun**      | **4**  | **3**   | **Shipped**| 2026-03-23 |
-
-## v8.0 Completion Summary
-
-**What was done:**
-- Backend (Rust/Axum) subtree merged into `packages/api-server/`
-- Yarn 4 → bun 1.3.10 migration (2,588 packages, 1.69s install)
-- Turborepo build orchestration (`turbo.json` with build/dev/lint/test)
-- TypeScript build errors fixed (JSX Fragment wrap + Supabase type cast)
-- `middleware.ts` → `proxy.ts` (Next.js 16)
-- README.md + CLAUDE.md updated for monorepo structure
-- `.env.local.example` created
-- GitHub repo: decodedcorp/decoded-monorepo (pushed)
-
-**Deferred to v8.1:**
-- CI/CD workflow integration (GitHub Actions, path-based change detection)
-- Docker configuration unification
+| v8.0 Monorepo & Bun          | 4      | 3       | Shipped    | 2026-03-23 |
+| **v9.0 API Generation**      | **-**  | **-**   | **Active** | -          |
 
 ## Accumulated Context
 
@@ -80,11 +67,11 @@ Recent decisions from v8.0:
 
 ## Session Continuity
 
-Last session: 2026-03-23T00:15:00.000Z
-Stopped at: v8.0 shipped
+Last session: 2026-03-23T18:00:00.000Z
+Stopped at: v9.0 milestone started — defining requirements
 Resume file: None
 
 ---
 
 _Created: 2026-02-05_
-_Last updated: 2026-03-23 after v8.0 shipped_
+_Last updated: 2026-03-23 after v9.0 milestone started_
