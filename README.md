@@ -126,7 +126,9 @@ Expo 54 React Native.
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** — conventions, routes, commands, design system
+- **[CLAUDE.md](CLAUDE.md)** — short map (rules, links)
+- **[AGENT.md](AGENT.md)** — Korean agent entry point
+- **[docs/agent/](docs/agent/)** — route/API/hook/design-system inventories for agents
 - **[docs/BACKEND-ONBOARDING.md](docs/BACKEND-ONBOARDING.md)** — API server in the monorepo
 - **[packages/api-server/docker/stack/README.md](packages/api-server/docker/stack/README.md)** — Docker Compose stack (api, ai, meili, redis, searxng), deploy script
 - **`packages/api-server/`** — Rust API docs, ADRs, `AGENTS.md`
