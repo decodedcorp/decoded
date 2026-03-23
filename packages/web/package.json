@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "generate:api": "orval --config orval.config.ts",
     "test:visual": "playwright test tests/visual-qa.spec.ts"
   },
   "dependencies": {
