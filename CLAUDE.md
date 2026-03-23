@@ -268,6 +268,9 @@ Located in `lib/design-system/`:
 | **Stores**         | `lib/stores/`                       | Zustand stores                                               |
 | **Rust API**       | `packages/api-server/`              | Axum REST API, gRPC client to ai-server                      |
 | **AI / gRPC**      | `packages/ai-server/`               | Inference, metadata, gRPC (Python)                           |
+| **Frontend CI**    | `packages/web/scripts/pre-push.sh`  | ESLint, Prettier, TypeScript checks                          |
+| **Git Workflow**   | `docs/GIT-WORKFLOW.md`              | Branch, commit, PR conventions                               |
+| **Code Reviewer**  | `.claude/agents/code-reviewer.md`   | decoded 전용 코드 리뷰 에이전트                             |
 
 ## API Routes
 
@@ -400,7 +403,7 @@ bun run dev:api-server  # Rust API (cargo watch)
 bun run dev:ai-server   # Python AI server (uv)
 bun run build           # Production build (via Turborepo)
 bun run lint            # ESLint (and package scripts where configured)
-bun run ci:local        # 로컬 CI (pre-push 와 동일: 프론트 슬롯 + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
+bun run ci:local        # 로컬 CI (pre-push 와 동일: web + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
 # 훅: 저장소 루트에서 `just hook` → core.hooksPath=.githooks
 
 # Split local dev: Meilisearch·Redis·SearXNG = Docker first, then:
@@ -418,6 +421,11 @@ bun run dev           # Next.js dev server
 bun run build         # Next.js production build
 bun run lint          # ESLint
 bun run format        # Prettier formatting
+bun run typecheck     # TypeScript (tsc --noEmit)
+
+# Frontend CI만 실행
+just ci-web                         # lint + format + tsc
+SKIP_FE_CI=1 git push               # 긴급 시 web CI 건너뛰기
 
 # API server (Rust)
 cd packages/api-server
@@ -437,6 +445,15 @@ uv run python -m src.main
 - TypeScript strict mode enabled
 - ESLint + Prettier applied
 - Conventional Commits format
+
+## Git Workflow
+
+자세한 가이드: [docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md)
+
+- **브랜치**: `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `test/`, `ci/` 접두사
+- **커밋**: Conventional Commits (`type(scope): description`)
+- **PR**: pre-push 통과 + 코드 리뷰 (`/review`) 후 생성
+- **main 직접 push 금지**: PR로만 머지
 
 ## Important Notes
 

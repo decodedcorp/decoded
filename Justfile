@@ -26,7 +26,7 @@ local-deps-down:
 hook:
     #!/usr/bin/env bash
     set -euo pipefail
-    chmod +x "{{ repo }}/scripts/git-pre-push.sh" "{{ repo }}/.githooks/pre-push" "{{ repo }}/packages/ai-server/scripts/pre-push.sh"
+    chmod +x "{{ repo }}/scripts/git-pre-push.sh" "{{ repo }}/.githooks/pre-push" "{{ repo }}/packages/ai-server/scripts/pre-push.sh" "{{ repo }}/packages/web/scripts/pre-push.sh"
     git -C "{{ repo }}" config core.hooksPath .githooks
     echo "OK: git config core.hooksPath=.githooks (repo: {{ repo }})"
 
@@ -41,4 +41,8 @@ local-help:
     @echo "   local-be 종료: 터미널 A에서 Ctrl+C"
     @echo "전체 한 터미널: bun run dev  (turbo, 로그 한 스트림)"
     @echo "push 전 로컬 CI: just hook  후 bun run ci:local  (또는 git push 가 훅 실행)"
+
+# Web 프론트엔드 로컬 CI (lint + format + tsc)
+ci-web:
+    bash "{{ repo }}/packages/web/scripts/pre-push.sh"
 
