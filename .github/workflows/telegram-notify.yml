@@ -1,0 +1,112 @@
+# Sends repository events to Telegram (plain text, no PR/issue body).
+# Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: Telegram notify
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build message and send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -eo pipefail
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "::error::Set repository secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID"
+            exit 1
+          fi
+
+          REPO="${{ github.repository }}"
+          SERVER="${{ github.server_url }}"
+          ACTOR="${{ github.actor }}"
+          SHA="${{ github.sha }}"
+          REF="${{ github.ref }}"
+          RUN_URL="${SERVER}/${REPO}/actions/runs/${{ github.run_id }}"
+
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              cat <<EOF > /tmp/tg-message.txt
+          [decoded] Manual test
+          repo: ${REPO}
+          triggered by: ${ACTOR}
+          open: ${RUN_URL}
+          EOF
+              ;;
+
+            push)
+              SHORT="${SHA:0:7}"
+              BRANCH="${REF#refs/heads/}"
+              MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 300)
+              COMMIT_URL="${SERVER}/${REPO}/commit/${SHA}"
+              cat <<EOF > /tmp/tg-message.txt
+          [decoded] Push
+          repo: ${REPO}
+          branch: ${BRANCH}
+          by: ${ACTOR}
+          commit: ${SHORT} — ${MSG}
+          open: ${COMMIT_URL}
+          EOF
+              ;;
+
+            pull_request)
+              NUM=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
+              TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
+              HEAD=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
+              BASE=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
+              AUTHOR=$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH")
+              URL=$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")
+              cat <<EOF > /tmp/tg-message.txt
+          [decoded] New PR #${NUM}
+          ${HEAD} → ${BASE}
+          title: ${TITLE}
+          by: ${AUTHOR}
+          open: ${URL}
+          EOF
+              ;;
+
+            issues)
+              NUM=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+              TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+              AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
+              URL=$(jq -r '.issue.html_url' "$GITHUB_EVENT_PATH")
+              cat <<EOF > /tmp/tg-message.txt
+          [decoded] New issue #${NUM}
+          title: ${TITLE}
+          by: ${AUTHOR}
+          open: ${URL}
+          EOF
+              ;;
+
+            *)
+              echo "::error::Unhandled event: ${EVENT_NAME}"
+              exit 1
+              ;;
+          esac
+
+          sed -i 's/^[[:space:]]*//' /tmp/tg-message.txt
+
+          PAYLOAD=$(jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --rawfile text /tmp/tg-message.txt \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end)}')
+
+          RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          echo "$RESP" | jq .
+          echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1

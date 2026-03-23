@@ -135,6 +135,10 @@ Expo 54 React Native.
 - API: `packages/api-server/.env.example` (copy to `.env` / `.env.dev` as needed)
 - AI: `packages/ai-server/.env.example` and `.dev.env` (see `.gitignore` in that package)
 
+### GitHub Actions (Telegram)
+
+Workflow [`.github/workflows/telegram-notify.yml`](.github/workflows/telegram-notify.yml) posts to Telegram on `push` to `main`, new PRs (`opened`), new issues (`opened`), and manual `workflow_dispatch`. Add these **repository secrets**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
+
 ## License
 
 Private
