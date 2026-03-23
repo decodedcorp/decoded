@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 42-03-PLAN.md
-last_updated: "2026-03-23T14:59:26.626Z"
+stopped_at: Completed 43-01-PLAN.md
+last_updated: "2026-03-23T15:25:32.244Z"
 progress:
-  total_phases: 40
+  total_phases: 41
   completed_phases: 38
-  total_plans: 91
-  completed_plans: 90
+  total_plans: 94
+  completed_plans: 91
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 43 — next phase
+**Current focus:** Phase 43 — ci-hardening-and-tooling
 
 ## Current Position
 
-Phase: 42 (mutation-migration-cache-wiring) — COMPLETE
-Plan: 3 of 3 (all complete)
+Phase: 43 (ci-hardening-and-tooling) — EXECUTING
+Plan: 1 of 3
 
 ## Milestone Summary
 
@@ -90,6 +90,9 @@ v9.0 key constraints (from research):
 - [Phase 42-03]: Solution/Spot manual types removed from mutation-types.ts — no consumers outside deleted files; generated equivalents in @/lib/api/generated/models
 - [Phase 42-03]: PostResponse (manual) removed from mutation-types.ts — usePosts.ts imports from generated/models; only used by now-deleted updatePost function
 - [Phase 42-03]: fetchPostsServer/fetchPostMagazine added to index.ts barrel — server-only post functions valid as public exports
+- [Phase 43-01]: TypeScript typecheck is the spec drift safety net — no git diff --exit-code needed after generate:api
+- [Phase 43-01]: pre-push Step 0 uses graceful warning (not exit 1) when api-server/openapi.json absent — developers without backend are not blocked
+- [Phase 43-01]: gitignore negation pattern: exclude packages/web/lib/api/generated/ then negate .gitkeep sentinel
 
 ### Blockers/Concerns
 
@@ -106,8 +109,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T14:58:22.971Z
-Stopped at: Completed 42-03-PLAN.md
+Last session: 2026-03-23T15:25:32.241Z
+Stopped at: Completed 43-01-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md

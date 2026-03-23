@@ -35,9 +35,9 @@
 
 ### CI/CD Integration
 
-- [ ] **CI-01**: 빌드 파이프라인에 generate:api 단계 추가 (prebuild 실행)
-- [ ] **CI-02**: Spec drift 감지 (generate && git diff --exit-code) pre-push 훅 추가
-- [ ] **CI-03**: 생성 코드 .gitignore 설정 (packages/web/lib/api/generated/)
+- [x] **CI-01**: 빌드 파이프라인에 generate:api 단계 추가 (prebuild 실행)
+- [x] **CI-02**: Spec drift 감지 (generate && git diff --exit-code) pre-push 훅 추가
+- [x] **CI-03**: 생성 코드 .gitignore 설정 (packages/web/lib/api/generated/)
 - [ ] **CI-04**: 백엔드 OpenAPI 스펙 변경 감지 및 프론트엔드 자동 재생성 trigger 프로세스
 - [ ] **CI-05**: 마이그레이션 단계별 롤백 계획 (git branching strategy + pre-push validation)
 
@@ -99,9 +99,9 @@
 | MIG-07 | Phase 42 | Complete |
 | MIG-08 | Phase 41 | Complete |
 | MIG-09 | Phase 42 | Complete |
-| CI-01 | Phase 43 | Pending |
-| CI-02 | Phase 43 | Pending |
-| CI-03 | Phase 43 | Pending |
+| CI-01 | Phase 43 | Complete |
+| CI-02 | Phase 43 | Complete |
+| CI-03 | Phase 43 | Complete |
 | CI-04 | Phase 43 | Pending |
 | CI-05 | Phase 43 | Pending |
 | TEST-01 | Phase 43 | Pending |
