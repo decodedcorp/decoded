@@ -87,9 +87,22 @@ class Environment(BaseModel):
     RESULT_BATCH_SIZE: int = 50  # 배치 크기
 
     @staticmethod
-    def from_environ(*, env_file: Optional[str] = join(getcwd(), ".env")):
-        if exists(env_file):
-            load_dotenv(env_file)
+    def from_environ(*, env_file: Optional[str] = None):
+        """Load env file(s). If `env_file` is set, only that path is used when it exists.
+
+        Default (로컬 dev): `.dev.env` 우선, 없으면 `.env`.
+        """
+        cwd = getcwd()
+        if env_file is not None:
+            if exists(env_file):
+                load_dotenv(env_file)
+        else:
+            dev = join(cwd, ".dev.env")
+            dotenv_path = join(cwd, ".env")
+            if exists(dev):
+                load_dotenv(dev)
+            elif exists(dotenv_path):
+                load_dotenv(dotenv_path)
         return Environment(**os.environ)
 
     @property
