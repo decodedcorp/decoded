@@ -9,6 +9,7 @@
     "lint": "eslint app lib",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "test:visual": "playwright test tests/visual-qa.spec.ts"
   },
   "dependencies": {

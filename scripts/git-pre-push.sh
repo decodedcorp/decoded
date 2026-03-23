@@ -30,9 +30,12 @@ if ! [ -t 0 ]; then
   done
 fi
 
-echo "=== [monorepo] 프론트 CI 슬롯 (미구현) ==="
-# TODO(@frontend): eslint / turbo / tsc 등 — 예: bun run --filter @decoded/web lint
-true
+if [[ -n "${SKIP_FE_CI:-}" ]]; then
+  echo "=== [monorepo] web CI 건너뜀 (SKIP_FE_CI) ==="
+else
+  echo "=== [monorepo] web 로컬 CI ==="
+  bash "$REPO_ROOT/packages/web/scripts/pre-push.sh"
+fi
 
 # ai-server 는 flake8 정리 등 팀 준비 전까지 기본 건너뜀. 켜기: RUN_AI_SERVER_CI=1
 if [[ -n "${SKIP_AI_SERVER_CI:-}" ]]; then
