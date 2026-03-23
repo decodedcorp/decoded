@@ -177,7 +177,7 @@ Plans:
 4. 하단 네비게이션이 표시되며 기존 `/lab/main-b` LabBottomNav 패턴을 재사용한다
 5. 기존 서버 쿼리(posts, items, trending keywords)로 실제 데이터가 표시된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -196,7 +196,7 @@ Plans:
 3. 카드를 클릭하고 드래그하면 캔버스 내 위치가 변경되며, 놓으면 inertia throw로 자연스럽게 멈춘다 (GSAP Draggable + InertiaPlugin)
 4. StickerPeel로 스티커를 벗기면 뒷면에 아이템 브랜드명, 가격, CTA 버튼이 표시된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -216,7 +216,7 @@ Plans:
 3. 아이템 카드 근처에 말풍선 형태의 가격태그 스티커가 브랜드명과 가격 정보를 표시한다
 4. 카드에 테이프 스트립 또는 washi 보더 데코레이터가 적용되어 handmade 콜라주 질감이 완성된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -237,7 +237,7 @@ Plans:
 4. `bun run dev`로 Next.js dev 서버가 localhost:3000에서 정상 기동된다
 5. `bun run build`로 프로덕션 빌드가 성공하고 GSAP Club 프라이빗 레지스트리 패키지가 포함된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -255,7 +255,7 @@ Plans:
 2. `cd packages/api-server && cargo build`가 성공하고 백엔드 바이너리가 생성된다
 3. Backend의 pre-push hooks와 justfile 경로가 모노레포 루트 기준으로 올바르게 수정되어 `cd packages/api-server && cargo test`가 실행된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 ### Phase m10-03: Turborepo Integration & Unified Dev
 
@@ -270,7 +270,7 @@ Plans:
 4. packages/api-server/package.json에 `cargo build/dev/test/clippy`가 npm scripts로 선언되어 있으며 Turborepo가 이를 오케스트레이션한다
 5. 통합 `.env.local.example`에 프론트엔드와 백엔드 환경변수가 모두 문서화되어 있다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 ### Phase m10-04: Docker & CI/CD Unification
 
@@ -285,7 +285,7 @@ Plans:
 4. backend-ci.yml에서 `cargo fmt --check`, `cargo clippy`, `cargo test`가 모두 통과한다
 5. frontend-ci.yml에서 `bun install --frozen-lockfile`, `bunx turbo run build`, `bun run lint`가 모두 통과한다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 ### Phase 39: Setup and Spec Validation
 
@@ -300,7 +300,7 @@ Plans:
 4. 업로드/multipart 엔드포인트 목록(POST /posts/upload 등)이 명시적으로 나열되고 orval.config.ts 제외 목록 초안이 작성된다
 5. 무한 스크롤 엔드포인트의 pagination 파라미터(`cursor`/`page`/`offset`)가 스펙에서 확인되어 문서화된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -320,7 +320,7 @@ Plans:
 4. 단일 엔드포인트 스모크 테스트에서 Network 탭의 요청 URL이 이중 접두사(`/api/v1/api/v1/...`) 없이 올바르고, 응답 데이터가 기존 `lib/api/types.ts`의 타입과 일치한다
 5. `turbo.json`에 `generate` 태스크가 선언되고 `build`/`typecheck` 이전에 실행되도록 파이프라인이 구성된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
@@ -383,13 +383,13 @@ Plans:
 5. Zod 스키마가 실제 API 응답에 대해 검증 테스트를 통과한다 — 응답 shape mismatch가 런타임 에러 대신 Zod 에러로 포착된다
 6. `lib/api/generated/`에 대한 직접 편집 시도를 감지하는 경고 메커니즘이 존재하고, CLAUDE.md에 생성 코드 규칙이 문서화된다
 
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 
-- [ ] 43-01: .gitignore 업데이트 + CI drift 감지 (generate && git diff) + pre-push 통합 (CI-01, CI-02, CI-03)
-- [ ] 43-02: 백엔드 spec 변경 트리거 프로세스 + 롤백 계획 문서화 (CI-04, CI-05)
-- [ ] 43-03: Zod 스키마 검증 테스트 + TOOL-01/02/03 에이전트 문서화 (TEST-01, TOOL-01, TOOL-02, TOOL-03)
+- [ ] 43-01-PLAN.md — .gitignore .gitkeep negation + pre-push Step 0 generate:api (CI-01, CI-02, CI-03)
+- [ ] 43-02-PLAN.md — CLAUDE.md + cursor rules + spec change trigger + rollback docs (CI-04, CI-05, TOOL-01, TOOL-02, TOOL-03)
+- [ ] 43-03-PLAN.md — Vitest setup + Zod schema validation tests (TEST-01)
 
 ## Progress
 
