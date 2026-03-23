@@ -132,10 +132,14 @@ async def main():
     except Exception as e:
         logger.warning(f"Failed to connect backend client: {str(e)}. Will retry on first use.")
     
-    # GRPC server configuration
+    # GRPC server configuration (Docker: set AI_GRPC_LISTEN_PORT to match api's AI_SERVER_GRPC_URL)
     grpc_host = "0.0.0.0"
-    grpc_port = 50052 if env == "dev" else 50051
-    
+    grpc_port_env = os.environ.get("AI_GRPC_LISTEN_PORT", "").strip()
+    if grpc_port_env:
+        grpc_port = int(grpc_port_env)
+    else:
+        grpc_port = 50052 if env == "dev" else 50051
+
     logger.debug(f"API Server: http://0.0.0.0:10000")
     logger.info(f"GRPC Server: {grpc_host}:{grpc_port}")
     

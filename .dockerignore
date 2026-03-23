@@ -1,0 +1,17 @@
+# Monorepo root context hints (when building from repo root)
+.git
+**/.git
+**/node_modules
+packages/web/.next
+packages/mobile
+**/.turbo
+**/target
+**/.venv
+**/__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+!.env.dev.example
+logs
+*.log

@@ -12,7 +12,7 @@ def use_dev_mock_overrides(application: "Application") -> "Application":
     # 필요한 필드만 오버라이드
     overridden_env = original_env.model_copy(
         update={
-            "DECODED_BACKEND_URL": "http://localhost:8000",
+            "API_SERVER_HTTP_URL": "http://localhost:8000",
             "REDIS_HOST": "localhost",
             "REDIS_PORT": 6300,
             "REDIS_PASSWORD": "password",
@@ -32,7 +32,7 @@ def use_prod_mock_overrides(application: "Application") -> "Application":
     # 필요한 필드만 오버라이드
     overridden_env = original_env.model_copy(
         update={
-            "DECODED_BACKEND_URL": "https://api.decoded.style",
+            "API_SERVER_HTTP_URL": "https://api.decoded.style",
             "REDIS_HOST": "localhost",
             "REDIS_PORT": 6379,
             "REDIS_PASSWORD": "password",

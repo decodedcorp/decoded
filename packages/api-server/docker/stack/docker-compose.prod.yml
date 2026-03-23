@@ -1,0 +1,123 @@
+# Production-style: api + ai + Meilisearch + Redis + SearXNG (Meili/Redis/SearXNG not published to host).
+# Env: packages/api-server/.env.prod + packages/ai-server/.prod.env
+# From repo root: bash scripts/deploy-backend.sh prod up
+# Set MEILISEARCH_MASTER_KEY in packages/api-server/.env.prod (used with deploy-backend.sh --env-file).
+
+name: decoded-backend-prod
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: decoded-backend-api-prod
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../../.env.prod
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      MEILISEARCH_URL: http://meilisearch:7700
+      AI_SERVER_GRPC_URL: http://ai:50051
+      API_SERVER_GRPC_PORT: "50052"
+      ENV: production
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    networks:
+      - decoded-backend-prod
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  ai:
+    build:
+      context: ../../../ai-server
+      dockerfile: Dockerfile.ai.prod
+    container_name: decoded-backend-ai-prod
+    restart: unless-stopped
+    expose:
+      - "50051"
+    env_file:
+      - ../../../ai-server/.prod.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      SEARXNG_API_URL: http://searxng:8080
+      API_SERVER_HTTP_URL: http://api:8080
+      API_SERVER_GRPC_HOST: api
+      API_SERVER_GRPC_PORT: "50052"
+      AI_GRPC_LISTEN_PORT: "50051"
+      APP_ENV: prod
+      ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    networks:
+      - decoded-backend-prod
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: decoded-backend-meilisearch-prod
+    restart: unless-stopped
+    volumes:
+      - meilisearch-data-prod:/meili_data
+    networks:
+      - decoded-backend-prod
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?set MEILISEARCH_MASTER_KEY in packages/api-server/.env.prod (used with deploy-backend.sh --env-file)}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: decoded-backend-redis-prod
+    restart: unless-stopped
+    networks:
+      - decoded-backend-prod
+    env_file:
+      - ../../../ai-server/.prod.env
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$${REDIS_PASSWORD}" --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: decoded-backend-searxng-prod
+    restart: unless-stopped
+    volumes:
+      - ../../../ai-server/searxng:/etc/searxng:rw
+    networks:
+      - decoded-backend-prod
+
+networks:
+  decoded-backend-prod:
+    driver: bridge
+
+volumes:
+  meilisearch-data-prod:

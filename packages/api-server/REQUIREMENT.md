@@ -200,7 +200,7 @@ MEILISEARCH_MASTER_KEY=your-master-key
 GROQ_API_KEY=your-groq-api-key
 
 # decoded-ai gRPC 서버 (이미지 분석용)
-DECODED_AI_GRPC_URL=http://localhost:50051
+AI_SERVER_GRPC_URL=http://localhost:50051
 
 # Affiliate Links (Rakuten)
 RAKUTEN_API_KEY=your-rakuten-api-key
@@ -1249,7 +1249,7 @@ Content-Type: multipart/form-data
 - **클라이언트 (decoded-api -> decoded-ai)**: `DecodedAIGrpcClient` (`AnalyzeLink`, `ExtractOGData`)
 - **서버 (decoded-api <- decoded-ai)**: `BackendGrpcServer` (`ProcessedBatchUpdate` 콜백 수신)
 - **프로토콜**: `ai.proto` (AI 서비스), `backend.proto` (백엔드 콜백 서비스)
-- **설정**: `DECODED_AI_GRPC_URL`, `GRPC_BACKEND_PORT` (기본값: 50052)
+- **설정**: `AI_SERVER_GRPC_URL`, `API_SERVER_GRPC_PORT` (ai-server와 동일 값; 레거시 `DECODED_AI_GRPC_URL` / `GRPC_BACKEND_PORT` 지원)
 - **데이터베이스**: `solutions` 테이블에 `link_type`, `metadata`, `qna`, `keywords` 컬럼 (JSONB)
 - **LinkMetadata 구조**: `link_type` 필드 추가, `og_*` 필드 제거, `metadata` map으로 타입별 동적 메타데이터 저장
 
@@ -2721,7 +2721,7 @@ PERPLEXITY_API_KEY=your-perplexity-api-key
 PERPLEXITY_MODEL=sonar  # optional
 
 # decoded-ai gRPC 서버 (이미지 분석용)
-DECODED_AI_GRPC_URL=http://localhost:50051
+AI_SERVER_GRPC_URL=http://localhost:50051
 ```
 
 **주요 특징:**
