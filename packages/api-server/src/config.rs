@@ -11,7 +11,9 @@ use crate::services::{
 
 /// Reads `primary` env, then legacy alias if unset (migration from older names).
 fn env_primary_or_legacy(primary: &str, legacy: &str) -> Option<String> {
-    std::env::var(primary).ok().or_else(|| std::env::var(legacy).ok())
+    std::env::var(primary)
+        .ok()
+        .or_else(|| std::env::var(legacy).ok())
 }
 
 /// 애플리케이션 설정
