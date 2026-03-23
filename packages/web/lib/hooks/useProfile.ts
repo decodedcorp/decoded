@@ -14,6 +14,7 @@ import {
   useGetMyStats,
   useGetUserProfile,
   getMyActivities,
+  updateMyProfile,
 } from "@/lib/api/generated/users/users";
 import { useMyBadges as useMyBadgesGenerated } from "@/lib/api/generated/badges/badges";
 import { useMyRankingDetail as useMyRankingDetailGenerated } from "@/lib/api/generated/rankings/rankings";
@@ -21,7 +22,6 @@ import type { MyBadgesResponse } from "@/lib/api/generated/models";
 import type { MyRankingDetailResponse } from "@/lib/api/generated/models";
 import type { UserResponse, UserStatsResponse } from "@/lib/api/generated/models";
 import type { UpdateUserDto } from "@/lib/api/generated/models";
-import { supabaseBrowserClient } from "@/lib/supabase/client";
 
 // ============================================================
 // Query Keys
@@ -43,46 +43,6 @@ export const profileKeys = {
   badges: () => [...profileKeys.all, "badges"] as const,
   rankings: () => [...profileKeys.all, "rankings"] as const,
 };
-
-// ============================================================
-// Inline from deleted users.ts — Phase 42 will replace with generated mutation
-// ============================================================
-
-async function updateMe(data: UpdateUserDto): Promise<UserResponse> {
-  const updates: Record<string, unknown> = {};
-  if (data.display_name !== undefined) updates.full_name = data.display_name;
-  if (data.avatar_url !== undefined) updates.avatar_url = data.avatar_url;
-  if (data.bio !== undefined) updates.bio = data.bio;
-
-  // updateUser returns the updated user directly — no need for a second getUser() call
-  const { data: updated, error } = await supabaseBrowserClient.auth.updateUser({
-    data: updates,
-  });
-
-  if (error || !updated?.user) {
-    throw new Error(error?.message ?? "프로필 업데이트에 실패했습니다.");
-  }
-
-  const user = updated.user;
-  const metadata = user.user_metadata || {};
-
-  return {
-    id: user.id,
-    email: user.email || "",
-    username:
-      metadata.preferred_username ||
-      metadata.nickname ||
-      user.email?.split("@")[0] ||
-      "",
-    rank: null as any, // Type mismatch with generated UserResponse — Phase 42 will fix
-    total_points: 0,
-    is_admin: false,
-    avatar_url: metadata.avatar_url || metadata.picture || null,
-    bio: metadata.bio || null,
-    display_name:
-      metadata.full_name || metadata.name || metadata.nickname || null,
-  } as any;
-}
 
 // ============================================================
 // useMe - Current user's profile
@@ -255,7 +215,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateUserDto) => updateMe(data),
+    mutationFn: (data: UpdateUserDto) => updateMyProfile(data),
     onSuccess: (updatedUser) => {
       // Update React Query cache
       queryClient.setQueryData(profileKeys.me(), updatedUser);
