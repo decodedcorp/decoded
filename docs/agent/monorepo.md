@@ -90,7 +90,7 @@ bun run dev:api-server  # Rust API (cargo watch)
 bun run dev:ai-server   # Python AI server (uv)
 bun run build           # Production build (via Turborepo)
 bun run lint            # ESLint (and package scripts where configured)
-bun run ci:local        # 로컬 CI (pre-push 와 동일: 프론트 슬롯 + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
+bun run ci:local        # 로컬 CI (pre-push 와 동일: web + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
 # 훅: 저장소 루트에서 `just hook` → core.hooksPath=.githooks
 
 # Split local dev: Meilisearch·Redis·SearXNG = Docker first, then:
@@ -108,6 +108,11 @@ bun run dev           # Next.js dev server
 bun run build         # Next.js production build
 bun run lint          # ESLint
 bun run format        # Prettier formatting
+bun run typecheck     # TypeScript (tsc --noEmit)
+
+# Frontend CI만 실행
+just ci-web                         # lint + format + tsc
+SKIP_FE_CI=1 git push               # 긴급 시 web CI 건너뛰기
 
 # API server (Rust)
 cd packages/api-server

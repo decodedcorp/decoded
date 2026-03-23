@@ -47,6 +47,10 @@ Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · S
 - **Supabase** required for typical data/auth flows
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
 
+## Git workflow
+
+요약: `main` 직접 push 금지, PR로만 머지. 브랜치 접두사·커밋·리뷰 절차는 **[docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md)**.
+
 ## Codebase documentation
 
 | 문서 | 내용 |
@@ -79,6 +83,7 @@ Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · S
 ## Documentation
 
 - [docs/README.md](docs/README.md) — 문서 인덱스
+- [docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md) — 브랜치, 커밋, PR
 - [docs/agent/](docs/agent/) — 에이전트용 참조 (표·인벤토리)
 - [docs/design-system/](docs/design-system/) — 디자인 토큰
 - [.planning/](.planning/) — GSD 아티팩트

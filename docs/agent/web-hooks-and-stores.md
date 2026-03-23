@@ -23,6 +23,9 @@ Paths below are under `packages/web/` unless absolute from repo root.
 | **Stores**         | `lib/stores/`                       | Zustand stores                                               |
 | **Rust API**       | `packages/api-server/`              | Axum REST API, gRPC client to ai-server                      |
 | **AI / gRPC**      | `packages/ai-server/`               | Inference, metadata, gRPC (Python)                           |
+| **Frontend CI**    | `packages/web/scripts/pre-push.sh`  | ESLint, Prettier, TypeScript checks                          |
+| **Git workflow**   | `docs/GIT-WORKFLOW.md`              | Branch, commit, PR conventions                             |
+| **Code reviewer**  | `.claude/agents/code-reviewer.md`   | Repository code-review agent notes                           |
 
 ## Custom hooks
 
