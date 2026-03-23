@@ -1,4 +1,3 @@
-use dotenvy::dotenv;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::sync::Arc;
 use std::time::Duration;
@@ -102,8 +101,9 @@ pub struct EmbeddingConfig {
 
 impl AppConfig {
     pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
-        // .env 파일 로드 (없으면 무시)
-        let _ = dotenv();
+        // 로컬 개발: `.env.dev` 우선, 이어서 `.env` (이미 설정된 변수는 dotenvy가 덮어쓰지 않음)
+        let _ = dotenvy::from_filename(".env.dev");
+        let _ = dotenvy::dotenv();
 
         Ok(Self {
             server: ServerConfig {

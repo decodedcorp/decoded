@@ -4,7 +4,7 @@
 
 use decoded_api::{AppConfig, AppState};
 
-/// Supabase 관련 변수 기본값 (미설정일 때만). `AppConfig::from_env()`가 `.env`를 로드합니다.
+/// Supabase 관련 변수 기본값 (미설정일 때만). `AppConfig::from_env()`가 `.env.dev` 후 `.env`를 로드합니다.
 pub fn ensure_integration_env() {
     if std::env::var("SUPABASE_URL").is_err() {
         std::env::set_var("SUPABASE_URL", "http://localhost:54321");
