@@ -16,6 +16,7 @@ Cargo.lock
 
 # Keep example only
 !.env.example
+!.env.dev.example
 
 # IDE / 에이전트
 .vscode/
