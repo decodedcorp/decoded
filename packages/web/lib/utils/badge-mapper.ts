@@ -3,9 +3,9 @@
  */
 
 import type {
-  ApiEarnedBadgeItem,
-  ApiAvailableBadgeItem,
-} from "@/lib/api/types";
+  EarnedBadgeItem as ApiEarnedBadgeItem,
+  AvailableBadgeItem as ApiAvailableBadgeItem,
+} from "@/lib/api/generated/models";
 import type { Badge, BadgeIconType } from "@/lib/stores/profileStore";
 
 const BADGE_TYPE_TO_ICON: Record<string, BadgeIconType> = {
@@ -46,7 +46,7 @@ export function apiEarnedBadgeToStoreBadge(item: ApiEarnedBadgeItem): Badge {
     icon: getIconForBadge(item.type, item.rarity),
     category: item.type || "achievement",
     earnedAt: new Date(item.earned_at),
-    description: item.description,
+    description: item.description ?? undefined,
     isLocked: false,
   };
 }
@@ -60,7 +60,7 @@ export function apiAvailableBadgeToStoreBadge(
     icon: getIconForBadge(undefined, item.rarity),
     category: "achievement",
     earnedAt: new Date(0), // Locked - no earned date
-    description: item.description,
+    description: item.description ?? undefined,
     isLocked: true,
   };
 }

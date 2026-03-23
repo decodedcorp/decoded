@@ -2,7 +2,10 @@
  * API Ranking 응답 → Profile Store Ranking 매핑
  */
 
-import type { ApiMyRankingDetail, ApiCategoryRank } from "@/lib/api/types";
+import type {
+  MyRankingDetailResponse as ApiMyRankingDetail,
+  CategoryRank as ApiCategoryRank,
+} from "@/lib/api/generated/models";
 import type { Ranking } from "@/lib/stores/profileStore";
 
 export function apiMyRankingDetailToStoreRankings(

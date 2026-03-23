@@ -1,10 +1,10 @@
 /**
  * 카테고리 조회 훅
- * React Query를 사용하여 카테고리 목록을 캐싱합니다.
+ * Orval 생성 훅을 사용하여 카테고리 목록을 캐싱합니다.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { getCategories, type Category } from "@/lib/api";
+import { useGetCategories as useGetCategoriesGenerated } from "@/lib/api/generated/categories/categories";
+import type { CategoryResponse } from "@/lib/api/generated/models";
 
 export const CATEGORIES_QUERY_KEY = ["categories"] as const;
 
@@ -12,11 +12,12 @@ export const CATEGORIES_QUERY_KEY = ["categories"] as const;
  * 카테고리 목록 조회 훅
  */
 export function useCategories() {
-  return useQuery({
-    queryKey: CATEGORIES_QUERY_KEY,
-    queryFn: getCategories,
-    staleTime: 1000 * 60 * 60, // 1시간 동안 fresh
-    gcTime: 1000 * 60 * 60 * 24, // 24시간 캐시 유지
+  return useGetCategoriesGenerated({
+    query: {
+      queryKey: CATEGORIES_QUERY_KEY,
+      staleTime: 1000 * 60 * 60, // 1시간 동안 fresh
+      gcTime: 1000 * 60 * 60 * 24, // 24시간 캐시 유지
+    },
   });
 }
 
@@ -34,7 +35,7 @@ export function useFindCategoryId(code: string | undefined) {
 /**
  * 카테고리 ID로 정보 찾기
  */
-export function useFindCategory(id: string | undefined): Category | undefined {
+export function useFindCategory(id: string | undefined): CategoryResponse | undefined {
   const { data: categories } = useCategories();
 
   if (!id || !categories) return undefined;

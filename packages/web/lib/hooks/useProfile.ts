@@ -17,8 +17,10 @@ import {
   fetchUserActivities,
   fetchUserById,
 } from "@/lib/api/users";
-import { fetchMyBadges } from "@/lib/api/badges";
-import { fetchMyRanking } from "@/lib/api/rankings";
+import { useMyBadges as useMyBadgesGenerated } from "@/lib/api/generated/badges/badges";
+import { useMyRankingDetail as useMyRankingDetailGenerated } from "@/lib/api/generated/rankings/rankings";
+import type { MyBadgesResponse } from "@/lib/api/generated/models";
+import type { MyRankingDetailResponse } from "@/lib/api/generated/models";
 import {
   UpdateUserDto,
   UserResponse,
@@ -129,16 +131,14 @@ export function useUser(
 // ============================================================
 
 export function useMyBadges(
-  options?: Omit<
-    UseQueryOptions<import("@/lib/api/types").MyBadgesResponse, Error>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<MyBadgesResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.badges(),
-    queryFn: fetchMyBadges,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
+  return useMyBadgesGenerated({
+    query: {
+      queryKey: profileKeys.badges(),
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      ...options,
+    },
   });
 }
 
@@ -147,16 +147,14 @@ export function useMyBadges(
 // ============================================================
 
 export function useMyRanking(
-  options?: Omit<
-    UseQueryOptions<import("@/lib/api/types").ApiMyRankingDetail, Error>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<MyRankingDetailResponse, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: profileKeys.rankings(),
-    queryFn: fetchMyRanking,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    ...options,
+  return useMyRankingDetailGenerated({
+    query: {
+      queryKey: profileKeys.rankings(),
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      ...options,
+    },
   });
 }
 
