@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# 로컬 CI — git push 전에 실행 권장:
-#   (api-server 디렉터리에서) ln -sf ../../scripts/pre-push.sh .git/hooks/pre-push
+# api-server 로컬 CI — 단독 실행 가능. 모노레포에서는 루트 `scripts/git-pre-push.sh`가 호출합니다.
+# 훅 설치: 모노레포 루트에서 `git config core.hooksPath .githooks` (또는 `just hook`)
 set -euo pipefail
 
-# Git이 이 스크립트를 pre-push 훅으로 호출할 때만 stdin으로 ref 정보가 옴.
+# Git이 이 스크립트를 pre-push 훅으로 직접 연결한 경우에만 stdin으로 ref 정보가 옴.
+# 루트 git-pre-push.sh 가 stdin을 이미 읽었으면 여기서는 while 가 돌지 않음.
 # 수동 실행(`./pre-push.sh`)은 TTY라서 이 검사를 건너뜀.
 if ! [ -t 0 ]; then
   while read -r local_ref local_sha remote_ref remote_sha; do

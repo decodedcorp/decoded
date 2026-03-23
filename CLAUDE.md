@@ -400,6 +400,8 @@ bun run dev:api-server  # Rust API (cargo watch)
 bun run dev:ai-server   # Python AI server (uv)
 bun run build           # Production build (via Turborepo)
 bun run lint            # ESLint (and package scripts where configured)
+bun run ci:local        # 로컬 CI (pre-push 와 동일: 프론트 슬롯 + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
+# 훅: 저장소 루트에서 `just hook` → core.hooksPath=.githooks
 
 # Split local dev: Meilisearch·Redis·SearXNG = Docker first, then:
 bun run dev:local-deps       # Docker deps only (see scripts/local-deps-up.sh)

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Git: core.hooksPath 가 이 디렉터리를 가리킬 때 사용됩니다.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec bash "$ROOT/scripts/git-pre-push.sh"
