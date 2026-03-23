@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package inbound;
+
+service Queue {
+  // OG metadata extraction (synchronous)
+  rpc ExtractOGData (ExtractOGDataRequest) returns (ExtractOGDataResponse);
+
+  // AI analysis - enqueue to job queue (asynchronous)
+  rpc AnalyzeLink (AnalyzeLinkRequest) returns (AnalyzeLinkResponse);
+
+  // AI analysis - direct response (synchronous, for testing)
+  rpc AnalyzeLinkDirect (AnalyzeLinkRequest) returns (AnalyzeLinkDirectResponse);
+
+  // Image analysis - direct response (synchronous)
+  rpc AnalyzeImage (AnalyzeImageRequest) returns (AnalyzeImageResponse);
+
+  // Post editorial - enqueue to job queue (asynchronous)
+  rpc ProcessPostEditorial (ProcessPostEditorialRequest) returns (ProcessPostEditorialResponse);
+}
+
+// Post Editorial messages (Asynchronous)
+message ProcessPostEditorialRequest {
+  string post_magazine_id = 1;
+  string post_data_json = 2;  // JSON serialized PostData from Backend
+}
+
+message ProcessPostEditorialResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+}
+
+// OG Extraction messages (Synchronous)
+message ExtractOGDataRequest {
+  string url = 1;
+}
+
+message ExtractOGDataResponse {
+  bool success = 1;
+  string url = 2;
+  string title = 3;
+  string description = 4;
+  string image = 5;
+  string site_name = 6;
+  string error_message = 7;
+}
+
+// AI Analysis messages (Asynchronous)
+message AnalyzeLinkRequest {
+  string url = 1;
+  string post_id = 2; 
+  string title = 3;
+  string description = 4;
+  string site_name = 5;
+}
+
+message AnalyzeLinkResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3; // Returns internal batch ID for tracking
+}
+
+message QAPair {
+  string question = 1;
+  string answer = 2;
+}
+
+// Link type별 metadata messages
+message ProductMetadata {
+  string category = 1;
+  string sub_category = 2;
+  string brand = 3;
+  string price = 4;
+  string currency = 5;
+  repeated string materials = 6;
+  string origin = 7;
+}
+
+message ArticleMetadata {
+  string category = 1;
+  string sub_category = 2;
+  string author = 3;
+  string published_date = 4;
+  string reading_time = 5;
+  repeated string topics = 6;
+}
+
+message VideoMetadata {
+  string category = 1;
+  string sub_category = 2;
+  string channel = 3;
+  string duration = 4;
+  string view_count = 5;
+  string upload_date = 6;
+}
+
+message OtherMetadata {
+  string category = 1;
+  string sub_category = 2;
+  string content_type = 3;
+}
+
+message AnalyzeLinkDirectResponse {
+  bool success = 1;
+  string message = 2;
+  string summary = 3;
+  repeated string keywords = 4;
+  repeated QAPair qna = 5;
+  
+  // oneof로 link_type별 metadata 전달
+  oneof metadata {
+    ProductMetadata product_metadata = 6;
+    ArticleMetadata article_metadata = 7;
+    VideoMetadata video_metadata = 8;
+    OtherMetadata other_metadata = 9;
+  }
+  
+  string error_message = 10;
+}
+
+// Image Analysis messages (Synchronous)
+message AnalyzeImageRequest {
+  string image_data = 1;  // base64 encoded image
+  string item_id = 2;     // optional tracking ID
+  repeated CategoryRule category_rules = 3;  // category rules
+}
+
+message CategoryRule {
+  string category = 1;
+  repeated string sub_categories = 2;
+}
+
+message ItemWithCoordinates {
+  string sub_category = 1;
+  string type = 2;
+  optional int32 top = 3;
+  optional int32 left = 4;
+}
+
+message ItemList {
+  repeated ItemWithCoordinates items = 1;
+}
+
+message AnalyzeImageResponse {
+  bool success = 1;
+  string subject = 2;
+  string title = 3;
+  optional string artist_name = 4;
+  optional string group_name = 5;
+  optional string context = 6;
+  map<string, ItemList> items = 7;  // category -> items
+  string error_message = 8;
+}

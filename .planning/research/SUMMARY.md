@@ -11,7 +11,7 @@
 
 This milestone consolidates a separately-maintained Rust/Axum backend into the existing decoded-app JS monorepo, simultaneously migrating from Yarn 4 to bun as the package manager, and introducing Turborepo for unified build orchestration. The end state is a single repository where `bunx turbo dev` starts both the Next.js frontend and the Rust backend concurrently, with path-based CI that only rebuilds affected packages. The current JS stack (Next.js 16, React 18, TypeScript 5.9, Supabase, Zustand, React Query, GSAP) is unchanged — only the tooling layer changes.
 
-The recommended approach follows a strict sequencing: git subtree merge first (before any tooling changes), then Yarn-to-bun lockfile migration, then Turborepo configuration, then Docker/CI unification. This order matters because each step depends on the previous: Turborepo requires knowing the package manager, and Docker CI requires knowing the final build commands. The critical architectural constraint is that the Rust backend (`packages/backend/`) must remain outside bun's `workspaces` array — a thin `package.json` wrapper makes it visible to Turborepo without confusing bun's dependency resolver.
+The recommended approach follows a strict sequencing: git subtree merge first (before any tooling changes), then Yarn-to-bun lockfile migration, then Turborepo configuration, then Docker/CI unification. This order matters because each step depends on the previous: Turborepo requires knowing the package manager, and Docker CI requires knowing the final build commands. The critical architectural constraint is that the Rust backend (`packages/api-server/`) must remain outside bun's `workspaces` array — a thin `package.json` wrapper makes it visible to Turborepo without confusing bun's dependency resolver.
 
 The primary risks are: (1) the Yarn 4 Berry lockfile has no direct migration path to bun and requires a pnpm intermediary, which can silently drift package versions; (2) `turbo prune --docker` is currently broken with bun (active GitHub issues) and must be avoided; (3) GSAP Club private registry authentication has a known bun bug requiring a project-level `bunfig.toml` fix. None of these risks are blockers, but each has a specific mitigation that must be applied proactively rather than reactively.
 
@@ -27,7 +27,7 @@ The existing JS stack is fully preserved. New additions are minimal and focused 
 
 - **bun 1.3.11**: Replaces Yarn 4 as package manager and JS runtime — 28x faster installs, native workspace support, text-format `bun.lock` that is git-diffable. Critical: Yarn 4 Berry lockfile requires pnpm as an intermediary for migration.
 - **Turborepo 2.8.x**: Build orchestration and task caching across JS and Rust packages. Turborepo officially supports bun. Backend participates via a thin `package.json` wrapper that exposes `cargo build/test/dev` as npm scripts.
-- **git subtree (built-in)**: Merges the Rust backend repo into `packages/backend/` with full commit history. Preferred over git submodules: no detached HEAD, no extra clone steps, upstream sync via `git subtree pull`.
+- **git subtree (built-in)**: Merges the Rust backend repo into `packages/api-server/` with full commit history. Preferred over git submodules: no detached HEAD, no extra clone steps, upstream sync via `git subtree pull`.
 - **cargo-watch 8.4.0**: Rust hot-reload during development (`cargo watch -x run`). Equivalent of HMR for the Axum server.
 - **concurrently 9.x**: Runs Next.js dev server and Rust backend concurrently from a single root `bun dev` command.
 
@@ -41,7 +41,7 @@ The existing JS stack is fully preserved. New additions are minimal and focused 
 
 **Must have (P1 — required for v8.0 milestone):**
 
-- git subtree merge with full Rust commit history preserved in `packages/backend/`
+- git subtree merge with full Rust commit history preserved in `packages/api-server/`
 - Single `bunx turbo dev` starts both Next.js and Rust backend concurrently
 - Yarn 4 to bun lockfile migration (yarn.lock deleted, bun.lock committed)
 - Root `turbo.json` with build/dev/lint task graph covering all packages
@@ -63,20 +63,20 @@ The existing JS stack is fully preserved. New additions are minimal and focused 
 
 ### Architecture Approach
 
-The monorepo follows a clear dual-workspace model: bun manages JS packages (`packages/web`, `packages/shared`, `packages/mobile`); Cargo manages the Rust workspace (`packages/backend/Cargo.toml`) independently. The two systems never merge — Turborepo bridges them by treating the backend's thin `package.json` as an entry point for task orchestration without adding it to bun's `workspaces`.
+The monorepo follows a clear dual-workspace model: bun manages JS packages (`packages/web`, `packages/shared`, `packages/mobile`); Cargo manages the Rust workspace (`packages/api-server/Cargo.toml`) independently. The two systems never merge — Turborepo bridges them by treating the backend's thin `package.json` as an entry point for task orchestration without adding it to bun's `workspaces`.
 
 **Major components:**
 
 1. **Root `package.json`**: bun workspace declaration listing only JS packages explicitly (not a glob — prevents accidental backend inclusion)
 2. **`turbo.json`**: Task dependency graph with `cache: false` on all backend tasks (Turborepo cannot hash Cargo inputs intelligently; Cargo's own incremental compilation handles Rust caching)
-3. **`packages/backend/package.json`**: Thin Turborepo adapter wrapping `cargo build`, `cargo dev`, `cargo test`, `cargo clippy` as npm scripts
+3. **`packages/api-server/package.json`**: Thin Turborepo adapter wrapping `cargo build`, `cargo dev`, `cargo test`, `cargo clippy` as npm scripts
 4. **`packages/web/.env.local`**: Next.js env vars (not monorepo root — Next.js resolves from its own CWD)
 5. **`docker-compose.yml` (root)**: Backend + Postgres + Meilisearch for dev/staging; backend dev script invokes Docker so frontend engineers don't need Rust installed locally
 6. **`.github/workflows/backend-ci.yml` + `frontend-ci.yml`**: Separate CI workflows with path-based triggers to avoid running Rust toolchain on every frontend PR
 
 **Build order (Turborepo-resolved):**
 
-- Phase 1 (parallel): `packages/shared#build` + `packages/backend#build`
+- Phase 1 (parallel): `packages/shared#build` + `packages/api-server#build`
 - Phase 2 (parallel, after shared): `packages/web#build` + `packages/mobile#build`
 
 ### Critical Pitfalls
@@ -91,7 +91,7 @@ The monorepo follows a clear dual-workspace model: bun manages JS packages (`pac
 
 5. **Turborepo cache invalidation misses Cargo.lock changes** — explicitly list `src/**/*.rs`, `Cargo.toml`, `Cargo.lock`, and `migrations/**/*.sql` in backend task `inputs` in `turbo.json`. Validate cache invalidation manually after setup. Address in Phase 3.
 
-6. **Backend pre-push hooks and justfile break after subtree merge** — backend's `.git/hooks/` is absorbed into the monorepo `.git/`. Hooks silently stop running. Re-register via lefthook or husky at monorepo root, updating hook scripts to `cd packages/backend && cargo test`. Address immediately after Phase 2.
+6. **Backend pre-push hooks and justfile break after subtree merge** — backend's `.git/hooks/` is absorbed into the monorepo `.git/`. Hooks silently stop running. Re-register via lefthook or husky at monorepo root, updating hook scripts to `cd packages/api-server && cargo test`. Address immediately after Phase 2.
 
 7. **Expo Metro cannot resolve bun's semi-isolated transitive deps** — add `publicHoistPattern = ["*"]` (or scoped pattern) to `bunfig.toml` to force hoisting. Verify Expo builds under bun before Phase 2. Address in Phase 1.
 
@@ -112,7 +112,7 @@ Based on the dependency graph discovered in research, the migration must follow 
 **Must avoid:**
 
 - Running `bun install` before deleting `yarn.lock` (silently re-resolves all deps to latest versions)
-- Adding `packages/backend` to bun workspaces glob
+- Adding `packages/api-server` to bun workspaces glob
 - Keeping both `yarn.lock` and `bun.lock` simultaneously (CI confusion)
 - Using `npm` or `npx` after migration (generates `package-lock.json`, breaks `bun.lock` consistency)
 
@@ -122,9 +122,9 @@ Based on the dependency graph discovered in research, the migration must follow 
 
 ### Phase 2: Backend Repo Merge (git subtree)
 
-**Rationale:** Backend code must exist in `packages/backend/` before Turborepo can be configured to orchestrate it. This is the only irreversible step — do it on a dedicated branch.
+**Rationale:** Backend code must exist in `packages/api-server/` before Turborepo can be configured to orchestrate it. This is the only irreversible step — do it on a dedicated branch.
 
-**Delivers:** `packages/backend/` with full Rust source, Cargo.toml, existing Dockerfile. Commit history preserved (or squash-merged). File tree verified. Hooks re-registered.
+**Delivers:** `packages/api-server/` with full Rust source, Cargo.toml, existing Dockerfile. Commit history preserved (or squash-merged). File tree verified. Hooks re-registered.
 
 **Addresses:** git subtree merge (P1 table stakes), Docker context path update, justfile path fix, pre-push hook re-registration.
 
@@ -132,7 +132,7 @@ Based on the dependency graph discovered in research, the migration must follow 
 
 - Mixing squash and non-squash strategies across initial merge and future pulls
 - Doing the subtree add directly on `main` — use `feat/backend-subtree-merge` branch
-- Forgetting to update Docker `COPY` paths to `packages/backend/` prefix
+- Forgetting to update Docker `COPY` paths to `packages/api-server/` prefix
 - Leaving pre-push hooks dead without re-registering
 
 **Research flag:** Standard pattern — official GitHub docs and git subtree documentation are comprehensive. PITFALLS.md covers all known edge cases.
@@ -141,15 +141,15 @@ Based on the dependency graph discovered in research, the migration must follow 
 
 ### Phase 3: Turborepo Integration + Unified Dev Environment
 
-**Rationale:** With bun migrated and backend code in place, Turborepo can now be configured with the correct package manager and a real `packages/backend/package.json` to orchestrate. The unified `bunx turbo dev` command is the primary deliverable of the entire milestone.
+**Rationale:** With bun migrated and backend code in place, Turborepo can now be configured with the correct package manager and a real `packages/api-server/package.json` to orchestrate. The unified `bunx turbo dev` command is the primary deliverable of the entire milestone.
 
-**Delivers:** `turbo.json` with build/dev/lint/test task graph; `packages/backend/package.json` wrapper; `bunx turbo dev` starts Next.js + Rust concurrently; per-package `.env.local` convention established.
+**Delivers:** `turbo.json` with build/dev/lint/test task graph; `packages/api-server/package.json` wrapper; `bunx turbo dev` starts Next.js + Rust concurrently; per-package `.env.local` convention established.
 
 **Addresses:** Turborepo build orchestration (P1), single `bun dev` command (P1), shared env var management (P1), cargo-watch for Rust hot reload (P2).
 
 **Must avoid:**
 
-- Adding `packages/backend` to bun `workspaces` (bun will try to install Cargo dependencies as npm packages)
+- Adding `packages/api-server` to bun `workspaces` (bun will try to install Cargo dependencies as npm packages)
 - Using a glob `"packages/*"` in root `workspaces` (accidentally includes backend)
 - Placing `.env.local` at monorepo root (Next.js won't find it; backend secrets leak to frontend)
 - Caching `target/**` in Turborepo outputs (2-10 GB kills remote cache economics — cache only final binary)
@@ -193,7 +193,7 @@ Based on the dependency graph discovered in research, the migration must follow 
 ### Phase Ordering Rationale
 
 - **Phase 1 before Phase 2**: Turborepo reads `packageManager` from `package.json` — setting up `turbo.json` with Yarn as the manager and then migrating to bun later causes ambiguous CI behavior and requires updating turbo config twice.
-- **Phase 2 before Phase 3**: `packages/backend/package.json` wrapper cannot be written until the Cargo source exists at `packages/backend/`. Writing it against an empty directory produces a Turborepo task that always fails.
+- **Phase 2 before Phase 3**: `packages/api-server/package.json` wrapper cannot be written until the Cargo source exists at `packages/api-server/`. Writing it against an empty directory produces a Turborepo task that always fails.
 - **Phase 3 before Phase 4**: Docker and CI build commands are derived from the final `turbo.json` task structure. Locking in Docker before the task graph is finalized means updating Dockerfiles twice.
 - **Phase 4 overlaps Phase 5**: DX polish can begin as Phase 4 CI work stabilizes — no hard dependency between them.
 

@@ -5,15 +5,20 @@
   "workspaces": [
     "packages/web",
     "packages/shared",
-    "packages/mobile"
+    "packages/mobile",
+    "packages/api-server",
+    "packages/ai-server"
   ],
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "bun run --filter @decoded/web dev",
-    "dev:backend": "cd packages/backend && cargo watch -x run",
+    "dev:api-server": "cd packages/api-server && cargo watch -x run",
+    "dev:ai-server": "cd packages/ai-server && poetry run python -m src.main",
+    "dev:backend": "bun run dev:api-server",
     "build": "turbo run build",
     "build:web": "bun run --filter @decoded/web build",
-    "build:backend": "cd packages/backend && cargo build --release",
+    "build:api-server": "cd packages/api-server && cargo build --release",
+    "build:backend": "bun run build:api-server",
     "lint": "turbo run lint",
     "test": "turbo run test"
   },

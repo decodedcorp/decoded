@@ -73,7 +73,7 @@ Track the turbo GitHub issue tracker before enabling `turbo prune` in CI — che
 ### Pitfall 3: git subtree Merge Fails with "Refusing to Merge Unrelated Histories"
 
 **What goes wrong:**
-`git subtree add --prefix=packages/backend <remote> <branch>` on an active monorepo with commits fails with `fatal: refusing to merge unrelated histories`. This error is thrown because the backend repo has no common ancestor with the frontend monorepo. If the developer works around this with `--allow-unrelated-histories` improperly, they can produce a merge commit that rewrites all backend file paths incorrectly, causing the `packages/backend/` prefix to be doubled or omitted in the tree.
+`git subtree add --prefix=packages/api-server <remote> <branch>` on an active monorepo with commits fails with `fatal: refusing to merge unrelated histories`. This error is thrown because the backend repo has no common ancestor with the frontend monorepo. If the developer works around this with `--allow-unrelated-histories` improperly, they can produce a merge commit that rewrites all backend file paths incorrectly, causing the `packages/api-server/` prefix to be doubled or omitted in the tree.
 
 **Why it happens:**
 `git subtree add` internally calls `git merge -s ours` to import the foreign tree. Without shared history, git refuses by default. The `--squash` flag avoids the history issue by collapsing all backend commits into one import commit — but if the developer uses `--squash` on the initial add and then omits `--squash` on subsequent `git subtree pull` updates, git cannot reconcile the squashed vs. full history and produces conflicts.
@@ -81,17 +81,17 @@ Track the turbo GitHub issue tracker before enabling `turbo prune` in CI — che
 **How to avoid:**
 Choose ONE strategy and apply it consistently:
 
-- **With history (recommended for this migration):** `git subtree add --prefix=packages/backend <backend-remote> main` — requires no `--squash`. If "unrelated histories" appears, verify the remote was added correctly (`git remote add backend <url>`) and that `git fetch backend` ran before the subtree add.
-- **Without history (squash):** `git subtree add --prefix=packages/backend <backend-remote> main --squash` — all future updates MUST also use `--squash`. Never mix squash and non-squash on the same subtree prefix.
+- **With history (recommended for this migration):** `git subtree add --prefix=packages/api-server <backend-remote> main` — requires no `--squash`. If "unrelated histories" appears, verify the remote was added correctly (`git remote add backend <url>`) and that `git fetch backend` ran before the subtree add.
+- **Without history (squash):** `git subtree add --prefix=packages/api-server <backend-remote> main --squash` — all future updates MUST also use `--squash`. Never mix squash and non-squash on the same subtree prefix.
 
-Verify the prefix after merge: `git ls-tree HEAD packages/backend/ | head -5` should show Cargo.toml, src/, etc. at the correct depth.
+Verify the prefix after merge: `git ls-tree HEAD packages/api-server/ | head -5` should show Cargo.toml, src/, etc. at the correct depth.
 
 **Warning signs:**
 
 - `fatal: refusing to merge unrelated histories` — run `git remote -v` to confirm backend remote is registered and fetched
-- Files appear at `packages/backend/packages/backend/` (doubled prefix) — indicates a wrong `--prefix` value during the merge
-- `Cargo.toml` appears at repo root instead of `packages/backend/` — prefix was omitted from the `git subtree add` command
-- `git log --oneline packages/backend/ | head -10` shows no commits — subtree was added but history was not imported
+- Files appear at `packages/api-server/packages/api-server/` (doubled prefix) — indicates a wrong `--prefix` value during the merge
+- `Cargo.toml` appears at repo root instead of `packages/api-server/` — prefix was omitted from the `git subtree add` command
+- `git log --oneline packages/api-server/ | head -10` shows no commits — subtree was added but history was not imported
 
 **Phase to address:** Phase 2 (git subtree merge). This is a one-time irreversible operation on the active repo. Do it on a dedicated branch (`git checkout -b feat/backend-subtree-merge`) and verify the tree structure before merging to main.
 
@@ -100,15 +100,15 @@ Verify the prefix after merge: `git ls-tree HEAD packages/backend/ | head -5` sh
 ### Pitfall 4: Backend's `pre-push` Hook and `justfile` Break After Subtree Move
 
 **What goes wrong:**
-The Rust backend repo has a `pre-push` hook (`.git/hooks/pre-push`) that runs `cargo test`, `cargo deny`, `cargo-tarpaulin`, and lint checks before every push. After `git subtree add`, those hooks live at `packages/backend/.git/hooks/` — but git only runs hooks from `.git/hooks/` at the repository root. The backend hooks are completely silenced. Developers believe their code passed the pre-push checks, but they did not run. Additionally, the backend's `justfile` contains `cd src && cargo build` style relative paths that break when invoked from the monorepo root.
+The Rust backend repo has a `pre-push` hook (`.git/hooks/pre-push`) that runs `cargo test`, `cargo deny`, `cargo-tarpaulin`, and lint checks before every push. After `git subtree add`, those hooks live at `packages/api-server/.git/hooks/` — but git only runs hooks from `.git/hooks/` at the repository root. The backend hooks are completely silenced. Developers believe their code passed the pre-push checks, but they did not run. Additionally, the backend's `justfile` contains `cd src && cargo build` style relative paths that break when invoked from the monorepo root.
 
 **Why it happens:**
-git hooks are stored in the `.git/hooks/` directory of the specific git repo. Subtree merges move files but not the `.git/` directory — the backend's `.git/` is absorbed into the parent monorepo's `.git/`. The hooks that lived at the backend repo root simply cease to exist as hooks. The `justfile` relative path issue is because `just` resolves paths relative to the `justfile` location, but if the `justfile` relies on being at the repo root for things like `cargo build` (which needs the workspace `Cargo.toml`), running it from `packages/backend/` works but running it from the monorepo root does not.
+git hooks are stored in the `.git/hooks/` directory of the specific git repo. Subtree merges move files but not the `.git/` directory — the backend's `.git/` is absorbed into the parent monorepo's `.git/`. The hooks that lived at the backend repo root simply cease to exist as hooks. The `justfile` relative path issue is because `just` resolves paths relative to the `justfile` location, but if the `justfile` relies on being at the repo root for things like `cargo build` (which needs the workspace `Cargo.toml`), running it from `packages/api-server/` works but running it from the monorepo root does not.
 
 **How to avoid:**
 
-- After the subtree merge, copy the backend hooks into the monorepo root `.git/hooks/` or (better) use a tool like `husky` or `lefthook` to manage hooks centrally. The hook scripts themselves should be updated to `cd packages/backend && cargo test`.
-- Update the `justfile` to use absolute paths from the monorepo root or add a `set working-directory := "packages/backend"` at the top. Test all `just <task>` commands from the monorepo root before merge sign-off.
+- After the subtree merge, copy the backend hooks into the monorepo root `.git/hooks/` or (better) use a tool like `husky` or `lefthook` to manage hooks centrally. The hook scripts themselves should be updated to `cd packages/api-server && cargo test`.
+- Update the `justfile` to use absolute paths from the monorepo root or add a `set working-directory := "packages/api-server"` at the top. Test all `just <task>` commands from the monorepo root before merge sign-off.
 - Add `cargo-deny` and `cargo-tarpaulin` invocations to the CI pipeline explicitly, since pre-push hooks no longer run in CI regardless.
 
 **Warning signs:**
@@ -156,13 +156,13 @@ Additionally, ensure `packages/mobile/metro.config.js` uses `@expo/metro-config`
 ### Pitfall 6: Turborepo Cannot Directly Orchestrate Cargo — Requires package.json Wrapper
 
 **What goes wrong:**
-Turborepo discovers tasks via `package.json` scripts. A `packages/backend/` directory with only a `Cargo.toml` and no `package.json` is invisible to Turborepo — it will not appear in the workspace, and `turbo run build` will not trigger a Cargo build. Developers mistakenly add `packages/backend` to the bun workspace `packages` glob and expect Turborepo to detect Rust projects natively.
+Turborepo discovers tasks via `package.json` scripts. A `packages/api-server/` directory with only a `Cargo.toml` and no `package.json` is invisible to Turborepo — it will not appear in the workspace, and `turbo run build` will not trigger a Cargo build. Developers mistakenly add `packages/api-server` to the bun workspace `packages` glob and expect Turborepo to detect Rust projects natively.
 
 **Why it happens:**
-Turborepo is a JavaScript task runner. Multi-language support works only through the JavaScript conventions: the non-JS package must have a `package.json` with scripts that shell out to the actual build tool. This is explicitly documented in Turborepo's multi-language guide. There is no native Cargo resolver in turbo. The decision in PROJECT.md notes "Backend stays outside Yarn workspace" — this means the Cargo workspace is independent, but a thin `package.json` wrapper in `packages/backend/` is still needed for Turborepo task orchestration.
+Turborepo is a JavaScript task runner. Multi-language support works only through the JavaScript conventions: the non-JS package must have a `package.json` with scripts that shell out to the actual build tool. This is explicitly documented in Turborepo's multi-language guide. There is no native Cargo resolver in turbo. The decision in PROJECT.md notes "Backend stays outside Yarn workspace" — this means the Cargo workspace is independent, but a thin `package.json` wrapper in `packages/api-server/` is still needed for Turborepo task orchestration.
 
 **How to avoid:**
-Create `packages/backend/package.json` with wrapper scripts:
+Create `packages/api-server/package.json` with wrapper scripts:
 
 ```json
 {
@@ -194,7 +194,7 @@ Then declare the Cargo output artifacts in `turbo.json`:
 
 Note: The `target/` directory is very large. Configure `.turbo/` to exclude it from remote cache if costs matter: `"outputs": ["target/release/decoded-backend"]` (binary only, not the full target dir).
 
-Do NOT add `packages/backend` to bun's `workspaces` field in root `package.json` — bun will attempt to install a `package.json`-declared workspace as a JS package. Keep the bun workspace limited to JS packages; Turborepo can orchestrate the backend `package.json` scripts separately via the `globalDependencies` or direct `--filter` flags.
+Do NOT add `packages/api-server` to bun's `workspaces` field in root `package.json` — bun will attempt to install a `package.json`-declared workspace as a JS package. Keep the bun workspace limited to JS packages; Turborepo can orchestrate the backend `package.json` scripts separately via the `globalDependencies` or direct `--filter` flags.
 
 **Warning signs:**
 
@@ -203,7 +203,7 @@ Do NOT add `packages/backend` to bun's `workspaces` field in root `package.json`
 - Running `turbo run build --filter=@decoded/backend` exits with "No tasks were run"
 - `cargo build` target artifacts are missing after a successful `turbo run build`
 
-**Phase to address:** Phase 3 (Turborepo integration). Define the `packages/backend/package.json` wrapper before writing any `turbo.json` tasks — the task graph cannot be validated without it.
+**Phase to address:** Phase 3 (Turborepo integration). Define the `packages/api-server/package.json` wrapper before writing any `turbo.json` tasks — the task graph cannot be validated without it.
 
 ---
 
@@ -252,7 +252,7 @@ Turborepo does NOT load `.env` files into task runtime by default — this is in
 
 **How to avoid:**
 
-- Never create `.env.local` at the monorepo root. Each package has its own `.env.local` in `packages/web/.env.local` and `packages/backend/.env.local`.
+- Never create `.env.local` at the monorepo root. Each package has its own `.env.local` in `packages/web/.env.local` and `packages/api-server/.env.local`.
 - Use `turbo.json` `env` and `dotEnv` fields per-task to declare which variables each task uses — this also correctly busts the Turborepo cache when env values change:
 
 ```json
@@ -315,9 +315,9 @@ Set `GSAP_TOKEN` as a CI secret and in `.env.local` (never commit the actual tok
 ### Pitfall 10: Docker Build Context Path Must Change After Backend Moves to Monorepo Subdir
 
 **What goes wrong:**
-The backend currently has its own `Dockerfile` at the repo root, with `COPY . .` and `cargo build --release` assuming the context root is the backend project root. After `git subtree add --prefix=packages/backend`, the backend source lives at `packages/backend/`. If the old `Dockerfile` is simply copied to `packages/backend/Dockerfile` without updating `COPY` paths, the build breaks: `COPY Cargo.toml .` copies the wrong file (the root `package.json` area), and multi-stage build `COPY --from=builder /app/target/...` paths are wrong.
+The backend currently has its own `Dockerfile` at the repo root, with `COPY . .` and `cargo build --release` assuming the context root is the backend project root. After `git subtree add --prefix=packages/api-server`, the backend source lives at `packages/api-server/`. If the old `Dockerfile` is simply copied to `packages/api-server/Dockerfile` without updating `COPY` paths, the build breaks: `COPY Cargo.toml .` copies the wrong file (the root `package.json` area), and multi-stage build `COPY --from=builder /app/target/...` paths are wrong.
 
-Additionally, if CI uses `docker build -f packages/backend/Dockerfile .` (context at repo root), all `COPY` statements must be prefixed with `packages/backend/`. If CI uses `docker build -f Dockerfile packages/backend/` (context at subdir), the `COPY` statements stay as-is but you cannot reference files from the monorepo root (e.g., shared config files).
+Additionally, if CI uses `docker build -f packages/api-server/Dockerfile .` (context at repo root), all `COPY` statements must be prefixed with `packages/api-server/`. If CI uses `docker build -f Dockerfile packages/api-server/` (context at subdir), the `COPY` statements stay as-is but you cannot reference files from the monorepo root (e.g., shared config files).
 
 **Why it happens:**
 Docker's build context is the directory passed as the last argument (or `.`). All `COPY` paths are relative to that context root. Moving the Dockerfile to a subdirectory without updating the build context invocation silently uses the wrong files.
@@ -328,15 +328,15 @@ Choose ONE consistent Docker context strategy for the backend and document it:
 **Option A — Context at monorepo root** (recommended, allows future shared base images):
 
 ```bash
-docker build -f packages/backend/Dockerfile --build-arg BACKEND_DIR=packages/backend .
+docker build -f packages/api-server/Dockerfile --build-arg BACKEND_DIR=packages/api-server .
 ```
 
-Update `Dockerfile` COPY statements: `COPY packages/backend/Cargo.toml ./Cargo.toml`
+Update `Dockerfile` COPY statements: `COPY packages/api-server/Cargo.toml ./Cargo.toml`
 
 **Option B — Context at backend subdir** (simpler if no shared files needed):
 
 ```bash
-docker build -f packages/backend/Dockerfile packages/backend/
+docker build -f packages/api-server/Dockerfile packages/api-server/
 ```
 
 No COPY path changes needed, but cannot access monorepo root files.
@@ -375,11 +375,11 @@ Common mistakes when connecting these specific tools together.
 | Integration                            | Common Mistake                                                                                      | Correct Approach                                                                                                                                                   |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | bun + Turborepo                        | Using `bun create turbo` which sets up with Turbopack (causes TurbopackInternalError with bun)      | Initialize Turborepo manually with `bunx turbo init`; do not use Turbopack dev mode with bun                                                                       |
-| turbo.json + Cargo                     | Declaring `"@decoded/backend"` as a task dependency without a `package.json` in `packages/backend/` | Always create the thin `package.json` wrapper first; verify with `turbo ls`                                                                                        |
+| turbo.json + Cargo                     | Declaring `"@decoded/backend"` as a task dependency without a `package.json` in `packages/api-server/` | Always create the thin `package.json` wrapper first; verify with `turbo ls`                                                                                        |
 | bun workspace + `workspace:*` protocol | Changing `"@decoded/shared": "workspace:*"` to a version number during migration                    | bun supports `workspace:*` natively — keep as-is, no changes needed                                                                                                |
 | git subtree + active development       | Doing the subtree add on `main` directly                                                            | Always do subtree operations on a dedicated feature branch; verify tree structure before merge to main                                                             |
 | pre-push hooks + monorepo              | Assuming backend hooks still run after subtree merge                                                | Backend `.git/hooks/` is absorbed — hooks must be re-registered at monorepo root via lefthook or husky                                                             |
-| GitHub Actions + mixed language CI     | Using `turbo run test` for both JS and Rust tests in a single job                                   | Use `dorny/paths-filter` to dispatch separate jobs: one for `packages/backend/**` changes (runs `cargo test`), one for `packages/web/**` changes (runs `bun test`) |
+| GitHub Actions + mixed language CI     | Using `turbo run test` for both JS and Rust tests in a single job                                   | Use `dorny/paths-filter` to dispatch separate jobs: one for `packages/api-server/**` changes (runs `cargo test`), one for `packages/web/**` changes (runs `bun test`) |
 | bun + GSAP private registry            | Putting GSAP token in global `~/.bunfig.toml`                                                       | Put token in project-level `bunfig.toml` using `$GSAP_TOKEN` env var reference                                                                                     |
 | Turborepo + dotenv                     | Using `dotenv-cli` in root `dev` script to load all env vars                                        | Use per-task `dotEnv` in `turbo.json`; never load a shared root `.env`                                                                                             |
 
@@ -394,7 +394,7 @@ Patterns that work at small scale but create CI cost or slow build problems.
 | Caching entire `target/` directory in Turborepo remote cache                   | Cache upload takes 10+ minutes per CI run; storage costs spike | Output only the final binary: `"outputs": ["target/release/decoded-backend"]`                   | From first CI run — `target/` is typically 2–10 GB                                       |
 | Running `cargo build` and `bun build` sequentially in CI                       | Total CI time = Rust compile + JS build (can be 15+ min)       | Use `turbo run build` with `--parallel` flag; Turborepo runs independent tasks concurrently     | Every CI run until parallelized                                                          |
 | `bun install --frozen-lockfile` on a CI machine without a cache                | Full install on every push (slow, no reuse)                    | Cache `~/.bun/install/cache` in GitHub Actions using `actions/cache` with `bun.lock` as the key | Every CI run until cache is added                                                        |
-| Metro bundle including all monorepo workspace packages in watchFolders         | `expo start` startup time grows with every package added       | Explicitly limit `watchFolders` to only `packages/mobile` and `packages/shared`                 | When `packages/backend` is added to workspace — metro does not need to watch Rust source |
+| Metro bundle including all monorepo workspace packages in watchFolders         | `expo start` startup time grows with every package added       | Explicitly limit `watchFolders` to only `packages/mobile` and `packages/shared`                 | When `packages/api-server` is added to workspace — metro does not need to watch Rust source |
 | Turborepo not configured for `env` vars → cache never busts on secret rotation | Stale build artifacts served after rotating DB password        | Declare all env vars that affect output in `turbo.json` `env` field per task                    | Any time a secret is rotated without code change                                         |
 
 ---
@@ -405,9 +405,9 @@ Migration-specific security issues beyond general web security.
 
 | Mistake                                                                                               | Risk                                               | Prevention                                                                                                                                 |
 | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Committing `packages/backend/.env.local` with `DATABASE_URL` or `JWT_SECRET` during the subtree merge | Production credentials in git history, permanently | Add `packages/backend/.env*` to root `.gitignore` immediately after subtree merge; audit with `git log --all --full-history -- "**/.env*"` |
+| Committing `packages/api-server/.env.local` with `DATABASE_URL` or `JWT_SECRET` during the subtree merge | Production credentials in git history, permanently | Add `packages/api-server/.env*` to root `.gitignore` immediately after subtree merge; audit with `git log --all --full-history -- "**/.env*"` |
 | Exposing GSAP Club auth token in `bunfig.toml` committed to repo                                      | Token abuse, potential GSAP license violation      | Only `$ENV_VAR_REFERENCE` in committed `bunfig.toml`; actual token only in `.env.local` and CI secrets                                     |
-| Backend `packages/backend/Dockerfile` copying `.env.local` into image via `COPY . .`                  | Secrets baked into Docker image layer              | Add `.env*` to `packages/backend/.dockerignore`; inject secrets at runtime via environment variables                                       |
+| Backend `packages/api-server/Dockerfile` copying `.env.local` into image via `COPY . .`                  | Secrets baked into Docker image layer              | Add `.env*` to `packages/api-server/.dockerignore`; inject secrets at runtime via environment variables                                       |
 | CI job with access to both frontend deploy secrets AND backend DB secrets                             | One compromised step affects both systems          | Separate GitHub Actions jobs for frontend deployment (Vercel token) and backend deployment (DB credentials) — different secret scopes      |
 
 ---
@@ -419,14 +419,14 @@ Things that appear complete in isolation but are broken in integration.
 - [ ] **Lockfile migration verified:** `bun install` succeeds AND `bun run build` (packages/web) produces a working Next.js build — not just "install completes"
 - [ ] **Expo build verified:** `cd packages/mobile && bun run ios` launches the Expo app without Metro "Cannot find module" errors
 - [ ] **GSAP Club packages verified:** `ls node_modules/@gsap/` shows premium plugins after `bun install` (not just free tier)
-- [ ] **Subtree path verified:** `git ls-tree HEAD packages/backend/ | grep Cargo.toml` returns exactly one result at depth 1
+- [ ] **Subtree path verified:** `git ls-tree HEAD packages/api-server/ | grep Cargo.toml` returns exactly one result at depth 1
 - [ ] **Turborepo task graph verified:** `turbo ls` shows `@decoded/backend`, `@decoded/web`, `@decoded/shared`, `@decoded/mobile` in the package list
 - [ ] **Backend task caches correctly:** Change a `.rs` file → `turbo run build --filter=@decoded/backend` = cache miss; revert → cache hit
 - [ ] **Backend task does NOT cache across env changes:** Change `DATABASE_URL` → `turbo run build --filter=@decoded/backend` = cache miss
 - [ ] **Hooks are running:** `git push` to a test branch prints cargo test output (not silent completion)
-- [ ] **Docker build succeeds with correct binary:** `docker build -f packages/backend/Dockerfile . && docker run --rm <image> ./decoded-backend --version` prints the correct version
+- [ ] **Docker build succeeds with correct binary:** `docker build -f packages/api-server/Dockerfile . && docker run --rm <image> ./decoded-backend --version` prints the correct version
 - [ ] **No shared root .env.local:** `ls .env.local` returns "No such file" at monorepo root
-- [ ] **CI path filtering works:** Push a change to only `packages/backend/src/` → only the Rust CI job runs, not the full Next.js test suite
+- [ ] **CI path filtering works:** Push a change to only `packages/api-server/src/` → only the Rust CI job runs, not the full Next.js test suite
 
 ---
 
@@ -442,7 +442,7 @@ When pitfalls occur despite prevention, how to recover.
 | Backend hooks silenced after subtree merge               | LOW           | Register hooks via `lefthook install` or manually copy hook scripts to `.git/hooks/`; add `cargo test` to CI as authoritative gate                               |
 | Metro cannot resolve transitive deps                     | LOW           | Add `publicHoistPattern = ["*"]` to `bunfig.toml`; run `bun install` again; restart Metro with `--reset-cache`                                                   |
 | GSAP private registry 401                                | LOW           | Verify `bunfig.toml` has project-level scope config (not global); confirm `$GSAP_TOKEN` env var is set; run `bun install --verbose` to trace registry resolution |
-| Docker context wrong after subtree move                  | MEDIUM        | Update all `COPY` paths in `packages/backend/Dockerfile` to match chosen context strategy; test locally before CI push                                           |
+| Docker context wrong after subtree move                  | MEDIUM        | Update all `COPY` paths in `packages/api-server/Dockerfile` to match chosen context strategy; test locally before CI push                                           |
 | Turborepo cache never invalidates for Cargo changes      | LOW           | Add `Cargo.lock` and `Cargo.toml` explicitly to `inputs` in `turbo.json`; run `turbo run build --force` once to repopulate cache                                 |
 
 ---
@@ -457,7 +457,7 @@ How roadmap phases should address these pitfalls.
 | GSAP Club private registry under bun                 | Phase 1: Package manager migration               | `ls node_modules/@gsap/` shows premium plugins after `bun install`               |
 | Expo Metro transitive dep resolution                 | Phase 1: Package manager migration               | `expo start` launches without module resolution errors                           |
 | `workspace:*` protocol compatibility                 | Phase 1: Package manager migration               | `@decoded/shared` resolves correctly in both web and mobile workspaces           |
-| git subtree "unrelated histories" error              | Phase 2: Backend subtree merge                   | `git ls-tree HEAD packages/backend/                                              | grep Cargo.toml` returns one entry |
+| git subtree "unrelated histories" error              | Phase 2: Backend subtree merge                   | `git ls-tree HEAD packages/api-server/                                              | grep Cargo.toml` returns one entry |
 | git subtree prefix doubled/missing                   | Phase 2: Backend subtree merge                   | Manual tree inspection before merging feature branch to main                     |
 | Backend pre-push hooks silenced                      | Phase 2: Backend subtree merge + Phase 3 dev env | `git push` prints cargo test output                                              |
 | `justfile` relative paths broken                     | Phase 2: Backend subtree merge                   | `just build` from monorepo root succeeds                                         |

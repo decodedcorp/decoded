@@ -29,7 +29,7 @@ Yarn 4를 bun으로 완전 교체한다 — lockfile, workspace 설정, scripts,
 ### Workspace 설정
 
 - `"workspaces": ["packages/*"]` glob → `["packages/web", "packages/shared", "packages/mobile"]` 명시적 리스트로 변경
-- 이유: 이후 페이즈에서 packages/backend (Rust) 추가 시 bun workspace에 포함되지 않도록 보장
+- 이유: 이후 페이즈에서 packages/api-server (Rust) 추가 시 bun workspace에 포함되지 않도록 보장
 - `bunfig.toml` 생성 — node-modules linker + publicHoistPattern (Expo Metro 호환성)
 
 ### Expo/Mobile 처리

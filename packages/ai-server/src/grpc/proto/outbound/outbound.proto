@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package outbound;
+
+service Metadata {
+    rpc ProcessedBatchUpdate (ProcessedBatchRequest) returns (ProcessedBatchResponse);
+}
+
+message QAPair {
+    string question = 1;
+    string answer = 2;
+}
+
+message LinkMetadata {
+    string summary = 1;
+    repeated QAPair qna = 2;
+    map<string, string> metadata = 3;
+    repeated string keywords = 4;
+    string link_type = 5;  // product, article, video, other
+}
+
+// Batch processing messages
+message BatchItemResult {
+    string item_id = 1;  // Solution ID from backend
+    string url = 2;
+    string type = 3;  // "link" (image not currently implemented)
+    string status = 4;  // "success", "partial", "failed"
+    optional string error_message = 5;
+    
+    // Results
+    optional LinkMetadata link_metadata = 6;
+}
+
+message ImageMetadata {
+    optional string summary = 1;
+    repeated string objects = 2;
+    optional string context = 3;
+    optional string style = 4;
+    map<string, string> metadata = 5;
+    optional string category = 6;
+    repeated QAPair qa_pairs = 7;
+}
+
+message BatchStatistics {
+    int32 total_count = 1;
+    int32 success_count = 2;
+    int32 partial_count = 3;
+    int32 failed_count = 4;
+    double processing_time_seconds = 5;
+}
+
+message ProcessedBatchRequest {
+    string batch_id = 1;
+    int64 processing_timestamp = 2;
+    repeated BatchItemResult results = 3;
+    BatchStatistics statistics = 4;
+}
+
+message ProcessedBatchResponse {
+    bool success = 1;
+    string message = 2;
+    int32 processed_count = 3;
+}

@@ -29,7 +29,7 @@
     "symlinkDirectories": [
       "node_modules",
       ".next",
-      "packages/backend/target"
+      "packages/api-server/target"
     ]
   }
 }

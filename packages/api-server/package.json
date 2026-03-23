@@ -1,0 +1,10 @@
+{
+  "name": "@decoded/api-server",
+  "private": true,
+  "scripts": {
+    "dev": "cargo watch -x run",
+    "build": "cargo build --release",
+    "test": "cargo test --lib",
+    "lint": "cargo clippy --all-targets -- -D warnings"
+  }
+}

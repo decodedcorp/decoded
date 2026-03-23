@@ -7,13 +7,14 @@ Image/item discovery and curation platform with behavioral intelligence, editori
 ```
 decoded-monorepo/
 ├── packages/
-│   ├── web/        Next.js 16 — frontend app
-│   ├── shared/     Shared types, hooks, Supabase queries
-│   ├── mobile/     Expo 54 — React Native app
-│   └── backend/    Rust/Axum — API server
-├── turbo.json      Turborepo task orchestration
-├── bunfig.toml     bun config
-└── package.json    Workspaces root
+│   ├── web/          Next.js 16 — frontend app
+│   ├── shared/       Shared types, hooks, Supabase queries
+│   ├── mobile/       Expo 54 — React Native app
+│   ├── api-server/   Rust/Axum — REST + gRPC client to AI
+│   └── ai-server/    Python — inference, gRPC (decoded-ai)
+├── turbo.json        Turborepo task orchestration
+├── bunfig.toml       bun config
+└── package.json      Workspaces root
 ```
 
 ## Tech Stack
@@ -49,10 +50,10 @@ cp packages/web/.env.local.example packages/web/.env.local
 bun run dev
 ```
 
-### Backend (packages/backend)
+### Backend (packages/api-server)
 
 ```bash
-cd packages/backend
+cd packages/api-server
 
 # Build
 cargo build
@@ -85,7 +86,20 @@ Main web application with:
 - Design system v2.0 (36 components)
 - OAuth auth (Kakao, Google, Apple) via Supabase
 
-### `packages/backend` — Rust API Server
+### `packages/ai-server` — Python AI / gRPC
+
+AI inference, metadata extraction, and gRPC services (Poetry). Run from repo root:
+
+```bash
+cd packages/ai-server
+poetry install
+poetry run python -m src.main
+# or: bun run dev:ai-server   # from monorepo root (requires Poetry)
+```
+
+Docker: use compose files under `packages/ai-server/`; build context is that directory (see `packages/ai-server/README.md`).
+
+### `packages/api-server` — Rust API Server
 
 REST API built with:
 - Axum web framework
@@ -109,13 +123,15 @@ React Native mobile app (Expo 54).
 ## Development
 
 ```bash
-bun run dev          # Dev server (all packages via Turborepo)
-bun run build        # Production build
-bun run lint         # ESLint
+bun run dev              # Dev server (JS packages via Turborepo)
+bun run dev:api-server   # Rust API (cargo watch)
+bun run dev:ai-server    # Python AI server (Poetry)
+bun run build            # Production build
+bun run lint             # ESLint (+ package scripts where configured)
 
-cd packages/backend
-cargo build          # Build Rust backend
-cargo test           # Run backend tests
+cd packages/api-server
+cargo build              # Build Rust API
+cargo test               # Run API tests
 ```
 
 ## Environment Variables

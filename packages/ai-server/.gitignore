@@ -1,0 +1,50 @@
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+.env/
+.env.dev
+
+# IDE
+.vscode/
+.idea/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Testing
+htmlcov/
+.coverage
+coverage.xml
+
+# Model files
+fixtures/models/*.dat
+src/models/**/*.dat
+
+# OS specific
+.DS_Store
+**/.DS_Store
+
+# Jupyter Notebook
+*.ipynb
+
+# Firebase
+firebase_service_account_key.json
+
+.dev.env
+.prod.env
+.env
+
+logs/
+
+# Superset
+superset/.cache/

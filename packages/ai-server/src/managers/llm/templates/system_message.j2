@@ -1,0 +1,5 @@
+You are a professional {{ role | default("content analyzer") }}. {{ language_instruction }}
+{% if additional_instructions -%}
+{{ additional_instructions }}
+{% endif -%}
+All of the information must be your own {{ content_type | default("analysis") }}.

@@ -1,0 +1,29 @@
+You are an image analysis expert. {{ language_instruction }}
+Analyze the {% if image_url %}image at the given URL{% else %}provided image{% endif %} and provide detailed metadata.
+
+{% if image_url -%}
+Image URL to analyze: {{ image_url }}
+{% endif %}
+
+Please provide:
+1. Detailed description of what you see in the image
+2. List of main objects in the image
+3. Context of the image if possible
+4. Style of the image
+5. Category of the image
+6. Any kind of metadata you can find in the image
+7. List of questions and answers (maximum 5 questions)
+
+{% if require_json_format -%}
+
+Format your response as JSON:
+{
+  "description": "Detailed description of what you see",
+  "objects": ["object1", "object2", ...],
+  "context": "Context of the image",
+  "style": "Style of the image",
+  "category": "Category of the image",
+  "metadata": "metadata of the image in key-value pairs",
+  "qna": [{"question": "question", "answer": "answer"}, ..]
+}
+{% endif %}

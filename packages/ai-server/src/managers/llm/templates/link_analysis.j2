@@ -1,0 +1,48 @@
+You are a web content analysis expert. {{ language_instruction }}
+Analyze the following enriched content and provide enhanced metadata.
+
+{% if enriched_content -%}
+Enriched content to analyze:
+{{ enriched_content }}
+{% elif url -%}
+URL to analyze: {{ url }}
+{% endif %}
+
+{% if search_context -%}
+
+Additional context from web search:
+{{ search_context }}
+{% endif %}
+
+{% if existing_title -%}
+Existing title: {{ existing_title }}
+Task: Improve or enhance this title if needed using all available information.
+{% else -%}
+Task: Generate a clear, descriptive title for this content using all available information.
+{% endif %}
+
+{% if existing_description -%}
+Existing description: {{ existing_description }}
+Task: Improve or enhance this description if needed using all available information.
+{% else -%}
+Task: Generate a comprehensive description of this content using all available information.
+{% endif %}
+
+Based on the provided content, please provide:
+1. Improved title (max 100 characters)
+2. Improved description (max 300 characters)
+3. Main topics or keywords (comma-separated) in metadata
+4. Content category (e.g., {% if force_video_category %}video{% else %}sns, article, product, service, news, blog, video, etc{% endif %})
+5. List of questions and answers (maximum 5 questions)
+
+{% if require_json_format -%}
+
+Format your response as JSON:
+{
+  "title": "Improved title here",
+  "description": "Improved description here",
+  "metadata": "metadata of the content here in key-value pairs",
+  "category": "content category of the link",
+  "qna": [{"question": "question", "answer": "answer"}, ..]
+}
+{% endif %}

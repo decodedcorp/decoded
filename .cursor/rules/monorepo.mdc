@@ -9,7 +9,8 @@ globs: "**/*"
 - `packages/web/` — Next.js 16 frontend
 - `packages/shared/` — Shared types, hooks, Supabase queries
 - `packages/mobile/` — Expo 54 React Native
-- `packages/backend/` — Rust/Axum API server (independent Cargo workspace)
+- `packages/api-server/` — Rust/Axum API server (independent Cargo workspace)
+- `packages/ai-server/` — Python AI / gRPC (Poetry; former decoded-ai)
 
 ## Package Manager
 - **bun** (not yarn/npm). Use `bun run`, `bun add`, `bunx`.
@@ -25,10 +26,13 @@ globs: "**/*"
 - Supabase queries: `packages/web/lib/supabase/queries/`
 - State management: Zustand stores in `packages/web/lib/stores/`
 
-## Backend (Rust)
+## API server (Rust)
 - Builds via `cargo` (not bun)
 - Axum 0.8, SeaORM, tokio, Meilisearch
-- `cd packages/backend && cargo build`
+- `cd packages/api-server && cargo build`
+
+## AI server (Python)
+- Poetry in `packages/ai-server`; `poetry run python -m src.main` or `bun run dev:ai-server` from root
 
 ## Environment
 - Copy `packages/web/.env.local.example` → `.env.local`

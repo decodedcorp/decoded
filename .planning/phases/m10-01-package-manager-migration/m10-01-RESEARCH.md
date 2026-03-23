@@ -121,7 +121,7 @@ Two non-trivial concerns exist for this specific project: (1) the root `package.
 }
 ```
 
-**Key change:** `"packages/*"` glob replaced with explicit list. Reason: packages/backend (Rust) will be added in m10-02 and must NOT be a bun workspace member.
+**Key change:** `"packages/*"` glob replaced with explicit list. Reason: packages/api-server (Rust) will be added in m10-02 and must NOT be a bun workspace member.
 
 ### bunfig.toml (project root)
 

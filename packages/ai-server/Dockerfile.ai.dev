@@ -1,0 +1,32 @@
+# Mac 환경을 위한 기본 이미지 사용
+# google-genai가 TypedDict extra_items 사용 (Python 3.12+ 필요)
+FROM python:3.12-slim
+
+# 필요한 시스템 패키지 설치
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Poetry 설치
+RUN pip install poetry
+
+# Poetry 가상환경 비활성화
+RUN poetry config virtualenvs.create false
+
+# 소스 코드 및 의존성 파일 복사
+COPY src/ /app/src/
+COPY README.md /app/
+COPY pyproject.toml poetry.lock ./
+RUN mkdir -p /app/db
+RUN mkdir -p /app/logs
+
+# Poetry로 의존성 설치
+RUN poetry lock && poetry install --no-root
+
+ENV PYTHONPATH=/app
+
+EXPOSE 10000 50052
+
+CMD ["poetry", "run", "python", "-m", "src.main"]

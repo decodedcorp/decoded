@@ -19,7 +19,15 @@ build/
 *.tsbuildinfo
 
 # Rust
-packages/backend/target/
+packages/api-server/target/
+
+# Python (ai-server)
+packages/ai-server/.venv/
+packages/ai-server/__pycache__/
+packages/ai-server/**/__pycache__/
+packages/ai-server/.pytest_cache/
+packages/ai-server/.mypy_cache/
+packages/ai-server/**/*.pyc
 
 # IDE
 .vscode/

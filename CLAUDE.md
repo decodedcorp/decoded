@@ -15,14 +15,16 @@ decoded-monorepo/
 │   ├── web/              # Next.js 16 frontend (main app)
 │   ├── shared/           # Shared types, hooks, Supabase queries
 │   ├── mobile/           # Expo 54 React Native app
-│   └── backend/          # Rust/Axum API server (Cargo workspace, independent build)
+│   ├── api-server/       # Rust/Axum API (Cargo workspace; not a bun workspace member)
+│   └── ai-server/        # Python AI / gRPC (Poetry; former decoded-ai repo)
 ├── .planning/            # GSD workflow artifacts
 └── CLAUDE.md             # This file
 ```
 
 - **Package Manager**: bun 1.3.10+ (not yarn/npm)
 - **Build Orchestration**: Turborepo
-- **Backend**: Rust/Axum — builds independently via `cargo` (not managed by bun workspaces)
+- **API server (Rust)**: `packages/api-server` — builds via `cargo` (not managed by bun workspaces)
+- **AI server (Python)**: `packages/ai-server` — Poetry; thin `package.json` scripts for Turborepo only
 
 ## Tech Stack
 
@@ -264,6 +266,8 @@ Located in `lib/design-system/`:
 | **Hooks**          | `lib/hooks/`                        | Custom hooks                                                 |
 | **Admin Hooks**    | `lib/hooks/admin/`                  | Admin dashboard hooks                                        |
 | **Stores**         | `lib/stores/`                       | Zustand stores                                               |
+| **Rust API**       | `packages/api-server/`              | Axum REST API, gRPC client to ai-server                      |
+| **AI / gRPC**      | `packages/ai-server/`               | Inference, metadata, gRPC (Python)                           |
 
 ## API Routes
 
@@ -391,9 +395,11 @@ Located in `lib/design-system/`:
 
 ```bash
 # Monorepo (from root)
-bun run dev           # Development server (all packages via Turborepo)
-bun run build         # Production build (all packages via Turborepo)
-bun run lint          # ESLint (all packages)
+bun run dev             # Development server (JS packages via Turborepo)
+bun run dev:api-server  # Rust API (cargo watch)
+bun run dev:ai-server   # Python AI server (Poetry)
+bun run build           # Production build (via Turborepo)
+bun run lint            # ESLint (and package scripts where configured)
 
 # Web package only
 cd packages/web
@@ -402,11 +408,17 @@ bun run build         # Next.js production build
 bun run lint          # ESLint
 bun run format        # Prettier formatting
 
-# Backend (Rust)
-cd packages/backend
-cargo build           # Build backend
-cargo run             # Run backend server
+# API server (Rust)
+cd packages/api-server
+cargo build           # Build API server
+cargo run             # Run API server
 cargo test            # Run tests
+
+# AI server (Python)
+cd packages/ai-server
+poetry install
+poetry run python -m src.main
+# or: bun run dev:ai-server  # from monorepo root
 ```
 
 ## Code Style

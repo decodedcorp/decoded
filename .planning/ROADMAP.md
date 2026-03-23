@@ -89,7 +89,7 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 **Milestone Goal:** Backend Rust/Axum 레포를 모노레포에 subtree 병합하고, Yarn 4 → bun 전환 + Turborepo 도입으로 통합 개발환경 구성 — `bunx turbo dev` 한 명령으로 프론트+백 동시 기동
 
 - [ ] **Phase m10-01: Package Manager Migration** - Yarn 4 → bun 전환, lockfile 마이그레이션, GSAP 레지스트리 픽스
-- [ ] **Phase m10-02: Backend Repository Merge** - git subtree로 backend 코드를 packages/backend/에 병합, history 보존
+- [ ] **Phase m10-02: Backend Repository Merge** - git subtree로 backend 코드를 packages/api-server/에 병합, history 보존
 - [ ] **Phase m10-03: Turborepo Integration & Unified Dev** - turbo.json 설정, backend thin wrapper, bunx turbo dev 통합 기동
 - [ ] **Phase m10-04: Docker & CI/CD Unification** - docker-compose 루트 통합, path-based GitHub Actions 워크플로우
 
@@ -235,14 +235,14 @@ Plans:
 
 ### Phase m10-02: Backend Repository Merge
 
-**Goal**: Rust/Axum 백엔드 코드가 git history 보존 상태로 `packages/backend/`에 병합되고, Cargo 빌드가 새 위치에서 독립적으로 성공한다
+**Goal**: Rust/Axum 백엔드 코드가 git history 보존 상태로 `packages/api-server/`에 병합되고, Cargo 빌드가 새 위치에서 독립적으로 성공한다
 **Depends on**: Phase m10-01
 **Requirements**: MERGE-01, MERGE-02, MERGE-03
 **Success Criteria** (what must be TRUE):
 
-1. `packages/backend/`에 Rust 소스, Cargo.toml, Dockerfile이 존재하며 `git log packages/backend/` 명령으로 원본 커밋 히스토리가 조회된다
-2. `cd packages/backend && cargo build`가 성공하고 백엔드 바이너리가 생성된다
-3. Backend의 pre-push hooks와 justfile 경로가 모노레포 루트 기준으로 올바르게 수정되어 `cd packages/backend && cargo test`가 실행된다
+1. `packages/api-server/`에 Rust 소스, Cargo.toml, Dockerfile이 존재하며 `git log packages/api-server/` 명령으로 원본 커밋 히스토리가 조회된다
+2. `cd packages/api-server && cargo build`가 성공하고 백엔드 바이너리가 생성된다
+3. Backend의 pre-push hooks와 justfile 경로가 모노레포 루트 기준으로 올바르게 수정되어 `cd packages/api-server && cargo test`가 실행된다
 
 **Plans**: TBD
 
@@ -255,8 +255,8 @@ Plans:
 
 1. `bunx turbo run build`가 shared → web/backend 순서로 전체 빌드를 실행하고 성공한다
 2. `bunx turbo dev`를 실행하면 Next.js dev 서버와 Rust 백엔드가 동시에 기동된다
-3. Turborepo 캐시가 packages/web과 packages/shared 빌드에서 hit되며, packages/backend 빌드는 `cache: false`로 Cargo에 위임된다
-4. packages/backend/package.json에 `cargo build/dev/test/clippy`가 npm scripts로 선언되어 있으며 Turborepo가 이를 오케스트레이션한다
+3. Turborepo 캐시가 packages/web과 packages/shared 빌드에서 hit되며, packages/api-server 빌드는 `cache: false`로 Cargo에 위임된다
+4. packages/api-server/package.json에 `cargo build/dev/test/clippy`가 npm scripts로 선언되어 있으며 Turborepo가 이를 오케스트레이션한다
 5. 통합 `.env.local.example`에 프론트엔드와 백엔드 환경변수가 모두 문서화되어 있다
 
 **Plans**: TBD
@@ -269,7 +269,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
 1. 루트 `docker-compose.dev.yml`에서 `docker compose up`으로 web + backend + Postgres + Meilisearch 전체 스택이 기동된다
-2. Backend의 Docker 컨텍스트가 `packages/backend/` 기준으로 동작하며 Dockerfile COPY 경로가 올바르다
+2. Backend의 Docker 컨텍스트가 `packages/api-server/` 기준으로 동작하며 Dockerfile COPY 경로가 올바르다
 3. frontend 파일만 변경된 PR에서는 backend-ci.yml이 실행되지 않고 frontend-ci.yml만 실행된다
 4. backend-ci.yml에서 `cargo fmt --check`, `cargo clippy`, `cargo test`가 모두 통과한다
 5. frontend-ci.yml에서 `bun install --frozen-lockfile`, `bunx turbo run build`, `bun run lint`가 모두 통과한다

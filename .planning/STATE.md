@@ -44,7 +44,7 @@ All monorepo consolidation phases complete.
 ## v8.0 Completion Summary
 
 **What was done:**
-- Backend (Rust/Axum) subtree merged into `packages/backend/`
+- Backend (Rust/Axum) subtree merged into `packages/api-server/`
 - Yarn 4 → bun 1.3.10 migration (2,588 packages, 1.69s install)
 - Turborepo build orchestration (`turbo.json` with build/dev/lint/test)
 - TypeScript build errors fixed (JSX Fragment wrap + Supabase type cast)

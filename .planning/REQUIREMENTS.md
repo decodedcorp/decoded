@@ -17,8 +17,8 @@ Requirements for Monorepo Consolidation & Bun Migration. Each maps to roadmap ph
 
 ### Backend Repository Merge
 
-- [ ] **MERGE-01**: Backend 코드가 `packages/backend/`에 git subtree로 병합됨 (history 보존)
-- [ ] **MERGE-02**: Backend Cargo build가 `packages/backend/` 내에서 독립 성공
+- [ ] **MERGE-01**: Backend 코드가 `packages/api-server/`에 git subtree로 병합됨 (history 보존)
+- [ ] **MERGE-02**: Backend Cargo build가 `packages/api-server/` 내에서 독립 성공
 - [ ] **MERGE-03**: Backend hooks/justfile 경로가 새 위치에 맞게 수정됨
 
 ### Build Orchestration
@@ -31,7 +31,7 @@ Requirements for Monorepo Consolidation & Bun Migration. Each maps to roadmap ph
 ### Infrastructure
 
 - [ ] **INFRA-01**: 통합 `.env.local.example`에 프론트+백 환경변수 문서화
-- [ ] **INFRA-02**: Docker 컨텍스트가 `packages/backend/` 기준으로 동작
+- [ ] **INFRA-02**: Docker 컨텍스트가 `packages/api-server/` 기준으로 동작
 - [ ] **INFRA-03**: 루트 docker-compose.dev.yml로 전체 스택 기동 가능
 
 ### CI/CD

@@ -39,13 +39,13 @@ decoded-monorepo/                           <- bun workspace root
 
 > "Backend stays outside Yarn workspace — Cargo workspace is independent, bun manages JS packages only"
 
-`packages/backend/package.json` exists exclusively as a Turborepo adapter. Cargo manages the Rust dependency graph independently.
+`packages/api-server/package.json` exists exclusively as a Turborepo adapter. Cargo manages the Rust dependency graph independently.
 
 ### Component Responsibilities
 
 | Component                       | Responsibility                               | Implementation                                                             |
 | ------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/backend/package.json` | Turborepo entry point for Cargo tasks        | Wraps `cargo build`, `cargo run`, `cargo test` as npm scripts              |
+| `packages/api-server/package.json` | Turborepo entry point for Cargo tasks        | Wraps `cargo build`, `cargo run`, `cargo test` as npm scripts              |
 | Root `turbo.json`               | Task dependency graph + cache config         | `build`, `dev`, `lint`, `test` tasks; backend tasks set `cache: false`     |
 | Root `package.json`             | bun workspace declaration (JS packages only) | `workspaces` lists web/shared/mobile explicitly, excludes backend          |
 | `bun.lock`                      | Deterministic JS dependency lockfile         | Text format; Turborepo 2.6 supports granular cache analysis of this format |
@@ -86,7 +86,7 @@ decoded-monorepo/
 
 ### Structure Rationale
 
-- **`packages` array in root `package.json` is explicit, not a glob.** Using `"packages/*"` as a glob would include `packages/backend`, causing bun to attempt resolving its Cargo-only nature as a JS workspace. Explicit listing prevents this.
+- **`packages` array in root `package.json` is explicit, not a glob.** Using `"packages/*"` as a glob would include `packages/api-server`, causing bun to attempt resolving its Cargo-only nature as a JS workspace. Explicit listing prevents this.
 - **`packages/web/.env.local` not monorepo root.** Next.js resolves `.env.local` relative to its `cwd` (i.e., `packages/web/` when `next dev` runs). Turborepo also recommends per-package env files over a root `.env`. The root `.env.local.example` serves only as documentation.
 - **`docker-compose.yml` at root.** The backend's `package.json` dev script references it with `../../docker-compose.yml`. This mirrors the existing backend deployment pattern (Docker in production).
 - **Separate CI workflows by language.** Rust CI uses `rustup` + `cargo`; JS CI uses `bun` + `turbo`. Mixing them on the same job adds ~2-3 min to every frontend PR from unnecessary Rust toolchain setup.
@@ -95,13 +95,13 @@ decoded-monorepo/
 
 ### Pattern 1: Cargo-via-package.json Wrapper (the only viable Turborepo+Rust pattern)
 
-**What:** `packages/backend/package.json` exposes Cargo commands as npm scripts. Turborepo treats these as regular tasks because it requires `package.json` scripts to include a directory in its task graph. Native Rust support in Turborepo is an open RFC (issue #683, open as of Oct 2025) with no implementation timeline.
+**What:** `packages/api-server/package.json` exposes Cargo commands as npm scripts. Turborepo treats these as regular tasks because it requires `package.json` scripts to include a directory in its task graph. Native Rust support in Turborepo is an open RFC (issue #683, open as of Oct 2025) with no implementation timeline.
 
 **When to use:** Required for any Rust package that must participate in Turborepo's task ordering.
 
 **Trade-offs:** Turborepo cannot hash Cargo inputs/outputs intelligently. Cargo's own incremental compilation handles Rust caching. Turborepo caching for backend tasks must be disabled.
 
-**Example `packages/backend/package.json`:**
+**Example `packages/api-server/package.json`:**
 
 ```json
 {
@@ -163,14 +163,14 @@ decoded-monorepo/
 ```
 Phase 1 (parallel — no dependencies):
   packages/shared#build     (TS compilation → dist/)
-  packages/backend#build    (cargo build --release)
+  packages/api-server#build    (cargo build --release)
 
 Phase 2 (parallel — after shared completes):
   packages/web#build        (next build, imports @decoded/shared)
   packages/mobile#build     (expo export, imports @decoded/shared)
 ```
 
-**Trade-offs:** The `^` syntax resolves only within the bun workspace graph. `packages/backend` is outside that graph — Turborepo runs it as an independent task, not a dependency of any JS package. If `packages/web` must wait for backend to be available at runtime during dev, use `dependsOn: ["@decoded/backend#dev"]` on the web dev task.
+**Trade-offs:** The `^` syntax resolves only within the bun workspace graph. `packages/api-server` is outside that graph — Turborepo runs it as an independent task, not a dependency of any JS package. If `packages/web` must wait for backend to be available at runtime during dev, use `dependsOn: ["@decoded/backend#dev"]` on the web dev task.
 
 ### Pattern 3: Docker Compose for Backend Dev, Native Cargo for CI
 
@@ -187,7 +187,7 @@ version: "3.9"
 services:
   backend:
     build:
-      context: ./packages/backend
+      context: ./packages/api-server
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -197,7 +197,7 @@ services:
       - postgres
       - meilisearch
     volumes:
-      - ./packages/backend/src:/app/src # optional: live reload with cargo-watch
+      - ./packages/api-server/src:/app/src # optional: live reload with cargo-watch
 
   postgres:
     image: postgres:15-alpine
@@ -236,25 +236,25 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/backend/**"
+      - "packages/api-server/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
-      - "packages/backend/**"
+      - "packages/api-server/**"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/backend
+        working-directory: packages/api-server
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/cache@v4
         with:
-          path: packages/backend/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/backend/Cargo.lock') }}
+          path: packages/api-server/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/api-server/Cargo.lock') }}
       - run: cargo clippy -- -D warnings
       - run: cargo test
       - run: cargo build --release
@@ -353,10 +353,10 @@ Run a full build + test suite after migration to catch any breaking upgrades.
 
 | Boundary                               | Communication                                 | Notes                                                                                            |
 | -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `packages/web` → `packages/backend`    | HTTP via `API_BASE_URL` env var               | No shared code. Next.js API routes proxy requests. Pattern unchanged from pre-monorepo.          |
-| `packages/shared` → `packages/backend` | None                                          | Rust types defined independently in Cargo workspace. No code sharing across language boundary.   |
-| `turbo.json` → `packages/backend`      | npm script delegation                         | Turborepo calls `cargo build/test` via `package.json` scripts. Cache disabled for backend tasks. |
-| `docker-compose.yml` → Cargo           | `docker build` context at `packages/backend/` | Backend Dockerfile compiles Rust from source. Existing Dockerfile unchanged.                     |
+| `packages/web` → `packages/api-server`    | HTTP via `API_BASE_URL` env var               | No shared code. Next.js API routes proxy requests. Pattern unchanged from pre-monorepo.          |
+| `packages/shared` → `packages/api-server` | None                                          | Rust types defined independently in Cargo workspace. No code sharing across language boundary.   |
+| `turbo.json` → `packages/api-server`      | npm script delegation                         | Turborepo calls `cargo build/test` via `package.json` scripts. Cache disabled for backend tasks. |
+| `docker-compose.yml` → Cargo           | `docker build` context at `packages/api-server/` | Backend Dockerfile compiles Rust from source. Existing Dockerfile unchanged.                     |
 | GitHub Actions → Both                  | `paths:` trigger on CI workflows              | Separate `.yml` files per language. No shared toolchain setup job.                               |
 
 ### New and Modified Config Files
@@ -365,7 +365,7 @@ Run a full build + test suite after migration to catch any breaking upgrades.
 | ----------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
 | `turbo.json` (root)                 | NEW             | Task graph: build, dev, lint, test + backend-specific overrides                      |
 | `package.json` (root)               | MODIFIED        | `packageManager` → `bun@1.x`; `workspaces` → explicit list; scripts → turbo commands |
-| `packages/backend/package.json`     | NEW             | Thin Turborepo adapter wrapping Cargo commands as npm scripts                        |
+| `packages/api-server/package.json`     | NEW             | Thin Turborepo adapter wrapping Cargo commands as npm scripts                        |
 | `bun.lock`                          | NEW             | Replaces `yarn.lock` after `bun install`                                             |
 | `docker-compose.yml` (root)         | NEW or MODIFIED | Root-level; consolidates backend + infrastructure services                           |
 | `packages/web/.env.local`           | VERIFY LOCATION | Must be in `packages/web/`, not monorepo root                                        |
@@ -382,7 +382,7 @@ Run a full build + test suite after migration to catch any breaking upgrades.
 | Current dev team            | Single docker-compose for backend, bun+Turborepo for JS, local CI caching                       |
 | Growing team (5+ engineers) | Add Turborepo Remote Cache (Vercel) — cache JS builds centrally; saves 2-4 min per CI run       |
 | Multiple backend services   | Add services to docker-compose; add matching `packages/service-x/package.json` wrappers         |
-| Monorepo cache optimization | GitHub Actions `actions/cache` on `packages/backend/target/` for Cargo; separate from Turborepo |
+| Monorepo cache optimization | GitHub Actions `actions/cache` on `packages/api-server/target/` for Cargo; separate from Turborepo |
 
 ### Scaling Priorities
 
@@ -391,13 +391,13 @@ Run a full build + test suite after migration to catch any breaking upgrades.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Adding packages/backend to bun workspaces
+### Anti-Pattern 1: Adding packages/api-server to bun workspaces
 
-**What people do:** Use `"workspaces": ["packages/*"]` in root `package.json`, inadvertently including `packages/backend`.
+**What people do:** Use `"workspaces": ["packages/*"]` in root `package.json`, inadvertently including `packages/api-server`.
 
-**Why it's wrong:** bun attempts to treat `packages/backend` as a JS package. While it may not crash, it creates unnecessary symlinks and confuses dependency resolution. More importantly, the Turborepo workspace graph picks up the package but bun has no understanding of Cargo dependencies.
+**Why it's wrong:** bun attempts to treat `packages/api-server` as a JS package. While it may not crash, it creates unnecessary symlinks and confuses dependency resolution. More importantly, the Turborepo workspace graph picks up the package but bun has no understanding of Cargo dependencies.
 
-**Do this instead:** Use an explicit list: `"workspaces": ["packages/web", "packages/shared", "packages/mobile"]`. Keep `packages/backend` outside the JS workspace while still present in the filesystem for Turborepo to discover via its own `package.json` lookup.
+**Do this instead:** Use an explicit list: `"workspaces": ["packages/web", "packages/shared", "packages/mobile"]`. Keep `packages/api-server` outside the JS workspace while still present in the filesystem for Turborepo to discover via its own `package.json` lookup.
 
 ### Anti-Pattern 2: Root .env.local for all packages
 
@@ -413,7 +413,7 @@ Run a full build + test suite after migration to catch any breaking upgrades.
 
 **Why it's wrong:** Cargo's `target/` directory is typically 2-5GB and Cargo already has its own incremental compilation cache. Uploading/downloading multi-GB artifacts via Turborepo's remote cache is slower than rebuilding locally. Turborepo cannot parse `Cargo.lock` for fine-grained change detection.
 
-**Do this instead:** Set `"cache": false` for backend tasks in `turbo.json`. Cache `packages/backend/target/` using `actions/cache` in the GitHub Actions backend workflow, keyed on `Cargo.lock`.
+**Do this instead:** Set `"cache": false` for backend tasks in `turbo.json`. Cache `packages/api-server/target/` using `actions/cache` in the GitHub Actions backend workflow, keyed on `Cargo.lock`.
 
 ### Anti-Pattern 4: Running Cargo directly in the Turborepo dev task for all engineers
 

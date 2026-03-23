@@ -33,14 +33,14 @@ The following are already installed and validated. Zero changes needed:
 | ----------- | --------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | bun         | 1.3.11                | Package manager + JS runtime replacing Yarn 4          | 28x faster installs than npm on Linux; native workspaces; single binary with bundler/test runner; workspace-aware `--filter` flag; bun.lock text format (human-readable, git-diffable); official current version as of March 2026 |
 | Turborepo   | 2.8.x (latest 2.8.20) | Build orchestration, task caching, change-detection CI | Task-level remote caching; `--affected` flag for CI (only rebuild changed packages); Devtools graph visualizer in 2.7; Rust engine internally for fast hashing; officially supports bun as package manager                        |
-| git subtree | built-in git          | Merge backend repo with full commit history preserved  | Preserves upstream commit history in `packages/backend/`; no extra tooling; prefixes all upstream commits under the subtree path; simpler than git submodules (no `.gitmodules` file, no special clone steps)                     |
+| git subtree | built-in git          | Merge backend repo with full commit history preserved  | Preserves upstream commit history in `packages/api-server/`; no extra tooling; prefixes all upstream commits under the subtree path; simpler than git submodules (no `.gitmodules` file, no special clone steps)                     |
 | cargo-watch | 8.4.0                 | Rust hot-reload during development                     | Watches `src/` and re-runs `cargo run` on change; standard tool for Axum dev; pairs with `systemfd` for connection-preserving reload                                                                                              |
 
 ### Supporting Libraries / Dev Tools
 
 | Tool              | Version                          | Purpose                                                       | When to Use                                                                                                                                                                          |
 | ----------------- | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| concurrently      | 9.x                              | Run frontend + backend dev servers in one terminal            | `bun dev` at root delegates to `concurrently "bun --cwd packages/web dev" "cargo watch -x run --manifest-path packages/backend/Cargo.toml"`; no process manager needed for local dev |
+| concurrently      | 9.x                              | Run frontend + backend dev servers in one terminal            | `bun dev` at root delegates to `concurrently "bun --cwd packages/web dev" "cargo watch -x run --manifest-path packages/api-server/Cargo.toml"`; no process manager needed for local dev |
 | systemfd          | 0.9.x (Rust crate)               | Socket passing for zero-downtime Axum reload                  | Optional: `systemfd --no-pid -s http::8080 -- cargo watch -x run` — preserves open connections when Axum binary reloads; useful if frontend dev frequently triggers API calls        |
 | docker compose    | v2 (bundled with Docker Desktop) | Run all services (frontend, backend, Supabase local) together | Use for integration testing and CI; not required for day-to-day dev                                                                                                                  |
 | oven-sh/setup-bun | GitHub Action                    | Install bun in CI                                             | Official GitHub Action from the bun team; replace `actions/setup-node` for JS steps                                                                                                  |
@@ -51,7 +51,7 @@ The following are already installed and validated. Zero changes needed:
 
 **This is the most important constraint for this milestone.**
 
-The Rust backend (`packages/backend/`) must NOT be added to bun's `workspaces` array. Cargo manages the Rust workspace independently. bun only manages JS packages.
+The Rust backend (`packages/api-server/`) must NOT be added to bun's `workspaces` array. Cargo manages the Rust workspace independently. bun only manages JS packages.
 
 ```json
 // Root package.json — workspaces includes ONLY JS packages
@@ -63,10 +63,10 @@ The Rust backend (`packages/backend/`) must NOT be added to bun's `workspaces` a
 }
 ```
 
-Turborepo, however, CAN include the backend as a "package" — it just needs a `package.json` in `packages/backend/` that exposes a `build` script wrapping `cargo build --release`.
+Turborepo, however, CAN include the backend as a "package" — it just needs a `package.json` in `packages/api-server/` that exposes a `build` script wrapping `cargo build --release`.
 
 ```json
-// packages/backend/package.json — thin wrapper, not a bun workspace
+// packages/api-server/package.json — thin wrapper, not a bun workspace
 {
   "name": "backend",
   "scripts": {
@@ -202,7 +202,7 @@ bunx turbo check --filter=backend
 ```bash
 # Run from monorepo root
 git subtree add \
-  --prefix=packages/backend \
+  --prefix=packages/api-server \
   https://github.com/decodedcorp/backend \
   main \
   --squash
@@ -211,7 +211,7 @@ git subtree add \
 **`--squash` vs without:**
 
 - `--squash`: condenses all upstream history into a single merge commit — cleaner monorepo history, but loses individual upstream commit granularity
-- Without `--squash`: preserves every upstream commit scoped to `packages/backend/` — full history available, but noisier `git log`
+- Without `--squash`: preserves every upstream commit scoped to `packages/api-server/` — full history available, but noisier `git log`
 
 **Recommendation: use `--squash` for initial merge.** The backend has 44 migrations and 19 domains — full history import would pollute the monorepo log. Individual commit history remains available in the original backend repo.
 
@@ -220,7 +220,7 @@ git subtree add \
 ```bash
 # Pull updates from backend repo after initial merge
 git subtree pull \
-  --prefix=packages/backend \
+  --prefix=packages/api-server \
   https://github.com/decodedcorp/backend \
   main \
   --squash
@@ -234,7 +234,7 @@ git subtree pull \
 | `Cargo.lock`         | Keep — NEVER add to .gitignore; Cargo.lock for binaries should be committed |
 | `src/`               | Keep — all Rust source                                                      |
 | `.env.example`       | Keep — merge into root `.env.local.example`                                 |
-| `Dockerfile`         | Keep at `packages/backend/Dockerfile`                                       |
+| `Dockerfile`         | Keep at `packages/api-server/Dockerfile`                                       |
 | `.github/workflows/` | Archive — replace with monorepo-level CI                                    |
 | `README.md`          | Archive or merge into root                                                  |
 
@@ -326,7 +326,7 @@ npm install -g pnpm && pnpm import && rm yarn.lock .yarnrc.yml && bun install &&
 
 | Avoid                                                          | Why                                                                                              | Use Instead                                                                                |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Adding `packages/backend` to bun `workspaces`                  | bun would attempt to install Cargo crates as npm dependencies — will fail silently or error      | Keep backend out of `workspaces`; give it a thin `package.json` for Turborepo scripts only |
+| Adding `packages/api-server` to bun `workspaces`                  | bun would attempt to install Cargo crates as npm dependencies — will fail silently or error      | Keep backend out of `workspaces`; give it a thin `package.json` for Turborepo scripts only |
 | `yarn.lock` after migration                                    | bun will NOT use yarn.lock; leaving it causes confusion about which lockfile is authoritative    | Delete `yarn.lock` and `.yarnrc.yml` as part of migration; commit `bun.lock` instead       |
 | `--no-squash` on initial subtree merge (44 migrations backend) | Imports ~1000+ commits into monorepo log, making `git log` noisy                                 | Use `--squash` for initial merge; future pulls can be --squash too                         |
 | `npm` or `npx` after bun migration                             | Invoking npm after bun migration generates a `package-lock.json` and breaks bun.lock consistency | Use `bun` / `bunx` everywhere; add `.npmrc` rule if needed to block npm usage              |
@@ -340,7 +340,7 @@ npm install -g pnpm && pnpm import && rm yarn.lock .yarnrc.yml && bun install &&
 **If running dev locally (day-to-day):**
 
 - Use `bunx turbo dev` from repo root
-- Turborepo runs `packages/web` Next.js dev server + `packages/backend` cargo-watch concurrently
+- Turborepo runs `packages/web` Next.js dev server + `packages/api-server` cargo-watch concurrently
 - No Docker needed for local dev
 
 **If running integration tests or full-stack CI:**
@@ -350,7 +350,7 @@ npm install -g pnpm && pnpm import && rm yarn.lock .yarnrc.yml && bun install &&
 
 **If the backend repo has ongoing parallel development during migration:**
 
-- Keep using `git subtree pull --prefix=packages/backend ... --squash` for syncing upstream changes
+- Keep using `git subtree pull --prefix=packages/api-server ... --squash` for syncing upstream changes
 - Once the backend team is fully working from the monorepo, the original repo becomes read-only
 
 **If Cargo.lock conflicts during subtree merge:**

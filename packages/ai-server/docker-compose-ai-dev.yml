@@ -1,0 +1,83 @@
+name: ai-dev
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    ports:
+      - 4000:8080
+    networks:
+      - ai-network-dev
+    restart: unless-stopped
+  ai-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai.dev
+    container_name: decoded-ai-api-dev
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+      - "50052:50052"
+    volumes:
+      - ./logs:/app/logs
+      - ./src:/app/src
+    networks:
+      - ai-network-dev
+      - decoded-api-dev_api-network-dev
+    env_file:
+      - .dev.env
+    environment:
+      - APP_ENV=dev
+      - IS_API_SERVER=true
+      - IS_GRPC_SERVER=true
+    depends_on:
+      redis-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+        reservations:
+          memory: 128M
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  redis-server:
+    image: redis:alpine
+    container_name: ai-redis-dev
+    ports:
+      - "6303:6379"
+    volumes:
+      - ai-redis-data-dev:/data
+    networks:
+      - ai-network-dev
+    env_file:
+      - .dev.env
+    environment:
+      - SE_NODE_SESSION_TIMEOUT=180
+      - SE_SESSION_REQUEST_TIMEOUT=60
+      - SE_SESSION_RETRY_INTERVAL=2
+    command: redis-server --maxmemory 192mb --maxmemory-policy allkeys-lru --requirepass password
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+networks:
+  ai-network-dev:
+    driver: bridge
+  decoded-api-dev_api-network-dev:
+    external: true
+
+volumes:
+  ai-redis-data-dev:
+    driver: local

@@ -1,0 +1,61 @@
+name: ai-prod
+services:
+  ai-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai.prod
+    container_name: decoded-ai-api-prod
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+      - "50051:50051"
+    volumes:
+      - ./logs:/app/logs
+      - ./src:/app/src
+    networks:
+      - ai_network
+    env_file:
+      - .prod.env
+    environment:
+      - APP_ENV=prod
+      - IS_API_SERVER=true
+      - IS_GRPC_SERVER=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  redis-server:
+    image: redis:alpine
+    container_name: ai-redis-dev
+    ports:
+      - "6303:6379"
+    volumes:
+      - ai-redis-data:/data
+    networks:
+      - ai_network
+    env_file:
+      - .dev.env
+    command: redis-server --maxmemory 192mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+networks:
+  ai_network:
+    driver: bridge
+
+volumes:
+  ai-redis-data:
