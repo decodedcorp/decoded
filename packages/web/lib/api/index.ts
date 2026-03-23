@@ -26,15 +26,6 @@ export type {
   CreatePostWithFileAndSolutionsRequest,
 } from "./posts";
 
-// User APIs
-export {
-  fetchMe,
-  updateMe,
-  fetchUserStats,
-  fetchUserById,
-  fetchUserActivities,
-} from "./users";
-
 // Spot APIs
 export { createSpot, updateSpot, deleteSpot } from "./spots";
 
