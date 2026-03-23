@@ -26,13 +26,6 @@ export type {
   CreatePostWithFileAndSolutionsRequest,
 } from "./posts";
 
-// Category APIs
-export {
-  getCategories,
-  findCategoryIdByCode,
-  findCategoryById,
-} from "./categories";
-
 // User APIs
 export {
   fetchMe,
