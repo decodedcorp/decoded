@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 40-01-PLAN.md
-last_updated: "2026-03-23T12:50:07.487Z"
+stopped_at: Completed 40-02-PLAN.md
+last_updated: "2026-03-23T12:56:16.862Z"
 progress:
   total_phases: 38
-  completed_phases: 35
+  completed_phases: 36
   total_plans: 84
-  completed_plans: 82
+  completed_plans: 83
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 40 — codegen-pipeline-and-custom-mutator
+**Current focus:** Phase 41 — next phase of v9.0 API Generation
 
 ## Current Position
 
-Phase: 40 (codegen-pipeline-and-custom-mutator) — EXECUTING
-Plan: 1 of 2
+Phase: 40 (codegen-pipeline-and-custom-mutator) — COMPLETE
+Plan: 2 of 2 (all plans done)
 
 ## Milestone Summary
 
@@ -69,12 +69,13 @@ v9.0 key constraints (from research):
 - [Phase 39]: Backend local dev port is 8000 (not 3001 as documented); spec URL: http://localhost:8000/api-docs/openapi.json
 - [Phase 40-codegen-pipeline-and-custom-mutator]: baseURL empty string in customInstance — OpenAPI paths include /api/v1/ prefix to prevent double-prefix
 - [Phase 40-codegen-pipeline-and-custom-mutator]: hooks block is sibling of input/output in orval.config.ts — placing inside output causes silent failure
+- [Phase 40]: Turbo task name must exactly match package script name — generate:api task name required (not generate) for Turborepo to dispatch correctly
 
 ### Blockers/Concerns
 
 - **Phase 39 RESOLVED:** OpenAPI spec is 3.1.0 — Orval 8.5.3 handles natively, no preprocessing needed
 - **Phase 39 RESOLVED:** No Handler/snake_case suffix issues found in operationIds
-- **Phase 40 BLOCKED:** 4 duplicate operationIds in openapi.json (list_posts, list_badges, list_solutions, list_spots). Fix: backend PR adding `operation_id = "admin_list_*"` to admin handler utoipa annotations, then re-download packages/api-server/openapi.json
+- **Phase 40 RESOLVED:** Duplicate operationIds fixed in backend (d694b9ac); codegen pipeline fully operational
 - **v6.0 (paused)**: Privacy compliance — PIPA/GDPR disclosure required before behavioral tracking ships
 
 ### Pending Todos
@@ -85,8 +86,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:50:07.484Z
-Stopped at: Completed 40-01-PLAN.md
+Last session: 2026-03-23T12:56:16.859Z
+Stopped at: Completed 40-02-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`

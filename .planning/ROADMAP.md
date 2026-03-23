@@ -99,7 +99,7 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 **Milestone Goal:** Orval + Zod를 사용하여 백엔드 OpenAPI spec에서 타입 안전한 API 클라이언트를 자동 생성하고, 기존 수동 API 호출 코드를 완전 교체
 
 - [x] **Phase 39: Setup and Spec Validation** - Orval 설치, OpenAPI spec 검증, operationId/nullable 이슈 해결 (completed 2026-03-23)
-- [ ] **Phase 40: Codegen Pipeline and Custom Mutator** - 커스텀 mutator 구현, orval.config.ts 완성, 스모크 테스트
+- [x] **Phase 40: Codegen Pipeline and Custom Mutator** - 커스텀 mutator 구현, orval.config.ts 완성, 스모크 테스트 (completed 2026-03-23)
 - [ ] **Phase 41: Read Hook Migration** - GET 엔드포인트 도메인별 순차 마이그레이션 (badges → admin)
 - [ ] **Phase 42: Mutation Migration and Cache Wiring** - POST/PATCH/DELETE 마이그레이션, Zustand 동기화, 수동 코드 삭제
 - [ ] **Phase 43: CI Hardening and Tooling** - CI drift 감지, .gitignore, Zod 검증 테스트, 에이전트 문서화
