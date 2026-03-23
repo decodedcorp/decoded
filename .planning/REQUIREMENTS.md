@@ -38,8 +38,8 @@
 - [x] **CI-01**: 빌드 파이프라인에 generate:api 단계 추가 (prebuild 실행)
 - [x] **CI-02**: Spec drift 감지 (generate && git diff --exit-code) pre-push 훅 추가
 - [x] **CI-03**: 생성 코드 .gitignore 설정 (packages/web/lib/api/generated/)
-- [ ] **CI-04**: 백엔드 OpenAPI 스펙 변경 감지 및 프론트엔드 자동 재생성 trigger 프로세스
-- [ ] **CI-05**: 마이그레이션 단계별 롤백 계획 (git branching strategy + pre-push validation)
+- [x] **CI-04**: 백엔드 OpenAPI 스펙 변경 감지 및 프론트엔드 자동 재생성 trigger 프로세스
+- [x] **CI-05**: 마이그레이션 단계별 롤백 계획 (git branching strategy + pre-push validation)
 
 ### Testing
 
@@ -47,9 +47,9 @@
 
 ### Tooling (에이전트 워크플로우 최적화)
 
-- [ ] **TOOL-01**: Claude Code 생성 파일 보호 메커니즘 (lib/api/generated/ 수정 시도 감지 및 차단/경고)
-- [ ] **TOOL-02**: CLAUDE.md 업데이트 — 생성 코드 구조, 파일 소유권, generate 명령어 문서화
-- [ ] **TOOL-03**: 코드 리뷰어 에이전트 업데이트 — 생성 파일 스타일 스킵, 스키마 유효성 검사, scope drift 감지 규칙
+- [x] **TOOL-01**: Claude Code 생성 파일 보호 메커니즘 (lib/api/generated/ 수정 시도 감지 및 차단/경고)
+- [x] **TOOL-02**: CLAUDE.md 업데이트 — 생성 코드 구조, 파일 소유권, generate 명령어 문서화
+- [x] **TOOL-03**: 코드 리뷰어 에이전트 업데이트 — 생성 파일 스타일 스킵, 스키마 유효성 검사, scope drift 감지 규칙
 
 ## Future Requirements
 
@@ -102,12 +102,12 @@
 | CI-01 | Phase 43 | Complete |
 | CI-02 | Phase 43 | Complete |
 | CI-03 | Phase 43 | Complete |
-| CI-04 | Phase 43 | Pending |
-| CI-05 | Phase 43 | Pending |
+| CI-04 | Phase 43 | Complete |
+| CI-05 | Phase 43 | Complete |
 | TEST-01 | Phase 43 | Pending |
-| TOOL-01 | Phase 43 | Pending |
-| TOOL-02 | Phase 43 | Pending |
-| TOOL-03 | Phase 43 | Pending |
+| TOOL-01 | Phase 43 | Complete |
+| TOOL-02 | Phase 43 | Complete |
+| TOOL-03 | Phase 43 | Complete |
 
 **Coverage:**
 - v9.0 requirements: 28 total

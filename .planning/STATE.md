@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 43-01-PLAN.md
-last_updated: "2026-03-23T15:25:32.244Z"
+stopped_at: Completed 43-02-PLAN.md
+last_updated: "2026-03-23T15:26:21.312Z"
 progress:
   total_phases: 41
   completed_phases: 38
   total_plans: 94
-  completed_plans: 91
+  completed_plans: 92
 ---
 
 # Project State
@@ -93,6 +93,8 @@ v9.0 key constraints (from research):
 - [Phase 43-01]: TypeScript typecheck is the spec drift safety net — no git diff --exit-code needed after generate:api
 - [Phase 43-01]: pre-push Step 0 uses graceful warning (not exit 1) when api-server/openapi.json absent — developers without backend are not blocked
 - [Phase 43-01]: gitignore negation pattern: exclude packages/web/lib/api/generated/ then negate .gitkeep sentinel
+- [Phase 43]: CI-04 documented as manual procedure — no automated cross-package CI trigger; backend developer notifies frontend via PR comment or Slack
+- [Phase 43]: Rollback strategy: revert openapi.json + re-run generate:api — generated files are gitignored so they are never committed and never need to be reverted
 
 ### Blockers/Concerns
 
@@ -109,8 +111,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T15:25:32.241Z
-Stopped at: Completed 43-01-PLAN.md
+Last session: 2026-03-23T15:26:21.309Z
+Stopped at: Completed 43-02-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md
