@@ -16,7 +16,7 @@ decoded-monorepo/
 │   ├── shared/           # Shared types, hooks, Supabase queries
 │   ├── mobile/           # Expo 54 React Native app
 │   ├── api-server/       # Rust/Axum API (Cargo workspace; not a bun workspace member)
-│   └── ai-server/        # Python AI / gRPC (Poetry; former decoded-ai repo)
+│   └── ai-server/        # Python AI / gRPC (uv; former decoded-ai repo)
 ├── .planning/            # GSD workflow artifacts
 └── CLAUDE.md             # This file
 ```
@@ -24,7 +24,7 @@ decoded-monorepo/
 - **Package Manager**: bun 1.3.10+ (not yarn/npm)
 - **Build Orchestration**: Turborepo
 - **API server (Rust)**: `packages/api-server` — builds via `cargo` (not managed by bun workspaces)
-- **AI server (Python)**: `packages/ai-server` — Poetry; thin `package.json` scripts for Turborepo only
+- **AI server (Python)**: `packages/ai-server` — uv; thin `package.json` scripts for Turborepo only
 
 ## Tech Stack
 
@@ -397,9 +397,18 @@ Located in `lib/design-system/`:
 # Monorepo (from root)
 bun run dev             # Development server (JS packages via Turborepo)
 bun run dev:api-server  # Rust API (cargo watch)
-bun run dev:ai-server   # Python AI server (Poetry)
+bun run dev:ai-server   # Python AI server (uv)
 bun run build           # Production build (via Turborepo)
 bun run lint            # ESLint (and package scripts where configured)
+
+# Split local dev: Meilisearch·Redis·SearXNG = Docker first, then:
+bun run dev:local-deps       # Docker deps only (see scripts/local-deps-up.sh)
+bun run dev:local-fe         # Next only (same as dev:web)
+bun run dev:local-be         # API + AI together; logs -> .logs/local/api.log & ai.log (tail -f in other terminals)
+# Local host env templates: packages/api-server/.env.dev.example , packages/ai-server/.dev.env.example
+# Port alignment (호스트 실행): MEILISEARCH_URL=http://localhost:7700 ; DECODED_AI_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
+#   API GRPC_PORT must equal AI GRPC_BACKEND_PORT ; AI Redis localhost:6303 + SEARXNG localhost:4000 with local-deps
+# just local-help            # prints tail -f hints (root Justfile)
 
 # Web package only
 cd packages/web
@@ -416,8 +425,8 @@ cargo test            # Run tests
 
 # AI server (Python)
 cd packages/ai-server
-poetry install
-poetry run python -m src.main
+uv sync
+uv run python -m src.main
 # or: bun run dev:ai-server  # from monorepo root
 ```
 
