@@ -1,107 +1,119 @@
-# Requirements: decoded-app
+# Requirements: decoded-monorepo v9.0 Type-Safe API Generation
 
-**Defined:** 2026-03-22
-**Core Value:** 완전한 사용자 경험 — 모든 페이지가 실제 데이터로 동작하며 일관된 디자인 시스템 적용
+**Defined:** 2026-03-23
+**Core Value:** 백엔드 OpenAPI spec에서 타입 안전한 API 클라이언트를 자동 생성하여 수동 API 코드를 완전 교체
 
-## v8.0 Requirements
+## v9.0 Requirements
 
-Requirements for Monorepo Consolidation & Bun Migration. Each maps to roadmap phases.
+### Infrastructure (코드 생성 파이프라인)
 
-### Package Manager Migration
+- [ ] **INFRA-01**: Orval, axios, zod 패키지 설치 및 orval.config.ts 작성 (react-query + zod 두 config 블록)
+- [ ] **INFRA-02**: 커스텀 mutator 구현 (Supabase JWT 인증 + baseURL="" Next.js 프록시 라우팅 + 에러 핸들링 — 기존 lib/api/client.ts apiClient() 대체)
+- [ ] **INFRA-03**: generate:api bun 스크립트 + Turborepo 파이프라인 통합 (빌드 전 자동 실행)
+- [ ] **INFRA-04**: Zod 스키마 생성 설정 (별도 config 블록, .zod.ts 확장자, 응답/요청 body 검증)
+- [ ] **INFRA-05**: afterAllFilesWrite 포매팅 설정 (Prettier + ESLint 자동 적용)
 
-- [x] **PKG-01**: bun install이 packages/web, shared, mobile 모두에서 성공
-- [x] **PKG-02**: Yarn 아티팩트 제거 (.yarnrc.yml, .yarn/, yarn.lock) 완료
-- [x] **PKG-03**: bun.lock이 생성되고 git에 추적됨
-- [ ] **PKG-04**: `bun run dev`로 Next.js dev 서버 정상 기동
-- [ ] **PKG-05**: `bun run build`로 프로덕션 빌드 성공
+### Spec Validation (OpenAPI 스펙 준비)
 
-### Backend Repository Merge
+- [ ] **SPEC-01**: 백엔드 OpenAPI 스펙 버전 확인 (3.0 vs 3.1) 및 utoipa nullable 이슈 검증
+- [ ] **SPEC-02**: 전체 엔드포인트 operationId 검증 (존재 + 중복 없음 + camelCase verbNoun 패턴) 및 태그 매핑 검증
+- [ ] **SPEC-03**: 업로드/multipart 엔드포인트 명시적 목록화 (POST /posts/upload 등) 및 Orval config 제외 설정
+- [ ] **SPEC-04**: 파이프라인 스모크 테스트 (단일 엔드포인트로 생성 → 빌드 → 실행 검증)
+- [ ] **SPEC-05**: 무한 스크롤 엔드포인트 식별 및 pagination 파라미터 확인 (cursor/page/offset)
 
-- [ ] **MERGE-01**: Backend 코드가 `packages/api-server/`에 git subtree로 병합됨 (history 보존)
-- [ ] **MERGE-02**: Backend Cargo build가 `packages/api-server/` 내에서 독립 성공
-- [ ] **MERGE-03**: Backend hooks/justfile 경로가 새 위치에 맞게 수정됨
+### Migration (수동 코드 → 생성 코드 교체)
 
-### Build Orchestration
+- [ ] **MIG-01**: Read hook 마이그레이션 — badges, rankings, categories 도메인
+- [ ] **MIG-02**: Read hook 마이그레이션 — comments, spots, solutions 도메인
+- [ ] **MIG-03**: Read hook 마이그레이션 — users, posts 도메인
+- [ ] **MIG-04**: Read hook 마이그레이션 — admin 도메인 (dashboard, ai-cost, audit, pipeline, server-logs)
+- [ ] **MIG-05**: Mutation hook 마이그레이션 — POST/PATCH/DELETE + onSuccess 캐시 무효화 연결
+- [ ] **MIG-06**: Zustand 스토어 동기화 업데이트 (mutation onSuccess에서 store 업데이트 패턴 보존 — useUpdateProfile 등)
+- [ ] **MIG-07**: 기존 lib/api/*.ts 및 lib/api/types.ts 삭제 (마이그레이션 완료 후)
+- [ ] **MIG-08**: 마이그레이션 중 타입 이름 중복 해결 (생성 타입 vs 기존 types.ts — import type aliasing)
+- [ ] **MIG-09**: Supabase 직접 쿼리 vs Orval 생성 쿼리 캐시 무효화 경계 정의
 
-- [ ] **BUILD-01**: turbo.json이 설정되고 `bunx turbo run build`가 전체 빌드 실행
-- [ ] **BUILD-02**: Backend에 thin package.json 래퍼가 추가되어 Turborepo가 Cargo 빌드를 오케스트레이션
-- [ ] **BUILD-03**: `bunx turbo run dev`로 프론트+백 동시 기동
-- [ ] **BUILD-04**: Turborepo 캐시가 JS 패키지에서 동작 (backend은 cache: false)
+### CI/CD Integration
 
-### Infrastructure
+- [ ] **CI-01**: 빌드 파이프라인에 generate:api 단계 추가 (prebuild 실행)
+- [ ] **CI-02**: Spec drift 감지 (generate && git diff --exit-code) pre-push 훅 추가
+- [ ] **CI-03**: 생성 코드 .gitignore 설정 (packages/web/lib/api/generated/)
+- [ ] **CI-04**: 백엔드 OpenAPI 스펙 변경 감지 및 프론트엔드 자동 재생성 trigger 프로세스
+- [ ] **CI-05**: 마이그레이션 단계별 롤백 계획 (git branching strategy + pre-push validation)
 
-- [ ] **INFRA-01**: 통합 `.env.local.example`에 프론트+백 환경변수 문서화
-- [ ] **INFRA-02**: Docker 컨텍스트가 `packages/api-server/` 기준으로 동작
-- [ ] **INFRA-03**: 루트 docker-compose.dev.yml로 전체 스택 기동 가능
+### Testing
 
-### CI/CD
+- [ ] **TEST-01**: Zod 스키마 유효성 검증 테스트 (생성된 스키마 vs 실제 API 응답)
 
-- [ ] **CICD-01**: GitHub Actions가 path-based 변경 감지로 프론트/백 분리 빌드
-- [ ] **CICD-02**: Backend CI에서 cargo fmt + clippy + test 실행
-- [ ] **CICD-03**: Frontend CI에서 bun install + turbo build + lint 실행
+### Tooling (에이전트 워크플로우 최적화)
+
+- [ ] **TOOL-01**: Claude Code 생성 파일 보호 메커니즘 (lib/api/generated/ 수정 시도 감지 및 차단/경고)
+- [ ] **TOOL-02**: CLAUDE.md 업데이트 — 생성 코드 구조, 파일 소유권, generate 명령어 문서화
+- [ ] **TOOL-03**: 코드 리뷰어 에이전트 업데이트 — 생성 파일 스타일 스킵, 스키마 유효성 검사, scope drift 감지 규칙
 
 ## Future Requirements
 
-Deferred to future milestones. Tracked but not in current roadmap.
+### v9.1 고급 생성 기능
 
-### API Proxy Cleanup
+- **ADV-01**: useInfiniteQuery 생성 설정 (이미지/피드 무한 스크롤 엔드포인트)
+- **ADV-02**: Auto-invalidation 헬퍼 (useMutation onSuccess 자동 무효화)
+- **ADV-03**: usePrefetch hooks (SSR 프리페칭)
+- **ADV-04**: useOperationIdAsQueryKey (DevTools 가독성 개선)
 
-- **PROXY-01**: Next.js API proxy 라우트를 직접 backend 호출로 전환 검토
-- **PROXY-02**: 개발환경 next.config rewrites 설정으로 프록시 단순화
+### v10+ 테스트 인프라
 
-### Shared Types
-
-- **TYPES-01**: Backend OpenAPI spec에서 TypeScript 타입 자동 생성
-- **TYPES-02**: packages/shared에 생성된 타입 통합
-
-### Production Deploy
-
-- **DEPLOY-01**: Vercel + 별도 backend 서버 통합 배포 전략
-- **DEPLOY-02**: 프로덕션 환경변수 관리 자동화
+- **MSW-01**: MSW mock 생성 (@faker-js/faker + msw 통합)
+- **ZOD-01**: Zod strict mode (안정화된 스펙에 대해 엄격한 응답 검증)
 
 ## Out of Scope
 
-| Feature                    | Reason                                       |
-| -------------------------- | -------------------------------------------- |
-| Backend 코드 리팩토링      | 있는 그대로 병합, 코드 변경 없음             |
-| API 프록시 라우트 제거     | 병합 후 별도 마일스톤에서 검토               |
-| 프로덕션 배포 전략 변경    | 현재 배포 방식 유지, 추후 결정               |
-| Turborepo remote caching   | Vercel 연동 필요, 별도 설정                  |
-| Backend test coverage 개선 | 기존 테스트 그대로 유지                      |
-| turbo prune Docker 최적화  | bun + turbo prune 버그로 불가 (이슈 추적 중) |
+| Feature | Reason |
+|---------|--------|
+| Supabase 직접 쿼리 전환 | 별도 마일스톤으로 분리 |
+| Zod v4 사용 | Orval 호환성 미안정 (이슈 #2249, #2304) — v3 사용 |
+| 생성 코드 git 커밋 | .gitignore + CI 재생성 패턴 채택 |
+| Next.js API 프록시 제거 | CORS/보안/인증 이유로 프록시 유지 |
+| 생성 파일 수동 편집 | Orval 재생성 시 덮어써짐 — 커스텀 mutator/adapter 패턴 사용 |
+| 전체 HTTP status별 Zod 스키마 | 150+ 스키마 생성 → 노이즈, 에러는 mutator에서 일괄 처리 |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
-| Requirement | Phase  | Status  |
-| ----------- | ------ | ------- |
-| PKG-01      | m10-01 | Complete |
-| PKG-02      | m10-01 | Complete |
-| PKG-03      | m10-01 | Complete |
-| PKG-04      | m10-01 | Pending |
-| PKG-05      | m10-01 | Pending |
-| MERGE-01    | m10-02 | Pending |
-| MERGE-02    | m10-02 | Pending |
-| MERGE-03    | m10-02 | Pending |
-| BUILD-01    | m10-03 | Pending |
-| BUILD-02    | m10-03 | Pending |
-| BUILD-03    | m10-03 | Pending |
-| BUILD-04    | m10-03 | Pending |
-| INFRA-01    | m10-03 | Pending |
-| INFRA-02    | m10-04 | Pending |
-| INFRA-03    | m10-04 | Pending |
-| CICD-01     | m10-04 | Pending |
-| CICD-02     | m10-04 | Pending |
-| CICD-03     | m10-04 | Pending |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | - | Pending |
+| INFRA-02 | - | Pending |
+| INFRA-03 | - | Pending |
+| INFRA-04 | - | Pending |
+| INFRA-05 | - | Pending |
+| SPEC-01 | - | Pending |
+| SPEC-02 | - | Pending |
+| SPEC-03 | - | Pending |
+| SPEC-04 | - | Pending |
+| SPEC-05 | - | Pending |
+| MIG-01 | - | Pending |
+| MIG-02 | - | Pending |
+| MIG-03 | - | Pending |
+| MIG-04 | - | Pending |
+| MIG-05 | - | Pending |
+| MIG-06 | - | Pending |
+| MIG-07 | - | Pending |
+| MIG-08 | - | Pending |
+| MIG-09 | - | Pending |
+| CI-01 | - | Pending |
+| CI-02 | - | Pending |
+| CI-03 | - | Pending |
+| CI-04 | - | Pending |
+| CI-05 | - | Pending |
+| TEST-01 | - | Pending |
+| TOOL-01 | - | Pending |
+| TOOL-02 | - | Pending |
+| TOOL-03 | - | Pending |
 
 **Coverage:**
-
-- v8.0 requirements: 18 total
-- Mapped to phases: 18
-- Unmapped: 0 ✓
+- v9.0 requirements: 28 total
+- Mapped to phases: 0
+- Unmapped: 28 ⚠️
 
 ---
-
-_Requirements defined: 2026-03-22_
-_Last updated: 2026-03-22 — traceability completed (18/18 mapped to m10-01 through m10-04)_
+*Requirements defined: 2026-03-23*
+*Last updated: 2026-03-23 after validator review (7 gaps added, 4 revisions applied)*
