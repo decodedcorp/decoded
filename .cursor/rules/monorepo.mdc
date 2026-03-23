@@ -1,12 +1,12 @@
 ---
-description: decoded-monorepo conventions
+description: decoded-monorepo conventions and architecture
 globs: "**/*"
 ---
 
 # decoded-monorepo
 
 ## Structure
-- `packages/web/` — Next.js 16 frontend
+- `packages/web/` — Next.js 16 frontend (main app)
 - `packages/shared/` — Shared types, hooks, Supabase queries
 - `packages/mobile/` — Expo 54 React Native
 - `packages/api-server/` — Rust/Axum API server (independent Cargo workspace)
@@ -18,21 +18,60 @@ globs: "**/*"
 
 ## Key Conventions
 - TypeScript strict mode
-- Conventional Commits: feat:, fix:, docs:, refactor:, test:, chore:
+- Conventional Commits: `type(scope): description`
+  - types: feat, fix, docs, refactor, test, chore, perf, ci, build
+  - scope: web, api-server, ai-server, shared, mobile (optional)
 - ESLint 10 flat config (requires Node 22+)
 - React 19 — `useRef(null)` required, `RefObject<T | null>`
 - `proxy.ts` (not middleware.ts) — Next.js 16
-- Design system components: `packages/web/lib/design-system/`
+- All request APIs are async: `await cookies()`, `await headers()`, `await params`
+
+## Design System (v2.0)
+- Import from `@/lib/design-system` (barrel export)
+- Components: Heading, Text, Card, ProductCard, Input, Badge, Tabs, BottomSheet, etc.
+- Tokens: `typography`, `colors`, `spacing`, `shadows`, `borderRadius`, `zIndex`
+- Use design system components over raw HTML/Tailwind when a matching component exists
+
+## Naming Conventions
+| Type | Convention | Example |
+|------|-----------|---------|
+| Components | PascalCase | `ProductCard.tsx` |
+| Hooks | camelCase, `use` prefix | `useImages.ts` |
+| Stores | camelCase, `Store` suffix | `authStore.ts` |
+| Utils | camelCase | `formatDate.ts` |
+| API routes | kebab-case dirs | `app/api/v1/posts/` |
+| Constants | UPPER_SNAKE | `MAX_FILE_SIZE` |
+
+## Key Paths
 - Supabase queries: `packages/web/lib/supabase/queries/`
-- State management: Zustand stores in `packages/web/lib/stores/`
+- Zustand stores: `packages/web/lib/stores/`
+- Custom hooks: `packages/web/lib/hooks/`
+- API client: `packages/web/lib/api/`
+- Design system: `packages/web/lib/design-system/`
+- Feature specs: `specs/`
+
+## Commands
+```bash
+bun run dev             # Dev server (all JS packages)
+bun run dev:api-server  # Rust API (cargo watch)
+bun run dev:ai-server   # Python AI server (uv)
+bun run build           # Production build
+bun run lint            # ESLint
+just ci-web             # Frontend CI (lint + format + tsc)
+```
+
+## Git Workflow
+- Branch: `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `test/`, `ci/` prefix
+- main 직접 push 금지 — PR로만 머지
+- Pre-push: ESLint + Prettier + TypeScript checks
+- Guide: `docs/GIT-WORKFLOW.md`
 
 ## API server (Rust)
-- Builds via `cargo` (not bun)
+- Builds via `cargo` (not bun): `cd packages/api-server && cargo build`
 - Axum 0.8, SeaORM, tokio, Meilisearch
-- `cd packages/api-server && cargo build`
 
 ## AI server (Python)
-- uv in `packages/ai-server`; `uv run python -m src.main` or `bun run dev:ai-server` from root (after `uv sync`)
+- uv: `cd packages/ai-server && uv sync && uv run python -m src.main`
 
 ## Environment
 - Copy `packages/web/.env.local.example` → `.env.local`

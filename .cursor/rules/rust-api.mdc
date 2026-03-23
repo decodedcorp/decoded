@@ -1,0 +1,64 @@
+---
+description: Rust API server conventions (Axum + SeaORM)
+globs: "packages/api-server/**/*.rs"
+---
+
+# Rust API Server Conventions
+
+## Stack
+- **Framework**: Axum 0.8
+- **ORM**: SeaORM 1.1
+- **Runtime**: tokio
+- **Search**: Meilisearch
+- **Build**: cargo (not bun)
+
+## Handler Pattern
+```rust
+use axum::{extract::State, Json};
+use crate::AppState;
+
+pub async fn handler(
+    State(state): State<AppState>,
+    Json(body): Json<RequestBody>,
+) -> Result<Json<ResponseBody>, AppError> {
+    // Business logic
+    Ok(Json(response))
+}
+```
+
+## Error Handling
+- Use `thiserror` for error type definitions
+- Implement `IntoResponse` for custom error types
+- Return appropriate HTTP status codes
+
+## SeaORM Entities
+- Location: `src/entities/`
+- Generated with `sea-orm-cli generate entity`
+- Use `ActiveModel` for inserts/updates
+
+## Commands
+```bash
+cargo build           # Build
+cargo run             # Run server
+cargo test            # Run tests
+cargo clippy          # Lint
+cargo fmt             # Format
+```
+
+## Key Directories
+```
+packages/api-server/
+├── src/
+│   ├── main.rs         # Entry point
+│   ├── routes/         # Axum route handlers
+│   ├── entities/       # SeaORM entities
+│   ├── services/       # Business logic
+│   └── grpc/           # gRPC client to ai-server
+├── Cargo.toml
+└── .env.dev.example
+```
+
+## Notes
+- This package is NOT in bun workspaces (independent Cargo workspace)
+- gRPC communication with `packages/ai-server`
+- Port alignment: GRPC_PORT must match AI server's GRPC_BACKEND_PORT
