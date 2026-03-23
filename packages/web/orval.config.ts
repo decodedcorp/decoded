@@ -53,6 +53,9 @@ export default defineConfig({
         },
       },
     },
+    hooks: {
+      afterAllFilesWrite: "./node_modules/.bin/prettier --write",
+    },
   },
   decodedApiZod: {
     input: {
