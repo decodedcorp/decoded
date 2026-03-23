@@ -47,3 +47,6 @@ yarn-error.log*
 # Testing
 coverage/
 test-results/
+
+# Local dev log files (optional tail -f workflows)
+.logs/
