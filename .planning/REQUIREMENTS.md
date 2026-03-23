@@ -8,10 +8,10 @@
 ### Infrastructure (코드 생성 파이프라인)
 
 - [x] **INFRA-01**: Orval, axios, zod 패키지 설치 및 orval.config.ts 작성 (react-query + zod 두 config 블록)
-- [ ] **INFRA-02**: 커스텀 mutator 구현 (Supabase JWT 인증 + baseURL="" Next.js 프록시 라우팅 + 에러 핸들링 — 기존 lib/api/client.ts apiClient() 대체)
+- [x] **INFRA-02**: 커스텀 mutator 구현 (Supabase JWT 인증 + baseURL="" Next.js 프록시 라우팅 + 에러 핸들링 — 기존 lib/api/client.ts apiClient() 대체)
 - [ ] **INFRA-03**: generate:api bun 스크립트 + Turborepo 파이프라인 통합 (빌드 전 자동 실행)
-- [ ] **INFRA-04**: Zod 스키마 생성 설정 (별도 config 블록, .zod.ts 확장자, 응답/요청 body 검증)
-- [ ] **INFRA-05**: afterAllFilesWrite 포매팅 설정 (Prettier + ESLint 자동 적용)
+- [x] **INFRA-04**: Zod 스키마 생성 설정 (별도 config 블록, .zod.ts 확장자, 응답/요청 body 검증)
+- [x] **INFRA-05**: afterAllFilesWrite 포매팅 설정 (Prettier + ESLint 자동 적용)
 
 ### Spec Validation (OpenAPI 스펙 준비)
 
@@ -81,10 +81,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 39 | Complete |
-| INFRA-02 | Phase 40 | Pending |
+| INFRA-02 | Phase 40 | Complete |
 | INFRA-03 | Phase 40 | Pending |
-| INFRA-04 | Phase 40 | Pending |
-| INFRA-05 | Phase 40 | Pending |
+| INFRA-04 | Phase 40 | Complete |
+| INFRA-05 | Phase 40 | Complete |
 | SPEC-01 | Phase 39 | Complete |
 | SPEC-02 | Phase 39 | Complete |
 | SPEC-03 | Phase 39 | Complete |

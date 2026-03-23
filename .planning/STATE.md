@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 39-02-PLAN.md
-last_updated: "2026-03-23T12:08:19.823Z"
+stopped_at: Completed 40-01-PLAN.md
+last_updated: "2026-03-23T12:50:07.487Z"
 progress:
-  total_phases: 37
+  total_phases: 38
   completed_phases: 35
-  total_plans: 82
-  completed_plans: 81
+  total_plans: 84
+  completed_plans: 82
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 39 — setup-spec-validation
+**Current focus:** Phase 40 — codegen-pipeline-and-custom-mutator
 
 ## Current Position
 
-Phase: 39 (setup-spec-validation) — COMPLETE
-Plan: 2 of 2
+Phase: 40 (codegen-pipeline-and-custom-mutator) — EXECUTING
+Plan: 1 of 2
 
 ## Milestone Summary
 
@@ -67,6 +67,8 @@ v9.0 key constraints (from research):
 - [Phase 39]: OpenAPI 3.1.0 confirmed — Orval 8.5.3 handles natively, no preprocessing script needed
 - [Phase 39]: 4 duplicate operationIds found (list_posts, list_badges, list_solutions, list_spots) — backend PR required before Phase 40 codegen; fix via explicit operation_id = 'admin_list_*' in utoipa annotations
 - [Phase 39]: Backend local dev port is 8000 (not 3001 as documented); spec URL: http://localhost:8000/api-docs/openapi.json
+- [Phase 40-codegen-pipeline-and-custom-mutator]: baseURL empty string in customInstance — OpenAPI paths include /api/v1/ prefix to prevent double-prefix
+- [Phase 40-codegen-pipeline-and-custom-mutator]: hooks block is sibling of input/output in orval.config.ts — placing inside output causes silent failure
 
 ### Blockers/Concerns
 
@@ -83,8 +85,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:08:19.820Z
-Stopped at: Completed 39-02-PLAN.md
+Last session: 2026-03-23T12:50:07.484Z
+Stopped at: Completed 40-01-PLAN.md
 Resume file: None
 
 Next step: `/gsd:plan-phase 39`
