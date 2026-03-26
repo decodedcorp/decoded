@@ -18,8 +18,8 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 
 - [x] **REF-01**: ThiingsGrid(950줄) 분리 — physics 엔진, spiral 계산, intersection observer를 커스텀 훅으로 추출하여 300줄 이하로
 - [x] **REF-02**: VtonModal(880줄) 분리 — 모달 상태, 폼 로직, 이미지 처리를 커스텀 훅과 서브컴포넌트로 분리
-- [ ] **REF-03**: ItemDetailCard(771줄) 분리 — solution 관리, adopt dropdown, GSAP 스크롤 애니메이션을 커스텀 훅으로 추출
-- [ ] **REF-04**: ImageDetailModal(726줄) 분리 — 모달 상태와 콘텐츠 컴포지션을 서브컴포넌트로 분리
+- [x] **REF-03**: ItemDetailCard(771줄) 분리 — solution 관리, adopt dropdown, GSAP 스크롤 애니메이션을 커스텀 훅으로 추출
+- [x] **REF-04**: ImageDetailModal(726줄) 분리 — 모달 상태와 콘텐츠 컴포지션을 서브컴포넌트로 분리
 - [ ] **REF-05**: 분리된 컴포넌트에 data-testid 속성 추가 (E2E 테스트 대상 마킹)
 
 ### Rate Limiting
@@ -84,8 +84,8 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 | MEM-04 | Phase 44 | Complete |
 | REF-01 | Phase 46 | Complete |
 | REF-02 | Phase 46 | Complete |
-| REF-03 | Phase 46 | Pending |
-| REF-04 | Phase 46 | Pending |
+| REF-03 | Phase 46 | Complete |
+| REF-04 | Phase 46 | Complete |
 | REF-05 | Phase 48 | Pending |
 | RATE-01 | Phase 45 | Complete |
 | RATE-02 | Phase 45 | Complete |

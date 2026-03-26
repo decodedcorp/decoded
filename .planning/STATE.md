@@ -22,8 +22,8 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Current Position
 
-Phase: 46 (component-refactoring) — EXECUTING
-Plan: 1 of 3
+Phase: 46 (component-refactoring) — COMPLETE
+Plan: 3 of 3
 
 ## Milestone Summary
 
@@ -62,6 +62,9 @@ Target features:
 - [Phase 46]: Grid item calculation (calculateGridItems) moved to PhysicsEngine to keep ThiingsGrid.tsx under 300 lines
 - [Phase 46]: passive:false event listeners stay in componentDidMount — physics engine handles event payloads, not DOM registration
 - [Phase 46]: VtonPhotoArea and VtonItemPanel added as additional layout subcomponents — hook extraction alone left 526 lines due to JSX-heavy component; layout panels needed to reach the 300-line target
+- [Phase 46]: OtherSolutionsList handles empty state internally (add-more button or null) — removes conditional wrapping from ItemDetailCard
+- [Phase 46]: useImageModalAnimation takes refs as parameters — component owns ref declarations, hook owns GSAP animation lifecycle (ctxRef)
+- [Phase 46]: renderContent() kept inline in ImageDetailModal — 60 lines, avoids duplicate of ImageDetailContent which serves full-page use case
 
 ## Performance Metrics
 
@@ -75,3 +78,4 @@ Target features:
 | Phase 45 P02 | 466 | 3 tasks | 30 files |
 | Phase 46 P01 | 334 | 2 tasks | 4 files |
 | Phase 46 P02 | 320 | 2 tasks | 9 files |
+| Phase 46 P03 | 347 | 2 tasks | 7 files |
