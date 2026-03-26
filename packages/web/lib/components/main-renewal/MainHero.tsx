@@ -111,20 +111,16 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
         />
       </div>
 
-      {/* Backdrop dim — single backdrop-filter instead of per-card blur */}
-      {focusedId !== null && (
-        <div
-          className="absolute inset-0 z-[35] cursor-pointer transition-opacity duration-400"
-          style={{
-            backgroundColor: "rgba(5,5,5,0.7)",
-            backdropFilter: "blur(3px)",
-          }}
-          onClick={clearFocus}
-        />
-      )}
-
-      {/* Scattered draggable images */}
+      {/* Scattered draggable images + backdrop inside same stacking context */}
       <div ref={cardsContainerRef} className="absolute inset-0 z-[2]">
+        {/* Backdrop dim — inside card container so z-index works correctly */}
+        {focusedId !== null && (
+          <div
+            className="absolute inset-0 z-[35] cursor-pointer"
+            style={{ backgroundColor: "rgba(5,5,5,0.65)" }}
+            onClick={clearFocus}
+          />
+        )}
         {images.map((img, i) => (
           <HeroCard
             key={img.id}
