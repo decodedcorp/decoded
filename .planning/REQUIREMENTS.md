@@ -78,33 +78,33 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEM-01 | — | Pending |
-| MEM-02 | — | Pending |
-| MEM-03 | — | Pending |
-| MEM-04 | — | Pending |
-| REF-01 | — | Pending |
-| REF-02 | — | Pending |
-| REF-03 | — | Pending |
-| REF-04 | — | Pending |
-| REF-05 | — | Pending |
-| RATE-01 | — | Pending |
-| RATE-02 | — | Pending |
-| RATE-03 | — | Pending |
-| RATE-04 | — | Pending |
-| SENT-01 | — | Pending |
-| SENT-02 | — | Pending |
-| SENT-03 | — | Pending |
-| SENT-04 | — | Pending |
-| E2E-01 | — | Pending |
-| E2E-02 | — | Pending |
-| E2E-03 | — | Pending |
-| E2E-04 | — | Pending |
+| MEM-01 | Phase 44 | Pending |
+| MEM-02 | Phase 44 | Pending |
+| MEM-03 | Phase 44 | Pending |
+| MEM-04 | Phase 44 | Pending |
+| REF-01 | Phase 46 | Pending |
+| REF-02 | Phase 46 | Pending |
+| REF-03 | Phase 46 | Pending |
+| REF-04 | Phase 46 | Pending |
+| REF-05 | Phase 48 | Pending |
+| RATE-01 | Phase 45 | Pending |
+| RATE-02 | Phase 45 | Pending |
+| RATE-03 | Phase 45 | Pending |
+| RATE-04 | Phase 45 | Pending |
+| SENT-01 | Phase 47 | Pending |
+| SENT-02 | Phase 47 | Pending |
+| SENT-03 | Phase 47 | Pending |
+| SENT-04 | Phase 47 | Pending |
+| E2E-01 | Phase 48 | Pending |
+| E2E-02 | Phase 48 | Pending |
+| E2E-03 | Phase 48 | Pending |
+| E2E-04 | Phase 48 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after codebase verification*
+*Last updated: 2026-03-26 after roadmap creation — all requirements mapped to Phases 44-48*

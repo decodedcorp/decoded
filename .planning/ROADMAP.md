@@ -13,6 +13,7 @@
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
+- [ ] **v10.0 Tech Debt Resolution** — Phases 44-48
 
 ## Phases
 
@@ -106,6 +107,16 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] Phase 43: CI Hardening and Tooling (3/3 plans) — completed 2026-03-24
 
 </details>
+
+### v10.0 Tech Debt Resolution (Phases 44-48)
+
+**Milestone Goal:** 프로덕션 안정성과 코드 품질 확보 — 메모리 누수, 보안, 컴포넌트 리팩토링, 관측성, 테스트 커버리지
+
+- [ ] **Phase 44: Memory Leak Prevention** — GSAP contextSafe(), ObjectURL, AbortController, useEffect 클린업
+- [ ] **Phase 45: Security Foundation** — Rate Limiting (Axum + Next.js proxy), 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파
+- [ ] **Phase 46: Component Refactoring** — ThiingsGrid(950줄), VtonModal(880줄), ItemDetailCard(771줄), ImageDetailModal(726줄) 분리
+- [ ] **Phase 47: Observability** — Sentry (Next.js + Rust + Python), Web Vitals, 에러 전파 검증
+- [ ] **Phase 48: Test Coverage** — Vitest 유닛, Playwright E2E (인증 + AI 파이프라인), data-testid 마킹
 
 ## Phase Details
 
@@ -314,8 +325,13 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
+| 44: Memory Leak Prevention                    | v10.0     | 0/TBD          | Not started   | -          |
+| 45: Security Foundation                       | v10.0     | 0/TBD          | Not started   | -          |
+| 46: Component Refactoring                     | v10.0     | 0/TBD          | Not started   | -          |
+| 47: Observability                             | v10.0     | 0/TBD          | Not started   | -          |
+| 48: Test Coverage                             | v10.0     | 0/TBD          | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-23 (v9.0 Phases 39-43 added, 28 requirements mapped)_
+_Last updated: 2026-03-26 (v10.0 Tech Debt Resolution — Phases 44-48, 21 requirements mapped)_
