@@ -263,6 +263,8 @@ export function VtonModal() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stageInterval = useRef<ReturnType<typeof setInterval>>(null);
+  // AbortController for direct fetch calls (VTON and save-to-profile)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Restore local state from backgroundJob when modal reopens with an active job
   const restoredFromJobRef = useRef<string | null>(null);
@@ -338,6 +340,13 @@ export function VtonModal() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen]);
 
+  // Abort any in-flight fetch when component unmounts
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   // Debounced search
   const [debouncedQuery, setDebouncedQuery] = useState("");
   useEffect(() => {
@@ -352,12 +361,17 @@ export function VtonModal() {
       setItems(preloadedItems);
       return;
     }
+    const controller = new AbortController();
     const params = new URLSearchParams({ category: activeCategory });
     if (debouncedQuery) params.set("q", debouncedQuery);
-    fetch(`/api/v1/vton/items?${params}`)
+    fetch(`/api/v1/vton/items?${params}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => setItems(data.items || []))
-      .catch(() => setItems([]));
+      .catch((err) => {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setItems([]);
+      });
+    return () => controller.abort();
   }, [isOpen, activeCategory, debouncedQuery, preloadedItems]);
 
   // Sync loading state from background job when modal is re-opened
@@ -436,6 +450,10 @@ export function VtonModal() {
     // Register background job so it persists across modal close
     startBackgroundJob(personPreview, personImage, selectedList);
 
+    // Abort any previous in-flight request and create a fresh controller
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       const productImageUrls = selectedList.map((item) => item.thumbnail_url);
 
@@ -446,6 +464,7 @@ export function VtonModal() {
           personImageBase64: personImage,
           productImageUrls,
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       const data = await res.json();
@@ -454,6 +473,7 @@ export function VtonModal() {
       const resultDataUrl = `data:${data.mimeType};base64,${data.resultImage}`;
       completeBackgroundJob(resultDataUrl, data.latencyMs);
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       const message = (err as Error).message;
       failBackgroundJob(message);
       setError(message);
@@ -485,6 +505,11 @@ export function VtonModal() {
   const handleSaveToProfile = useCallback(async () => {
     if (!displayResultImage || savedToProfile) return;
     setIsSaving(true);
+
+    // Abort any previous in-flight request and create a fresh controller
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       const res = await fetch("/api/v1/tries", {
         method: "POST",
@@ -494,6 +519,7 @@ export function VtonModal() {
           source_post_id: sourcePostId,
           selected_item_ids: selectedList.map((i) => i.id),
         }),
+        signal: abortControllerRef.current.signal,
       });
       if (!res.ok) {
         if (res.status === 401) throw new Error("Please log in to save");
@@ -503,6 +529,7 @@ export function VtonModal() {
       setSavedToProfile(true);
       toast.success("Saved to My Tries!");
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
       console.error("[VtonModal] Save error:", error);
       const message =
         error instanceof Error ? error.message : "Failed to save. Try again.";
