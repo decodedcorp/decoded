@@ -116,7 +116,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] **Phase 45: Security Foundation** — Rate Limiting (Axum + Next.js proxy), 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파 (completed 2026-03-26)
 - [x] **Phase 46: Component Refactoring** — ThiingsGrid(950줄), VtonModal(880줄), ItemDetailCard(771줄), ImageDetailModal(726줄) 분리 (completed 2026-03-26)
 - [x] **Phase 47: Observability** — Sentry (Next.js + Rust + Python), Web Vitals, 에러 전파 검증 (completed 2026-03-26)
-- [ ] **Phase 48: Test Coverage** — Vitest 유닛, Playwright E2E (인증 + AI 파이프라인), data-testid 마킹
+- [x] **Phase 48: Test Coverage** — Vitest 유닛, Playwright E2E (인증 + AI 파이프라인), data-testid 마킹 (completed 2026-03-26)
 
 ## Phase Details
 

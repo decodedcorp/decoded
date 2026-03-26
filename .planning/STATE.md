@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T15:13:04.445Z"
+last_updated: "2026-03-26T16:09:37.953Z"
 progress:
-  total_phases: 45
-  completed_phases: 43
-  total_plans: 104
-  completed_plans: 103
+  total_phases: 46
+  completed_phases: 44
+  total_plans: 106
+  completed_plans: 105
 ---
 
 # Project State
@@ -18,12 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 47 — observability
+**Current focus:** Phase 48 — test-coverage
 
 ## Current Position
 
-Phase: 47 (observability) — COMPLETE
-Plan: 2 of 2 (complete)
+Phase: 48 (test-coverage) — EXECUTING
+Plan: 1 of 2
 
 ## Milestone Summary
 
@@ -69,6 +69,9 @@ Target features:
 - [Phase 47]: All Sentry env vars commented out by default in .env.local.example — graceful degradation when DSN absent; hideSourceMaps: true prevents source map exposure
 - [Phase 47]: sentry 0.47.0 API uses EventFilter::Event/Breadcrumb/Log/Ignore (not Exception); re-exports via sentry::integrations::tower:: and sentry::integrations::tracing::; SentryHttpLayer::new().enable_transaction() replaces deprecated with_transaction()
 - [Phase 47]: Python _init_sentry() guard pattern: check empty SENTRY_DSN, return early without init — both backend services gracefully start without Sentry in local dev
+- [Phase 48]: item-adopt-button placed on TopSolutionCard (not ItemDetailCard) — actual button element is in TopSolutionCard; adoptDropdown props are spread down
+- [Phase 48]: Auth injection uses localStorage (sb-{projectRef}-auth-token) because app uses createClient not createBrowserClient (SSR cookies)
+- [Phase 48]: AI pipeline E2E tests use page.route() mock for /api/v1/posts/analyze — never hit real Rust backend
 
 ## Performance Metrics
 
@@ -85,3 +88,5 @@ Target features:
 | Phase 46 P03 | 347 | 2 tasks | 7 files |
 | Phase 47 P01 | 184 | 2 tasks | 8 files |
 | Phase 47 P02 | 281 | 2 tasks | 6 files |
+| Phase 48 P01 | 540 | 2 tasks | 10 files |
+| Phase 48 P02 | 184 | 2 tasks | 8 files |
