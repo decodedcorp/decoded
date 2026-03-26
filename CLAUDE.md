@@ -109,7 +109,44 @@ When adding a new API endpoint:
 - [.planning/](.planning/) — GSD 아티팩트
 - docs/adr/, docs/api/, docs/ai-playbook/
 
-<!-- Last Updated: 2026-03-23 -->
+## gstack (Software Factory)
+
+Use gstack slash commands for the sprint workflow: **Think → Plan → Build → Review → Test → Ship → Reflect**.
+
+### Available Skills
+| Phase | Command | Role |
+|-------|---------|------|
+| Think | `/office-hours` | YC Office Hours — reframe the product |
+| Plan | `/plan-ceo-review` | CEO — rethink scope |
+| Plan | `/plan-eng-review` | Eng Manager — lock architecture |
+| Plan | `/plan-design-review` | Designer — rate & improve design |
+| Plan | `/design-consultation` | Design Partner — build design system |
+| Plan | `/autoplan` | Auto-review pipeline: CEO → design → eng |
+| Build | `/browse` | Browser automation (Playwright) |
+| Review | `/review` | Staff Engineer — find production bugs |
+| Review | `/design-review` | Designer Who Codes — audit + fix |
+| Review | `/cso` | Security Officer — OWASP + STRIDE audit |
+| Test | `/qa` | QA Lead — real browser testing + auto-fix |
+| Test | `/qa-only` | QA report only (no fixes) |
+| Ship | `/ship` | Release Engineer — test, PR, ship |
+| Ship | `/land-and-deploy` | Merge → deploy → canary verify |
+| Monitor | `/canary` | Post-deploy monitoring |
+| Monitor | `/benchmark` | Performance regression detection |
+| Debug | `/investigate` | Systematic root-cause debugging |
+| Reflect | `/retro` | Sprint retrospective |
+| Docs | `/document-release` | Post-ship doc updates |
+| Safety | `/careful`, `/freeze`, `/guard`, `/unfreeze` | Destructive op protection |
+| Setup | `/setup-deploy`, `/setup-browser-cookies` | One-time config |
+| Utility | `/gstack-upgrade` | Update gstack |
+| Utility | `/codex` | Multi-AI second opinion |
+| Utility | `/connect-chrome` | Connect Chrome for browsing |
+
+### Rules
+- Use `/browse` for all web browsing — never use `mcp__claude-in-chrome__*` tools
+- If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup`
+- Follow the sprint order: Think → Plan → Build → Review → Test → Ship → Reflect
+
+<!-- Last Updated: 2026-03-27 -->
 
 <!-- MANUAL ADDITIONS START -->
 
