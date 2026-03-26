@@ -257,6 +257,13 @@ export function ProfileClient() {
     }
   }, [rankingData, setRankingsFromApi]);
 
+  // Loading state - user & stats만 블로킹 (badges/rankings는 개별 로딩)
+  const isLoading = isUserLoading || isStatsLoading;
+
+  // Error state - user & stats 실패 시에만 전체 에러
+  const isError = isUserError || isStatsError;
+  const error = userError || statsError;
+
   // 401 auth error -> redirect to login
   useEffect(() => {
     const axiosErr = error as AxiosError | null;
@@ -264,13 +271,6 @@ export function ProfileClient() {
       router.replace("/login?redirect=/profile");
     }
   }, [isError, error, router]);
-
-  // Loading state - user & stats만 블로킹 (badges/rankings는 개별 로딩)
-  const isLoading = isUserLoading || isStatsLoading;
-
-  // Error state - user & stats 실패 시에만 전체 에러
-  const isError = isUserError || isStatsError;
-  const error = userError || statsError;
 
   // Retry function
   const handleRetry = () => {
@@ -374,7 +374,11 @@ export function ProfileClient() {
       <div className="md:hidden px-4 py-4 space-y-4">
         <ProfileHeader onEditClick={() => setIsEditModalOpen(true)} />
         <ProfileBio bio={userData?.bio ?? undefined} className="px-4" />
-        <FollowStats className="px-4" />
+        <FollowStats
+          followers={userData?.followers_count ?? 0}
+          following={userData?.following_count ?? 0}
+          className="px-4"
+        />
         <StyleDNACard
           keywords={profileExtras?.style_dna?.keywords}
           colors={profileExtras?.style_dna?.colors}

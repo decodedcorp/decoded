@@ -253,8 +253,11 @@ export function PublicProfileClient({ userId }: { userId: string }) {
 
         <ProfileBio bio={userData.bio ?? undefined} className="px-4" />
 
-        {/* FollowStats with 0/0 defaults — real follow data comes in Phase 46+ */}
-        <FollowStats followers={0} following={0} className="px-4" />
+        <FollowStats
+          followers={userData.followers_count}
+          following={userData.following_count}
+          className="px-4"
+        />
 
         {/* BadgeGrid placeholder — BadgeGrid reads from profileStore, not suitable for public view */}
         <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-6 text-center">
@@ -310,7 +313,10 @@ export function PublicProfileClient({ userId }: { userId: string }) {
             <>
               <ProfileBio bio={userData.bio ?? undefined} />
 
-              <FollowStats followers={0} following={0} />
+              <FollowStats
+                followers={userData.followers_count}
+                following={userData.following_count}
+              />
 
               {/* BadgeGrid placeholder */}
               <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-6 text-center">

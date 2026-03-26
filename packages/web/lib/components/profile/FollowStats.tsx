@@ -15,8 +15,8 @@ function formatCount(n: number): string {
 }
 
 export function FollowStats({
-  followers = 1234,
-  following = 567,
+  followers = 0,
+  following = 0,
   className,
 }: FollowStatsProps) {
   return (
