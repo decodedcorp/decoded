@@ -14,6 +14,22 @@ export interface HeroSpotAnnotation {
   brand?: string;
   imageUrl?: string; // Item product image URL
   side: "left" | "right";
+  price?: string;
+  productLink?: string;
+}
+
+/**
+ * Deterministic scatter position for a hero card.
+ * All values are CSS strings. Computed by seeded PRNG — identical on SSR and client.
+ */
+export interface ScatterPosition {
+  top: string;
+  left: string;
+  width: string;
+  rotate: number;
+  zIndex: number;
+  tier: "hero" | "medium" | "small";
+  aspectRatio: string;
 }
 
 /** Hero section data -- "The Hook" */
@@ -25,6 +41,15 @@ export interface MainHeroData {
   ctaLink: string; // e.g. "/magazine"
   ctaLabel?: string; // e.g. "VIEW EDITORIAL"
   spots?: HeroSpotAnnotation[]; // Floating item annotation spots
+}
+
+/** Individual floating image in the hero scattered collage */
+export interface FloatingHeroImage {
+  id: string;
+  imageUrl: string;
+  label?: string;
+  link: string;
+  spots?: HeroSpotAnnotation[];
 }
 
 /** Grid item for masonry layout */
