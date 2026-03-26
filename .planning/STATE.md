@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T11:49:24.233Z"
+last_updated: "2026-03-26T14:03:16.851Z"
 progress:
-  total_phases: 42
+  total_phases: 43
   completed_phases: 40
-  total_plans: 97
-  completed_plans: 96
+  total_plans: 99
+  completed_plans: 97
 ---
 
 # Project State
@@ -18,14 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 44 — memory-leak-prevention
+**Current focus:** Phase 45 — security-foundation
 
 ## Current Position
 
-Phase: 44 (memory-leak-prevention) — CHECKPOINT (MEM-04 manual profiling)
-Plan: 3 of 3
-
-**Last session:** 2026-03-26T11:49:24.228Z
+Phase: 45 (security-foundation) — EXECUTING
+Plan: 2 of 2 (Plan 01 complete)
 
 ## Milestone Summary
 
@@ -56,6 +54,8 @@ Target features:
 | 44-03 | Build/lint verification via grep audit due to worktree missing node_modules (pre-existing constraint); MEM-04 requires manual Chrome DevTools heap snapshot profiling |
 
 - [Phase 44]: MEM-04 manual Chrome DevTools heap snapshot profiling deferred — worktree environment cannot start dev server; user approved deferral, profiling to occur in next normal dev session
+- [Phase 45]: governor 0.10 added directly as companion to tower_governor 0.8 (StateInformationMiddleware not re-exported)
+- [Phase 45]: JWT sub extracted with insecure_disable_signature_validation() — safe since auth_middleware verifies upstream; IP fallback via ConnectInfo<SocketAddr> to avoid X-Forwarded-For spoofing
 
 ## Performance Metrics
 
@@ -65,3 +65,4 @@ Target features:
 | 44 | 02 | 1080 | 2/2 | 8 |
 | 44 | 03 | 300 | 1/2 | 0 |
 | Phase 44 P03 | 600 | 2 tasks | 0 files |
+| Phase 45 P01 | 417 | 2 tasks | 4 files |

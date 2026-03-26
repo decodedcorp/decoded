@@ -24,10 +24,10 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 
 ### Rate Limiting
 
-- [ ] **RATE-01**: Axum에 tower-governor 미들웨어를 추가하여 AI 분석 엔드포인트에 GCRA 기반 Rate Limiting 적용
-- [ ] **RATE-02**: Per-user JWT 기반 커스텀 키 추출기 구현 (IP 대신 유저 ID로 제한)
+- [x] **RATE-01**: Axum에 tower-governor 미들웨어를 추가하여 AI 분석 엔드포인트에 GCRA 기반 Rate Limiting 적용
+- [x] **RATE-02**: Per-user JWT 기반 커스텀 키 추출기 구현 (IP 대신 유저 ID로 제한)
 - [ ] **RATE-03**: Next.js proxy 레이어(image-proxy 등)에 in-memory sliding window 방어 Rate Limiting 추가
-- [ ] **RATE-04**: 제한 초과 시 429 Too Many Requests 응답 + Retry-After 헤더 반환
+- [x] **RATE-04**: 제한 초과 시 429 Too Many Requests 응답 + Retry-After 헤더 반환
 
 ### Error Tracking (Sentry)
 
@@ -87,10 +87,10 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 | REF-03 | Phase 46 | Pending |
 | REF-04 | Phase 46 | Pending |
 | REF-05 | Phase 48 | Pending |
-| RATE-01 | Phase 45 | Pending |
-| RATE-02 | Phase 45 | Pending |
+| RATE-01 | Phase 45 | Complete |
+| RATE-02 | Phase 45 | Complete |
 | RATE-03 | Phase 45 | Pending |
-| RATE-04 | Phase 45 | Pending |
+| RATE-04 | Phase 45 | Complete |
 | SENT-01 | Phase 47 | Pending |
 | SENT-02 | Phase 47 | Pending |
 | SENT-03 | Phase 47 | Pending |
