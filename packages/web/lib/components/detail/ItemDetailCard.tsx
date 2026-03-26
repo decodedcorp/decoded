@@ -92,6 +92,7 @@ export function ItemDetailCard({
   return (
     <div
       ref={cardRef}
+      data-testid="item-detail-card"
       data-item-index={index}
       className="group relative mb-8 md:mb-12 flex min-h-auto flex-col justify-center py-4 md:py-6 lg:mb-16"
       onMouseEnter={onActivate}

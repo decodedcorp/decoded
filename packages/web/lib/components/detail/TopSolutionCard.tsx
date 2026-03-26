@@ -162,6 +162,7 @@ export function TopSolutionCard({
                   className="relative"
                 >
                   <button
+                    data-testid="item-adopt-button"
                     type="button"
                     onClick={() =>
                       setAdoptTargetId((p) =>

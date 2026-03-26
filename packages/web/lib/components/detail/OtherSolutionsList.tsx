@@ -69,7 +69,7 @@ export function OtherSolutionsList({
   }
 
   return (
-    <>
+    <div data-testid="item-solutions-list">
       <button
         type="button"
         onClick={() => setOthersExpanded((e) => !e)}
@@ -247,6 +247,6 @@ export function OtherSolutionsList({
           솔루션 더 추가하기
         </button>
       )}
-    </>
+    </div>
   );
 }

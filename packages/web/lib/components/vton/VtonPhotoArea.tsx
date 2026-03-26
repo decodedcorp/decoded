@@ -38,11 +38,11 @@ export function VtonPhotoArea({
   const showResult = displayResultImage && displayPersonPreview && !isProcessing;
 
   return (
-    <div className="relative flex flex-1 items-center justify-center bg-[#050505] md:flex-[3]">
+    <div data-testid="vton-photo-area" className="relative flex flex-1 items-center justify-center bg-[#050505] md:flex-[3]">
       {isProcessing && <VtonLoadingAnimation stage={loadingStage} />}
 
       {showResult ? (
-        <div className="relative h-full w-full">
+        <div data-testid="vton-result-image" className="relative h-full w-full">
           <BeforeAfterSlider
             beforeSrc={displayPersonPreview}
             afterSrc={displayResultImage}

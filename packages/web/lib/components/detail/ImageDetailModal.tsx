@@ -179,6 +179,7 @@ export function ImageDetailModal({ imageId }: Props) {
   return (
     <div
       ref={containerRef}
+      data-testid="image-detail-modal"
       className="fixed inset-0 z-[10000] flex items-end md:items-stretch md:justify-end"
       role="dialog"
       aria-modal="true"
@@ -205,6 +206,7 @@ export function ImageDetailModal({ imageId }: Props) {
             style={{ backgroundImage: `url(${activeImageSrc})`, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(24px)", transform: "scale(1.08)" }}
           />
           <img
+            data-testid="image-detail-image"
             ref={floatingImageRef}
             src={activeImageSrc}
             alt="Post image"
@@ -270,6 +272,7 @@ export function ImageDetailModal({ imageId }: Props) {
             <Maximize2 className="h-5 w-5" />
           </button>
           <button
+            data-testid="image-detail-close"
             onClick={handleClose}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-accent active:scale-95"
             aria-label="Close"

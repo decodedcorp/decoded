@@ -49,7 +49,7 @@ export function VtonItemPanel({
   const currentSelected = selectedItems[activeCategory];
 
   return (
-    <div className="flex w-full flex-col border-t border-white/10 md:w-[340px] md:border-t-0 md:border-l">
+    <div data-testid="vton-item-panel" className="flex w-full flex-col border-t border-white/10 md:w-[340px] md:border-t-0 md:border-l">
       {/* Header */}
       <div className="border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">
@@ -194,6 +194,7 @@ export function VtonItemPanel({
         )}
 
         <button
+          data-testid="vton-try-on-button"
           onClick={onTryOn}
           disabled={!personImage || selectedCount === 0 || isProcessing}
           className="w-full rounded-xl bg-[#eafd67] py-3 text-sm font-semibold text-[#050505] transition-all hover:bg-[#d4e85c] disabled:cursor-not-allowed disabled:opacity-30"

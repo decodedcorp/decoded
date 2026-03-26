@@ -206,7 +206,7 @@ export function VtonModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overscroll-contain">
+    <div data-testid="vton-modal" className="fixed inset-0 z-[100] flex items-center justify-center overscroll-contain">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative z-10 flex h-[90vh] w-[95vw] max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-2xl md:flex-row">
         <button

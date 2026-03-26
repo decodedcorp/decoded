@@ -212,6 +212,7 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
     return (
       <div
         ref={this.containerRef as React.RefObject<HTMLDivElement>}
+        data-testid="thiings-grid"
         className={className}
         style={{ position: "absolute", inset: 0, touchAction: "none", overflow: "hidden", cursor: this.physicsEngine?.isDragging ? "grabbing" : "grab", zIndex: 0 }}
         onMouseDown={this.handleMouseDown}
@@ -234,6 +235,7 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
           {gridItems.map((item) => (
             <div
               key={`${item.position.x}-${item.position.y}`}
+              data-testid="thiings-grid-item"
               className="js-observe"
               style={{
                 contentVisibility: "auto",
