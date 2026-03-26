@@ -50,6 +50,13 @@ utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 # Template Engine
 tera = "1"
 
+# Rate Limiting
+tower_governor = { version = "0.8", features = ["axum"] }
+governor = "0.10"
+
+# Observability
+sentry = { version = "0.47.0", features = ["tower-axum-matched-path", "tracing"] }
+
 # Cache
 moka = { version = "0.12", features = ["future"] }
 
@@ -105,6 +112,9 @@ scraper = { workspace = true }
 toml = { workspace = true }
 notify = { workspace = true }
 url = { workspace = true }
+tower_governor = { workspace = true }
+governor = { workspace = true }
+sentry = { workspace = true }
 
 # Workspace members
 migration = { path = "migration" }

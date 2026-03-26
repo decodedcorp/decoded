@@ -33,7 +33,7 @@ dependencies = [
     "youtube-transcript-api (>=1.2.0,<2.0.0)",
     "groq (>=0.31.0,<0.40)",
     "jinja2 (>=3.1.0,<4.0.0)",
-    "google-genai (>=1.10.0,<1.55.0)",  # <1.55: extra_items(TypedDict)는 Python 3.15에서 추가
+    "google-genai (>=1.10.0,<1.55.0)", # <1.55: extra_items(TypedDict)는 Python 3.15에서 추가
     "apscheduler (>=3.10.0,<4.0.0)",
     "arq (>=0.26.0,<0.27.0)",
     "perplexityai (>=0.27.0,<0.28.0)",
@@ -42,6 +42,7 @@ dependencies = [
     "langchain-core (>=0.3)",
     "supabase (>=2.0)",
     "tenacity (>=9.0)",
+    "sentry-sdk[fastapi,grpcio]>=2.56.0,<3.0.0",
 ]
 
 [dependency-groups]

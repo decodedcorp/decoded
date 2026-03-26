@@ -28,15 +28,34 @@ export default defineConfig({
   outputDir: "test-results/",
 
   projects: [
+    // Auth setup — runs first, saves storageState for authenticated tests
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // Authenticated tests — depend on setup project to have storageState ready
     {
       name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".playwright/storageState.json",
+      },
+      dependencies: ["setup"],
+      testIgnore: [/auth\.setup\.ts/, /login\.spec\.ts/],
+    },
+
+    // Unauthenticated tests — login flow, no storageState dependency
+    {
+      name: "chromium-no-auth",
       use: { ...devices["Desktop Chrome"] },
+      testMatch: /login\.spec\.ts/,
     },
   ],
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "yarn dev",
+    command: "bun dev",
     url: "http://localhost:3000",
     reuseExistingServer: true, // Always reuse existing server
     timeout: 120000, // 2 minute timeout for server startup

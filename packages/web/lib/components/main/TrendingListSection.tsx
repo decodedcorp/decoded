@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -62,60 +63,68 @@ function FlowingMenuItem({
     return () => window.removeEventListener("resize", calc);
   }, [item.label, item.image]);
 
-  useEffect(() => {
-    const setup = () => {
-      if (!marqueeInnerRef.current) return;
-      const part = marqueeInnerRef.current.querySelector(
-        ".marquee-part"
-      ) as HTMLElement;
-      if (!part || part.offsetWidth === 0) return;
-      animationRef.current?.kill();
-      animationRef.current = gsap.to(marqueeInnerRef.current, {
-        x: -part.offsetWidth,
-        duration: 12,
-        ease: "none",
-        repeat: -1,
-      });
-    };
-    const timer = setTimeout(setup, 50);
-    return () => {
-      clearTimeout(timer);
-      animationRef.current?.kill();
-    };
-  }, [item.label, item.image, repetitions]);
+  const { contextSafe } = useGSAP(
+    () => {
+      const setup = () => {
+        if (!marqueeInnerRef.current) return;
+        const part = marqueeInnerRef.current.querySelector(
+          ".marquee-part"
+        ) as HTMLElement;
+        if (!part || part.offsetWidth === 0) return;
+        animationRef.current?.kill();
+        animationRef.current = gsap.to(marqueeInnerRef.current, {
+          x: -part.offsetWidth,
+          duration: 12,
+          ease: "none",
+          repeat: -1,
+        });
+      };
+      // requestAnimationFrame ensures layout is computed before GSAP reads DOM measurements
+      const rafId = requestAnimationFrame(setup);
+      return () => {
+        cancelAnimationFrame(rafId);
+        animationRef.current?.kill();
+      };
+    },
+    { scope: itemRef, dependencies: [item.label, item.image, repetitions] }
+  );
 
-  const handleMouseEnter = (ev: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!itemRef.current || !marqueeRef.current || !marqueeInnerRef.current)
-      return;
-    const rect = itemRef.current.getBoundingClientRect();
-    const edge = findClosestEdge(
-      ev.clientX - rect.left,
-      ev.clientY - rect.top,
-      rect.width,
-      rect.height
-    );
-    gsap
-      .timeline({ defaults: animationDefaults })
-      .set(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
-      .set(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0)
-      .to([marqueeRef.current, marqueeInnerRef.current], { y: "0%" }, 0);
-  };
+  const handleMouseEnter = contextSafe(
+    (ev: React.MouseEvent<HTMLAnchorElement>) => {
+      if (!itemRef.current || !marqueeRef.current || !marqueeInnerRef.current)
+        return;
+      const rect = itemRef.current.getBoundingClientRect();
+      const edge = findClosestEdge(
+        ev.clientX - rect.left,
+        ev.clientY - rect.top,
+        rect.width,
+        rect.height
+      );
+      gsap
+        .timeline({ defaults: animationDefaults })
+        .set(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
+        .set(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0)
+        .to([marqueeRef.current, marqueeInnerRef.current], { y: "0%" }, 0);
+    }
+  );
 
-  const handleMouseLeave = (ev: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!itemRef.current || !marqueeRef.current || !marqueeInnerRef.current)
-      return;
-    const rect = itemRef.current.getBoundingClientRect();
-    const edge = findClosestEdge(
-      ev.clientX - rect.left,
-      ev.clientY - rect.top,
-      rect.width,
-      rect.height
-    );
-    gsap
-      .timeline({ defaults: animationDefaults })
-      .to(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
-      .to(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0);
-  };
+  const handleMouseLeave = contextSafe(
+    (ev: React.MouseEvent<HTMLAnchorElement>) => {
+      if (!itemRef.current || !marqueeRef.current || !marqueeInnerRef.current)
+        return;
+      const rect = itemRef.current.getBoundingClientRect();
+      const edge = findClosestEdge(
+        ev.clientX - rect.left,
+        ev.clientY - rect.top,
+        rect.width,
+        rect.height
+      );
+      gsap
+        .timeline({ defaults: animationDefaults })
+        .to(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
+        .to(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0);
+    }
+  );
 
   return (
     <div

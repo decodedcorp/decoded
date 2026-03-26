@@ -7,19 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL = process.env.API_BASE_URL;
+import { API_BASE_URL } from "@/lib/server-env";
 
 export async function POST(request: NextRequest) {
-  // Validate server configuration
-  if (!API_BASE_URL) {
-    console.error("API_BASE_URL environment variable is not configured");
-    return NextResponse.json(
-      { message: "Server configuration error" },
-      { status: 500 }
-    );
-  }
-
   // Validate authentication
   const authHeader = request.headers.get("Authorization");
   if (!authHeader) {
@@ -44,7 +34,9 @@ export async function POST(request: NextRequest) {
 
     // Handle gateway errors (502, 503, 504)
     if (response.status >= 502 && response.status <= 504) {
-      console.error(`Backend gateway error: ${response.status}`);
+      if (process.env.NODE_ENV === "development") {
+        console.error(`Backend gateway error: ${response.status}`);
+      }
       return NextResponse.json(
         {
           message:
@@ -59,7 +51,9 @@ export async function POST(request: NextRequest) {
     // Check content-type before parsing as JSON
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
-      console.error(`Unexpected content-type: ${contentType}`);
+      if (process.env.NODE_ENV === "development") {
+        console.error(`Unexpected content-type: ${contentType}`);
+      }
       return NextResponse.json(
         {
           message: "서버 응답 형식이 올바르지 않습니다.",
@@ -86,13 +80,12 @@ export async function POST(request: NextRequest) {
     // Return the response with the same status code
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Upload proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Upload proxy error:", error);
+    }
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? `Proxy error: ${error.message}`
-            : "이미지 업로드에 실패했습니다.",
+        message: error instanceof Error ? error.message : "Proxy error",
         code: "UPLOAD_ERROR",
         retryable: true,
       },

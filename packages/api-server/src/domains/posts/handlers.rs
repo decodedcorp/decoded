@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::{
     config::{AppConfig, AppState},
     error::AppResult,
-    middleware::{auth::User, auth_middleware, optional_auth_middleware},
+    middleware::{ai_rate_limit_layer, auth::User, auth_middleware, optional_auth_middleware},
     utils::pagination::PaginatedResponse,
 };
 
@@ -414,9 +414,14 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
     // Spots 라우터 통합
     let spots_router = crate::domains::spots::router(app_config);
 
+    // /analyze 라우트에만 rate limit 적용
+    let rate_limited_routes = Router::new()
+        .route("/analyze", post(analyze_image))
+        .layer(ai_rate_limit_layer());
+
     Router::new()
         .route("/", get(list_posts))
-        .route("/analyze", post(analyze_image))
+        .merge(rate_limited_routes)
         .nest("/{post_id}/spots", spots_router)
         .merge(optional_auth_routes)
         .merge(protected_routes)

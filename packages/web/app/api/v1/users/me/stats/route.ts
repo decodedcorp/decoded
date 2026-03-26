@@ -6,22 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL = process.env.API_BASE_URL;
+import { API_BASE_URL } from "@/lib/server-env";
 
 /**
  * GET /api/v1/users/me/stats
  * Fetch current user's statistics
  */
 export async function GET(request: NextRequest) {
-  if (!API_BASE_URL) {
-    console.error("API_BASE_URL environment variable is not configured");
-    return NextResponse.json(
-      { message: "Server configuration error" },
-      { status: 500 }
-    );
-  }
-
   const authHeader = request.headers.get("Authorization");
   if (!authHeader) {
     return NextResponse.json(
@@ -50,13 +41,12 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Users/me/stats GET proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Users/me/stats GET proxy error:", error);
+    }
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? `Proxy error: ${error.message}`
-            : "Failed to fetch user stats",
+        message: error instanceof Error ? error.message : "Proxy error",
       },
       { status: 502 }
     );

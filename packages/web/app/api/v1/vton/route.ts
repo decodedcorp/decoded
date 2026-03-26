@@ -136,13 +136,15 @@ export async function POST(request: NextRequest) {
     const totalInputKB =
       personTokens + productTokensArr.reduce((a, b) => a + b, 0);
 
-    console.log(`[VTON] ──── Request Start ────`);
-    console.log(
-      `[VTON] Items: ${productImages.length} | Person: ${personTokens}KB | Products: ${productTokensArr.map((k) => `${k}KB`).join(", ")}`
-    );
-    console.log(
-      `[VTON] Total input size: ${totalInputKB}KB (${(totalInputKB / 1024).toFixed(1)}MB)`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.error(`[VTON] ──── Request Start ────`);
+      console.error(
+        `[VTON] Items: ${productImages.length} | Person: ${personTokens}KB | Products: ${productTokensArr.map((k) => `${k}KB`).join(", ")}`
+      );
+      console.error(
+        `[VTON] Total input size: ${totalInputKB}KB (${(totalInputKB / 1024).toFixed(1)}MB)`
+      );
+    }
 
     // Chain requests: each result becomes the person image for the next item
     let currentPersonBase64 = personImageBase64;
@@ -150,7 +152,9 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < productImages.length; i++) {
       const stepStart = Date.now();
-      console.log(`[VTON] Processing item ${i + 1}/${productImages.length}...`);
+      if (process.env.NODE_ENV === "development") {
+        console.error(`[VTON] Processing item ${i + 1}/${productImages.length}...`);
+      }
       const result = await callVtonApi(
         accessToken,
         currentPersonBase64,
@@ -158,19 +162,23 @@ export async function POST(request: NextRequest) {
       );
       const stepMs = Date.now() - stepStart;
       const resultKB = Math.ceil((result.resultBase64.length * 0.75) / 1024);
-      console.log(
-        `[VTON] Item ${i + 1} done: ${(stepMs / 1000).toFixed(1)}s | Result: ${resultKB}KB`
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          `[VTON] Item ${i + 1} done: ${(stepMs / 1000).toFixed(1)}s | Result: ${resultKB}KB`
+        );
+      }
       currentPersonBase64 = result.resultBase64;
       lastMimeType = result.mimeType;
     }
 
     const latencyMs = Date.now() - start;
     const outputKB = Math.ceil((currentPersonBase64.length * 0.75) / 1024);
-    console.log(`[VTON] ──── Complete ────`);
-    console.log(
-      `[VTON] Total: ${(latencyMs / 1000).toFixed(1)}s | Output: ${outputKB}KB (${(outputKB / 1024).toFixed(1)}MB)`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.error(`[VTON] ──── Complete ────`);
+      console.error(
+        `[VTON] Total: ${(latencyMs / 1000).toFixed(1)}s | Output: ${outputKB}KB (${(outputKB / 1024).toFixed(1)}MB)`
+      );
+    }
 
     return NextResponse.json({
       resultImage: currentPersonBase64,
@@ -180,11 +188,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     const latencyMs = Date.now() - start;
-    console.error(`[VTON] ──── Error (${(latencyMs / 1000).toFixed(1)}s) ────`);
-    console.error(`[VTON]`, (err as Error).message);
+    if (process.env.NODE_ENV === "development") {
+      console.error(`[VTON] ──── Error (${(latencyMs / 1000).toFixed(1)}s) ────`);
+      console.error(`[VTON]`, (err as Error).message);
+    }
     return NextResponse.json(
-      { error: (err as Error).message },
-      { status: 500 }
+      { error: err instanceof Error ? err.message : "Proxy error" },
+      { status: 502 }
     );
   }
 }

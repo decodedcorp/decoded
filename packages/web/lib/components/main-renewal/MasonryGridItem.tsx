@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 
 import type { GridItemData, GridItemSpot } from "./types";
 
@@ -74,7 +75,6 @@ export default function MasonryGridItem({
 }: MasonryGridItemProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const spotsRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
 
   const aspectRatio = item.aspectRatio ?? 1;
   const height = clampHeight(aspectRatio, index);
@@ -121,38 +121,42 @@ export default function MasonryGridItem({
     return () => ctx.revert();
   }, [index]);
 
-  /* ---- GSAP: spot markers fade-in on hover ---- */
-  useEffect(() => {
+  /* ---- GSAP: spot markers fade-in on hover (contextSafe for proper cleanup) ---- */
+  const { contextSafe } = useGSAP({ scope: cardRef });
+
+  const handleMouseEnter = contextSafe(() => {
     const container = spotsRef.current;
     if (!container || !hasSpots) return;
-
     const markers = container.querySelectorAll(".spot-marker");
     if (markers.length === 0) return;
+    gsap.fromTo(
+      markers,
+      { opacity: 0, scale: 0 },
+      {
+        opacity: 1,
+        scale: 1,
+        duration: 0.3,
+        stagger: 0.05,
+        ease: "back.out(2)",
+      }
+    );
+  });
 
-    if (isHovered) {
-      gsap.fromTo(
-        markers,
-        { opacity: 0, scale: 0 },
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 0.3,
-          stagger: 0.05,
-          ease: "back.out(2)",
-        }
-      );
-    } else {
-      gsap.to(markers, { opacity: 0, scale: 0, duration: 0.2 });
-    }
-  }, [isHovered, hasSpots]);
+  const handleMouseLeave = contextSafe(() => {
+    const container = spotsRef.current;
+    if (!container || !hasSpots) return;
+    const markers = container.querySelectorAll(".spot-marker");
+    if (markers.length === 0) return;
+    gsap.to(markers, { opacity: 0, scale: 0, duration: 0.2 });
+  });
 
   return (
     <div
       ref={cardRef}
       className={`group relative overflow-hidden rounded-xl opacity-0 ${className ?? ""}`}
       style={{ height }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Background image */}
       <Image

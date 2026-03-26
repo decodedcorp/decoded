@@ -47,12 +47,14 @@ export interface UploadImageOptions {
   file: File;
   onProgress?: (progress: number) => void;
   maxRetries?: number;
+  signal?: AbortSignal;
 }
 
 export async function uploadImage({
   file,
   onProgress,
   maxRetries = UPLOAD_RETRY_CONFIG.maxRetries,
+  signal,
 }: UploadImageOptions): Promise<UploadResponse> {
   const token = await getAuthToken();
 
@@ -78,6 +80,7 @@ export async function uploadImage({
           Authorization: `Bearer ${token}`,
         },
         body: formData,
+        signal,
       });
 
       onProgress?.(70);
@@ -133,6 +136,9 @@ export async function uploadImage({
       return response.json();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+
+      // AbortError — do not retry, rethrow immediately
+      if (lastError.name === "AbortError") throw lastError;
 
       // Network errors are retryable
       if (

@@ -8,8 +8,29 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Sentry는 tokio 런타임 시작 전에 초기화해야 한다 (_guard는 async_main 종료 후에도 살아있어야 함)
+    let _guard = sentry::init((
+        std::env::var("SENTRY_DSN").unwrap_or_default(),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            environment: Some(
+                std::env::var("APP_ENV")
+                    .unwrap_or_else(|_| "development".into())
+                    .into(),
+            ),
+            traces_sample_rate: if cfg!(debug_assertions) { 1.0 } else { 0.1 },
+            ..Default::default()
+        },
+    ));
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async_main())
+}
+
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // 환경 변수 및 설정 로드
     let config = AppConfig::from_env()?;
 
@@ -28,11 +49,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .with_file(false)
                     .with_line_number(false),
             )
+            .with(sentry::integrations::tracing::layer().event_filter(|md| {
+                use sentry::integrations::tracing::EventFilter;
+                match *md.level() {
+                    tracing::Level::ERROR => EventFilter::Event,
+                    tracing::Level::WARN => EventFilter::Breadcrumb,
+                    _ => EventFilter::Ignore,
+                }
+            }))
             .init();
     } else {
         tracing_subscriber::registry()
             .with(env_filter)
             .with(tracing_subscriber::fmt::layer())
+            .with(sentry::integrations::tracing::layer().event_filter(|md| {
+                use sentry::integrations::tracing::EventFilter;
+                match *md.level() {
+                    tracing::Level::ERROR => EventFilter::Event,
+                    tracing::Level::WARN => EventFilter::Breadcrumb,
+                    _ => EventFilter::Ignore,
+                }
+            }))
             .init();
     }
 
@@ -117,6 +154,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
+        .layer(sentry::integrations::tower::NewSentryLayer::<
+            axum::extract::Request,
+        >::new_from_top())
+        .layer(sentry::integrations::tower::SentryHttpLayer::new().enable_transaction())
         .layer(axum::middleware::from_fn(
             middleware::request_logger_middleware,
         ))
