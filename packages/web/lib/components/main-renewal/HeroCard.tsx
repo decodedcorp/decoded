@@ -5,14 +5,15 @@ import Image from "next/image";
 import { gsap } from "gsap";
 import { Draggable } from "gsap/Draggable";
 
-import type { FloatingHeroImage, ScatterPosition } from "./types";
+import type { FloatingHeroImage } from "./types";
+import type { ScatterResult } from "./scatter";
 import { HeroSpotMarker } from "./HeroSpotMarker";
 
 gsap.registerPlugin(Draggable);
 
 interface HeroCardProps {
   image: FloatingHeroImage;
-  position: ScatterPosition;
+  position: ScatterResult;
   index: number;
   isFocused: boolean;
   isDimmed: boolean;
@@ -39,23 +40,21 @@ export function HeroCard({
   const [showSpots, setShowSpots] = useState(false);
   const [hidden, setHidden] = useState(false);
 
-  // Stable callback for draggable onClick
   const onToggleFocusRef = useRef(onToggleFocus);
   onToggleFocusRef.current = onToggleFocus;
 
-  // Start float animation from current position
+  const { interactive, floatAmplitude, floatSpeed } = position;
+
   const startFloat = useCallback((el: HTMLElement) => {
-    const floatY = 6 + (index % 3) * 3;
-    const floatDuration = 3.5 + (index % 4) * 0.8;
     floatRef.current = gsap.to(el, {
-      y: `+=${floatY}`,
-      duration: floatDuration,
+      y: `+=${floatAmplitude}`,
+      duration: floatSpeed + (index % 4) * 0.5,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
       delay: 0.3,
     });
-  }, [index]);
+  }, [index, floatAmplitude, floatSpeed]);
 
   useEffect(() => {
     const el = cardRef.current;
@@ -64,30 +63,31 @@ export function HeroCard({
     // Entry animation
     gsap.fromTo(
       el,
-      { opacity: 0, y: 40, scale: 0.9 },
+      { opacity: 0, y: 30, scale: 0.9 },
       {
-        opacity: 1,
+        opacity: position.initialOpacity,
         y: 0,
         scale: 1,
-        duration: 1.0,
-        delay: 0.2 + index * 0.1,
+        duration: 0.8,
+        delay: 0.1 + index * 0.06,
         ease: "power3.out",
         onComplete: () => startFloat(el),
       },
     );
 
-    // Draggable
+    // Only add draggable for interactive cards
+    if (!interactive) return;
+
     const [inst] = Draggable.create(el, {
       type: "x,y",
       inertia: false,
       allowEventDefault: false,
       onClick() {
-        if (animatingRef.current) return; // Block during animation
+        if (animatingRef.current) return;
         onToggleFocusRef.current(image.id);
       },
       onPress() {
         gsap.set(el, { zIndex: 50 });
-        // Pause float instead of killing it
         floatRef.current?.pause();
         draggingRef.current = false;
         setShowSpots(true);
@@ -105,16 +105,12 @@ export function HeroCard({
         });
       },
       onRelease() {
-        if (draggingRef.current) {
-          setShowSpots(false);
-        }
+        if (draggingRef.current) setShowSpots(false);
         draggingRef.current = false;
-        const targetZ = 40;
         gsap.to(el, {
-          zIndex: targetZ,
+          zIndex: position.zIndex,
           delay: 0.3,
           onComplete: () => {
-            // Resume float from current position after interaction
             if (!wasFocusedRef.current) {
               floatRef.current?.kill();
               startFloat(el);
@@ -132,7 +128,7 @@ export function HeroCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync showSpots with focus — hide when card returns to normal
+  // Sync showSpots
   useEffect(() => {
     if (!isFocused && !isDimmed) {
       const t = setTimeout(() => setShowSpots(false), 400);
@@ -143,20 +139,18 @@ export function HeroCard({
   // Focus/dim state changes
   useEffect(() => {
     const el = cardRef.current;
-    if (!el) return;
+    if (!el || !interactive) return;
 
     if (isFocused) {
       wasFocusedRef.current = true;
       animatingRef.current = true;
       floatRef.current?.kill();
 
-      // Save current position before centering
       preFocusPosRef.current = {
         x: gsap.getProperty(el, "x") as number,
         y: gsap.getProperty(el, "y") as number,
       };
 
-      // Move card to center, clamped within hero bounds
       const parent = el.parentElement;
       if (parent) {
         const scale = 1.2;
@@ -189,50 +183,34 @@ export function HeroCard({
         });
       }
 
-      // Animate spots in
       if (spotRefs.current) {
         const dots = spotRefs.current.querySelectorAll(".spot-marker");
-        gsap.fromTo(
-          dots,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out" },
-        );
+        gsap.fromTo(dots, { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out" });
       }
     } else if (isDimmed) {
-      // No per-card blur — handled by MainHero backdrop-filter
-      gsap.to(el, {
-        opacity: 0.2,
-        scale: 0.95,
-        duration: 0.4,
-        ease: "power2.out",
-      });
+      gsap.to(el, { opacity: 0.2, scale: 0.95, duration: 0.4, ease: "power2.out" });
     } else {
-      // Restore
       animatingRef.current = true;
       const anim: gsap.TweenVars = {
-        opacity: 1,
-        filter: "none",
+        opacity: position.initialOpacity,
+        filter: position.cssFilter || "none",
         scale: 1,
         zIndex: position.zIndex,
         duration: 0.4,
         ease: "power2.out",
         onComplete: () => {
           animatingRef.current = false;
-          // Restart float after returning to position
-          if (wasFocusedRef.current) {
-            wasFocusedRef.current = false;
-          }
+          wasFocusedRef.current = false;
           startFloat(el);
         },
       };
-      // Return to pre-focus position (drag position, not scatter origin)
       if (wasFocusedRef.current) {
         anim.x = preFocusPosRef.current.x;
         anim.y = preFocusPosRef.current.y;
       }
       gsap.to(el, anim);
     }
-  }, [isFocused, isDimmed, position.zIndex, startFloat]);
+  }, [isFocused, isDimmed, position.zIndex, position.initialOpacity, position.cssFilter, startFloat, interactive]);
 
   const isHero = position.tier === "hero";
   const isSmall = position.tier === "small";
@@ -245,34 +223,38 @@ export function HeroCard({
 
   if (hidden) return null;
 
+  const cursorClass = interactive
+    ? "cursor-grab active:cursor-grabbing"
+    : "pointer-events-none";
+
   return (
     <div
       ref={cardRef}
-      className="absolute cursor-grab active:cursor-grabbing transform-gpu touch-none opacity-0 will-change-transform"
+      className={`absolute ${cursorClass} transform-gpu touch-none opacity-0 will-change-transform`}
       style={{
         top: position.top,
         left: position.left,
         width: position.width,
         zIndex: position.zIndex,
         transform: `rotate(${position.rotate}deg)`,
+        filter: position.cssFilter,
       }}
-      tabIndex={0}
-      role="button"
-      aria-label={image.label || "Hero image"}
-      onKeyDown={(e) => {
+      tabIndex={interactive ? 0 : -1}
+      role={interactive ? "button" : undefined}
+      aria-label={interactive ? (image.label || "Hero image") : undefined}
+      onKeyDown={interactive ? (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           if (!animatingRef.current) onToggleFocus(image.id);
         }
-      }}
+      } : undefined}
     >
-      {/* Card */}
       <div
         className="relative rounded-2xl"
         style={{
           border: (isFocused || showSpots)
             ? "1.5px solid rgba(234,253,103,0.5)"
-            : "1px solid rgba(255,255,255,0.12)",
+            : "1px solid rgba(255,255,255,0.08)",
           boxShadow: (isFocused || showSpots)
             ? `${shadow}, 0 0 24px rgba(234,253,103,0.2)`
             : shadow,
@@ -302,8 +284,8 @@ export function HeroCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
         </div>
 
-        {/* Spot markers */}
-        {(isFocused || showSpots) && image.spots && image.spots.length > 0 && (
+        {/* Spot markers — only for interactive cards */}
+        {interactive && (isFocused || showSpots) && image.spots && image.spots.length > 0 && (
           <div ref={spotRefs} className="absolute inset-0 pointer-events-none">
             {image.spots.map((spot) => (
               <div key={spot.id} className="spot-marker pointer-events-auto">
