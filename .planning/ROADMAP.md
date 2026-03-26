@@ -373,7 +373,8 @@ Plans:
 
 Plans:
 
-- [ ] 48-01-PLAN.md — Rust tries/saved 핸들러 + OpenAPI spec + Orval 재생성
+- [ ] 48-01-PLAN.md — Rust tries/saved 핸들러 + DTOs + service + openapi.rs (TRIES-01, SAVED-01)
+- [ ] 48-02-PLAN.md — OpenAPI spec 업데이트 + Orval 재생성 (TRIES-02, SAVED-02)
 
 ### Phase 49: Tries Tab Frontend
 
@@ -435,7 +436,7 @@ v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
 | 45: Public User Profile Route                 | v10.0     | 0/1            | Not started   | -          |
 | 46: Follow System Backend                     | v10.0     | 0/1            | Not started   | -          |
 | 47: Follow System Frontend                    | v10.0     | 0/1            | Not started   | -          |
-| 48: Tries & Saved Backend                     | v10.0     | 0/1            | Not started   | -          |
+| 48: Tries & Saved Backend                     | v10.0     | 0/2            | Not started   | -          |
 | 49: Tries Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
 | 50: Saved Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
 
