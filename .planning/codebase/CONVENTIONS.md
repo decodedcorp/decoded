@@ -1,7 +1,7 @@
 # Code Conventions & Standards
 
-**Project**: decoded-app
-**Last Updated**: 2026-02-12
+**Project**: decoded-monorepo
+**Last Updated**: 2026-03-26
 **Focus**: Quality & consistency across the codebase
 
 ## Table of Contents
@@ -32,7 +32,7 @@
   - `allowJs: true` - Allow JavaScript files
 
 ### ESLint Configuration
-**File**: `packages/web/eslint.config.mjs` (ESLint 9.0+ flat config)
+**File**: `packages/web/eslint.config.mjs` (ESLint 10+ flat config)
 
 **Plugins Enabled**:
 - `@next/eslint-plugin-next` - Next.js best practices
@@ -715,8 +715,8 @@ import { Hotspot } from "@/lib/design-system"
 ## Summary Checklist
 
 - [ ] TypeScript strict mode - all files
-- [ ] ESLint passes - run `yarn lint`
-- [ ] Prettier formatted - run `yarn format`
+- [ ] ESLint passes - run `bun run lint`
+- [ ] Prettier formatted - run `bun run format`
 - [ ] Components use PascalCase filenames and `React.memo`
 - [ ] Hooks prefixed with `use`, in `lib/hooks/`
 - [ ] Stores suffixed with `Store`, in `lib/stores/`

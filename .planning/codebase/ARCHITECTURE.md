@@ -1,23 +1,45 @@
 # Architecture
 
-**Analysis Date:** 2026-02-05
+**Analysis Date:** 2026-03-26
 
 ## Pattern Overview
 
-**Overall:** Layered Full-Stack Next.js Application with Feature-Based Component Organization
+**Overall:** Multi-Service Heterogeneous Monorepo: Next.js 16 frontend + Rust/Axum REST backend + Python/FastAPI gRPC AI server
 
 **Key Characteristics:**
+- **Multi-Service Architecture**: Next.js 16 BFF + Rust/Axum REST API + Python/gRPC AI server as independent deployable services
 - **Client-Server Separation**: Next.js App Router with server-side page components and client-side interactive features
 - **Multi-Layer State Management**: Zustand for client state, React Query for server state with Supabase as primary data source
-- **Feature-Based Component Organization**: Components grouped by feature domains (explore, search, detail, profile, etc.)
+- **Feature-Based Component Organization**: Components grouped by feature domains (explore, search, detail, profile, main, main-renewal, dome, admin, etc.)
 - **Monorepo Structure**: Shared packages (`@decoded/shared`) for cross-platform code, with web-specific implementations in `packages/web`
-- **API Proxy Pattern**: Next.js API routes proxy external backend APIs to avoid CORS issues
+- **API Proxy Pattern**: Next.js API routes proxy Rust backend APIs to avoid CORS issues (BFF layer)
+- **Generated API Client**: Orval 8.5.3 auto-generates TypeScript hooks from Rust backend OpenAPI spec
+
+## Service Topology
+
+```
+Browser / Mobile
+     │
+     ▼
+packages/web (Next.js 16, React 19) ─── BFF Proxy (/api/v1/*)
+     │
+     ├──▶ packages/api-server (Rust/Axum) ─── REST API
+     │         ├──▶ Supabase (PostgreSQL + Auth + RLS)
+     │         ├──▶ Cloudflare R2 (image storage)
+     │         ├──▶ Meilisearch (search)
+     │         └──▶ gRPC ──▶ packages/ai-server (Python/FastAPI)
+     │                            ├──▶ OpenAI / Groq / Gemini / Perplexity
+     │                            ├──▶ Redis (cache + job queue)
+     │                            └──▶ SearXNG (self-hosted search)
+     │
+     └──▶ packages/shared (@decoded/shared)
+```
 
 ## Layers
 
 **UI/Presentation Layer:**
 - Purpose: React components for user interaction and display
-- Location: `lib/components/` (feature-based folders: explore, search, detail, profile, auth, etc.)
+- Location: `lib/components/` (feature-based folders: explore, search, detail, profile, auth, main, main-renewal, dome, admin, etc.)
 - Contains: React components, hooks for UI state, animation logic (GSAP, Motion, Lenis)
 - Depends on: Zustand stores, React Query hooks, custom hooks, design system
 - Used by: Page components in `app/`
@@ -35,7 +57,12 @@
   - May compose design system primitives
 
 - **Level 3: Feature Components** (`lib/components/[feature]/`) - Page-specific implementations
-  - Examples: `explore/`, `search/`, `detail/`, `profile/`
+  - `explore/`, `search/`, `detail/`, `profile/` - core discovery features
+  - `main/` - home page sections including `HeroItemSync`, `DynamicHomeFeed`
+  - `main-renewal/` - redesigned hero section: `MainHero`, `HeroSpotMarker`, `MasonryGrid`
+  - `detail/magazine/` - editorial content: `MagazineContent`, `MagazineCelebSection`, etc.
+  - `dome/` - VTON dome gallery
+  - `admin/` - AI cost, audit, pipeline, server logs dashboards
   - Compose both design system and base UI components
 
 **Design Token Flow:**
@@ -56,6 +83,11 @@ tokens.ts → Tailwind config → globals.css → components
   - `profileStore.ts`: User profile state
   - `filterStore.ts`: Filter/search state
   - `searchStore.ts`: Search UI state
+  - `vtonStore.ts`: VTON modal state + background processing job (persists across navigation)
+  - `behaviorStore.ts`: Client-side analytics event queue (batched sendBeacon, max 20 events or 30s flush)
+  - `magazineStore.ts`: Collection bookshelf (magazine issues)
+  - `studioStore.ts`: 3D Spline studio camera state machine
+  - `collectionStore.ts`: Collection state
 - Depends on: Supabase browser client, API client functions
 - Used by: Components, hooks, pages
 
@@ -67,6 +99,9 @@ tokens.ts → Tailwind config → globals.css → components
   - `posts.ts`: Post/image upload, analysis, metadata extraction
   - `users.ts`: User profile and activity queries
   - `categories.ts`: Category/taxonomy fetching
+  - `lib/api/generated/`: Auto-generated TypeScript hooks from OpenAPI spec (Orval 8.5.3) — do not manually edit
+  - `lib/api/mutator/custom-instance.ts`: Orval mutator (auth header injection, base URL config)
+  - `lib/api/admin/`: Admin-specific API functions
 - Depends on: Supabase browser client, auth tokens
 - Used by: React Query hooks, server-side queries
 
@@ -120,6 +155,39 @@ tokens.ts → Tailwind config → globals.css → components
 5. **Step 4 - Submit**: `createPost()` API called with collected data
 6. **Confirmation**: Success updates user's profile via invalidation of related queries
 
+**VTON Flow:**
+
+1. **Item Selection**: User selects item for virtual try-on → dispatched to `vtonStore`
+2. **Request**: POST `/api/v1/vton` via BFF proxy → Rust backend → gRPC to AI server
+3. **Background Job**: Job ID stored in `vtonStore`; polling or webhook for result
+4. **Result**: Result image URL stored in `vtonStore` (persists across route navigation via LazyVtonModal in root layout)
+5. **Display**: `LazyVtonModal` renders result without unmounting on route change
+
+**Behavioral Analytics Flow:**
+
+1. **Event Capture**: `useTrackEvent`, `useTrackDwellTime`, `useTrackScrollDepth` hooks emit events
+2. **Batching**: `behaviorStore` queues events (flush on 20 events or 30-second interval)
+3. **Transmission**: `navigator.sendBeacon('/api/v1/events', payload)` — fire-and-forget, survives page unload
+4. **Backend**: BFF proxy forwards to Rust API → persisted to Supabase
+
+**AI Server Data Path:**
+
+1. **Rust API → gRPC**: Rust/Axum calls `MetadataServicer` via gRPC
+2. **LLM Routing**: `LLMRouter` selects provider based on content type:
+   - Perplexity — web-grounded queries
+   - Groq — low-latency completions
+   - Gemini — multimodal / vision tasks
+   - OpenAI — general-purpose completions
+3. **Cache**: Redis caches responses to avoid duplicate LLM calls
+4. **Search**: SearXNG (self-hosted) used for web search augmentation
+
+**Editorial/Magazine Flow:**
+
+1. **Curation**: AI server generates editorial content stored via Rust API → Supabase
+2. **Page Load**: Magazine detail page server-renders `MagazineContent`, `MagazineCelebSection`
+3. **Decoding Ritual**: Client-side animation (GSAP) plays "decoding ritual" on magazine open
+4. **Bookshelf State**: `magazineStore` tracks which issues are in the user's personal collection
+
 **Modal/Detail Page Flow:**
 
 1. **Modal Route**: App uses parallel routes (`@modal/(.)images/[id]`) for image detail modal
@@ -134,6 +202,11 @@ tokens.ts → Tailwind config → globals.css → components
 - `authStore`: OAuth session, user identity
 - `requestStore`: Multi-step form progression
 - `profileStore`: Cached user profile/preferences
+- `vtonStore`: VTON job state, persists across navigation
+- `behaviorStore`: Analytics event queue
+- `magazineStore`: Magazine bookshelf state
+- `studioStore`: 3D Spline camera state machine
+- `collectionStore`: Collection state
 
 **React Query**: Asynchronous server-state caching
 - Query keys: `["images", "infinite", {...params}]` for structured cache invalidation
@@ -148,6 +221,12 @@ tokens.ts → Tailwind config → globals.css → components
 - Examples: `lib/stores/requestStore.ts`
 - Pattern: Single Zustand store manages all 4 request steps, prevents invalid state transitions
 - Actions: `addImage()`, `detectItems()`, `updateMetadata()`, `submitRequest()`
+
+**Generated API Hooks (Orval):**
+- Purpose: Type-safe, auto-generated React Query hooks from Rust OpenAPI spec
+- Location: `lib/api/generated/` (never edit manually)
+- Pattern: `bun run generate:api` in `packages/web` regenerates from `packages/api-server/openapi.json`
+- Mutator: `lib/api/mutator/custom-instance.ts` injects auth headers and base URL
 
 **API Client Functions:**
 - Purpose: Typed, error-handled API communication
@@ -181,6 +260,7 @@ tokens.ts → Tailwind config → globals.css → components
   - Wraps app with `AppProviders` (React Query, Theme, Auth)
   - Renders modal slot for parallel routes
   - Wraps content with `MainContentWrapper` for header/nav spacing
+  - Mounts `LazyVtonModal` — persists VTON state across route changes
   - Renders footer
 
 **App Providers:**
@@ -198,6 +278,20 @@ tokens.ts → Tailwind config → globals.css → components
   - Calls `useAuthStore.initialize()` to check session on startup
   - Subscribes to `supabaseBrowserClient.auth.onAuthStateChange()`
   - Updates `authStore` when user logs in/out/refreshes token
+
+**VTON Modal:**
+- Location: `LazyVtonModal` lazy-loaded in `app/layout.tsx`
+- Triggers: `vtonStore` job state changes
+- Responsibilities:
+  - Persists across route navigation (mounted at root level)
+  - Displays VTON background job progress and result image
+
+**Admin Dashboard:**
+- Location: `app/admin/` routes
+- Triggers: User navigates to `/admin/*`
+- Responsibilities:
+  - Protected by `isAdmin` flag on user profile
+  - Surfaces AI cost metrics, audit logs, pipeline status, server logs
 
 **Search Page:**
 - Location: `app/search/page.tsx` (server) + `SearchPageClient.tsx` (client)
@@ -285,6 +379,16 @@ tokens.ts → Tailwind config → globals.css → components
 - RLS: Supabase RLS policies on tables (users, posts, items) enforce authorization
 - Guest Mode: `authStore.guestLogin()` allows browsing without authentication
 
+**Behavioral Tracking:**
+- Hooks: `useTrackEvent`, `useTrackDwellTime`, `useTrackScrollDepth`
+- Batching: `behaviorStore` queues up to 20 events, flushes every 30 seconds
+- Transport: `navigator.sendBeacon` (fire-and-forget, survives page unload)
+
+**Generated API:**
+- Tooling: Orval 8.5.3 reads `packages/api-server/openapi.json` → generates `lib/api/generated/`
+- Regenerate: `cd packages/web && bun run generate:api`
+- Rule: Never manually edit files in `lib/api/generated/`
+
 **Loading States:**
 - UI: Skeleton screens during page load (SearchPageSkeleton in search/page.tsx)
 - React Query: `isPending` / `isLoading` used for loading indicators
@@ -295,8 +399,9 @@ tokens.ts → Tailwind config → globals.css → components
 - TypeScript strict mode enabled
 - Database types: Auto-generated from Supabase schema in `lib/supabase/types.ts`
 - API types: Manual DTOs in `lib/api/types.ts` (UploadResponse, CreatePostRequest, etc.)
+- Generated types: Orval produces fully-typed hooks from OpenAPI spec
 - Component props: Fully typed with interfaces/generics
 
 ---
 
-*Architecture analysis: 2026-02-05*
+*Architecture analysis: 2026-03-26*

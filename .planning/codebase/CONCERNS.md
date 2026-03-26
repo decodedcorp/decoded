@@ -1,10 +1,10 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-05
+**Analysis Date:** 2026-03-26
 
 ## Executive Summary
 
-The codebase is well-structured with clear separation of concerns and solid architectural patterns. However, several technical debt items and fragile patterns exist that should be addressed for production stability. Primary concerns involve error handling consistency, component complexity in large UI files, state management validation, and upstream external API dependencies.
+The codebase has grown into a multi-service monorepo with a Next.js 16 frontend, Rust/Axum backend, and Python AI server — significantly more complex than the initial analysis. The architecture is well-structured with clear separation of concerns and solid patterns. However, several technical debt items and fragile patterns exist that should be addressed for production stability. Primary concerns involve test coverage (infrastructure configured but unused), missing CI/CD pipeline, error handling consistency, component complexity in large UI files, state management validation, bundle size monitoring, and upstream external API dependencies.
 
 ---
 
@@ -60,12 +60,12 @@ useEffect(() => {
 - Consider using proper logging library (winston, pino) with log levels
 - Remove or centralize debug logging at build time
 
-### 3. Inconsistent Error Handling in API Routes
+### 3. Inconsistent API Proxy Error Handling
 
 **Issue:** API proxy routes (`/app/api/v1/**`) have inconsistent error handling:
-- `route.ts` (lines 19-24, 63-68): Check `API_BASE_URL`, log with `console.error()`
-- Some routes don't validate environment variables
-- Error responses all return generic 500 status
+- Some routes validate `API_BASE_URL`, others don't
+- All routes return generic 500 without forwarding the backend's structured error codes
+- Backend errors (validation, auth, rate limit) get swallowed at the proxy layer
 
 **Files:**
 - `packages/web/app/api/v1/posts/route.ts` (lines 20-24, 49-53)
@@ -80,6 +80,21 @@ useEffect(() => {
 - Create middleware for env validation and error formatting
 - Parse backend error responses and forward structured errors
 - Use consistent HTTP status codes (401 for auth, 422 for validation, 429 for rate limits)
+
+### 4. STACK.md Version Drift
+
+**Severity:** Low
+
+**Issue:** `STACK.md` documented yarn 4.9.2 as the package manager, but the actual runtime is bun 1.3.10. Documentation was stale and misrepresented the toolchain.
+
+**Impact:**
+- New developers install the wrong package manager
+- CI/CD scripts built from docs may use wrong commands
+- Erodes trust in documentation accuracy
+
+**Fix approach:**
+- Treat STACK.md as a living document; update on every toolchain change
+- Add a linting step or checklist item that cross-references `package.json` engines field with STACK.md on each PR
 
 ---
 
@@ -188,6 +203,7 @@ const FRICTION = 0.9;
 - High frame rate requirement (16ms = 60fps target)
 - On lower-end devices, scrolling may jank
 - Large number of DOM nodes (MAX_RENDER_CELLS = 300) impact layout
+- Not yet profiled on mid-range Android or other lower-end hardware
 
 **Fix approach:**
 - Profile with DevTools to identify bottlenecks
@@ -195,7 +211,29 @@ const FRICTION = 0.9;
 - Add frame rate adaptive tuning
 - Test on lower-end devices (e.g., mid-range Android)
 
-### 2. Coordinate Conversion Overhead
+### 2. Bundle Size Not Monitored
+
+**Severity:** Medium
+
+**Issue:** Heavy dependencies are included without lazy loading or bundle size enforcement.
+
+**Affected areas:**
+- Three.js (`DecodedLogo.tsx`) adds significant bundle weight
+- GSAP loaded globally rather than per-route
+- Full icon sets (lucide-react, react-icons) without tree-shaking verification
+- No `bundlesize` or `size-limit` integration in CI
+
+**Impact:**
+- Initial page load likely heavier than necessary
+- No visibility into regressions when adding new dependencies
+- Mobile users on slow connections disproportionately affected
+
+**Fix approach:**
+- Add `size-limit` or `bundlesize` check to CI
+- Lazy-load Three.js and GSAP at route level
+- Audit icon imports; import individual icons rather than full packages
+
+### 3. Coordinate Conversion Overhead
 
 **Issue:** `apiToStoreCoord()` and `storeToApiCoord()` called frequently during rendering.
 
@@ -236,22 +274,24 @@ const FRICTION = 0.9;
 - Throw error at build time if missing
 - Create `lib/config/api.ts` with validated configuration
 
-### 2. Three.js Version and Browser Support
+### 2. Three.js / WebGL No Fallback
 
-**Issue:** `DecodedLogo.tsx` uses Three.js with WebGL rendering, no fallback for older browsers.
+**Severity:** Low
+
+**Issue:** `DecodedLogo.tsx` uses Three.js with WebGL rendering. There is no WebGL capability detection and no SVG fallback for environments where WebGL is unavailable (in-app browsers, WebViews, older Android WebKit).
 
 **Files:**
 - `packages/web/lib/components/DecodedLogo.tsx` (lines 67-140+)
 
 **Risk:**
-- WebGL not supported on older browsers or in-app browsers (WebView)
-- No error boundary or fallback
-- Memory leaks possible if canvas not cleaned up
+- Blank or broken logo in in-app browsers (Instagram, LINE, KakaoTalk)
+- No error boundary means a Three.js crash propagates up the tree
+- Memory leaks possible if canvas not cleaned up on unmount
 
 **Fix approach:**
-- Add WebGL capability detection
-- Provide SVG fallback for unsupported browsers
-- Add error boundary around Three.js component
+- Add WebGL capability detection (`canvas.getContext('webgl')`)
+- Provide SVG or static image fallback for unsupported browsers
+- Wrap in error boundary
 
 ### 3. Zustand Store Serialization Risk
 
@@ -273,7 +313,7 @@ const FRICTION = 0.9;
 
 ### Critical Untested Paths
 
-**No test directory exists** (`__tests__/` folder is missing)
+**Test framework is configured but no actual tests have been written.**
 
 1. **API proxy error handling** - No tests for backend error propagation
    - What if backend returns 400? Does it propagate to client?
@@ -303,12 +343,12 @@ const FRICTION = 0.9;
    - What if user goes back?
    - Timeout handling on unmount
 
-### Test Infrastructure Missing
+### Test Framework Configured but Unused
 
-- **Test framework:** No jest, vitest, or other test runner configured
-- **Test files:** No test files present in codebase
+- **Test framework:** Vitest 4.1 and Playwright 1.58 are listed in `package.json` — infrastructure exists
+- **Test files:** Zero test files present in codebase — infrastructure is entirely unused
 - **Mocking:** No mock factories for API responses, Supabase
-- **Test coverage:** 0% coverage
+- **Test coverage:** 0% meaningful coverage
 
 **Recommended additions:**
 ```bash
@@ -471,6 +511,28 @@ setDetectedSpots: (spots) => {
 
 ---
 
+## CI/CD and Infrastructure Gaps
+
+### 1. No CI/CD Pipeline
+
+**Severity:** Critical
+
+**Issue:** No GitHub Actions workflows or equivalent CI/CD configuration detected in the repository. There is no automated build, test, or deploy pipeline.
+
+**Impact:**
+- PRs can be merged without passing type checks or lint
+- No automated test execution (even once tests are written)
+- Deploy process is entirely manual — error-prone
+- No visibility into build health over time
+
+**Fix approach:**
+- Add `.github/workflows/ci.yml` with: install, type-check, lint, test, build
+- Gate PR merges on CI passing
+- Add a separate deploy workflow triggered on merge to `main`
+- Consider Turborepo's remote caching for faster CI runs
+
+---
+
 ## Monitoring Gaps
 
 ### 1. No Error Tracking or Observability
@@ -513,7 +575,7 @@ setDetectedSpots: (spots) => {
 
 ### 1. Build Size Not Monitored
 
-**Issue:** No mention of bundle size analysis or optimization.
+**Issue:** No bundle size analysis or enforcement in CI.
 
 **Risk:**
 - Component libraries bundled entirely (lucide-react, react-icons)
@@ -543,31 +605,31 @@ setDetectedSpots: (spots) => {
 
 ## Recommendations Priority
 
-### Critical (Blocking Issues)
-1. **Add test infrastructure** - Zero test coverage is untenable for production
-2. **Fix environment variable validation** - Prevent misconfiguration
-3. **Complete scroll forwarding** - Unfinished features can break
-4. **Implement rate limiting** - Prevent abuse of public endpoints
+### Critical
+1. **Add test coverage** - Framework (Vitest 4.1, Playwright 1.58) exists; zero tests written
+2. **Implement rate limiting** on `POST /api/v1/posts/analyze`
+3. **Set up CI/CD pipeline** - No automated build/test/deploy exists
+4. **Fix environment variable validation** - Prevent misconfiguration silent failures
 
-### High (Technical Debt)
-1. **Refactor large components** - Reduce cognitive load and improve maintainability
-2. **Remove debug logging** - Clean up production code
-3. **Fix state machine transitions** - Prevent invalid state combinations
-4. **Add error tracking** - Gain visibility into production issues
+### High
+1. **Refactor large components** - ThiingsGrid (948 lines), DecodedLogo (764 lines), etc.
+2. **Fix state machine transitions** in RequestStore - Prevent invalid step combinations
+3. **Add error tracking** (Sentry or equivalent) - Gain production visibility
+4. **Remove debug logging** from production code
 
-### Medium (Improvements)
-1. **Implement image URL cleanup** - Prevent memory leaks
-2. **Add GSAP safety guards** - Ensure animations clean up properly
-3. **Optimize ThiingsGrid performance** - Test on low-end devices
-4. **Add serialization strategy** - Document what's persistable in stores
+### Medium
+1. **Fix memory leak risk** with URL.createObjectURL - Add proper cleanup
+2. **Add GSAP safety guards** - Ensure animations clean up on unmount
+3. **Monitor bundle size** - Add size-limit to CI; lazy-load Three.js and GSAP
+4. **Standardize API proxy error handling** - Forward backend structured errors; validate API_BASE_URL consistently
 
-### Low (Polish)
-1. **Add bundle size monitoring** - Track performance regressions
-2. **Optimize dependencies** - Lazy load heavy libraries
-3. **Add Web Vitals monitoring** - Track user experience
-4. **Implement feature detection** - Graceful degradation for older browsers
+### Low
+1. **Add WebGL fallback** - SVG or static image fallback for in-app browsers
+2. **Optimize lazy loading** for heavy dependencies
+3. **Add Web Vitals monitoring** - Track user experience over time
+4. **Profile ThiingsGrid on low-end devices** - Validate physics engine on mid-range Android
 
 ---
 
-*Concerns audit: 2026-02-05*
-*Analysis scope: 183 TS/TSX files, 7 major store/API layers, 4 complex UI components reviewed*
+*Concerns audit: 2026-03-26*
+*Analysis scope: 250+ TS/TSX files across Next.js frontend, Rust/Axum backend, Python AI server; 9 major store/API/proxy layers, 4 complex UI components reviewed*

@@ -1,7 +1,7 @@
 # Testing Framework & Patterns
 
-**Project**: decoded-app
-**Last Updated**: 2026-01-23
+**Project**: decoded-monorepo
+**Last Updated**: 2026-03-26
 **Focus**: Test structure, patterns, and quality standards
 
 ## Table of Contents
@@ -20,10 +20,9 @@
 
 | Framework | Version | Purpose | Location |
 |-----------|---------|---------|----------|
-| **Playwright** | (via `@playwright/test`) | E2E testing | `__tests__/e2e/` |
-| **React Testing Library** | (implicit via React Query) | Component testing | Not yet configured |
-| **Jest** | Not configured | Unit testing | Not configured |
-| **Vitest** | Not configured | Alternative test runner | Not configured |
+| **Playwright** | 1.58 | E2E testing | `__tests__/e2e/`, `tests/` |
+| **Vitest** | 4.1 | Unit/component test runner | configured |
+| **React Testing Library** | (separate dep) | Component testing | configured |
 
 ### Test Configuration
 
@@ -36,12 +35,17 @@
     "start": "next start",
     "lint": "eslint app lib",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "generate:api": "orval --config orval.config.ts",
+    "test:visual": "playwright test tests/visual-qa.spec.ts",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest"
   }
 }
 ```
 
-**Status**: Test script not yet added to npm scripts. Playwright tests are discoverable but not run by default.
+**Status**: Vitest and Playwright are configured. Vitest setup exists with jsdom environment. However, actual test files are minimal - only E2E scroll-animation spec exists.
 
 ---
 
@@ -50,7 +54,7 @@
 ### Directory Layout
 
 ```
-decoded-app/
+decoded-monorepo/packages/web/
 ├── __tests__/
 │   ├── e2e/
 │   │   └── scroll-animation.spec.ts      # E2E test suite
@@ -105,7 +109,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'yarn dev',
+    command: 'bun run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
   },
@@ -266,25 +270,25 @@ await page.dragAndDrop(".source", ".target");
 
 ```bash
 # Install Playwright (if not already)
-npx playwright install
+bunx playwright install
 
 # Run all E2E tests
-npx playwright test
+bunx playwright test
 
 # Run tests in specific file
-npx playwright test __tests__/e2e/scroll-animation.spec.ts
+bunx playwright test __tests__/e2e/scroll-animation.spec.ts
 
 # Run tests in headed mode (see browser)
-npx playwright test --headed
+bunx playwright test --headed
 
 # Debug mode
-npx playwright test --debug
+bunx playwright test --debug
 
 # Run on specific browser
-npx playwright test --project=chromium
+bunx playwright test --project=chromium
 
 # Generate test report
-npx playwright test && npx playwright show-report
+bunx playwright test && bunx playwright show-report
 ```
 
 ---
@@ -734,14 +738,11 @@ export function createTestQueryClient() {
 ### Generating Coverage Report
 
 ```bash
-# Jest
-jest --coverage
-
 # Vitest
-vitest run --coverage
+bun run test:unit -- --coverage
 
 # Playwright (code coverage)
-npx playwright test --reporter=html
+bunx playwright test --reporter=html
 
 # View report
 open coverage/index.html
@@ -755,7 +756,7 @@ open playwright-report/index.html
 ### 1. Add Playwright Config
 ```bash
 # Install Playwright if not already installed
-npm install -D @playwright/test
+bun add -D @playwright/test
 
 # Create playwright.config.ts in root
 # (Use template provided in section above)
@@ -773,9 +774,9 @@ npm install -D @playwright/test
 }
 ```
 
-### 3. Set Up Unit Testing (Vitest Recommended)
+### 3. Set Up Unit Testing (Vitest)
 ```bash
-npm install -D vitest @testing-library/react @testing-library/user-event
+bun add -D vitest @testing-library/react @testing-library/user-event
 ```
 
 ### 4. Create Test Utilities
