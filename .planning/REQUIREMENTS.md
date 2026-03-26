@@ -32,9 +32,9 @@
 
 - [x] **SAVED-01**: Rust 백엔드 `GET /api/v1/users/me/saved` 엔드포인트 구현 (기존 `saved_posts` 테이블 활용, 페이지네이션)
 - [x] **SAVED-02**: OpenAPI spec 반영 + Orval hook 생성
-- [ ] **SAVED-03**: `SavedGrid.tsx`를 실제 데이터 기반으로 재구현
-- [ ] **SAVED-04**: `collectionStore.ts` MOCK_PINS/MOCK_BOARDS 완전 제거
-- [ ] **SAVED-05**: 무한스크롤 연결
+- [x] **SAVED-03**: `SavedGrid.tsx`를 실제 데이터 기반으로 재구현
+- [x] **SAVED-04**: `collectionStore.ts` MOCK_PINS/MOCK_BOARDS 완전 제거
+- [x] **SAVED-05**: 무한스크롤 연결
 
 ## Future Requirements (v10.1+)
 
@@ -80,9 +80,9 @@
 | TRIES-05 | Phase 49 | Complete |
 | SAVED-01 | Phase 48 | Complete |
 | SAVED-02 | Phase 48 | Complete |
-| SAVED-03 | Phase 50 | Pending |
-| SAVED-04 | Phase 50 | Pending |
-| SAVED-05 | Phase 50 | Pending |
+| SAVED-03 | Phase 50 | Complete |
+| SAVED-04 | Phase 50 | Complete |
+| SAVED-05 | Phase 50 | Complete |
 
 **Coverage:**
 - v10.0 requirements: 19 total
