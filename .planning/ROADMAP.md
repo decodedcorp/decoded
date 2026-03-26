@@ -120,6 +120,51 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
 ## Phase Details
 
+### Phase 44: Memory Leak Prevention
+
+**Goal**: GSAP contextSafe(), AbortController, useEffect 클린업 패턴을 전면 적용하여 메모리 누수를 방지하고, Chrome DevTools 프로파일링으로 검증한다
+**Depends on**: Nothing (first phase of v10.0)
+**Requirements**: MEM-01, MEM-02, MEM-03, MEM-04
+**Success Criteria** (what must be TRUE):
+
+1. 47개 GSAP 사용 컴포넌트의 이벤트 핸들러 애니메이션이 contextSafe() 패턴을 사용하며 언마운트 시 자동 클린업된다
+2. 모든 비동기 fetch 요청에 AbortController가 적용되어 컴포넌트 언마운트 시 abort()가 호출된다
+3. useEffect 내 setTimeout 워크어라운드가 제거되고 addEventListener/removeEventListener 직접 사용 패턴으로 정비된다
+4. 주요 페이지(메인, 피드, 아이템 상세)의 Chrome DevTools Memory 프로파일링에서 반복 네비게이션 시 메모리 증가가 없다
+
+
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 44-01-PLAN.md — GSAP contextSafe() + setTimeout workaround cleanup (MEM-01, MEM-03)
+- [ ] 44-02-PLAN.md — AbortController signal threading for all fetch paths (MEM-02)
+- [ ] 44-03-PLAN.md — Build verification + Chrome DevTools memory profiling checkpoint (MEM-04)
+
+### Phase 45: Security Foundation
+
+**Goal**: Rate Limiting, 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파를 적용하여 보안 기반을 확립한다
+**Depends on**: Nothing (independent)
+**Requirements**: RATE-01, RATE-02, RATE-03, SEC-01, SEC-02, SEC-03
+
+### Phase 46: Component Refactoring
+
+**Goal**: 950줄, 880줄, 771줄, 726줄의 거대 컴포넌트를 커스텀 훅과 서브컴포넌트로 분리하여 300줄 이하로 만든다
+**Depends on**: Phase 44 (GSAP cleanup patterns established first)
+**Requirements**: REF-01, REF-02, REF-03, REF-04
+
+### Phase 47: Observability
+
+**Goal**: Sentry를 Next.js, Rust, Python에 통합하고 Web Vitals 모니터링과 에러 전파 검증을 구축한다
+**Depends on**: Phase 45 (security foundation in place)
+**Requirements**: OBS-01, OBS-02, OBS-03
+
+### Phase 48: Test Coverage
+
+**Goal**: Vitest 유닛 테스트, Playwright E2E 테스트로 핵심 경로를 커버하고 data-testid를 체계적으로 마킹한다
+**Depends on**: Phase 46, Phase 47 (refactored components + observability)
+**Requirements**: TEST-01, TEST-02, TEST-03
+
 ### Phase m8-01: Event Tracking Infrastructure
 
 **Goal**: 유저 행동이 비동기적으로 기록되며 UI 성능에 영향 없이 Supabase에 저장된다 — 미구현 소셜 연동 UI 제거
@@ -325,7 +370,7 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
-| 44: Memory Leak Prevention                    | v10.0     | 0/TBD          | Not started   | -          |
+| 44: Memory Leak Prevention                    | v10.0     | 0/3            | Planning done | -          |
 | 45: Security Foundation                       | v10.0     | 0/TBD          | Not started   | -          |
 | 46: Component Refactoring                     | v10.0     | 0/TBD          | Not started   | -          |
 | 47: Observability                             | v10.0     | 0/TBD          | Not started   | -          |
