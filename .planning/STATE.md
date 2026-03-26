@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Phase 46 context gathered
-last_updated: "2026-03-26T14:09:09.104Z"
+stopped_at: Completed 46-01-PLAN.md
+last_updated: "2026-03-26T14:24:19.250Z"
 progress:
   total_phases: 44
-  completed_phases: 41
-  total_plans: 96
-  completed_plans: 95
+  completed_phases: 42
+  total_plans: 97
+  completed_plans: 96
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 45 — public-user-profile-route
+**Current focus:** Phase 46 — follow-system-backend
 
 ## Current Position
 
-Phase: 45 (public-user-profile-route) — EXECUTING
+Phase: 46 (follow-system-backend) — EXECUTING
 Plan: 1 of 1
 
 ## Milestone Summary
@@ -104,6 +104,9 @@ v9.0 key constraints (from research):
 - [Phase 45-01]: PublicProfileClient is standalone (not extending ProfileClient) — prevents Zustand profileStore being polluted with another user's data
 - [Phase 45-01]: ProfileHeaderCard (design-system explicit props) used instead of ProfileHeader (reads profileStore) for public profile view
 - [Phase 45-01]: BadgeGrid and RankingList replaced with inline placeholders in public profile — both read profileStore and would show wrong user data
+- [Phase 46]: ConnectionTrait must be imported explicitly for query_one on DatabaseConnection
+- [Phase 46]: struct update syntax (..UserResponse::from(user)) cleanly sets non-count fields in get_user_with_follow_counts
+- [Phase 46]: PATCH /me re-fetches follow counts after update for accurate response
 
 ### Blockers/Concerns
 
@@ -120,9 +123,9 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-26T14:09:09.100Z
-Stopped at: Phase 46 context gathered
-Resume file: .planning/phases/46-follow-system-backend/46-CONTEXT.md
+Last session: 2026-03-26T14:24:19.247Z
+Stopped at: Completed 46-01-PLAN.md
+Resume file: None
 
 Next step: Execute 42-03-PLAN.md
 

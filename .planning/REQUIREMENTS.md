@@ -14,9 +14,9 @@
 
 ### Follow System
 
-- [ ] **FLLW-01**: Supabase `user_follows` 테이블 생성 (마이그레이션 SQL)
-- [ ] **FLLW-02**: Rust 백엔드 Follow API 구현 (`GET /users/{id}/followers/count`, `GET /users/{id}/following/count`)
-- [ ] **FLLW-03**: `UserResponse`에 `followers_count`/`following_count` 필드 추가
+- [x] **FLLW-01**: Supabase `user_follows` 테이블 생성 (마이그레이션 SQL)
+- [x] **FLLW-02**: Rust 백엔드 Follow API 구현 (`GET /users/{id}/followers/count`, `GET /users/{id}/following/count`)
+- [x] **FLLW-03**: `UserResponse`에 `followers_count`/`following_count` 필드 추가
 - [ ] **FLLW-04**: OpenAPI spec 업데이트 + Orval 재생성
 - [ ] **FLLW-05**: `FollowStats.tsx` 하드코딩(`1234`/`567`) 제거, 실제 데이터 연결
 
@@ -68,9 +68,9 @@
 | AUTH-02 | Phase 44 | Complete |
 | ROUTE-01 | Phase 45 | Complete |
 | ROUTE-02 | Phase 45 | Complete |
-| FLLW-01 | Phase 46 | Pending |
-| FLLW-02 | Phase 46 | Pending |
-| FLLW-03 | Phase 46 | Pending |
+| FLLW-01 | Phase 46 | Complete |
+| FLLW-02 | Phase 46 | Complete |
+| FLLW-03 | Phase 46 | Complete |
 | FLLW-04 | Phase 47 | Pending |
 | FLLW-05 | Phase 47 | Pending |
 | TRIES-01 | Phase 48 | Pending |
