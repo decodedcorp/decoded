@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Phase 45 context gathered
-last_updated: "2026-03-26T13:38:23.773Z"
+stopped_at: Completed 45-01-PLAN.md
+last_updated: "2026-03-26T13:57:30.238Z"
 progress:
   total_phases: 43
-  completed_phases: 40
-  total_plans: 95
-  completed_plans: 94
+  completed_phases: 41
+  total_plans: 96
+  completed_plans: 95
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 44 — auth-guard
+**Current focus:** Phase 45 — public-user-profile-route
 
 ## Current Position
 
-Phase: 44 (auth-guard) — EXECUTING
+Phase: 45 (public-user-profile-route) — EXECUTING
 Plan: 1 of 1
 
 ## Milestone Summary
@@ -101,6 +101,9 @@ v9.0 key constraints (from research):
 - [Phase 44]: sessionStorage for OAuth round-trip (Supabase allowlists fixed redirectTo origin/)
 - [Phase 44]: window.location.replace in authStore (not router.push) to avoid login page in browser history
 - [Phase 44]: req.nextUrl.pathname used for redirect param to prevent open redirect vulnerability
+- [Phase 45-01]: PublicProfileClient is standalone (not extending ProfileClient) — prevents Zustand profileStore being polluted with another user's data
+- [Phase 45-01]: ProfileHeaderCard (design-system explicit props) used instead of ProfileHeader (reads profileStore) for public profile view
+- [Phase 45-01]: BadgeGrid and RankingList replaced with inline placeholders in public profile — both read profileStore and would show wrong user data
 
 ### Blockers/Concerns
 
@@ -117,9 +120,9 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-26T13:38:23.770Z
-Stopped at: Phase 45 context gathered
-Resume file: .planning/phases/45-public-user-profile-route/45-CONTEXT.md
+Last session: 2026-03-26T13:57:30.235Z
+Stopped at: Completed 45-01-PLAN.md
+Resume file: None
 
 Next step: Execute 42-03-PLAN.md
 
