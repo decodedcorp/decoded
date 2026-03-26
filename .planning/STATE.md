@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Phase 48 context gathered
-last_updated: "2026-03-26T15:05:13.536Z"
+stopped_at: Completed 48-01-PLAN.md
+last_updated: "2026-03-26T15:20:20.762Z"
 progress:
   total_phases: 46
   completed_phases: 43
-  total_plans: 98
-  completed_plans: 97
+  total_plans: 100
+  completed_plans: 98
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 47 — follow-system-frontend
+**Current focus:** Phase 48 — tries-saved-backend
 
 ## Current Position
 
-Phase: 47 (follow-system-frontend) — EXECUTING
-Plan: 1 of 1
+Phase: 48 (tries-saved-backend) — EXECUTING
+Plan: 1 of 2
 
 ## Milestone Summary
 
@@ -110,6 +110,8 @@ v9.0 key constraints (from research):
 - [Phase 47]: openapi.json edit via python3 json.load/dump for minified JSON safety
 - [Phase 47]: Orval preserves snake_case: UserResponse fields are followers_count/following_count (not camelCase)
 - [Phase 47]: ProfileClient uses optional chaining (userData?.followers_count ?? 0) — PublicProfileClient uses direct access (non-null guard at line 189)
+- [Phase 48]: list_my_tries uses SeaORM entity query (no JOIN needed); list_my_saved uses raw SQL JOIN for post title/thumbnail
+- [Phase 48]: per_page capped at 50 in service layer for tries/saved endpoints (not in Pagination struct)
 
 ### Blockers/Concerns
 
@@ -126,9 +128,9 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-26T15:05:13.531Z
-Stopped at: Phase 48 context gathered
-Resume file: .planning/phases/48-tries-saved-backend/48-CONTEXT.md
+Last session: 2026-03-26T15:20:20.753Z
+Stopped at: Completed 48-01-PLAN.md
+Resume file: None
 
 Next step: Execute 42-03-PLAN.md
 
