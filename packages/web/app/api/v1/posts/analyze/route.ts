@@ -7,17 +7,17 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL = process.env.API_BASE_URL;
+import { API_BASE_URL } from "@/lib/server-env";
+import {
+  checkRateLimit,
+  getClientKey,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  // Validate server configuration
-  if (!API_BASE_URL) {
-    console.error("API_BASE_URL environment variable is not configured");
-    return NextResponse.json(
-      { message: "Server configuration error" },
-      { status: 500 }
-    );
+  const clientKey = getClientKey(request);
+  if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 10 })) {
+    return rateLimitResponse(60);
   }
 
   try {
@@ -42,7 +42,9 @@ export async function POST(request: NextRequest) {
       data = JSON.parse(responseText);
     } catch {
       // Backend returned non-JSON response (likely an error message)
-      console.error("Backend returned non-JSON response:", responseText);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Backend returned non-JSON response:", responseText);
+      }
       return NextResponse.json(
         { message: responseText || "Backend error" },
         { status: response.status || 500 }
@@ -52,14 +54,11 @@ export async function POST(request: NextRequest) {
     // Return the response with the same status code
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Analyze proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Analyze proxy error:", error);
+    }
     return NextResponse.json(
-      {
-        message:
-          error instanceof Error
-            ? `Proxy error: ${error.message}`
-            : "Failed to analyze image",
-      },
+      { message: error instanceof Error ? error.message : "Proxy error" },
       { status: 502 }
     );
   }
