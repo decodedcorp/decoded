@@ -31,10 +31,10 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 
 ### Error Tracking (Sentry)
 
-- [ ] **SENT-01**: @sentry/nextjs 설치 및 설정 — instrumentation.ts, 소스맵 업로드, 클라이언트/서버 에러 수집
-- [ ] **SENT-02**: Rust 백엔드에 sentry + sentry-tower 레이어 연동 — 기존 tracing 스택과 통합
-- [ ] **SENT-03**: Python AI 서버에 sentry-sdk[fastapi] 연동 — gRPC 핸들러 에러 수집
-- [ ] **SENT-04**: dev/prod 환경별 DSN 분리 설정 및 환경 태깅
+- [x] **SENT-01**: @sentry/nextjs 설치 및 설정 — instrumentation.ts, 소스맵 업로드, 클라이언트/서버 에러 수집
+- [x] **SENT-02**: Rust 백엔드에 sentry + sentry-tower 레이어 연동 — 기존 tracing 스택과 통합
+- [x] **SENT-03**: Python AI 서버에 sentry-sdk[fastapi] 연동 — gRPC 핸들러 에러 수집
+- [x] **SENT-04**: dev/prod 환경별 DSN 분리 설정 및 환경 태깅
 
 ### E2E Testing
 
@@ -91,10 +91,10 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 | RATE-02 | Phase 45 | Complete |
 | RATE-03 | Phase 45 | Complete |
 | RATE-04 | Phase 45 | Complete |
-| SENT-01 | Phase 47 | Pending |
-| SENT-02 | Phase 47 | Pending |
-| SENT-03 | Phase 47 | Pending |
-| SENT-04 | Phase 47 | Pending |
+| SENT-01 | Phase 47 | Complete |
+| SENT-02 | Phase 47 | Complete |
+| SENT-03 | Phase 47 | Complete |
+| SENT-04 | Phase 47 | Complete |
 | E2E-01 | Phase 48 | Complete |
 | E2E-02 | Phase 48 | Complete |
 | E2E-03 | Phase 48 | Complete |
