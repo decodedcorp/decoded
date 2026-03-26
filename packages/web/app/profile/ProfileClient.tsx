@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Settings, RefreshCw, Share2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { AxiosError } from "axios";
 import { Header } from "@/lib/components";
 import {
   ProfileHeader,
@@ -167,6 +169,7 @@ function ProfileError({
 }
 
 export function ProfileClient() {
+  const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActivityTab>("posts");
 
@@ -254,6 +257,14 @@ export function ProfileClient() {
     }
   }, [rankingData, setRankingsFromApi]);
 
+  // 401 auth error -> redirect to login
+  useEffect(() => {
+    const axiosErr = error as AxiosError | null;
+    if (isError && axiosErr?.response?.status === 401) {
+      router.replace("/login?redirect=/profile");
+    }
+  }, [isError, error, router]);
+
   // Loading state - user & stats만 블로킹 (badges/rankings는 개별 로딩)
   const isLoading = isUserLoading || isStatsLoading;
 
@@ -276,6 +287,11 @@ export function ProfileClient() {
 
   // Show error state
   if (isError && error) {
+    const axiosErr = error as AxiosError;
+    if (axiosErr.response?.status === 401) {
+      // Show skeleton while redirect is in flight
+      return <ProfileSkeleton />;
+    }
     return <ProfileError error={error} onRetry={handleRetry} />;
   }
 
