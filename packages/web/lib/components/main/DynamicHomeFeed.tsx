@@ -15,6 +15,7 @@ import { TopItemsSection } from "./TopItemsSection";
 import { EditorialSection } from "./EditorialSection";
 import { TrendingListSection } from "./TrendingListSection";
 import DomeGallery from "@/lib/components/dome/DomeGallery";
+import type { ImageItem } from "@/lib/utils/fallbackImages";
 import { FuzzyText } from "@/lib/components/ui/FuzzyText";
 import { useVtonStore } from "@/lib/stores/vtonStore";
 
@@ -59,6 +60,7 @@ export interface HomeSectionData {
   bestItemCards?: ItemCardData[];
   weeklyBestStyles?: WeeklyBestStyle[];
   trendingKeywords?: TrendingKeyword[];
+  domeImages?: ImageItem[];
 }
 
 export interface DynamicHomeFeedProps {
@@ -284,7 +286,7 @@ export function DynamicHomeFeed({
         );
 
       case "dome-gallery":
-        return <DomeGallerySection key={type} />;
+        return <DomeGallerySection key={type} images={data.domeImages} />;
 
       default:
         return null;
@@ -298,8 +300,12 @@ export function DynamicHomeFeed({
   );
 }
 
+interface DomeGallerySectionProps {
+  images?: ImageItem[];
+}
+
 /** Full-bleed dome gallery with centered CTA */
-export function DomeGallerySection() {
+export function DomeGallerySection({ images }: DomeGallerySectionProps) {
   const openVton = useVtonStore((s) => s.open);
 
   return (
@@ -321,6 +327,7 @@ export function DomeGallerySection() {
         vignetteStart={88}
         segments={28}
         heightGuardMultiplier={2.5}
+        images={images}
       />
 
       {/* Dark scrim with accent color tint */}
