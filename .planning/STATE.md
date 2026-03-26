@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T14:05:19.417Z"
+last_updated: "2026-03-26T14:31:57.669Z"
 progress:
-  total_phases: 43
+  total_phases: 44
   completed_phases: 41
-  total_plans: 99
-  completed_plans: 98
+  total_plans: 102
+  completed_plans: 100
 ---
 
 # Project State
@@ -18,12 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 45 — security-foundation
+**Current focus:** Phase 46 — component-refactoring
 
 ## Current Position
 
-Phase: 45 (security-foundation) — EXECUTING
-Plan: 2 of 2 (Plan 01 complete)
+Phase: 46 (component-refactoring) — EXECUTING
+Plan: 1 of 3
 
 ## Milestone Summary
 
@@ -59,6 +59,9 @@ Target features:
 - [Phase 45]: Rate limiter is in-memory per-process (not Redis) — acceptable for single-server deployment
 - [Phase 45]: console.log/error guarded (not deleted) — Phase 47 Sentry will replace with structured logging
 - [Phase 45]: debug-env route deleted entirely — no legitimate production use case
+- [Phase 46]: Grid item calculation (calculateGridItems) moved to PhysicsEngine to keep ThiingsGrid.tsx under 300 lines
+- [Phase 46]: passive:false event listeners stay in componentDidMount — physics engine handles event payloads, not DOM registration
+- [Phase 46]: VtonPhotoArea and VtonItemPanel added as additional layout subcomponents — hook extraction alone left 526 lines due to JSX-heavy component; layout panels needed to reach the 300-line target
 
 ## Performance Metrics
 
@@ -70,3 +73,5 @@ Target features:
 | Phase 44 P03 | 600 | 2 tasks | 0 files |
 | Phase 45 P01 | 417 | 2 tasks | 4 files |
 | Phase 45 P02 | 466 | 3 tasks | 30 files |
+| Phase 46 P01 | 334 | 2 tasks | 4 files |
+| Phase 46 P02 | 320 | 2 tasks | 9 files |
