@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL = process.env.API_BASE_URL;
+import { API_BASE_URL } from "@/lib/server-env";
 
 type RouteParams = {
   params: Promise<{ postId: string }>;
@@ -18,13 +17,6 @@ async function proxy(
   request: NextRequest,
   method: "GET" | "POST" | "DELETE"
 ) {
-  if (!API_BASE_URL) {
-    return NextResponse.json(
-      { message: "Server configuration error" },
-      { status: 500 }
-    );
-  }
-
   const url = `${API_BASE_URL}/api/v1/posts/${postId}/saved`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -53,10 +45,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     return proxy(postId, request, "GET");
   } catch (error) {
-    console.error("Saved GET proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Saved GET proxy error:", error);
+    }
     return NextResponse.json(
-      { message: "Failed to fetch save status" },
-      { status: 500 }
+      { message: error instanceof Error ? error.message : "Proxy error" },
+      { status: 502 }
     );
   }
 }
@@ -74,10 +68,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     return proxy(postId, request, "POST");
   } catch (error) {
-    console.error("Saved POST proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Saved POST proxy error:", error);
+    }
     return NextResponse.json(
-      { message: "Failed to save post" },
-      { status: 500 }
+      { message: error instanceof Error ? error.message : "Proxy error" },
+      { status: 502 }
     );
   }
 }
@@ -95,10 +91,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     return proxy(postId, request, "DELETE");
   } catch (error) {
-    console.error("Saved DELETE proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Saved DELETE proxy error:", error);
+    }
     return NextResponse.json(
-      { message: "Failed to unsave post" },
-      { status: 500 }
+      { message: error instanceof Error ? error.message : "Proxy error" },
+      { status: 502 }
     );
   }
 }

@@ -1,108 +1,92 @@
 ---
 gsd_state_version: 1.0
-milestone: v10.0
-milestone_name: Profile Page Completion
-status: roadmap_ready
-stopped_at: v10.0 Profile Page Completion roadmap created — Phase 44 next
-last_updated: "2026-03-26T00:00:00.000Z"
+milestone: v6.0
+milestone_name: Behavioral Intelligence & Dynamic UI
+status: unknown
+last_updated: "2026-03-26T16:10:26.906Z"
 progress:
-  total_phases: 50
-  completed_phases: 43
-  total_plans: 94
-  completed_plans: 93
+  total_phases: 46
+  completed_phases: 44
+  total_plans: 106
+  completed_plans: 105
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-23)
+See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** v10.0 Profile Page Completion — Phase 44 ready to execute
+**Current focus:** Phase 48 — test-coverage
 
 ## Current Position
 
-Phase: 44 (auth-guard) — PLANNED
-Plan: 0 of TBD
-
-Progress bar: ████████████████████████████░░░░░░░░░░ 43/50 phases
+Phase: 48 (test-coverage) — EXECUTING
+Plan: 1 of 2
 
 ## Milestone Summary
 
-| Milestone                    | Phases | Plans | Status      | Date       |
-| ---------------------------- | ------ | ----- | ----------- | ---------- |
-| v1.0 Documentation           | 5      | 5     | Shipped     | 2026-01-29 |
-| v1.1 API Integration         | 5      | 13    | Shipped     | 2026-01-29 |
-| v2.0 Design Overhaul         | 9      | 26    | Shipped     | 2026-02-05 |
-| v2.1 Design System           | 6      | 14    | Shipped     | 2026-02-06 |
-| v3.0 Admin Panel             | 6      | 12    | Shipped     | 2026-02-19 |
-| v4.0 Spec Overhaul           | 9      | 13    | Shipped     | 2026-02-20 |
-| v5.0 AI Magazine             | 3      | 11    | Shipped     | 2026-03-12 |
-| v6.0 Behavioral Intelligence | 3      | 10    | Paused      | -          |
-| v7.0 Sticker Canvas          | 3      | 8     | Paused      | -          |
-| v8.0 Monorepo & Bun          | 4      | 3     | Shipped     | 2026-03-23 |
-| v9.0 API Generation          | 5      | 11    | Shipped     | 2026-03-24 |
-| **v10.0 Profile Completion** | **7**  | **-** | **Planned** | -          |
+v10.0 Tech Debt Resolution — 프로덕션 안정성과 코드 품질을 위한 기술 부채 해소
 
-## Performance Metrics
+Target features:
 
-| Metric | Value |
-| ------ | ----- |
-| Total milestones shipped | 8 |
-| Total phases completed | 43 |
-| Total plans executed | 93+ |
-| Current milestone requirements | 19/19 mapped |
-| Current milestone phases | 7 |
+- Rate Limiting 적용 (AI API 비용 보호)
+- Sentry 에러 트래킹 도입
+- 핵심 비즈니스 로직 E2E 테스트
+- 대형 컴포넌트 분리
+- 메모리 누수 방지
 
 ## Accumulated Context
 
-### Decisions
+- v9.0 완료: Orval + Zod 기반 타입 안전 API 생성 파이프라인, 수동 API 코드 전량 교체
+- GitHub Issues 등록: #11 (Rate Limiting), #12 (Sentry), #13 (E2E 테스트), #14 (컴포넌트 분리), #15 (메모리 누수)
 
-v10.0 key constraints (Profile Page Completion — 2026-03-26):
+## Decisions
 
-- [v10.0]: AUTH-01/02 (Phase 44) must be first — all profile feature phases depend on auth guard being in place
-- [v10.0]: ROUTE-01/02 (Phase 45) has zero backend blockers — existing `useProfile` hook + Rust `/api/v1/users/{userId}` ready to use
-- [v10.0]: FLLW backend (Phase 46) requires DB migration (Supabase `user_follows` table) + Rust API — full stack delivery before frontend
-- [v10.0]: Phase 48 (Tries & Saved Backend) depends on Phase 44, NOT Phase 47 — can run in parallel with Phase 47 if needed
-- [v10.0]: TRIES/SAVED backend combined into one phase (48) — same endpoint pattern (GET /users/{userId}/tries, /saved), same Orval workflow
-- [v10.0]: After any backend change: update packages/api-server/openapi.json → run `bun run generate:api` → import generated hooks
-- [v10.0]: Use optimistic updates for follow/unfollow and save/unsave — Korean users expect instant feedback
-- [v10.0]: Cursor-based infinite scroll for Tries/Saved tabs — consistent with existing feed patterns
+| Phase | Decision |
+|-------|----------|
+| 44-01 | AISummarySection/StudioLoader setTimeout patterns preserved — intentional delays with proper cleanup, not workarounds |
+| 44-01 | DraggableDoodle/PolaroidCard: Draggable.create() migrated into useGSAP rather than wrapping individual gsap calls |
+| 44-01 | StickerPeel: contextSafe() used for mousemove handler; touch handlers (classList only) left as native useEffect |
+| 44-02 | AbortSignal threaded through RequestInit (not a separate parameter) to keep adminFetch backwards-compatible |
+| 44-02 | VtonModal uses single shared abortControllerRef for handleTryOn and handleSaveToProfile; items fetch uses per-effect local controller |
+| 44-03 | Build/lint verification via grep audit due to worktree missing node_modules (pre-existing constraint); MEM-04 requires manual Chrome DevTools heap snapshot profiling |
 
-Recent decisions from v9.0:
+- [Phase 44]: MEM-04 manual Chrome DevTools heap snapshot profiling deferred — worktree environment cannot start dev server; user approved deferral, profiling to occur in next normal dev session
+- [Phase 45]: governor 0.10 added directly as companion to tower_governor 0.8 (StateInformationMiddleware not re-exported)
+- [Phase 45]: JWT sub extracted with insecure_disable_signature_validation() — safe since auth_middleware verifies upstream; IP fallback via ConnectInfo<SocketAddr> to avoid X-Forwarded-For spoofing
+- [Phase 45]: Rate limiter is in-memory per-process (not Redis) — acceptable for single-server deployment
+- [Phase 45]: console.log/error guarded (not deleted) — Phase 47 Sentry will replace with structured logging
+- [Phase 45]: debug-env route deleted entirely — no legitimate production use case
+- [Phase 46]: Grid item calculation (calculateGridItems) moved to PhysicsEngine to keep ThiingsGrid.tsx under 300 lines
+- [Phase 46]: passive:false event listeners stay in componentDidMount — physics engine handles event payloads, not DOM registration
+- [Phase 46]: VtonPhotoArea and VtonItemPanel added as additional layout subcomponents — hook extraction alone left 526 lines due to JSX-heavy component; layout panels needed to reach the 300-line target
+- [Phase 46]: OtherSolutionsList handles empty state internally (add-more button or null) — removes conditional wrapping from ItemDetailCard
+- [Phase 46]: useImageModalAnimation takes refs as parameters — component owns ref declarations, hook owns GSAP animation lifecycle (ctxRef)
+- [Phase 46]: renderContent() kept inline in ImageDetailModal — 60 lines, avoids duplicate of ImageDetailContent which serves full-page use case
+- [Phase 47]: @sentry/nextjs/server subpath removed — not exported in v10.46.0; onRequestError is Next.js 15.3+ feature unavailable in this version
+- [Phase 47]: All Sentry env vars commented out by default in .env.local.example — graceful degradation when DSN absent; hideSourceMaps: true prevents source map exposure
+- [Phase 47]: sentry 0.47.0 API uses EventFilter::Event/Breadcrumb/Log/Ignore (not Exception); re-exports via sentry::integrations::tower:: and sentry::integrations::tracing::; SentryHttpLayer::new().enable_transaction() replaces deprecated with_transaction()
+- [Phase 47]: Python _init_sentry() guard pattern: check empty SENTRY_DSN, return early without init — both backend services gracefully start without Sentry in local dev
+- [Phase 48]: item-adopt-button placed on TopSolutionCard (not ItemDetailCard) — actual button element is in TopSolutionCard; adoptDropdown props are spread down
+- [Phase 48]: Auth injection uses localStorage (sb-{projectRef}-auth-token) because app uses createClient not createBrowserClient (SSR cookies)
+- [Phase 48]: AI pipeline E2E tests use page.route() mock for /api/v1/posts/analyze — never hit real Rust backend
 
-- [v9.0]: Use zod v3 (not v4) — Orval Zod v4 compat bugs #2249/#2304 active
-- [Phase 43]: Rollback strategy: revert openapi.json + re-run generate:api — generated files are gitignored
-- [Phase 43-03]: vitest environment: node for Zod schema tests (no DOM dependency)
+## Performance Metrics
 
-### Blockers/Concerns
-
-- **v6.0 (paused)**: Privacy compliance — PIPA/GDPR disclosure required before behavioral tracking ships
-- **Phase 46 (FLLW-01)**: Supabase migration requires coordinated deploy — DB schema change must precede Rust API deploy
-- **Phase 46 (FLLW-02)**: Rust endpoint addition requires backend build + deploy before frontend can use generated hooks
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260326-ssc | 매주 목요일 미팅용 주간 업데이트 정리 스킬 생성 | 2026-03-26 | b66bb037 | [260326-ssc-weekly-meeting-prep-skill](./quick/260326-ssc-weekly-meeting-prep-skill/) |
-
-### Pending Todos
-
-**From v2-09-03 Visual QA:**
-
-1. Quick task: Fix images page raw JSON error exposure (API error handling — consider addressing in Phase 45 proxy error handling)
-
-## Session Continuity
-
-Last activity: 2026-03-26 - Completed quick task 260326-ssc: 매주 목요일 미팅용 주간 업데이트 정리 스킬 생성
-Stopped at: v10.0 Profile Page Completion roadmap created
-Resume file: None
-
-Next step: Plan Phase 44 — `/gsd:plan-phase 44`
-
----
-
-_Created: 2026-02-05_
-_Last updated: 2026-03-26 after v10.0 Profile Page Completion roadmap created (Phases 44-50, 19 requirements mapped)_
+| Phase | Plan | Duration (s) | Tasks | Files |
+|-------|------|-------------|-------|-------|
+| 44 | 01 | 215 | 2/2 | 8 |
+| 44 | 02 | 1080 | 2/2 | 8 |
+| 44 | 03 | 300 | 1/2 | 0 |
+| Phase 44 P03 | 600 | 2 tasks | 0 files |
+| Phase 45 P01 | 417 | 2 tasks | 4 files |
+| Phase 45 P02 | 466 | 3 tasks | 30 files |
+| Phase 46 P01 | 334 | 2 tasks | 4 files |
+| Phase 46 P02 | 320 | 2 tasks | 9 files |
+| Phase 46 P03 | 347 | 2 tasks | 7 files |
+| Phase 47 P01 | 184 | 2 tasks | 8 files |
+| Phase 47 P02 | 281 | 2 tasks | 6 files |
+| Phase 48 P01 | 540 | 2 tasks | 10 files |
+| Phase 48 P02 | 184 | 2 tasks | 8 files |

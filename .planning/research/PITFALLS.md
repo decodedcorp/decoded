@@ -1,201 +1,277 @@
 # Pitfalls Research
 
-**Domain:** Orval + Zod API code generation — adding to existing Next.js + React Query project (decoded-monorepo v9.0)
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Orval + React Query mechanics, utoipa schema issues), MEDIUM (bun/Turborepo Orval CLI integration), MEDIUM (migration patterns from manual to generated hooks)
+**Domain:** Production hardening — adding Rate Limiting, Sentry error tracking, E2E tests, component refactoring, and memory leak fixes to an existing Next.js 16 + Rust/Axum + Python/gRPC monorepo (decoded v10.0)
+**Researched:** 2026-03-26
+**Confidence:** HIGH (memory leaks, GSAP cleanup, component splitting), MEDIUM (Sentry polyglot config, Axum rate limiting patterns), MEDIUM (Playwright auth with Supabase)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that force rewrites, break TypeScript compilation, or invalidate the generated output entirely.
+Mistakes that cause rewrites, break production, or invalidate the work of a phase entirely.
 
 ---
 
-### Pitfall 1: OpenAPI 3.1 + utoipa Nullable Fields Generate Uncompilable Zod
+### Pitfall 1: Axum Rate Limiter State Not Shared Across Clones
 
 **What goes wrong:**
-utoipa on Axum can emit OpenAPI 3.1 specs where `Option<T>` fields are represented as union type arrays — `type: ["string", "null"]` — instead of the OpenAPI 3.0 `nullable: true` approach. When Orval processes these alongside a pattern constraint (e.g., a field that is both numeric and string-parseable), it generates `zod.number().regex()` which does not exist in the Zod API. The output file will not compile.
+`tower::ServiceBuilder`'s built-in `RateLimitLayer` creates a new independent counter for each clone of the service. In Axum, the router is cloned per request handler (or per connection depending on the executor). The result: the rate limit never triggers because each request gets its own fresh counter. You think you have a 100 req/min limit but every request resets to 0.
 
 **Why it happens:**
-Orval's Zod generator has a code path for `allOf/oneOf` combined with `nullable` that can produce invalid method chains when the union type mixes number and string with a regex constraint. The root cause is that the generator applies `.regex()` to a `zod.number()` schema, which is a type mismatch — `regex` only exists on `zod.string()`. This was confirmed in Orval issue #2562 and is triggered specifically by OpenAPI 3.1 specs where numeric fields allow string representation.
+Developers add `ServiceBuilder::new().layer(RateLimitLayer::new(100, Duration::from_secs(60)))` to the Axum router following the Tower documentation, not realizing that `RateLimitLayer` clones its state (the `AtomicUsize` counter) into each service clone. This is a known behavioral issue filed against Axum (issue #2634) — the rate limit layer is not respected because each handler clone starts a new counter.
 
 **How to avoid:**
-1. Verify the utoipa version in `packages/api-server/Cargo.toml` — utoipa 4.x generates OpenAPI 3.1 by default. Check whether the spec endpoint (`/api-docs/openapi.json`) returns `"openapi": "3.1.0"` or `"3.0.x"`.
-2. If the spec is 3.1 and nullable fields use type arrays, configure utoipa to emit OpenAPI 3.0 format, or add a post-processing script to normalize `type: ["T", "null"]` → `{type: "T", nullable: true}` before Orval consumes the spec.
-3. As a fallback: in `orval.config.ts`, use `override.operationName` + `override.response` to manually correct only the affected schemas.
+Use a shared `Arc<Mutex<RateLimiter>>` or a purpose-built crate like `tower-governor` (which wraps the `governor` crate and uses a shared `Arc<GovernorConfig>` properly) or `axum-governor`. The shared state must be in an `Arc` that all handler clones reference, not a value that gets deep-copied. Store the rate limiter in `AppState` and check it in a middleware that reads from the shared state.
+
+For AI endpoint cost protection (the primary goal here), use per-user rate limiting keyed on the JWT subject claim extracted from the Authorization header — not per-IP, which is trivially bypassed behind NAT.
 
 **Warning signs:**
-- TypeScript compilation error: `Property 'regex' does not exist on type 'ZodNumber'`
-- TypeScript compilation error: `Property 'stringFormat' does not exist`
-- Generated file contains `z.number().regex(...)` or `z.number().stringFormat(...)`
-- The spec's `openapi` field is `"3.1.0"` and you have `Option<CustomType>` in Axum handlers
+- Rate limiting appears to work in unit tests but never triggers under load testing
+- Curl loop `for i in {1..200}; do curl -s /api/v1/posts/analyze; done` returns 200 for all requests
+- Logs show no 429 responses despite traffic exceeding the configured limit
 
-**Phase to address:** Phase 1 (Setup & spec validation). Validate the spec and fix schema emission before running Orval for the first time. Do not proceed to generation until a clean spec is confirmed.
+**Phase to address:** Rate Limiting phase (Phase 1). Validate with a load test before declaring done.
 
 ---
 
-### Pitfall 2: utoipa Missing `operationId` Breaks Generated Hook Names
+### Pitfall 2: In-Memory Rate Limiter State Grows Unboundedly for Per-User Keying
 
 **What goes wrong:**
-Orval derives TypeScript function and hook names from the OpenAPI `operationId`. If utoipa handlers do not have explicit `operation_id` annotations, utoipa auto-generates them from the handler function name using snake_case (e.g., `get_posts_handler` → operationId `getPostsHandler`). The resulting React Query hook names become long and inconsistent (`useGetPostsHandlerQuery` instead of `useGetPosts`). Worse, if two handlers share a similar name pattern, utoipa may generate duplicate `operationId` values, which causes Orval to emit duplicate exports — a TypeScript error.
+Per-user rate limiting stores a counter entry per user ID in memory. If the store is a `HashMap<UserId, RateLimitState>` with no eviction, it grows for the lifetime of the process — one entry per unique user who ever made a request. At 10k users, this is negligible. But if the AI endpoint is hit by authenticated users creating many accounts (or if state is keyed on IP which can be spoofed with many IPs), memory grows without bound and the process eventually OOMs.
 
 **Why it happens:**
-utoipa's auto-generated `operationId` is based on the Rust function name, which often includes implementation detail suffixes like `_handler`, `_route`, `_endpoint`. The Orval name derivation is mechanical: it takes the operationId and maps to `use{OperationId}` (PascalCase). Without intentional naming in utoipa, the DX of the generated client degrades significantly.
+Teams implement a simple `HashMap` keyed on user/IP without reading about time-windowed expiry. The entries for users who haven't hit the endpoint in hours continue occupying memory.
 
 **How to avoid:**
-Before running Orval, audit every endpoint in the spec for its `operationId`. Add explicit `operation_id = "listPosts"` (camelCase) in each utoipa `#[utoipa::path(...)]` annotation in Rust. This is a Rust-side change that must happen before code generation. Create a spec linting step that asserts no duplicate `operationId` values and all ids follow `verbNoun` pattern (e.g., `listPosts`, `getPost`, `createPost`).
+Use `tower-governor`'s built-in GC mechanism, or `axum_gcra` which has configurable GC intervals. If rolling a custom solution, use `moka` (a Rust concurrent cache with TTL eviction) as the backing store instead of `HashMap`. Set TTL to 2× the rate limit window. For this app's AI protection use case, per-authenticated-user keying on the JWT `sub` claim with a `moka::Cache<String, AtomicU32>` with TTL eviction is the correct pattern.
 
 **Warning signs:**
-- Generated hooks have `Handler` or `Route` in their names
-- TypeScript error: duplicate identifier in generated file
-- `operationId` values in the spec contain underscores (indicates auto-generation from Rust fn names)
+- Axum process RSS grows monotonically over hours/days with no ceiling
+- Memory profiling shows the rate limiter HashMap is the top allocator
+- Restarting the process temporarily reclaims memory
 
-**Phase to address:** Phase 1 (Spec preparation). Fix operationIds in Rust before first generation run.
-
----
-
-### Pitfall 3: Snake_case API Response Fields + Orval Default = Type/Runtime Mismatch
-
-**What goes wrong:**
-The Rust/Axum backend returns JSON with `snake_case` field names (`image_url`, `artist_name`, `created_at`). The existing `lib/api/types.ts` already mirrors this correctly. Orval, by default, preserves the casing from the spec — it generates TypeScript types with `snake_case` properties. This is actually correct behavior, but the pitfall is that if anyone configures Orval's `override.components.schemas.namingConvention` to convert to `camelCase` thinking it follows TypeScript conventions, the generated types will say `imageUrl` while the actual API response returns `image_url`. The TypeScript types will be wrong at runtime with all fields undefined.
-
-**Why it happens:**
-Developers conflate TypeScript naming conventions (camelCase for variables) with API response field names (snake_case from Rust/serde). Orval does not transform the actual runtime values — it only generates type definitions. Switching the type names to camelCase creates a lie: the TypeScript says `imageUrl` but fetch returns `image_url`.
-
-**How to avoid:**
-Keep Orval's default case preservation. The generated types should exactly mirror what the backend returns. The existing `lib/api/types.ts` already uses snake_case correctly — the generated types should match this pattern. If camelCase is desired in the frontend, add a transformation layer in the custom mutator (not in Orval config), using a library like `camelcase-keys` applied to the response body before returning.
-
-**Warning signs:**
-- `namingConvention: "camelCase"` appears in `orval.config.ts` schema overrides
-- After migration, components that previously showed data now show undefined fields
-- TypeScript types compile but runtime values are `undefined`
-
-**Phase to address:** Phase 2 (Generation configuration). Establish the correct naming policy before any hooks are migrated.
+**Phase to address:** Rate Limiting phase. Include a 24-hour soak test or memory profiling step as part of verification.
 
 ---
 
-### Pitfall 4: Next.js API Proxy + Orval baseURL Double-Prefixing
+### Pitfall 3: Sentry User Context Set on Server Is Not Propagated to Client
 
 **What goes wrong:**
-The current `lib/api/client.ts` uses `API_BASE_URL = ""` so all requests route through the Next.js API proxy (`/api/v1/...`). If Orval is configured with a `baseURL` pointing to the backend directly (`https://dev.decoded.style`), the generated client will bypass the proxy. This breaks: (1) auth token injection via Supabase session, (2) CORS — the backend does not accept browser-side direct calls, (3) the FormData multipart upload path that relies on the proxy to forward correctly.
-
-If instead the baseURL is set to `""` (empty, matching the current client) but the OpenAPI spec paths already include `/api/v1/`, the generated calls will double-prefix to `/api/v1/api/v1/...`.
+In a Next.js App Router app, calling `Sentry.setUser({ id: userId })` in a Server Component or Route Handler does not propagate to the client-side Sentry SDK. Client errors are captured without user context — you see an error but don't know which user triggered it. The team looks at Sentry, sees errors without user IDs, and assumes the user context is working because the server-side errors do show user IDs.
 
 **Why it happens:**
-Orval prepends the configured `baseURL` to the path from the spec. The spec from the Rust backend includes full paths like `/api/v1/posts`. If both the baseURL and the spec paths contribute the prefix, the final URL doubles it. The existing manual client avoids this by using empty baseURL and relying on Next.js routing.
+The Sentry SDK runs as two independent instances: one in the Next.js Node.js runtime (server) and one bundled into the browser (client). `setUser()` on the server writes to the server-side scope only. The client SDK has no knowledge of this call. This is documented in the Sentry GitHub discussion #10019 for App Router projects.
 
 **How to avoid:**
-1. Set Orval's baseURL to `""` (empty string) — routes through the proxy.
-2. Verify that the custom mutator strips any path prefix that would double up. Alternatively, configure `baseURL` pointing to the real backend for server-side generation and the proxy path for client-side.
-3. The safest approach: use a custom mutator that delegates to the existing `apiClient()` function in `lib/api/client.ts`, inheriting its proxy-routing and auth logic. This minimizes the surface area of change during initial migration.
+Call `Sentry.setUser()` in both contexts independently. On the server: in a server action or layout that has access to the Supabase session. On the client: in the `AuthProvider` or `authStore` after session hydration completes. The client call should happen inside a `useEffect` after `supabase.auth.getUser()` resolves, not at module init time. Pattern:
 
-**Warning signs:**
-- Network requests show URLs like `/api/v1/api/v1/posts`
-- 404 errors immediately after switching to generated client
-- Browser CORS error on `dev.decoded.style` from the frontend origin
-
-**Phase to address:** Phase 2 (Generation + custom mutator setup). Validate URL construction with a single endpoint before migrating all hooks.
-
----
-
-### Pitfall 5: Multipart Upload Endpoints Cannot Be Directly Generated
-
-**What goes wrong:**
-The `POST /api/v1/posts/upload` and `POST /api/v1/posts` (FormData) endpoints use multipart/form-data with a binary file field. Orval changed how it generates the type for binary fields between v7.20 and v8.0 — it now generates `string` instead of `Blob` for binary-typed fields. The generated function signature will accept a `string` where a `File` or `Blob` is needed, causing a runtime failure on upload.
-
-Additionally, the current `uploadImage()` in `posts.ts` has custom retry logic (exponential backoff, progress callbacks) that cannot be expressed in an Orval-generated hook. A generated hook would lose this critical UX behavior.
-
-**Why it happens:**
-Orval's multipart/form-data type detection relies on the OpenAPI spec correctly annotating binary fields with `format: binary`. If utoipa emits these fields differently (e.g., as `type: string` without the binary format), Orval generates a plain string type. Even with correct annotation, Orval's generated code may use `Blob` when `File` is needed (since `File extends Blob` but FormData behaves differently).
-
-**How to avoid:**
-Explicitly exclude the upload endpoints from Orval generation using `override.operationsSuffix` exclusions or separate them into a non-generated `lib/api/upload.ts` that keeps the existing manual implementation. Mark these endpoints with a comment in the spec or in `orval.config.ts` to prevent accidental migration. The rule: **endpoints with progress callbacks, retry logic, or binary uploads stay manual**.
-
-**Warning signs:**
-- Generated type for file parameter is `string` instead of `File | Blob`
-- TypeScript error when passing a `File` object to a generated function parameter
-- Upload progress UI stops working after migration to generated hook
-
-**Phase to address:** Phase 2 (Generation configuration) — exclude these endpoints. Phase 3 (Migration) — explicitly do not migrate upload functions.
-
----
-
-### Pitfall 6: Existing React Query Hook Query Keys Collide with Generated Keys
-
-**What goes wrong:**
-The existing hooks (e.g., `usePosts`, `useProfile`) define their own query keys using patterns like `["posts", params]` or `["profile", userId]`. Orval generates query keys from the operationId and parameters. When both old and new hooks coexist during migration, they may use different query key structures for the same endpoint. React Query's cache will treat them as distinct — causing duplicate fetches, stale data, and cache invalidation that doesn't propagate.
-
-A specific known issue (Orval #2359): when both `useQuery` and `useInfiniteQuery` are generated for the same endpoint, both use the same query key function. Any code calling `queryClient.invalidateQueries` with one key will not invalidate the other, breaking cache coherence for paginated endpoints like `useImages` and `usePosts`.
-
-**Why it happens:**
-Query key design is a contract between producer and consumer. Orval generates keys mechanically from the spec structure. The existing hooks were designed with different key conventions. During a gradual migration where both old and new hooks are in use, two sources of truth for cache state coexist.
-
-**How to avoid:**
-1. Plan migration endpoint-by-endpoint, not feature-by-feature. For each endpoint, migrate ALL consumers of the old hook before removing it. Never leave both old and new hooks active for the same endpoint.
-2. Configure Orval's `override.query.queryKey` to match the existing key structure where possible, ensuring cache continuity.
-3. For pagination endpoints that use both `useQuery` and `useInfiniteQuery`, configure Orval to generate different keys: use `queryKey: (params) => ["posts", "list", params]` for regular and `queryKey: (params) => ["posts", "infinite", params]` for infinite variants.
-4. After full migration, do a global search for old query key strings to confirm no dual-key situations remain.
-
-**Warning signs:**
-- React Query DevTools shows two entries for the same logical data
-- Infinite scroll stops refreshing when new posts are created (invalidation not reaching infinite key)
-- Data briefly shows stale state when navigating between pages that use old vs. new hooks
-
-**Phase to address:** Phase 3 (Migration) — requires a strict per-endpoint migration plan.
-
----
-
-### Pitfall 7: bun + Orval CLI — `npx orval` vs `bunx orval` Behavioral Difference
-
-**What goes wrong:**
-Orval is typically invoked via `npx orval` or as a script. Under bun, `bunx orval` works but has a subtle difference: bun's package execution may resolve Orval from a different location than the installed workspace version, especially in a Turborepo monorepo where the root installs tools and the web package uses workspace:* references. The result can be a version mismatch where the Orval config syntax from v8.x is parsed by a v7.x binary (or vice versa), causing silent configuration failures.
-
-Additionally, Turborepo's `--filter` argument conflicts with bun's own `--filter` flag when running scripts through `turbo run generate`. This was a known issue in Turborepo 2.6.x with bun.
-
-**Why it happens:**
-bun resolves binaries differently from npm/yarn when `bunx` is used without a lockfile entry. In a hoisted bun monorepo, the binary resolution path for `bunx orval` depends on whether `orval` is installed at the root or in `packages/web`. If installed only at the web package level, `bunx orval` run from the monorepo root may not find it.
-
-**How to avoid:**
-1. Install Orval as a devDependency in `packages/web/package.json` (not root), pinned to an exact version.
-2. Add a `generate` script to `packages/web/package.json`: `"generate": "orval"` and invoke it via `bun run generate` from within `packages/web/`.
-3. In `turbo.json`, add a `generate` task that depends on the spec being available and outputs to the generated directory. Use `bun run generate` (not `bunx orval`) in the turbo task.
-4. Verify by running `bun run generate` from `packages/web/` directly and confirming the Orval version in the output matches `package.json`.
-
-**Warning signs:**
-- `bunx orval` outputs a different version than `bun run orval --version`
-- Orval config keys in `orval.config.ts` show "unknown option" errors
-- `turbo run generate` hangs or exits without output
-
-**Phase to address:** Phase 1 (Setup). Establish the correct invocation pattern before writing the Orval config.
-
----
-
-### Pitfall 8: Committed vs. Gitignored Generated Files Creates CI Drift
-
-**What goes wrong:**
-If generated files are gitignored and regenerated on-demand (e.g., in a pre-build script), the TypeScript check in CI (`bun run typecheck`) will fail if the generate step does not run first. The existing `packages/web/scripts/pre-push.sh` runs `tsc --noEmit` — if generated files are absent, TypeScript cannot resolve imports from the generated module.
-
-Conversely, if generated files are committed, CI may pass even when the spec has changed and the committed files are stale. A developer updating the backend spec without regenerating the client will push stale types that silently diverge from the actual API.
-
-**Why it happens:**
-There is no inherent synchronization between the OpenAPI spec in the Rust backend and the generated TypeScript files in the Next.js frontend. The two artifacts live in different package directories and have no build-time dependency in Turborepo unless explicitly configured.
-
-**How to avoid:**
-The recommended approach for this project: **commit generated files**, but add a CI step that reruns generation and asserts no diff:
+```typescript
+// In authStore or a client-side auth component
+useEffect(() => {
+  if (user) {
+    Sentry.setUser({ id: user.id, email: user.email });
+  } else {
+    Sentry.setUser(null);
+  }
+}, [user]);
 ```
-bun run generate && git diff --exit-code packages/web/src/generated/
-```
-If there is a diff, CI fails — forcing the developer to regenerate and commit updated files before merging.
-
-Update `packages/web/scripts/pre-push.sh` to run `bun run generate` before `tsc --noEmit`, ensuring the local pre-push hook always has current generated files.
 
 **Warning signs:**
-- CI TypeScript check fails with "Cannot find module '../generated/...'"
-- `git diff` after running `bun run generate` shows changes (spec has drifted from generated output)
-- Developer merges a Rust backend PR without a corresponding frontend regeneration commit
+- Server-side Sentry events have `user.id` populated; client-side events show `user: null`
+- React Query fetch errors in the browser are attributed to anonymous users in Sentry
+- `Sentry.getActiveSpan()` on the client returns a span without user context
 
-**Phase to address:** Phase 1 (Setup) — define the git strategy. Phase 4 (CI) — add the drift detection step.
+**Phase to address:** Sentry integration phase. Verify with a test error thrown from a client component while logged in — confirm user ID appears in the Sentry event.
+
+---
+
+### Pitfall 4: Sentry Source Maps Not Uploading = Obfuscated Stack Traces
+
+**What goes wrong:**
+Sentry captures errors with minified stack traces like `at t (main-abc123.js:1:4821)`. Without source maps uploaded, every error in Sentry is useless — you cannot locate the line of code that failed. Teams deploy Sentry, see errors appear, and declare it "working" without verifying that the stack traces are readable.
+
+**Why it happens:**
+Next.js with `@sentry/nextjs` does upload source maps automatically during build, but only if `SENTRY_AUTH_TOKEN` is available at build time. In CI/CD pipelines, this environment variable is often forgotten or scoped incorrectly. On Vercel, it must be added as an environment variable in the project settings (not `.env.local`). Additionally, the `withSentryConfig` wrapper in `next.config.js` must be present — if someone wraps the config in another HOC (e.g., `withBundleAnalyzer(withSentryConfig(...))`) in the wrong order, the Sentry webpack plugin does not activate.
+
+**How to avoid:**
+1. Add `SENTRY_AUTH_TOKEN` to CI secrets and Vercel environment variables before the first production deploy.
+2. After the first deploy, immediately check a Sentry event: click the stack trace frame and verify it shows your TypeScript source lines, not minified JS.
+3. In `next.config.js`, wrap as `withSentryConfig(nextConfig, sentryOptions)` — Sentry must be the outermost wrapper.
+4. The `SENTRY_AUTH_TOKEN` must NOT be in `.env.local` or committed to git — it is a build-time secret only.
+
+**Warning signs:**
+- Stack traces in Sentry show minified file names like `page-abc123.js` with no line mapping
+- Sentry breadcrumbs show component names as `<anonymous>` instead of real component names
+- `next build` output does not mention "Sentry: uploading source maps"
+
+**Phase to address:** Sentry integration phase. Source map verification is a go/no-go gate before calling the phase complete.
+
+---
+
+### Pitfall 5: Sentry for Rust/Axum Does Not Auto-Capture Panic = Silent Crashes
+
+**What goes wrong:**
+The `sentry` crate for Rust captures panics automatically when initialized with `sentry::init(...)` and the `with_backtrace_support` feature. However, in an Axum server, panics in async handlers do not propagate as OS-level process panics — they are caught by Tokio's task supervisor and converted to a 500 response. The Sentry panic handler never sees them. The result: a handler `unwrap()` that panics in production causes a 500 response and the error is never sent to Sentry.
+
+**Why it happens:**
+Async runtimes like Tokio catch panics per-task to prevent one failing task from taking down the entire server. This is correct behavior for availability, but it means the standard Sentry panic hook (which hooks into `std::panic::set_hook`) is never called for async task panics in Axum handlers. The CONCERNS.md already notes that `unwrap()` is forbidden — but any remaining `unwrap()` in the codebase will silently drop errors.
+
+**How to avoid:**
+1. Audit the codebase for any remaining `unwrap()` calls in handler code — the api-server CLAUDE.md already forbids this, but verify compliance with `grep -r "\.unwrap()" src/`.
+2. Add a Tower middleware layer that wraps handler execution in `catch_unwind` and sends the panic to Sentry before converting to a 500 response. The `sentry-tower` crate provides this as `SentryLayer`.
+3. Configure the Sentry SDK with `sentry::ClientOptions { attach_stacktrace: true, ..Default::default() }` to attach backtraces to all events, not just panics.
+
+**Warning signs:**
+- A handler returns 500 responses but no corresponding events appear in Sentry
+- `grep -r "\.unwrap()" packages/api-server/src/` returns results outside of test files
+- Sentry events from Rust are being captured for `tracing::error!` calls but not for panics
+
+**Phase to address:** Sentry integration phase (Rust/Axum component). Verify by intentionally triggering a recoverable error path in a non-production environment.
+
+---
+
+### Pitfall 6: Playwright E2E Tests Fail in CI Due to Supabase Auth Session Timing
+
+**What goes wrong:**
+E2E tests that require authentication hit a race condition: the Supabase auth session is stored in localStorage/cookies, but after `page.goto()` the session hydration happens asynchronously. Tests that click "add to collection" or trigger authenticated API calls immediately after navigation find the user is unauthenticated because the session hasn't loaded yet. The test passes locally (where the app is warm and hydration is faster) but fails in CI (cold start, slower).
+
+**Why it happens:**
+Supabase's `onAuthStateChange` fires asynchronously after the page loads. The browser's localStorage contains the session token, but the Supabase client hasn't yet called `getSession()` and populated the auth store. Any test that relies on `authStore.user` being non-null immediately after navigation is racing against this hydration.
+
+**How to avoid:**
+Use Playwright's `storageState` to pre-authenticate via the Supabase REST API (not the UI login flow) before the test suite runs. In `playwright.config.ts`, add a `setup` project that:
+1. Calls `POST https://[project].supabase.co/auth/v1/token?grant_type=password` with test user credentials
+2. Saves the response token to `localStorage["sb-[ref]-auth-token"]`
+3. Saves the browser state to `.auth/user.json`
+
+All test projects then use `storageState: '.auth/user.json'`. Additionally, add a `waitForFunction` after navigation that polls until `authStore.user !== null` (or a sentinel DOM element that only renders for authenticated users) before proceeding with authenticated actions.
+
+**Warning signs:**
+- Tests pass in `--headed` mode locally but fail headlessly in CI
+- Intermittent 401 errors in network requests during test runs
+- Tests pass on the second retry (Playwright's CI retry setting masks the root cause)
+
+**Phase to address:** E2E testing phase. The auth setup fixture must be built before any authenticated test is written — do not defer it.
+
+---
+
+### Pitfall 7: E2E Tests Coupled to UI Labels Instead of Stable Selectors
+
+**What goes wrong:**
+Tests written as `page.getByText("아이템 발견하기")` or `page.locator(".hero-card-title")` break whenever the copy changes or the CSS class is refactored. The existing visual QA tests (visual-qa.spec.ts) take screenshots — this is appropriate for visual regression. But new business logic E2E tests written in the same style (text-based, style-based selectors) create a maintenance burden where every copy change breaks the test suite.
+
+**Why it happens:**
+Teams write tests against what they see on screen (text, visual appearance) because it's the fastest way to get a test passing. The tests become brittle because UI copy and styles change frequently while the underlying user intent does not.
+
+**How to avoid:**
+Add `data-testid` attributes to all interactive elements that E2E tests need to target: `data-testid="request-upload-button"`, `data-testid="item-spot-[id]"`, etc. Use `page.getByTestId("request-upload-button")` in tests. Keep `data-testid` attributes stable across refactors — they are test infrastructure, not styling. For the ThiingsGrid and ImageDetailContent components being refactored, add `data-testid` as part of the refactor work, not after.
+
+**Warning signs:**
+- A copy PR ("아이템 발견하기" → "아이템 찾기") causes test failures
+- CSS class renaming during refactor breaks tests
+- Tests pass after `npm run test -- --update-snapshots` but the change was a false pass (UI broke but screenshot accepted the broken state)
+
+**Phase to address:** E2E testing phase. Establish the `data-testid` convention before writing tests. Component refactoring phase should add `data-testid` as part of the work.
+
+---
+
+### Pitfall 8: Refactoring Large Component Breaks Animation Timing Without Visual Evidence
+
+**What goes wrong:**
+`ThiingsGrid.tsx` (948 lines) and `ImageDetailContent.tsx` (671 lines) contain GSAP timeline orchestration tightly coupled to the component's internal DOM structure. When you extract a sub-section into a child component (`<ThiingsGridHeader>`, `<ItemSpotSection>`), the GSAP refs that target DOM nodes by `ref` or by querySelector lose their targets. The timeline runs but animates nothing — no error is thrown, no TypeScript violation, just silent animation failure.
+
+**Why it happens:**
+GSAP targets DOM elements via refs or CSS selectors scoped to the parent's container. When a section is extracted to a child component, the `ref` is now in the child's render scope. The parent's GSAP context still tries to target `containerRef.current.querySelector('.item-spot')`, which now returns null because the child component hasn't mounted yet when the parent's `useGSAP` runs.
+
+**How to avoid:**
+Refactor in this specific order:
+1. First, convert all animation logic to `useGSAP` with explicit `scope` refs (not raw `querySelector` on the container) — this creates a stable targeting contract.
+2. Extract presentational markup (no animation logic) into child components, passing `ref` via `forwardRef`.
+3. Move animation hooks to the lowest component that owns both the DOM element and the animation trigger.
+4. Test animation behavior after each extraction step — don't batch multiple extractions before testing.
+
+For `ImageDetailModal.tsx` specifically, the GSAP context cleanup issue documented in CONCERNS.md must be fixed before the refactor — fixing cleanup after the split makes it much harder.
+
+**Warning signs:**
+- After extracting a child component, the animation timeline completes instantly (duration = 0ms visible effect)
+- `gsap.getTweensOf(element)` returns empty array for elements that should be animated
+- No TypeScript or console errors, but animations are absent
+- GSAP DevTools (if available) shows tweens targeting null elements
+
+**Phase to address:** Component refactoring phase. Each extraction must include a manual animation smoke test before moving to the next component.
+
+---
+
+### Pitfall 9: ObjectURL Cleanup Race Condition During Rapid Navigation
+
+**What goes wrong:**
+In `requestStore.ts`, `URL.createObjectURL()` creates blob URLs for image previews. The `revokeObjectURL()` is intended to be called on cleanup. However, if a user navigates away from the request flow (e.g., closes the modal or hits the back button) while an image compression is in progress, the cleanup path in the store is called before the compression Promise resolves. When compression resolves, it tries to render the revoked URL — the `<img>` tag briefly shows a broken image or the blob URL reference is now invalid.
+
+Additionally, `browser-image-compression` (used in the stack) returns a `File` object. The `createObjectURL` called on this File is a separate URL from the original input URL — if both are created but only one is revoked, the other leaks permanently for the page session.
+
+**Why it happens:**
+The store's `clearImages()` is called synchronously when the component unmounts, but compression is async. The Promise callback runs after cleanup and attempts to create/use a URL from a cleared state.
+
+**How to avoid:**
+Use an `AbortController` pattern: pass the abort signal to the compression function and check `signal.aborted` in the `.then()` handler before creating any new ObjectURL. The CONCERNS.md already identifies this as the correct fix for `requestStore.ts`. Implementation:
+
+```typescript
+// In the store action
+const controller = new AbortController();
+set({ compressionAbortController: controller });
+
+compress(file, { signal: controller.signal })
+  .then((compressed) => {
+    if (controller.signal.aborted) return; // don't create URL if navigated away
+    const url = URL.createObjectURL(compressed);
+    set({ previewUrl: url });
+  });
+
+// In cleanup
+get().compressionAbortController?.abort();
+URL.revokeObjectURL(get().previewUrl ?? "");
+```
+
+Track ALL created ObjectURLs in a `Set<string>` on the store so cleanup can revoke all of them, not just the last one.
+
+**Warning signs:**
+- Memory profiling shows blob URLs accumulating across navigation cycles (visible in Chrome DevTools Memory tab under "Blob URL count")
+- Occasional broken image display when rapidly navigating to and from the request flow
+- `performance.memory.usedJSHeapSize` grows on each request-flow visit without returning to baseline
+
+**Phase to address:** Memory leak phase. Fix the AbortController pattern first, then add the URL tracking Set, then add a development-mode warning if any URLs are not revoked on page unload.
+
+---
+
+### Pitfall 10: GSAP Animations Created in Event Handlers Are Not Captured by useGSAP Context
+
+**What goes wrong:**
+Many components use `gsap.context(() => { ... })` manually or via `useGSAP`. However, any GSAP animation created inside a click handler, scroll handler, or `setTimeout` callback that runs after the hook executes is NOT registered with the context. When the component unmounts and the context calls `revert()`, these orphaned tweens continue running and targeting DOM nodes that no longer exist — causing `Cannot read properties of null` errors and memory leaks.
+
+The codebase has multiple components creating timelines inside event handlers (e.g., `IssueSpine.tsx` creates `gsap.timeline()` inside `onMouseEnter`). These are the most common source of GSAP-related memory leaks.
+
+**Why it happens:**
+The GSAP official documentation explicitly warns about this: animations created after the `useGSAP` hook body executes are not recorded. Developers intuitively put animation code where it triggers (in the event handler) rather than in the hook body.
+
+**How to avoid:**
+Wrap all event handler animations with `contextSafe()` from the `useGSAP` hook:
+
+```typescript
+const { contextSafe } = useGSAP({ scope: containerRef });
+
+const handleMouseEnter = contextSafe(() => {
+  gsap.timeline().to(ref.current, { scaleX: 1.05 });
+});
+```
+
+`contextSafe()` registers the animation with the context so it gets cleaned up on unmount. As part of the memory leak phase, audit every file matching `gsap.timeline()` or `gsap.to()` that appears inside an event handler body (not inside `useGSAP`) and wrap them.
+
+**Warning signs:**
+- Console error: `Cannot read properties of null (reading 'style')` after component unmounts with an animation in-flight
+- Navigating away from the collection page while a Spline + GSAP animation is running causes React error boundaries to fire
+- GSAP's global timeline (accessible via `gsap.globalTimeline.getChildren()`) grows with each component mount/unmount cycle
+
+**Phase to address:** Memory leak phase. This is the highest-impact leak to fix given the animation-heavy codebase.
 
 ---
 
@@ -205,65 +281,74 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Keeping both old and new hooks simultaneously "temporarily" | Faster migration per feature | Query key collisions, cache bugs, confusion over which hook to use | Never — migrate per-endpoint atomically |
-| Using Orval for upload endpoints with binary fields | Consistent generated client | Progress callbacks lost, type mismatch for `File` vs `string` | Never — keep upload functions manual |
-| Pointing generated client directly to backend URL (bypassing proxy) | Simpler config | CORS failures in browser, auth token injection breaks | Only for server-side (Next.js Route Handlers), never for client-side |
-| Skipping operationId audit, accepting utoipa auto-generated ids | Saves one Rust PR | Hook names contain `Handler`/`Route` suffixes, bad DX forever | Never — fix operationIds before generation |
-| Gitignoring generated files without a CI regeneration step | Cleaner repo | TypeScript check fails in CI, spec drift silently accumulates | Only if a pre-build `generate` step is added to every CI job |
-| Committing generated files without a drift check | TypeScript always happy | Stale types ship without detection | Only if a drift check is added to CI |
+| Rate limiting at the Next.js proxy layer only (not Axum) | One less Rust change | AI server still reachable if Axum is called directly; no protection for backend-to-AI gRPC calls | Never for cost protection — must be at Axum level |
+| Sentry with `tracesSampleRate: 1.0` in production | Complete trace coverage | Performance degradation at scale; Sentry costs spike | Dev/staging only; production should be 0.1–0.2 |
+| Writing E2E tests for every page (like visual-qa.spec.ts) | High coverage numbers | Slow test suite, flaky due to animation timeouts, maintenence burden | Visual regression only; business logic tests should be focused flows |
+| Splitting components by line count alone (e.g., "everything over 400 lines") | Smaller files | Splits animation logic from its DOM targets, breaking GSAP | Never — split by responsibility, not size |
+| Adding `data-testid` only when tests are already failing | Tests written quickly | Testids added reactively cover only what already broke | Always add proactively during component work |
+| Fixing memory leaks only with `useEffect` cleanup | Works for React-managed resources | Does not handle stores, GSAP contexts, or non-React event listeners | Only for purely React-managed subscriptions |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when wiring Orval into the existing system.
+Common mistakes when connecting to external services.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Supabase JWT auth | Hardcoding the token retrieval in the Orval mutator using `import { supabase }` at module level | Use the existing `getAuthToken()` from `lib/api/client.ts` inside the mutator function — token is fetched per-request, not at module init |
-| React Query `QueryClient` | Not providing a shared `QueryClient` to generated hooks — each hook creates its own | Wrap the app in a single `QueryClientProvider` and verify generated hooks use the same client (they use context, not local instantiation) |
-| Next.js Route Handler proxy | Configuring Orval's baseURL as `https://dev.decoded.style` for both client and server components | Use empty-string baseURL for client components (proxy routing), backend URL only in server-side fetch calls |
-| Turborepo task graph | Not declaring the `generate` task as a dependency of `build` and `typecheck` | Add `"generate": { "outputs": ["src/generated/**"] }` to `turbo.json` and make `build` depend on it |
-| Orval config file format | Using `.js` config with CJS `module.exports` when the package is ESM | Use `orval.config.ts` (TypeScript) or `orval.config.mjs` (ESM) to match the project's module system |
-| utoipa spec endpoint | Fetching spec from `https://dev.decoded.style/api-docs/openapi.json` in Orval config | In development, fetch from local `packages/api-server` running on localhost, or download and commit a static spec file to avoid network dependency in codegen |
+| Sentry + Next.js 16 App Router | Not using `withSentryConfig` in `next.config.js` | Wrap `nextConfig` with `withSentryConfig(nextConfig, { org, project, authToken })` as the outermost config wrapper |
+| Sentry + Supabase auth | Calling `Sentry.setUser()` only on the server | Call `Sentry.setUser()` in `authStore` on the client side after session hydration |
+| Sentry + Python gRPC | Not adding `GRPCIntegration` to the Python SDK init | `sentry_sdk.init(dsn=..., integrations=[GRPCIntegration()])` — required since sentry-sdk 1.35.0 |
+| Sentry source maps | Setting `SENTRY_AUTH_TOKEN` in `.env.local` | Set as CI secret and Vercel env var — never commit auth token |
+| Playwright + Supabase | Logging in via UI for each test | Use `storageState` with REST API login in a `setup` project — UI login is slow and flaky |
+| Axum rate limiting | Using `tower::ServiceBuilder::layer(RateLimitLayer::new(...))` | Use `tower-governor` or `axum-governor` with shared `Arc` state |
 
 ---
 
 ## Performance Traps
 
-Patterns that degrade build or runtime performance.
+Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Orval barrel file (`indexFiles: true`) + Next.js without `optimizePackageImports` | Large initial bundle, slow cold start | Enable `experimental.optimizePackageImports` in `next.config.js` for the generated directory | At any scale — barrel files defeat tree-shaking |
-| Generated hooks imported into layout or root component | Every page loads all API types | Import only the specific hook needed per page/component | At > 20 generated hooks |
-| Running `bun run generate` synchronously before every dev server start | 5-10s startup delay | Run generate only when spec changes (watch mode or manual trigger) | Immediately in development |
-| Both old `usePosts` and new generated `useGetPosts` querying simultaneously | Double network requests, doubled cache entries | Enforce atomic migration — one hook per endpoint at a time | Immediately during migration |
+| Per-IP rate limiting for AI endpoints | Auth bypass via VPN/proxy rotation — limits never triggered for bad actors | Use per-authenticated-user (JWT sub) rate limiting for AI endpoints | Immediately — determined users route around it |
+| `HashMap<UserId, RateLimitState>` with no TTL eviction | Process RSS grows monotonically; restart reclaims memory | Use `moka::Cache` with TTL, or `tower-governor` with GC | ~10k unique users without eviction |
+| `networkidle` in Playwright tests with GSAP/Lenis | Tests wait 30s for animations to stop creating network activity | Use explicit `waitForSelector` on a stable post-load element | Every test — animations create continuous JS timers |
+| Running full Playwright suite (40 tests × 4 viewports) in CI for every PR | CI takes 20+ minutes | Separate visual-qa (scheduled weekly) from business logic E2E (every PR) | Immediately once suite grows |
+| Sentry `tracesSampleRate: 1.0` with GSAP-heavy pages | Sentry performance traces overwhelm the quota; monthly Sentry bill spikes | Set `tracesSampleRate: 0.1` in production | First month in production with real traffic |
 
 ---
 
 ## Security Mistakes
 
+Domain-specific security issues.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using untrusted/external OpenAPI specs with Orval | Code injection via `x-enum-descriptions` field (CVE-2026-23947, CVE-2026-25141) — arbitrary code executed in generated output | Only consume the spec from the known backend (`dev.decoded.style`) or a committed local copy; use Orval >= 8.2.0 which patches these CVEs |
-| Logging generated API response bodies in the custom mutator during development | PII (user data, email, profile info) in logs | Add log filtering in the mutator; strip sensitive fields before any debug logging |
-| Exposing the backend API URL in generated client code for server-side routes | Backend URL becomes visible in client bundle | Use environment variable (`process.env.API_BASE_URL`) not a hardcoded URL; verify it is not `NEXT_PUBLIC_` prefixed |
+| Rate limiting only on the Next.js proxy, not on the Axum handler | Direct callers bypass the proxy entirely — unlimited AI API calls possible | Enforce rate limiting at the Axum middleware layer where auth is validated |
+| Sentry DSN exposed as `NEXT_PUBLIC_SENTRY_DSN` without tunnel configuration | Anyone can spam fake events to your Sentry quota | Use `@sentry/nextjs` tunnel feature (`tunnelRoute: "/monitoring"`) to proxy Sentry calls through your own domain |
+| `SENTRY_AUTH_TOKEN` in `.env.local` or committed to `.env.example` | Source maps can be downloaded and used to reverse-engineer minified code | Auth token is build-time CI secret only — never in any checked-in file |
+| Per-IP rate limiting on AI endpoints | Trivially bypassed with many IPs or from behind a shared NAT (legitimate users blocked, bad actors not) | Key on authenticated user ID (JWT sub), not IP |
+| Sentry error payloads containing `requestStore.detectedSpots` with user-uploaded image URLs | User image URLs logged to a third-party service without consent | Add `beforeSend` hook to strip image URL fields from Sentry event data |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
+Things that appear complete but have critical pieces missing.
 
-- [ ] **Spec validation:** Orval runs without errors — verify generated TypeScript also compiles (`bun run typecheck`) before declaring setup done
-- [ ] **Auth injection:** Generated hooks appear to work — verify authenticated endpoints actually send `Authorization: Bearer <token>` (check Network tab with a logged-in user)
-- [ ] **Upload endpoints:** Generated client exists for upload routes — verify the manual upload functions in `lib/api/posts.ts` are explicitly excluded from generation and still work
-- [ ] **Query key migration:** All consumers of an old hook are removed — search for imports of the old hook name across the entire `packages/web/` directory
-- [ ] **Proxy routing:** Generated client calls succeed in local dev — verify the same calls succeed in production where `NEXT_PUBLIC_API_BASE_URL` may differ
-- [ ] **Infinite scroll:** Regular query hook is replaced — also check that the infinite query variant uses a distinct query key (Orval issue #2359)
-- [ ] **CI drift check:** Generate runs in CI — verify that a spec change without regeneration causes CI to fail (test by modifying a field in the spec and not regenerating)
-- [ ] **Zod validation:** Zod schemas are generated — verify they are actually applied at runtime (Orval generates schemas but does not auto-apply them; you must wire them to the mutator or React Query's `select`)
+- [ ] **Rate Limiting:** Middleware is wired — verify with `for i in {1..200}; do curl -s -o /dev/null -w "%{http_code}\n" POST /api/v1/posts/analyze; done` and confirm 429 responses appear before request 101
+- [ ] **Rate Limiting:** Added to Axum — verify it also applies when the backend is called directly (not through the Next.js proxy)
+- [ ] **Sentry Next.js:** SDK initialized — verify that a manually triggered client-side error (`throw new Error("sentry-test")`) appears in Sentry with a readable stack trace showing TypeScript source lines
+- [ ] **Sentry Next.js:** Event visible — verify that `user.id` is populated on the Sentry event (not just `user: null`)
+- [ ] **Sentry Rust:** `sentry::init()` called — verify that a `tracing::error!()` call produces a Sentry event (not just a log line)
+- [ ] **Sentry Python gRPC:** SDK initialized — verify that a gRPC handler exception produces a Sentry event with the correct environment tag
+- [ ] **E2E Tests:** Tests pass locally — run `CI=true bun playwright test` to confirm they pass with CI worker constraints (1 worker, no headed mode)
+- [ ] **E2E Tests:** Auth flow works — verify that authenticated-user tests use `storageState` and do not depend on UI login flow
+- [ ] **Component Refactor:** Code split — open the refactored component and manually trigger every animation that existed before the split; confirm all play correctly
+- [ ] **Memory Leaks:** ObjectURL cleanup added — visit the request flow 10 times without refreshing; check Chrome DevTools Memory → "Blob URLs" count stays constant
+- [ ] **Memory Leaks:** GSAP cleanup — navigate to the collection page, interact with Spline, navigate away, and verify no `Cannot read properties of null` errors appear in console
+- [ ] **Memory Leaks:** Event listeners — use Chrome DevTools → Performance Monitor → "DOM Nodes" counter; verify it returns to baseline after navigating away from animated pages
 
 ---
 
@@ -273,50 +358,50 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Uncompilable Zod from OpenAPI 3.1 nullable | MEDIUM | Write a spec normalization script that converts `type: ["T", "null"]` to `{type: "T", nullable: true}` and run it before Orval; re-run generation |
-| Query key collisions causing cache bugs | MEDIUM | Identify all dual-hook endpoints in React Query DevTools; rollback those endpoints to old hooks; migrate them atomically with explicit key config |
-| Upload endpoint broken after migration | LOW | Revert the migration of upload endpoints; add them to the Orval exclusion list; restore manual implementation from git |
-| baseURL double-prefix causing 404s | LOW | Update the custom mutator to strip the `/api/v1` prefix from the path before calling fetch, or reconfigure baseURL in `orval.config.ts` |
-| Generated files causing CI typecheck failure | LOW | Add `bun run generate` as a pre-step in the CI typecheck job; commit the regenerated files |
-| bun/Turborepo version conflict with Orval CLI | LOW | Pin Orval version in `packages/web/package.json`; add `bun run generate` as a local script; avoid `bunx orval` at monorepo root |
-| Spec drift after backend changes | MEDIUM | Establish a process: every backend PR that changes API shape must include a frontend regeneration commit; enforce with CI drift check |
+| Rate limiter not sharing state (all requests pass through) | LOW | Replace `RateLimitLayer` with `tower-governor`; verify shared Arc is in AppState; re-deploy |
+| Sentry events without user context | LOW | Add `Sentry.setUser()` call to `authStore`; verify in one PR; no data migration needed |
+| Sentry source maps missing (obfuscated traces) | LOW | Add `SENTRY_AUTH_TOKEN` to CI/Vercel env; trigger new build; old events stay obfuscated |
+| Playwright tests failing in CI due to auth race | MEDIUM | Add `storageState` setup project; replace all `waitForLoadState('networkidle')` with explicit element waits; re-run |
+| Component refactor broke GSAP animations | MEDIUM | Git revert the extraction; follow the prescribed refactor order (fix cleanup first, then extract with forwardRef, then move animation to child); re-test each step |
+| ObjectURL accumulation causing page memory bloat | MEDIUM | Add URL tracking Set to the store; run cleanup on unmount; add AbortController to compression path |
+| GSAP orphaned tweens after component unmount | HIGH | Audit all event handler animation calls; wrap each in `contextSafe()`; this requires touching many components |
 
 ---
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls.
-
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| OpenAPI 3.1 nullable → uncompilable Zod | Phase 1: Spec validation | Run `bun run generate && bun run typecheck` — zero TypeScript errors |
-| Missing/duplicate operationId | Phase 1: Spec preparation (Rust-side fix) | Spec linting script finds zero duplicate operationIds and zero auto-generated suffixes |
-| Snake_case/camelCase naming policy | Phase 2: Orval config | Generated types mirror existing `lib/api/types.ts` field names exactly |
-| Next.js proxy + baseURL double-prefix | Phase 2: Custom mutator setup | Single endpoint smoke test — network request shows correct URL, no double prefix |
-| Multipart upload exclusion | Phase 2: Generation config | Orval config has explicit exclusions for upload endpoints; `uploadImage()` still works |
-| Query key collisions | Phase 3: Migration (per-endpoint plan) | React Query DevTools shows one cache entry per endpoint after migration |
-| bun + Orval CLI invocation | Phase 1: Setup | `bun run generate` from `packages/web/` runs correct Orval version and generates files |
-| Generated files CI drift | Phase 4: CI integration | CI fails when spec changes without corresponding regeneration commit |
+| Axum rate limiter state not shared | Phase: Rate Limiting | Load test shows 429 responses at correct threshold |
+| Per-user state unbounded memory growth | Phase: Rate Limiting | 24h soak test or moka TTL config visible in code review |
+| Sentry user context not in client events | Phase: Sentry | Test event in Sentry dashboard shows `user.id` from client-side error |
+| Sentry source maps missing | Phase: Sentry | Stack trace shows TypeScript source lines, not minified JS |
+| Rust panic not captured by Sentry | Phase: Sentry | `grep -r ".unwrap()" src/` returns zero results outside test files; sentry-tower layer present |
+| Playwright auth race in CI | Phase: E2E Tests | `CI=true playwright test` passes on first attempt without retries |
+| E2E tests coupled to UI labels | Phase: E2E Tests | All test locators use `data-testid` — no `getByText` in business logic tests |
+| Component refactor breaks GSAP | Phase: Component Refactoring | Animation smoke test after each extraction step |
+| ObjectURL race during navigation | Phase: Memory Leaks | Chrome blob URL count stable across 10 navigation cycles |
+| GSAP orphaned tweens | Phase: Memory Leaks | GSAP global timeline empty after component unmount |
 
 ---
 
 ## Sources
 
-- [Orval GitHub Issues — Zod uncompilable types after OpenAPI 3.1 upgrade (#2562)](https://github.com/orval-labs/orval/issues/2562)
-- [Orval GitHub Issues — Zod: Code Generation fails for type id/string + pattern (#3097)](https://github.com/orval-labs/orval/issues/3097)
-- [Orval GitHub Issues — Query key collision for infinite + regular query (#2359)](https://github.com/orval-labs/orval/issues/2359)
-- [Orval GitHub Issues — multipart/form-data binary type regression (#2864)](https://github.com/orval-labs/orval/issues/2864)
-- [Orval GitHub Issues — Incorrect import paths with indexFiles=false (#2382)](https://github.com/orval-labs/orval/issues/2382)
-- [Orval Discussion — Converting schema field names from snake_case (#218)](https://github.com/orval-labs/orval/discussions/218)
-- [Orval Security Advisory — CVE-2026-23947 code injection via x-enum-descriptions](https://github.com/orval-labs/orval/security/advisories/GHSA-h526-wf6g-67jv)
-- [utoipa GitHub Issues — nullable $ref should include type: object (#973)](https://github.com/juhaku/utoipa/issues/973)
-- [utoipa GitHub Issues — Query params should not be nullable (#1215)](https://github.com/juhaku/utoipa/issues/1215)
-- [Orval Custom HTTP Client guide](https://orval.dev/guides/custom-client)
-- [Orval DeepWiki — Zod Schema Validation architecture](https://deepwiki.com/orval-labs/orval/5-zod-schema-validation)
-- [Turborepo + bun compatibility issues — GitHub Issue #4762](https://github.com/vercel/turborepo/issues/4762)
-- [Barrel files and Next.js tree-shaking — Vercel blog](https://vercel.com/blog/how-we-optimized-package-imports-in-next-js)
-- [OpenAPI nullable with oneOf/allOf — Speakeasy](https://www.speakeasy.com/openapi/schemas/null)
+- [Axum issue #2634 — RateLimitLayer not respected (cloned state)](https://github.com/tokio-rs/axum/issues/2634)
+- [tower-governor — rate limiting middleware for Axum with shared Arc state](https://github.com/benwis/tower-governor)
+- [axum_gcra — GCRA rate limiting with GC for Axum](https://docs.rs/axum_gcra)
+- [Sentry GitHub discussion #10019 — setUser() not propagated from server to client in App Router](https://github.com/getsentry/sentry-javascript/discussions/10019)
+- [Sentry Next.js Manual Setup — withSentryConfig and source maps](https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/)
+- [Sentry Source Maps for Next.js](https://docs.sentry.io/platforms/javascript/guides/nextjs/sourcemaps/)
+- [Sentry Python gRPC Integration — GRPCIntegration](https://docs.sentry.io/platforms/python/integrations/grpc/)
+- [Sentry Rust Configuration Options](https://docs.sentry.io/platforms/rust/configuration/options/)
+- [Playwright Authentication — storageState pattern](https://playwright.dev/docs/auth)
+- [Login via Supabase REST API in Playwright — mokkapps.de](https://mokkapps.de/blog/login-at-supabase-via-rest-api-in-playwright-e2e-test)
+- [GSAP React official docs — useGSAP and contextSafe() for event handlers](https://gsap.com/resources/React/)
+- [useGSAP automatic cleanup guide](https://medium.com/@hello.kweku/simplifying-react-animations-with-usegsap-automatic-cleanup-and-beyond-354edfec31dc)
+- [GSAP community — onComplete in useGSAP cleanup behavior on unmount](https://gsap.com/community/forums/topic/41648-oncomplete-animations-in-usegsap-gets-cleaned-on-unmount/)
+- [decoded-monorepo CONCERNS.md — existing known issues for this codebase](.planning/codebase/CONCERNS.md)
 
 ---
-*Pitfalls research for: Orval + Zod API code generation added to existing Next.js + React Query monorepo*
-*Researched: 2026-03-23*
+*Pitfalls research for: Production hardening — rate limiting, error tracking, E2E tests, component refactoring, memory leak fixes*
+*Researched: 2026-03-26*

@@ -1,523 +1,423 @@
 # Architecture Research
 
-**Domain:** Type-safe API client generation (Orval + Zod) integrated into existing Next.js monorepo
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Orval v8.5.3 official docs verified, existing codebase read directly)
+**Domain:** Polyglot Monorepo Tech Debt Resolution (Next.js + Rust/Axum + Python/gRPC)
+**Researched:** 2026-03-26
+**Confidence:** HIGH — Based on direct codebase analysis, no speculation.
 
-## Standard Architecture
-
-### System Overview
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      UI Layer (React Components)                 │
-│  lib/components/[feature]/   app/[route]/                        │
-│  Components consume hooks exactly as today — NO component changes│
-├─────────────────────────────────────────────────────────────────┤
-│                     Hook Layer (React Query)                     │
-├────────────────────────────┬────────────────────────────────────┤
-│  EXISTING (keep as-is)     │  GENERATED (new, replace gradually) │
-│  lib/hooks/useProfile.ts   │  lib/api/generated/               │
-│  lib/hooks/usePosts.ts     │    posts/posts.ts   (hooks)        │
-│  lib/hooks/useImages.ts    │    users/users.ts   (hooks)        │
-│  lib/hooks/useSpots.ts     │    spots/spots.ts   (hooks)        │
-│  lib/hooks/useComments.ts  │    solutions/...    (hooks)        │
-│  ...                       │  lib/api/generated/model/          │
-│                            │    post.ts  user.ts  spot.ts       │
-│                            │  lib/api/generated/zod/            │
-│                            │    posts.zod.ts  users.zod.ts      │
-├────────────────────────────┴────────────────────────────────────┤
-│                   API Client / Mutator Layer                     │
-├────────────────────────────┬────────────────────────────────────┤
-│  EXISTING (deprecate after │  NEW (single mutator for all        │
-│  migration per domain)     │  generated hooks)                   │
-│  lib/api/client.ts         │  lib/api/mutator.ts                │
-│  lib/api/posts.ts          │    - Next.js proxy-aware            │
-│  lib/api/users.ts          │    - Supabase JWT injection         │
-│  lib/api/badges.ts ...     │    - Shared error handling          │
-├────────────────────────────┴────────────────────────────────────┤
-│               Next.js API Proxy Layer (completely unchanged)     │
-│  app/api/v1/posts/route.ts   app/api/v1/users/route.ts          │
-│  app/api/v1/spots/route.ts   app/api/v1/admin/...               │
-│  All proxy routes stay — they are the stable URL contract        │
-├─────────────────────────────────────────────────────────────────┤
-│             State Layer (Zustand — completely unchanged)          │
-│  lib/stores/authStore.ts   lib/stores/behaviorStore.ts           │
-│  lib/stores/vtonStore.ts   lib/stores/magazineStore.ts           │
-│  Zustand stores never call API directly; unchanged in v9.0       │
-└─────────────────────────────────────────────────────────────────┘
-                    ↕ proxy forwards to
-┌─────────────────────────────────────────────────────────────────┐
-│             Backend: packages/api-server (Rust/Axum)            │
-│             OpenAPI spec at https://dev.decoded.style            │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Browser / Client                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              Next.js 16 (packages/web)                      │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │    │
+│  │  │ React Pages  │  │  Zustand /   │  │  Orval-Generated │  │    │
+│  │  │ + Components │  │  TanStack Q  │  │  API Hooks       │  │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────────┘  │    │
+│  │  ┌────────────────────────────────────────────────────────┐ │    │
+│  │  │          Next.js API Proxy Routes (app/api/v1/*)       │ │    │
+│  │  │  Rate limit gate [NEW]   Sentry capture [NEW]          │ │    │
+│  │  └────────────────────────────────────────────────────────┘ │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                          HTTP/REST (Bearer JWT)                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │             Rust / Axum (packages/api-server)               │    │
+│  │  ┌──────────────────────────────────────────────────────┐   │    │
+│  │  │  Tower middleware stack                              │   │    │
+│  │  │  cors → logger → auth → [rate-limit NEW] → router   │   │    │
+│  │  └──────────────────────────────────────────────────────┘   │    │
+│  │  ┌───────────┐  ┌──────────────┐  ┌────────────────────┐    │    │
+│  │  │  Domains  │  │   SeaORM     │  │  moka cache +      │    │    │
+│  │  │  (router) │  │   (Postgres) │  │  Meilisearch       │    │    │
+│  │  └───────────┘  └──────────────┘  └────────────────────┘    │    │
+│  │                     gRPC                                     │    │
+│  │  ┌────────────────────────────────────────────────────────┐  │    │
+│  │  │         Python AI Server (packages/ai-server)          │  │    │
+│  │  │  FastAPI + arq workers + LangGraph + Groq/Gemini       │  │    │
+│  │  │  [Sentry Python SDK NEW]                               │  │    │
+│  │  └────────────────────────────────────────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              Supabase (PostgreSQL + Auth + RLS)             │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+**[NEW]** markers indicate net-new components added by v10.0 tech debt work.
 
-| Component | Responsibility | Change in v9.0 |
-|-----------|---------------|----------------|
-| `lib/api/generated/` | Orval-generated React Query hooks + model types | NEW — produced by codegen |
-| `lib/api/generated/model/` | TypeScript type definitions generated from OpenAPI schemas | NEW — replaces `lib/api/types.ts` |
-| `lib/api/generated/[tag]/[tag].zod.ts` | Zod validation schemas per domain | NEW — used for request body validation |
-| `lib/api/mutator.ts` | Shared fetch wrapper injected into all generated hooks | NEW — replaces per-file auth logic |
-| `orval.config.ts` | Orval code generation configuration | NEW in `packages/web/` |
-| `lib/api/client.ts` | Existing manual apiClient fetch wrapper | KEEP during migration; delete after |
-| `lib/api/posts.ts` etc. | Manual API function files per domain | DEPRECATE per domain; delete after migration |
-| `lib/api/types.ts` | Manual TypeScript DTO types | DEPRECATE; delete after model/ replaces it |
-| `lib/hooks/` | Existing React Query hooks | KEEP during migration; replace one domain at a time |
-| `app/api/v1/` | Next.js proxy routes | UNCHANGED — generated hooks call same `/api/v1/*` URLs |
-| `lib/stores/` | Zustand client state | UNCHANGED — no API calls inside stores |
+## Component Responsibilities
 
-## Recommended Project Structure
+| Component | Responsibility | Communicates With |
+|-----------|----------------|-------------------|
+| Next.js pages + components | UI rendering, user interaction, design system | Orval hooks, Zustand stores |
+| Next.js API proxy (app/api/v1/*) | CORS bridge, auth forwarding, rate-limit gate | Rust/Axum backend |
+| Rust/Axum middleware stack | Auth, CORS, logging, (new) rate limiting, (new) Sentry | All domain handlers |
+| Rust domain handlers | Business logic per domain (posts, users, spots…) | SeaORM, moka, Meilisearch |
+| Python AI server | LLM orchestration, image analysis, magazine generation | Rust via gRPC |
+| Supabase | Persistent storage, RLS, JWT auth | Next.js server-side, Rust |
+| Playwright E2E suite | Full-stack flow verification | Next.js dev/preview URLs |
+
+## Integration Points Per Tech Debt Item
+
+### 1. Rate Limiting
+
+**Primary enforcement layer: Rust/Axum middleware**
+
+The existing middleware stack (`cors → logger → auth`) has no rate-limiting layer. The correct insertion point is after `auth` (so user identity is available for per-user limits) and before domain handlers.
 
 ```
-packages/web/
-├── orval.config.ts                  # NEW: Orval generation config (root of packages/web)
-├── lib/
-│   ├── api/
-│   │   ├── generated/               # NEW: Orval output directory — ADD TO .gitignore
-│   │   │   ├── model/               # Generated TypeScript types (one file per schema)
-│   │   │   │   ├── post.ts
-│   │   │   │   ├── user.ts
-│   │   │   │   ├── spot.ts
-│   │   │   │   ├── solution.ts
-│   │   │   │   └── index.ts         # Barrel export
-│   │   │   ├── posts/               # Generated hooks per tag (tags-split mode)
-│   │   │   │   ├── posts.ts         # useGetPosts, useCreatePost, useDeletePost...
-│   │   │   │   └── posts.zod.ts     # Zod schemas for posts requests/responses
-│   │   │   ├── users/
-│   │   │   │   ├── users.ts
-│   │   │   │   └── users.zod.ts
-│   │   │   ├── spots/
-│   │   │   │   ├── spots.ts
-│   │   │   │   └── spots.zod.ts
-│   │   │   ├── solutions/
-│   │   │   ├── badges/
-│   │   │   ├── rankings/
-│   │   │   ├── admin/
-│   │   │   └── index.ts             # Barrel export for all generated code
-│   │   ├── mutator.ts               # NEW: shared fetch mutator for generated hooks
-│   │   ├── client.ts                # EXISTING: keep during migration
-│   │   ├── posts.ts                 # EXISTING: deprecate after posts/ migrated
-│   │   ├── users.ts                 # EXISTING: deprecate after users/ migrated
-│   │   ├── types.ts                 # EXISTING: deprecate after model/ replaces it
-│   │   └── index.ts                 # Update exports as migration progresses
-│   └── hooks/
-│       ├── usePosts.ts              # EXISTING: thin wrapper or swap queryFn
-│       ├── useProfile.ts            # EXISTING: thin wrapper or swap queryFn
-│       └── ...                      # Swap per domain; delete wrappers when stable
+Tower middleware stack (packages/api-server/src/middleware/):
+  cors.rs  →  logger.rs  →  auth.rs  →  [rate_limit.rs NEW]  →  router handlers
 ```
 
-### Structure Rationale
+- Crate: `tower_governor` (wraps `governor` leaky-bucket, integrates cleanly with Tower/Axum)
+- Limit scoping: IP-based for public endpoints; user-ID-based for authenticated endpoints
+- AI cost-critical endpoints requiring hard limits: `POST /api/v1/posts/analyze`, `POST /api/v1/posts/extract-metadata`, `POST /api/v1/posts/upload`
+- Storage: In-process `dashmap` (already have `moka` in workspace, alternative). Redis is overkill for single-instance.
+- Next.js proxy layer: Forward `429` responses with `Retry-After` header unmodified — do NOT re-throw as 500 (current bug pattern in proxy routes).
 
-- **`lib/api/generated/` in `packages/web/` — not `packages/shared/`:** Generated hooks depend on `@tanstack/react-query`. React Query hooks require a `QueryClientProvider` in the component tree. The mobile app (Expo 54) has a different React Query setup, and sharing hooks across packages causes the documented "No QueryClient set" error (TanStack/query issues #3595, #7965). The mobile app also uses React Native — web-specific patterns (`window.location.origin`, Next.js proxy cookies) cannot be shared. Keep generated code colocated with the consuming app.
+**Secondary soft-gate: Next.js proxy (app/api/v1/posts/analyze/route.ts)**
 
-- **`tags-split` mode:** One folder per OpenAPI tag with separate files for hooks and Zod schemas. Keeps domains independently navigable. Avoids a single giant file that is impossible to diff during code review.
+Optionally add a request-count check using a server-side in-memory counter per session cookie for defense-in-depth. This is not the authoritative limit — Rust holds truth.
 
-- **`lib/api/mutator.ts` as the single auth layer:** All generated hooks share one custom mutator. This replaces the per-file auth logic spread across `client.ts`, `posts.ts`, and `users.ts`. The existing `client.ts` pattern (check session, inject `Authorization: Bearer`) is preserved exactly.
+**New files:**
+- `packages/api-server/src/middleware/rate_limit.rs` (new)
+- Update `packages/api-server/src/middleware/mod.rs` to export
+- Update `packages/api-server/src/main.rs` middleware composition
 
-- **`lib/api/generated/` gitignored:** Generated files must not be committed. They are produced at build/pre-push time from the OpenAPI spec. Committing them creates stale drift risk — when the backend changes a field, TypeScript would still compile against the stale type.
+### 2. Sentry Error Tracking
 
-## Architectural Patterns
+Three SDKs across three runtimes — each is independent and does not depend on others.
 
-### Pattern 1: Custom Fetch Mutator (Auth Injection)
+**Frontend (Next.js):**
+- Package: `@sentry/nextjs`
+- Entry points: `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts` (Next.js 16 convention)
+- Auto-instruments: unhandled promise rejections, React error boundaries, fetch, Next.js route handlers
+- Additional capture: React Error Boundary wrapping `ThiingsGrid`, `ImageDetailContent`, `SplineStudio` (high-risk components)
+- Source maps: Sentry Webpack plugin uploads during `next build`
+- User context: Set `Sentry.setUser({ id, email })` in `AuthProvider` on `SIGNED_IN`
 
-**What:** A single function that Orval injects into every generated hook as the HTTP transport. It handles JWT retrieval from Supabase, the Next.js proxy base URL, and error normalization. This directly replaces the logic in `lib/api/client.ts:apiClient()`.
+**Backend (Rust/Axum):**
+- Crate: `sentry` + `sentry-tower`
+- Integration: Add `sentry::init()` in `main.rs`; `sentry_tower::NewSentryLayer` into Tower stack
+- Captures: unhandled `AppError` variants; gRPC errors from Python AI server
+- Performance: Sentry transaction tracing per request (optional, adds ~5% overhead — enable selectively)
+- Config: `SENTRY_DSN` env var (server-only, never exposed to browser)
 
-**When to use:** Required. This is the primary integration point between Orval-generated code and the existing Supabase auth system.
+**Python AI server:**
+- Package: `sentry-sdk[fastapi,arq]`
+- Integration: `sentry_sdk.init()` in `src/app.py` + `src/bootstrap.py`
+- Captures: LLM API failures (Groq, Gemini, OpenAI), arq worker exceptions, gRPC handler errors
+- Breadcrumbs: Log LLM model, token counts as structured breadcrumb context
 
-**Trade-offs:** Centralizes auth in one place (good). The mutator runs on every request including public ones — the Supabase `getSession()` call adds a small async overhead. Acceptable given the existing code already does this on every request.
+**Cross-service correlation:**
+- Rust should forward a `Sentry-Trace` header to gRPC calls (or inject as gRPC metadata)
+- Allows tracing a single user request across frontend → Rust → Python in Sentry UI
+
+**New files:**
+- `packages/web/sentry.client.config.ts` (new)
+- `packages/web/sentry.server.config.ts` (new)
+- Update `packages/web/next.config.js` to wrap with `withSentryConfig()`
+- Update `packages/api-server/Cargo.toml` to add `sentry`, `sentry-tower`
+- Update `packages/api-server/src/main.rs` Sentry init
+- Update `packages/ai-server/pyproject.toml` to add `sentry-sdk[fastapi,arq]`
+
+### 3. E2E Tests (Playwright)
+
+Existing Playwright infrastructure already exists: 40 visual QA tests, 36 approved baselines, GitHub Actions CI. The v10.0 work **extends** this, it does not create new infrastructure.
+
+**What exists:**
+- `packages/web/playwright.config.ts` — configured
+- Visual regression tests for 10 pages at 4 breakpoints
+
+**What is needed: business-logic E2E flows (not visual)**
+
+Critical paths to cover:
+
+| Flow | Start | End | Key assertions |
+|------|-------|-----|----------------|
+| Auth (OAuth happy path) | Landing page | Authenticated state | authStore has user, header shows avatar |
+| Post creation | Upload image | Post visible in feed | Post exists via API assertion |
+| AI detection | Upload → analyze | Spots rendered on image | Spot coordinates visible, count > 0 |
+| Image detail | Click image | Modal open + data loaded | Image title, spot count, share button |
+| Search | Type query | Results rendered | Count > 0, first result relevant |
+| Rate limit | Rapid AI requests | 429 response | UI shows "too many requests" message |
+
+**Integration point:** Tests run against `next dev` (local) or a preview deployment URL. The AI detection flow requires the Rust backend + Python AI server to be running — use a `test:e2e` script that starts all services via Docker Compose.
+
+**New files:**
+- `packages/web/e2e/auth.spec.ts`
+- `packages/web/e2e/post-creation.spec.ts`
+- `packages/web/e2e/ai-detection.spec.ts`
+- `packages/web/e2e/image-detail.spec.ts`
+- `packages/web/e2e/search.spec.ts`
+- `packages/web/e2e/rate-limit.spec.ts`
+
+### 4. Component Refactoring
+
+Not a new integration — modifies existing component files. Zero new infrastructure required.
+
+**Target components and extraction strategy:**
+
+| Component | Current LOC | Primary debt | Extraction target |
+|-----------|------------|-------------|-------------------|
+| `ThiingsGrid.tsx` | ~948 | Physics engine + rendering mixed | `useThiingsPhysics.ts` hook + `ThiingsCell.tsx` |
+| `ImageDetailContent.tsx` | ~671 | Multi-section layout monolith | `ImageDetailHero.tsx`, `ImageDetailSpots.tsx`, `ImageDetailShop.tsx` |
+| `ImageDetailModal.tsx` | ~637 | GSAP + state + layout mixed | `useModalGSAP.ts` hook, `ModalDrawer.tsx` |
+| `DecodedLogo.tsx` | ~764 | Three.js + ASCII rendering | `useDecodedLogoWebGL.ts` + `DecodedLogoFallback.tsx` |
+
+**Boundary rule:** Each extracted unit must be independently importable and testable. No circular imports back to parent.
+
+**Integration risk:** These components are used on high-traffic pages (main, detail, images). Refactoring requires visual regression baseline re-approval in Playwright.
+
+**Sequence within the phase:** Refactoring must happen before or in parallel with E2E tests — E2E tests should test the refactored components, not the monoliths.
+
+### 5. Memory Leak Prevention
+
+Scope: React component cleanup, ObjectURL lifecycle, GSAP context. All changes are within `packages/web`.
+
+**Known leak sites (from CONCERNS.md):**
+
+| Site | Leak type | Fix pattern |
+|------|-----------|-------------|
+| `requestStore.ts` `createPreviewUrl()` | `URL.createObjectURL` not always revoked | `useEffect(() => { return () => URL.revokeObjectURL(url) }, [url])` in consuming component |
+| `ImageDetailModal.tsx` GSAP | Context created, cleanup conditional | `useGSAP()` hook from `@gsap/react` with `scope` parameter — auto-reverts on unmount |
+| `DecodedLogo.tsx` Three.js | Canvas + renderer not disposed on unmount | `useEffect` cleanup: `renderer.dispose()`, `scene.clear()`, `canvas.remove()` |
+| Event listeners (generic) | `addEventListener` without paired `removeEventListener` | `useEffect` cleanup always removes listener |
+
+**Verification:** Chrome DevTools Memory profiler — take heap snapshot before/after navigation away from affected pages. ObjectURL count in blob registry should return to 0.
+
+## Data Flow: Error and Metrics Propagation
+
+```
+User Action (Browser)
+    |
+React Component
+    | throws / rejects
+[Sentry client SDK] <-- captures automatically
+    |
+Next.js API Proxy (app/api/v1/*)
+    | fetch to Rust
+    | 429 Too Many Requests -----------------------> [UI shows Retry-After toast]
+    | 500/503 error
+[Sentry server SDK] <-- captures automatically
+    |
+Rust/Axum handler
+    | AppError propagation via ?
+[sentry-tower layer] <-- captures AppError::Internal
+    | gRPC call
+Python AI server
+    | LLM timeout / API error
+[sentry-sdk Python] <-- captures with LLM breadcrumbs
+```
+
+**Rate limit data flow:**
+
+```
+Request arrives at Rust
+    |
+[tower_governor middleware]
+    | bucket has capacity --> proceed to handler
+    | bucket exhausted --> return 429 { "error": "rate_limited", "retry_after": N }
+Next.js proxy forwards 429 as-is (fix current swallow-to-500 behavior)
+Browser receives 429 --> custom-instance.ts (Orval mutator) detects --> toast notification
+```
+
+## Recommended Build Order
+
+Dependencies drive ordering:
+
+```
+1. Memory Leaks (no dependencies, isolated cleanup)
+        |
+2. Component Refactoring (structural prereq for clean E2E targets)
+        |               parallel with
+3.              Rate Limiting -- Rust layer (backend, independent of frontend)
+        |
+4. Sentry (frontend + backend + AI) (needs stable components to avoid noisy alerts)
+        |
+5. E2E Tests (tests all the above; must be last to assert full system behavior)
+```
+
+**Rationale:**
+
+- Memory leaks first: smallest scope, no regressions, immediate production benefit.
+- Refactoring before Sentry: Sentry error grouping works better with clean component names. Monolith components generate confusing stack traces.
+- Rate limiting before Sentry backend: Tower middleware insertion order matters. Rate limit → Sentry layer ordering ensures rate-limit 429s are not reported as errors.
+- Sentry before E2E: E2E tests can verify Sentry captures work (assert no errors fired during happy-path flows).
+- E2E last: Integration test of the complete system. Must pass with all other items done.
+
+## Architectural Patterns to Follow
+
+### Pattern 1: Tower Middleware Insertion (Rust)
+
+**What:** New middleware (rate limit, Sentry) slots into the existing Tower service builder without touching domain handlers.
+
+**When to use:** Any cross-cutting concern in the Rust backend.
+
+**Trade-offs:** Tower layer ordering is strict and matters for correctness. Sentry must be outermost to capture all errors including those from inner layers.
 
 **Example:**
+```rust
+let app = Router::new()
+    .nest("/api/v1", build_api_router(state.clone()))
+    .layer(sentry_tower::NewSentryLayer::new_from_top())  // outermost
+    .layer(create_rate_limit_layer(&config))              // after sentry
+    .layer(create_cors_layer(&config.allowed_origins))
+    .layer(request_logger_middleware)
+    .with_state(state);
+```
+
+### Pattern 2: Next.js Proxy 429 Passthrough
+
+**What:** Currently proxy routes catch all errors and return 500. Rate-limit 429 responses from Rust must be forwarded with correct status and `Retry-After` header.
+
+**When to use:** All proxy routes calling AI or rate-limited endpoints.
+
+**Trade-offs:** Requires touching ~5 proxy route files. Low-risk change — just stop overwriting the status code.
+
 ```typescript
-// lib/api/mutator.ts
-import { supabaseBrowserClient } from "@/lib/supabase/client";
-
-export interface RequestConfig {
-  url: string;
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  params?: Record<string, unknown>;
-  headers?: Record<string, string>;
-  data?: unknown;
-  signal?: AbortSignal;
-}
-
-export const decodedFetcher = async <T>(config: RequestConfig): Promise<T> => {
-  const { url, method, params, headers = {}, data, signal } = config;
-
-  // Inject Supabase JWT — same as existing lib/api/client.ts:getAuthToken()
-  const { data: { session } } = await supabaseBrowserClient.auth.getSession();
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
-  }
-
-  // Build URL with query params (Orval passes params separately from the URL)
-  // Use relative URL so requests route through Next.js proxy (avoids CORS)
-  const fullUrl = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) {
-        fullUrl.searchParams.set(k, String(v));
-      }
-    });
-  }
-
-  const response = await fetch(fullUrl.toString(), {
-    method,
+const response = await fetch(`${API_BASE_URL}/api/v1/posts/analyze`, ...);
+if (!response.ok) {
+  return new Response(response.body, {
+    status: response.status,  // preserve 429, not hardcode 500
     headers: {
-      "Content-Type": "application/json",
-      ...headers,
+      'Content-Type': 'application/json',
+      ...(response.headers.get('Retry-After')
+        ? { 'Retry-After': response.headers.get('Retry-After')! }
+        : {}),
     },
-    body: data ? JSON.stringify(data) : undefined,
-    signal,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(error.message ?? `API Error: ${response.status}`);
-  }
-
-  if (response.status === 204) return undefined as T;
-  return response.json();
-};
-```
-
-```typescript
-// packages/web/orval.config.ts
-import { defineConfig } from "orval";
-
-export default defineConfig({
-  "decoded-api": {
-    input: {
-      // Download spec from backend at codegen time; or use local file during dev
-      target: "https://dev.decoded.style/api-docs/openapi.json",
-    },
-    output: {
-      mode: "tags-split",               // One folder per OpenAPI tag
-      target: "lib/api/generated",      // Hooks go here
-      schemas: "lib/api/generated/model", // TypeScript types go here
-      client: "react-query",
-      httpClient: "fetch",              // Use fetch (not axios) to match existing code
-      clean: true,                      // Delete stale generated files on each run
-      prettier: true,                   // Format output (uses packages/web/.prettierrc)
-      override: {
-        mutator: {
-          path: "lib/api/mutator.ts",
-          name: "decodedFetcher",
-        },
-        query: {
-          useQuery: true,
-          useMutation: true,
-          signal: true,                 // Include AbortSignal for request cancellation
-          options: {
-            staleTime: 60000,           // 1 minute — matches existing hooks
-            gcTime: 300000,             // 5 minutes — matches existing hooks
-          },
-        },
-        zod: {
-          generate: {
-            response: true,             // Validate API responses at runtime
-            body: true,                 // Validate request bodies before send
-          },
-        },
-      },
-    },
-  },
-});
-```
-
-### Pattern 2: Thin Wrapper Migration (Existing Hook Preservation)
-
-**What:** During migration, keep `lib/hooks/` hooks but replace their `queryFn` with calls to generated API functions rather than manual `lib/api/` functions. Components continue using the same hook API — zero component changes.
-
-**When to use:** For hooks with business logic beyond a raw fetch: `useInfinitePosts` (page mapping), `useCreatePost` (multi-step), `useTrackDwellTime` (side effects). Generated hooks are pure API wrappers; the mapping logic stays in the existing hook.
-
-**Trade-offs:** Maintains backward compatibility, allows domain-by-domain rollout. Thin redundancy during migration is acceptable. Remove wrappers after validation is complete.
-
-**Example:**
-```typescript
-// lib/hooks/usePosts.ts — AFTER swapping queryFn (thin wrapper)
-
-// Previously: import { fetchPosts } from "@/lib/api/posts"
-// After:      import the raw fetch function from generated code
-import { getPostsQueryOptions } from "@/lib/api/generated/posts/posts";
-
-export function useInfinitePosts(params: UseInfinitePostsParams) {
-  return useInfiniteQuery({
-    queryKey: ["posts", "infinite", params],
-    queryFn: async ({ pageParam }) => {
-      // Use generated queryFn internally; keep custom page-mapping logic
-      const response = await getPostsQueryOptions({ page: pageParam as number, ...mappedParams }).queryFn!();
-      return {
-        items: response.data,
-        currentPage: response.pagination.current_page,
-        hasMore: response.pagination.current_page < response.pagination.total_pages,
-      };
-    },
-    // ... rest of infinite query config
   });
 }
 ```
 
-### Pattern 3: Zod Runtime Validation at Mutation Boundary
+### Pattern 3: useGSAP for Animation Cleanup
 
-**What:** Use generated Zod schemas to validate user-supplied request bodies before they leave the component. Responses are already typed by TypeScript — runtime Zod validation of responses is optional.
+**What:** Replace raw `useEffect` + `gsap.context()` with `@gsap/react`'s `useGSAP` hook which auto-handles context revert on unmount.
 
-**When to use:** For mutation hooks (POST/PATCH) where user input is involved. Catches malformed form data before a network round-trip. Not needed for GET hooks where TypeScript types suffice.
+**When to use:** All GSAP animations in components, especially in components that mount/unmount (modals, drawers).
 
-**Trade-offs:** Adds a parse step on each mutation. Cost is negligible for form submissions. Do not use for high-frequency reads.
+**Trade-offs:** `useGSAP` is the official GSAP React integration — no external dep addition needed, already in package.json.
 
-**Example:**
 ```typescript
-// In a component — validate before calling mutation
-import { createPostBody } from "@/lib/api/generated/posts/posts.zod";
-import { useCreatePost } from "@/lib/api/generated/posts/posts";
+import { useGSAP } from "@gsap/react";
 
-const { mutate: createPost } = useCreatePost();
+// OLD (leaks on rapid mount/unmount):
+useEffect(() => {
+  const ctx = gsap.context(() => { ... }, containerRef);
+  return () => ctx.revert();
+}, []);
 
-const handleSubmit = (formData: unknown) => {
-  const parsed = createPostBody.safeParse(formData);
-  if (!parsed.success) {
-    toast.error(parsed.error.issues[0].message);
-    return;
-  }
-  createPost({ data: parsed.data });
-};
+// NEW (safe, auto-reverts):
+useGSAP(() => {
+  gsap.from(containerRef.current, { opacity: 0 });
+}, { scope: containerRef, dependencies: [] });
 ```
 
-### Pattern 4: Cache Invalidation in Generated Mutation Hooks
+### Pattern 4: Sentry User Context Binding
 
-**What:** Generated `useCreate*` and `useUpdate*` hooks do not automatically invalidate related queries. Add `onSuccess` cache invalidation via the `mutation` option prop — same pattern as existing `useMutation` hooks.
+**What:** Bind authenticated user to Sentry scope once, in `AuthProvider`, so all subsequent errors carry user identity.
 
-**When to use:** Every mutation that modifies data that other queries display. This is the same pattern used today in `useUpdatePost` and `useDeletePost`.
+**When to use:** Once in `AuthProvider.tsx`, not scattered across individual components.
 
-**Trade-offs:** Cache invalidation logic must be added manually at the call site (not in the generated file). This is intentional — the generated file regenerates and would overwrite any manual additions.
+**Trade-offs:** None. Centralizing avoids duplicate setUser calls and race conditions.
 
-**Example:**
-```typescript
-// Component or feature hook wrapping the generated mutation
-const queryClient = useQueryClient();
+## Anti-Patterns to Avoid
 
-const { mutate: deletePost } = useDeletePost({
-  mutation: {
-    onSuccess: (_, postId) => {
-      queryClient.removeQueries({ queryKey: getPostQueryKey(postId) });
-      queryClient.invalidateQueries({ queryKey: getPostsQueryKey() });
-    },
-  },
-});
-```
+### Anti-Pattern 1: Rate Limiting Only at the Next.js Proxy Layer
 
-## Data Flow
+**What people do:** Add rate limiting in Next.js API routes only (easier, TypeScript).
 
-### Request Flow (Generated Hook Path)
+**Why it's wrong:** The Rust backend is directly accessible by bypassing the Next.js proxy (direct API calls from curl, mobile app, or other services). The Next.js layer is a soft gate only.
 
-```
-Component calls useGetPosts({ params })
-    ↓ (from lib/api/generated/posts/posts.ts)
-React Query executes queryFn
-    ↓
-decodedFetcher({ url: "/api/v1/posts", method: "GET", params })
-    ↓ calls supabaseBrowserClient.auth.getSession() — injects JWT
-fetch("http://localhost:3000/api/v1/posts?page=1&...")
-    ↓
-Next.js Proxy Route: app/api/v1/posts/route.ts (UNCHANGED)
-    ↓ reads API_BASE_URL server env var, forwards request
-Rust/Axum Backend: https://dev.decoded.style/api/v1/posts
-    ↓ returns JSON
-decodedFetcher returns typed T (typed by Orval from OpenAPI schema)
-    ↓
-React Query stores in cache with queryKey ["posts", "list", params]
-    ↓
-Component receives { data, isLoading, isError }
-```
+**Do this instead:** Enforce at the Rust middleware layer. Next.js can add a soft advisory check.
 
-Critical insight: the Next.js proxy layer (`app/api/v1/`) is unchanged. Generated hooks use relative URLs (same as the existing `lib/api/client.ts` with `API_BASE_URL = ""`). The proxy is the stable contract between browser and backend — it handles CORS, server-side secrets, and FormData forwarding.
+### Anti-Pattern 2: Sentry Capturing Expected Business Errors
 
-### State Management (Unchanged)
+**What people do:** Let all `AppError` variants reach Sentry, including 404 Not Found and 401 Unauthorized.
 
-```
-Zustand Stores (authStore, vtonStore, magazineStore, behaviorStore ...)
-    │
-    │ remain isolated from API calls
-    │ only update via React Query onSuccess callbacks
-    │ or direct user actions (UI events)
-    │
-    ↓ no changes to any lib/stores/ files during v9.0 migration
-```
+**Why it's wrong:** Floods Sentry with noise, obscures real errors, burns through Sentry quota.
 
-### Migration Data Flow
+**Do this instead:** Only capture `AppError::Internal` and `AppError::ExternalService` in Sentry. Filter 4xx client errors with `before_send` callback.
 
-```
-Phase A: Generated code exists alongside manual code
-  components → existing lib/hooks/ → lib/api/[domain].ts → apiClient
-  (migration target) → generated lib/api/generated/ → decodedFetcher → proxy
+### Anti-Pattern 3: Component Refactoring Without Visual Baseline Update
 
-Phase B: Swap queryFn in existing hooks to generated functions
-  components → lib/hooks/usePosts.ts (wrapper) → generated queryFn → proxy
+**What people do:** Refactor `ThiingsGrid` or `ImageDetailModal`, then run Playwright visual tests which fail because the component renders differently.
 
-Phase C: Point components directly at generated hooks where wrappers are trivial
-  components → lib/api/generated/posts/posts.ts (useGetPosts) → proxy
+**Why it's wrong:** False negatives block CI; team ignores visual failures.
 
-Phase D: Delete manual files; generated model/ is type SSOT
-  DELETE: lib/api/client.ts, lib/api/posts.ts, lib/api/users.ts, lib/api/types.ts
-  RESULT: lib/api/generated/model/ is the single source of truth for all API types
-```
+**Do this instead:** After refactoring each component, explicitly re-approve visual baselines for affected pages before merging.
+
+### Anti-Pattern 4: ObjectURL Revoke Only in Zustand Store
+
+**What people do:** Revoke ObjectURLs inside Zustand store actions (`clearImages`).
+
+**Why it's wrong:** If a component unmounts before `clearImages` is called (navigation, error boundary), the URL leaks. Store actions are not lifecycle-aware.
+
+**Do this instead:** Revoke in `useEffect` cleanup of the component that consumes the URL. Store may also call revoke as belt-and-suspenders, but component cleanup is authoritative.
+
+## New vs. Modified Components Summary
+
+| Item | New | Modified |
+|------|-----|----------|
+| `packages/api-server/src/middleware/rate_limit.rs` | NEW | — |
+| `packages/api-server/src/middleware/mod.rs` | — | MODIFIED (export rate_limit) |
+| `packages/api-server/src/main.rs` | — | MODIFIED (middleware stack + Sentry init) |
+| `packages/api-server/Cargo.toml` | — | MODIFIED (tower_governor, sentry deps) |
+| `packages/web/sentry.client.config.ts` | NEW | — |
+| `packages/web/sentry.server.config.ts` | NEW | — |
+| `packages/web/next.config.js` | — | MODIFIED (withSentryConfig wrapper) |
+| `packages/web/lib/components/auth/AuthProvider.tsx` | — | MODIFIED (Sentry.setUser) |
+| `packages/web/app/api/v1/posts/analyze/route.ts` | — | MODIFIED (429 passthrough) |
+| `packages/ai-server/pyproject.toml` | — | MODIFIED (sentry-sdk) |
+| `packages/ai-server/src/app.py` / `bootstrap.py` | — | MODIFIED (sentry init) |
+| `packages/web/e2e/*.spec.ts` | NEW (6 files) | — |
+| `packages/web/lib/components/ThiingsGrid.tsx` | — | MODIFIED (extract hooks) |
+| `packages/web/lib/components/detail/ImageDetailContent.tsx` | — | MODIFIED (split sections) |
+| `packages/web/lib/components/detail/ImageDetailModal.tsx` | — | MODIFIED (useGSAP) |
+| `packages/web/lib/stores/requestStore.ts` | — | MODIFIED (ObjectURL lifecycle) |
 
 ## Integration Points
 
 ### External Services
 
-| Service | Integration Pattern | Change in v9.0 |
-|---------|---------------------|----------------|
-| OpenAPI spec at `dev.decoded.style` | Input to Orval at codegen time only — not a runtime dependency | NEW: spec fetched during `bun run generate` |
-| Supabase Auth | `decodedFetcher` calls `supabaseBrowserClient.auth.getSession()` — same as `lib/api/client.ts:getAuthToken()` | Mutator replicates existing pattern |
-| Next.js Proxy (`app/api/v1/`) | Generated hooks call relative `/api/v1/*` URLs — proxy unchanged | No change |
-| Rust/Axum Backend | Reached only through Next.js proxy — browser never calls it directly | No change |
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Sentry (Next.js) | `@sentry/nextjs` SDK + `withSentryConfig` | Source maps via Sentry Webpack plugin in CI build |
+| Sentry (Rust) | `sentry` + `sentry-tower` Tower layer | DSN via `SENTRY_DSN` env var, server-only |
+| Sentry (Python) | `sentry-sdk[fastapi,arq]` | Captures arq background worker failures too |
+| tower_governor | Tower layer in Rust middleware stack | Per-IP + per-user limits, in-process dashmap storage |
 
 ### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| `lib/api/generated/` ↔ `lib/hooks/` | Direct import (thin wrapper or replacement) | Both coexist during migration; wrappers deleted after |
-| `lib/api/generated/` ↔ `lib/stores/` | None — stores do not call API directly | Stores updated via React Query `onSuccess` callbacks, unchanged |
-| `lib/api/generated/model/` ↔ `lib/api/types.ts` | Parallel during migration; `types.ts` deleted at end | Do not re-export from both; prefer generated types immediately |
-| `lib/api/mutator.ts` ↔ `lib/api/client.ts` | Independent during migration — different functions | `mutator.ts` is a clean rewrite; `client.ts` stays until all manual functions are gone |
-| `orval.config.ts` ↔ Turborepo | `generate` task declared in `turbo.json`, cached by spec hash | Input fingerprint: downloaded spec file; output: `lib/api/generated/` |
+| Next.js proxy → Rust | HTTP/REST via proxy routes | 429 must be forwarded, not swallowed as 500 |
+| Rust → Python AI | gRPC (proto in `packages/api-server/proto/`) | Errors captured by both Sentry SDKs; trace header forwarded |
+| Component → Store | Zustand subscription | ObjectURL revoke must happen in component, not only in store |
+| E2E tests → Full stack | HTTP against running dev/preview server | Full stack (Docker Compose) required for AI detection tests |
 
-### New and Modified Files
+## Scaling Considerations
 
-| File | Status | Purpose |
-|------|--------|---------|
-| `packages/web/orval.config.ts` | NEW | Orval generation config |
-| `packages/web/lib/api/mutator.ts` | NEW | Shared fetch wrapper for all generated hooks |
-| `packages/web/lib/api/generated/` | NEW (gitignored) | Orval output: hooks, model types, Zod schemas |
-| `packages/web/.gitignore` | MODIFIED | Add `lib/api/generated/` |
-| `packages/web/package.json` | MODIFIED | Add `"generate": "orval"` script; add `orval` devDependency |
-| `turbo.json` (root) | MODIFIED | Add `generate` task with `dependsOn: []` (no Turborepo deps; spec is external) |
-| `packages/web/lib/api/client.ts` | UNCHANGED during migration | Deleted in Phase D |
-| `packages/web/lib/api/types.ts` | UNCHANGED during migration | Deleted in Phase D |
-| `packages/web/lib/api/[domain].ts` | UNCHANGED during migration | Deleted per domain as migration completes |
-
-## Build Order for Migration
-
-The migration is phased to keep the app deployable at each step.
-
-**Phase 1 — Scaffold (no behavior change to production)**
-1. Install `orval` as devDependency in `packages/web`: `bun add -d orval`
-2. Create `packages/web/orval.config.ts` (see Pattern 1 above)
-3. Create `packages/web/lib/api/mutator.ts`
-4. Add `"generate": "orval"` to `packages/web/package.json` scripts
-5. Add `lib/api/generated/` to `packages/web/.gitignore`
-6. Run `bun run generate` — confirm files appear in `lib/api/generated/`
-7. Run `bun run typecheck` — fix any type collisions between generated `model/` and existing `lib/api/types.ts` (expect name overlaps; use `import type` aliasing temporarily)
-8. Add `generate` step before typecheck in `packages/web/scripts/pre-push.sh`
-
-**Phase 2 — Validate parity (no production change)**
-1. Import one generated hook in isolation (e.g., in `app/debug/supabase/page.tsx`)
-2. Confirm generated `useGetPosts` returns same shape as `fetchPosts` today
-3. Confirm auth token injected correctly (check Network tab in browser)
-4. Confirm query keys are compatible with existing cache (safe to coexist)
-5. Document any shape differences between generated model/ and existing types.ts
-
-**Phase 3 — Migrate read hooks domain by domain**
-
-Recommended order (least complex to most):
-
-```
-badges → rankings → categories → comments → spots → solutions → users → posts → admin
-```
-
-For each domain:
-- Replace `queryFn` in `lib/hooks/use[Domain].ts` with generated fetch function
-- Keep hook signature unchanged — zero component changes
-- Delete `lib/api/[domain].ts`
-- Run `bun run typecheck` + `bun run test:visual` on affected pages
-
-**Phase 4 — Migrate mutation hooks**
-
-Mutations need extra care because they have `onSuccess` cache invalidation and store syncing logic:
-- Use generated `useCreate[Resource]` as the base hook
-- Pass `onSuccess`, `onError` via the `mutation` option at the call site
-- Migrate `useUpdateProfile` last (it syncs with `profileStore` on success)
-
-**Phase 5 — Cleanup**
-1. Delete `lib/api/client.ts` (replaced by `mutator.ts`)
-2. Delete `lib/api/types.ts` (replaced by `lib/api/generated/model/`)
-3. Delete remaining `lib/api/[domain].ts` files
-4. Update `lib/api/index.ts` to export only from `generated/`
-5. Remove type aliases added in Phase 1 to handle overlaps
-6. Run full build: `bun run build` — confirm success
-7. Run `bun run test:visual` — confirm no visual regressions
-
-**Dependency graph for build order:**
-
-```
-mutator.ts must exist BEFORE generate runs (orval imports and validates it)
-generate must succeed BEFORE typecheck (generated types feed type-checking)
-typecheck must pass BEFORE migration begins (baseline correctness)
-domain migrations are sequential, not parallel (safer debugging)
-cleanup is the final gate (all domains migrated and verified first)
-```
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Generated Code in `packages/shared`
-
-**What people do:** Put Orval-generated hooks in `packages/shared` so mobile app can theoretically reuse them.
-
-**Why it is wrong:** React Query hooks require `QueryClientProvider` in the component tree. Sharing hooks across package boundaries causes the "No QueryClient set" error (TanStack/query issues #3595, #7965). The mobile app uses Expo with a different React Query setup and React Native — web-specific patterns (`window.location.origin`, Next.js proxy cookies, browser fetch) cannot be shared.
-
-**Do this instead:** Keep generated hooks in `packages/web/lib/api/generated/`. If mobile needs API type definitions, share only the plain TypeScript model types (no hooks, no React dependencies) via `packages/shared/types/`. Zod schemas are also safe to share (no framework dependency) if mobile input validation is needed.
-
-### Anti-Pattern 2: Committing Generated Files
-
-**What people do:** Commit `lib/api/generated/` to avoid needing spec access at build time.
-
-**Why it is wrong:** Generated files drift from the spec between manual regenerations. When the backend changes a field, TypeScript still compiles against the stale generated type — the type safety guarantee disappears silently.
-
-**Do this instead:** Add `lib/api/generated/` to `.gitignore`. Run `bun run generate` as part of pre-push CI (`just ci-web`) and as a Turborepo prebuild step. The OpenAPI spec at `dev.decoded.style` is the authoritative source; codegen must run against it.
-
-### Anti-Pattern 3: Removing the Next.js Proxy Layer
-
-**What people do:** Point the Orval mutator directly at `https://dev.decoded.style` to "simplify" the stack.
-
-**Why it is wrong:** The proxy (`app/api/v1/`) exists to avoid CORS (browser cannot reach the Rust backend directly), inject `API_BASE_URL` server secrets, and handle FormData for file uploads. The browser has no access to server-only env vars. Bypassing the proxy breaks file upload endpoints and exposes the backend URL.
-
-**Do this instead:** Keep `decodedFetcher` using relative URLs (empty base). File upload endpoints (`/api/v1/posts/upload`, `/api/v1/posts` with FormData) require a custom override or remain in the manual `lib/api/posts.ts` — Orval cannot auto-generate multipart form handling.
-
-### Anti-Pattern 4: Full Cutover Before Validation
-
-**What people do:** Delete all of `lib/hooks/` and `lib/api/` in one commit to "clean up" technical debt.
-
-**Why it is wrong:** Existing hooks contain business logic beyond raw fetch: `useInfinitePosts` page-mapping, `useCreatePost` multi-step flow, `useUpdateProfile` store syncing. Generated hooks are pure API calls. Mapping logic must be verified to exist (or explicitly rewritten) before deleting the originals.
-
-**Do this instead:** Follow the phased migration. Generate first, validate parity, swap per domain, delete only after each domain's visual QA passes.
-
-### Anti-Pattern 5: Generating Infinite Query Without OpenAPI Pagination Markers
-
-**What people do:** Expect Orval to auto-generate `useInfiniteQuery` hooks for paginated endpoints.
-
-**Why it is wrong:** Orval generates `useInfiniteQuery` only when the operation has `useInfiniteQueryParam` configured in `orval.config.ts`, or when the OpenAPI spec uses pagination extensions. Without explicit config, it generates a plain `useQuery`. The infinite scroll logic in `useInfinitePosts` must remain as a wrapper.
-
-**Do this instead:** Add `override.operations["GetPosts"].query.useInfinite = true` and `useInfiniteQueryParam: "page"` in `orval.config.ts` for each paginated endpoint. Alternatively, keep the existing infinite query hooks as thin wrappers that call the generated base fetch function.
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Current (< 1k users) | In-process dashmap rate limit sufficient; single Sentry project for all services |
+| 1k–10k users | Redis-backed rate limiting (tower_governor supports this); separate Sentry projects per service for cleaner alerting |
+| 10k+ users | Distributed rate limiting at edge (Cloudflare Workers); Sentry performance monitoring for bottleneck identification |
 
 ## Sources
 
-- Orval v8.5.3 official documentation (verified March 2026): https://orval.dev/
-- Orval React Query guide: https://www.orval.dev/guides/react-query
-- Orval output configuration reference: https://orval.dev/docs/reference/configuration/output/
-- Orval Zod generation guide: https://www.orval.dev/guides/client-with-zod
-- Orval GitHub repo (v8.5.3, March 6 2026): https://github.com/orval-labs/orval
-- TanStack Query shared library issue (hooks across packages): https://github.com/TanStack/query/issues/3595
-- TanStack Query QueryClient provider issue: https://github.com/TanStack/query/issues/7965
-- Orval Zod generation deep-wiki: https://deepwiki.com/orval-labs/orval/5.1-zod-generation-configuration
-- Existing codebase (read directly): `packages/web/lib/api/client.ts`, `lib/api/types.ts`, `lib/hooks/usePosts.ts`, `lib/hooks/useProfile.ts`, `app/api/v1/posts/route.ts`
+- Direct codebase analysis: `.planning/codebase/ARCHITECTURE.md`, `CONCERNS.md`, `INTEGRATIONS.md`, `STACK.md`
+- `packages/api-server/src/middleware/mod.rs` — existing middleware structure confirmed
+- `packages/api-server/Cargo.toml` — workspace deps confirmed (no rate-limit or sentry crates present)
+- `packages/ai-server/pyproject.toml` — Python deps confirmed (no sentry-sdk present)
+- `packages/web/app/api/v1/` — proxy route inventory (41 route files inspected)
+- Confidence: HIGH — all claims derived from direct file inspection
 
 ---
 
-*Architecture research for: decoded-monorepo v9.0 — Orval + Zod Type-Safe API Generation*
-*Researched: 2026-03-23*
+*Architecture research for: v10.0 Tech Debt Resolution — decoded-monorepo*
+*Researched: 2026-03-26*

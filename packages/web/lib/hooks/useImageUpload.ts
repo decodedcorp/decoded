@@ -80,10 +80,8 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
 
       // 4. 자동 AI 분석 시작
       if (autoAnalyze) {
-        // 약간의 딜레이 후 분석 시작 (UI 업데이트 대기)
-        setTimeout(() => {
-          startDetection();
-        }, 100);
+        // Zustand 상태 업데이트는 동기적이므로 setTimeout 딜레이 불필요 — 직접 호출
+        startDetection();
       }
     } catch (error) {
       const rawMessage =

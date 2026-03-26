@@ -47,6 +47,8 @@ yarn-error.log*
 # Testing
 coverage/
 test-results/
+# Playwright auth storageState — contains real auth tokens, never commit
+packages/web/.playwright/
 
 # Local dev log files (optional tail -f workflows)
 .logs/
