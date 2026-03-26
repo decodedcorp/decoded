@@ -38,6 +38,8 @@ const CARD_SLOTS: {
   { left: 85, top: 0, tier: "small", baseRotate: -8, aspectRatio: "3 / 4" },
   { left: -3, top: 6, tier: "small", baseRotate: 10, aspectRatio: "4 / 5" },
   { left: 54, top: 2, tier: "medium", baseRotate: -4, aspectRatio: "4 / 5" },
+  { left: 18, top: 8, tier: "small", baseRotate: 5, aspectRatio: "1 / 1" },
+  { left: 78, top: 6, tier: "small", baseRotate: -12, aspectRatio: "4 / 5" },
 
   // ── Row 2: upper band (18-28%) ──
   { left: 8, top: 20, tier: "hero", baseRotate: 3, aspectRatio: "3 / 4" },
@@ -46,6 +48,8 @@ const CARD_SLOTS: {
   { left: 86, top: 20, tier: "small", baseRotate: 12, aspectRatio: "4 / 5" },
   { left: -2, top: 22, tier: "small", baseRotate: -6, aspectRatio: "3 / 4" },
   { left: 56, top: 18, tier: "hero", baseRotate: -3, aspectRatio: "3 / 4" },
+  { left: 22, top: 26, tier: "small", baseRotate: 8, aspectRatio: "4 / 5" },
+  { left: 64, top: 24, tier: "small", baseRotate: -7, aspectRatio: "3 / 4" },
 
   // ── Row 3: middle band (38-48%) ──
   { left: 10, top: 40, tier: "small", baseRotate: -8, aspectRatio: "4 / 5" },
@@ -54,6 +58,8 @@ const CARD_SLOTS: {
   { left: 84, top: 44, tier: "small", baseRotate: -10, aspectRatio: "1 / 1" },
   { left: -4, top: 38, tier: "small", baseRotate: 14, aspectRatio: "3 / 4" },
   { left: 52, top: 40, tier: "small", baseRotate: 4, aspectRatio: "4 / 5" },
+  { left: 20, top: 44, tier: "small", baseRotate: -6, aspectRatio: "3 / 4" },
+  { left: 62, top: 42, tier: "small", baseRotate: 9, aspectRatio: "4 / 5" },
 
   // ── Row 4: lower band (56-66%) ──
   { left: 6, top: 58, tier: "medium", baseRotate: 5, aspectRatio: "3 / 4" },
@@ -62,6 +68,8 @@ const CARD_SLOTS: {
   { left: 86, top: 58, tier: "small", baseRotate: 8, aspectRatio: "3 / 4" },
   { left: -1, top: 56, tier: "small", baseRotate: -12, aspectRatio: "4 / 5" },
   { left: 54, top: 62, tier: "medium", baseRotate: 3, aspectRatio: "4 / 5" },
+  { left: 18, top: 60, tier: "small", baseRotate: 7, aspectRatio: "1 / 1" },
+  { left: 80, top: 62, tier: "small", baseRotate: -5, aspectRatio: "3 / 4" },
 
   // ── Row 5: bottom band (74-84%) ──
   { left: 8, top: 76, tier: "small", baseRotate: -6, aspectRatio: "1 / 1" },
@@ -70,6 +78,8 @@ const CARD_SLOTS: {
   { left: 84, top: 76, tier: "small", baseRotate: 16, aspectRatio: "4 / 5" },
   { left: -2, top: 74, tier: "small", baseRotate: 10, aspectRatio: "3 / 4" },
   { left: 52, top: 78, tier: "medium", baseRotate: -5, aspectRatio: "3 / 4" },
+  { left: 16, top: 80, tier: "small", baseRotate: -8, aspectRatio: "4 / 5" },
+  { left: 64, top: 76, tier: "small", baseRotate: 6, aspectRatio: "1 / 1" },
 ];
 
 export function computeScatterPosition(
@@ -92,14 +102,14 @@ export function computeScatterPosition(
   else if (slot.tier === "medium") zIndex = 8 + (index % 6);
   else zIndex = 2 + (index % 4);
 
-  // Reduced sizes for denser layout
+  // Compact sizes — cards must fit within hero viewport
   let width: string;
   if (slot.tier === "hero") {
-    width = "clamp(130px, 17vw, 260px)";
+    width = "clamp(100px, 13vw, 200px)";
   } else if (slot.tier === "medium") {
-    width = "clamp(90px, 12vw, 180px)";
+    width = "clamp(70px, 9vw, 140px)";
   } else {
-    width = "clamp(60px, 8vw, 110px)";
+    width = "clamp(50px, 6vw, 90px)";
   }
 
   return {

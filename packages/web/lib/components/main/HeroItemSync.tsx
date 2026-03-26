@@ -36,13 +36,17 @@ export interface HeroPostEntry {
 function autoDistributeSpots(
   items: HeroPostEntry["items"],
 ): HeroSpotAnnotation[] {
-  const count = items.length;
-  return items.map((item, i) => {
-    // Alternate sides: even=left side of image, odd=right side
+  // Limit to 4 spots max to avoid clutter
+  const limited = items.slice(0, 4);
+  const count = limited.length;
+
+  return limited.map((item, i) => {
+    // Alternate sides with more vertical spread
     const isLeftSide = i % 2 === 0;
-    const x = item.x ?? (isLeftSide ? 25 : 75);
-    // Spread vertically across 25%-85% of image height
-    const y = item.y ?? (count === 1 ? 50 : 25 + (i * 60) / (count - 1));
+    const x = item.x ?? (isLeftSide ? 20 : 80);
+    // Spread vertically: each spot gets its own vertical zone
+    const zoneSize = 80 / Math.max(count, 1);
+    const y = item.y ?? (10 + zoneSize * i + zoneSize / 2);
     return {
       id: item.id,
       x,
