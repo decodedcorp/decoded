@@ -208,7 +208,21 @@ Plans:
 
 **Goal**: Vitest 유닛 테스트, Playwright E2E 테스트로 핵심 경로를 커버하고 data-testid를 체계적으로 마킹한다
 **Depends on**: Phase 46, Phase 47 (refactored components + observability)
-**Requirements**: TEST-01, TEST-02, TEST-03
+**Requirements**: REF-05, E2E-01, E2E-02, E2E-03, E2E-04
+**Success Criteria** (what must be TRUE):
+
+1. ThiingsGridPhysics 순수 함수(debounce, throttle, getDistance)에 Vitest 유닛 테스트가 통과한다
+2. playwright.config.ts가 bun dev를 사용하고 storageState 기반 인증 픽스처가 구축된다
+3. 로그인 플로우 + 메인 페이지 네비게이션 E2E 테스트가 작성된다
+4. AI 이미지 분석 파이프라인 E2E 테스트가 mocked backend으로 작성된다
+5. 4개 리팩토링된 컴포넌트 트리에 data-testid가 마킹된다
+
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 48-01-PLAN.md — Vitest unit tests + data-testid markup (REF-05, E2E-04)
+- [ ] 48-02-PLAN.md — Playwright config fix + auth fixture + E2E specs (E2E-01, E2E-02, E2E-03)
 
 ### Phase m8-01: Event Tracking Infrastructure
 
