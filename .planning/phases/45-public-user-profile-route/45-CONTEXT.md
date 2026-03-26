@@ -14,10 +14,10 @@
 ## Implementation Decisions
 
 ### Profile Content Visibility
-- 타인 프로필: 프로필 헤더(아바타, 닉네임) + ProfileBio + FollowStats(숫자만) + BadgeGrid + RankingList 공개
+- 타인 프로필 공개: 프로필 헤더(아바타, 닉네임) + ProfileBio + FollowStats(숫자만) + StyleDNACard(읽기 전용)
 - 타인 프로필 숨김: Saved 탭, Ink 크레딧(InkEconomyCard), 프로필 수정 버튼(Settings), ActivityTabs 전체
-- StatsCards와 ArchiveStats는 공개 (포스트/스팟/솔루션 개수)
-- StyleDNACard는 공개 (읽기 전용)
+- BadgeGrid, RankingList: 공개 대상이나 타 유저 배지/랭킹 API 없음 — empty/placeholder 상태로 표시 ("No badges yet" / "Not ranked yet")
+- StatsCards, ArchiveStats: Zustand profileStore 의존 — UserResponse에 포스트/스팟/솔루션 카운트 없음. 사용 가능한 데이터(total_points, rank)로 간소화된 인라인 스탯 표시
 
 ### Error & Edge Cases
 - 존재하지 않는 userId: 전용 NotFound UI (일러스트 + 홈 이동 버튼)
