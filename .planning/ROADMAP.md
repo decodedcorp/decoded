@@ -13,6 +13,7 @@
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
+- [ ] **v10.0 Profile Page Completion** — Phases 44-50 (active)
 
 ## Phases
 
@@ -106,6 +107,18 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] Phase 43: CI Hardening and Tooling (3/3 plans) — completed 2026-03-24
 
 </details>
+
+### v10.0 Profile Page Completion (Active)
+
+**Milestone Goal:** 프로필 페이지 완전 구현 — 인증 가드, 공개 프로필 라우트, 팔로우 시스템 풀스택, Tries/Saved 탭 실데이터 연결
+
+- [ ] **Phase 44: Auth Guard** - 프로필 편집 라우트 인증 가드, 비로그인 리다이렉트, 공개 프로필 접근 허용
+- [ ] **Phase 45: Public Profile Route** - `/profile/[userId]` 공개 프로필 페이지, 라우트 구조 정리
+- [ ] **Phase 46: Follow System Backend** - DB 스키마, Rust API 엔드포인트, OpenAPI 업데이트 + Orval 코드젠
+- [ ] **Phase 47: Follow System Frontend** - 팔로우/언팔로우 UI, 낙관적 업데이트, 팔로워/팔로잉 목록
+- [ ] **Phase 48: Tries & Saved Backend** - Tries/Saved Rust 엔드포인트, OpenAPI 업데이트 + Orval 코드젠
+- [ ] **Phase 49: Tries Tab Frontend** - 생성된 훅으로 Tries 탭 재작성, 무한 스크롤, UI 정리
+- [ ] **Phase 50: Saved Tab Frontend** - 목 데이터 제거, 생성된 훅으로 Saved 탭 재작성, 무한 스크롤, UI 정리
 
 ## Phase Details
 
@@ -290,12 +303,114 @@ Plans:
 
 **Plans**: 3 plans
 
+### Phase 44: Auth Guard
+
+**Goal**: 프로필 편집/설정 라우트가 인증 없이 접근 불가하고, 공개 프로필은 누구나 조회할 수 있다
+**Depends on**: Nothing (first phase of v10.0)
+**Requirements**: AUTH-01, AUTH-02
+**Success Criteria** (what must be TRUE):
+
+1. 비로그인 유저가 `/profile/edit` 또는 `/profile/settings`에 접근하면 자동으로 로그인 페이지로 리다이렉트된다
+2. 비로그인 유저가 `/profile/[userId]`에 접근하면 페이지가 정상 렌더링되고 프로필 정보가 표시된다
+3. 로그인 유저가 프로필 편집 라우트에 접근하면 편집 UI가 표시된다 (리다이렉트 없음)
+4. 리다이렉트 후 로그인 완료 시 원래 접근하려던 URL로 복귀된다
+
+**Plans**: TBD
+
+### Phase 45: Public Profile Route
+
+**Goal**: 모든 유저가 `/profile/[userId]`에서 타 유저의 프로필을 조회할 수 있고, 자신의 프로필과 타인의 프로필 라우트가 명확히 분리된다
+**Depends on**: Phase 44
+**Requirements**: ROUTE-01, ROUTE-02
+**Success Criteria** (what must be TRUE):
+
+1. `/profile/[userId]` URL로 진입하면 해당 유저의 프로필(아바타, 닉네임, 바이오, 통계)이 표시된다
+2. 자신의 프로필 페이지에는 편집 버튼이 표시되고, 타인의 프로필 페이지에는 팔로우 버튼 영역이 표시된다
+3. 존재하지 않는 userId로 접근하면 404 페이지가 표시된다
+4. 네비게이션에서 프로필 링크를 클릭하면 올바른 유저 프로필 페이지로 이동한다
+
+**Plans**: TBD
+
+### Phase 46: Follow System Backend
+
+**Goal**: 팔로우 관계가 데이터베이스에 저장되고 Rust API를 통해 팔로우/언팔로우/조회가 가능하며, 생성된 TypeScript 훅이 사용 가능한 상태다
+**Depends on**: Phase 45
+**Requirements**: FLLW-01, FLLW-02, FLLW-03
+**Success Criteria** (what must be TRUE):
+
+1. Supabase에 `user_follows` 테이블이 존재하며 follower/following 관계가 정확히 저장된다
+2. `POST /api/v1/users/{userId}/follow` 요청이 성공하면 팔로우 관계가 DB에 저장된다
+3. `DELETE /api/v1/users/{userId}/follow` 요청이 성공하면 팔로우 관계가 DB에서 삭제된다
+4. `GET /api/v1/users/{userId}/followers` 및 `/following`이 올바른 유저 목록을 반환한다
+5. `bun run generate:api` 실행 후 TypeScript 타입과 React Query 훅이 생성되어 컴파일 에러 없이 import된다
+
+**Plans**: TBD
+
+### Phase 47: Follow System Frontend
+
+**Goal**: 공개 프로필 페이지에서 팔로우/언팔로우 버튼이 동작하고 팔로워/팔로잉 카운트와 목록이 표시된다
+**Depends on**: Phase 46
+**Requirements**: FLLW-04, FLLW-05
+**Success Criteria** (what must be TRUE):
+
+1. 타인의 프로필 페이지에서 팔로우 버튼을 클릭하면 즉시 UI가 업데이트되고(낙관적 업데이트), 네트워크 실패 시 원상 복구된다
+2. 프로필 페이지에 팔로워 수와 팔로잉 수가 표시되며 팔로우/언팔로우 후 실시간으로 숫자가 갱신된다
+3. 팔로워/팔로잉 카운트를 클릭하면 해당 유저 목록이 표시되고, 각 유저 아이템에서 팔로우 상태를 전환할 수 있다
+4. 이미 팔로우 중인 유저의 프로필에서는 버튼이 "팔로잉" 상태로 표시된다
+
+**Plans**: TBD
+
+### Phase 48: Tries & Saved Backend
+
+**Goal**: Tries와 Saved 아이템 목록을 Rust API를 통해 조회할 수 있고, 생성된 TypeScript 훅이 프론트엔드에서 사용 가능한 상태다
+**Depends on**: Phase 44
+**Requirements**: TRIES-01, TRIES-02, SAVED-01, SAVED-02
+**Success Criteria** (what must be TRUE):
+
+1. `GET /api/v1/users/{userId}/tries` 엔드포인트가 해당 유저의 Tries 아이템 목록을 페이지네이션으로 반환한다
+2. `GET /api/v1/users/{userId}/saved` 엔드포인트가 해당 유저의 Saved 아이템 목록을 페이지네이션으로 반환한다
+3. `bun run generate:api` 실행 후 `useGetUserTriesQuery`와 `useGetUserSavedQuery` 훅이 생성되어 타입 에러 없이 import된다
+4. API가 잘못된 userId나 인증 없는 요청에 대해 올바른 HTTP 상태 코드(404, 401)를 반환한다
+
+**Plans**: TBD
+
+### Phase 49: Tries Tab Frontend
+
+**Goal**: 프로필 페이지 Tries 탭이 실제 API 데이터를 표시하고, 무한 스크롤로 더 많은 아이템을 로드할 수 있다
+**Depends on**: Phase 48
+**Requirements**: TRIES-03, TRIES-04, TRIES-05
+**Success Criteria** (what must be TRUE):
+
+1. 프로필 페이지에서 Tries 탭을 선택하면 실제 서버 데이터가 아이템 카드 그리드로 표시된다 (mock 데이터 없음)
+2. 로딩 중에는 SkeletonCard가 표시되고, 에러 발생 시 재시도 버튼이 있는 에러 메시지가 표시된다
+3. Tries 아이템이 없는 유저의 탭에서 "아직 도전한 아이템이 없어요" 빈 상태 메시지가 표시된다
+4. 목록 하단으로 스크롤하면 다음 페이지가 자동으로 로드된다 (커서 기반 무한 스크롤)
+5. 아이템 카드를 클릭하면 해당 포스트의 상세 페이지(`/images/{postId}`)로 이동한다
+
+**Plans**: TBD
+
+### Phase 50: Saved Tab Frontend
+
+**Goal**: 프로필 페이지 Saved 탭이 실제 API 데이터를 표시하고, 목 데이터가 완전히 제거되며 무한 스크롤과 저장 해제 인터랙션이 동작한다
+**Depends on**: Phase 48
+**Requirements**: SAVED-03, SAVED-04, SAVED-05
+**Success Criteria** (what must be TRUE):
+
+1. 프로필 페이지에서 Saved 탭을 선택하면 실제 서버 데이터가 아이템 카드 그리드로 표시된다 (mock 데이터 완전 제거)
+2. 로딩 중에는 SkeletonCard가 표시되고, 에러 발생 시 재시도 버튼이 있는 에러 메시지가 표시된다
+3. 저장한 아이템이 없는 유저의 탭에서 "저장한 아이템이 없어요" 빈 상태 메시지가 표시된다
+4. 목록 하단으로 스크롤하면 다음 페이지가 자동으로 로드된다 (커서 기반 무한 스크롤)
+5. 아이템 카드에서 저장 해제를 실행하면 낙관적 업데이트로 즉시 목록에서 제거되고, 실패 시 원상 복구된다
+
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
 v9.0: 39 → 40 → 41 → 42 → 43
+v10.0: 44 → 45 → 46 → 47 → 48 → 49 → 50
+Note: Phase 48 depends on Phase 44 (auth guard), not Phase 47 (follow frontend) — can run in parallel with Phase 47
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
@@ -314,8 +429,15 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
+| 44: Auth Guard                                | v10.0     | 0/TBD          | Not started   | -          |
+| 45: Public Profile Route                      | v10.0     | 0/TBD          | Not started   | -          |
+| 46: Follow System Backend                     | v10.0     | 0/TBD          | Not started   | -          |
+| 47: Follow System Frontend                    | v10.0     | 0/TBD          | Not started   | -          |
+| 48: Tries & Saved Backend                     | v10.0     | 0/TBD          | Not started   | -          |
+| 49: Tries Tab Frontend                        | v10.0     | 0/TBD          | Not started   | -          |
+| 50: Saved Tab Frontend                        | v10.0     | 0/TBD          | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-23 (v9.0 Phases 39-43 added, 28 requirements mapped)_
+_Last updated: 2026-03-26 (v10.0 Profile Page Completion — Phases 44-50, 19 requirements mapped)_
