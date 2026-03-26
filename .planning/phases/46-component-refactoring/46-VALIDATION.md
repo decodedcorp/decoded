@@ -38,10 +38,10 @@ created: 2026-03-26
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------|-------------------|--------|
-| 46-01-T1 | 01 | 1 | REF-01 | line count | `wc -l packages/web/lib/components/main/ThiingsGrid.tsx` (< 300) | ⬜ pending |
+| 46-01-T1 | 01 | 1 | REF-01 | line count | `wc -l packages/web/lib/components/ThiingsGrid.tsx` (< 300) | ⬜ pending |
 | 46-02-T1 | 02 | 1 | REF-02 | line count | `wc -l packages/web/lib/components/vton/VtonModal.tsx` (< 300) | ⬜ pending |
-| 46-03-T1 | 03 | 2 | REF-03 | line count | `wc -l packages/web/lib/components/detail/ItemDetailCard.tsx` (< 300) | ⬜ pending |
-| 46-04-T1 | 04 | 2 | REF-04 | line count | `wc -l packages/web/lib/components/detail/ImageDetailModal.tsx` (< 300) | ⬜ pending |
+| 46-03-T1 | 03 | 1 | REF-03 | line count | `wc -l packages/web/lib/components/detail/ItemDetailCard.tsx` (< 300) | ⬜ pending |
+| 46-04-T1 | 03 | 1 | REF-04 | line count | `wc -l packages/web/lib/components/detail/ImageDetailModal.tsx` (< 300) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
