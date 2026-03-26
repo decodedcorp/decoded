@@ -1,14 +1,19 @@
-from fastapi import FastAPI, APIRouter, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from src.config import Application
 import datetime
-from src.middleware import logging_middleware, global_exception_handler
-from src.api.metadata_controller import router as metadata_router
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from src.api.metadata_controller import router as metadata_router
+from src.config import Application
+from src.middleware import global_exception_handler, logging_middleware
+
+from .app import _init_sentry
 
 
 def create_app(application: Application) -> FastAPI:
     """기본 FastAPI 앱 생성 및 동기적 설정"""
+    # Sentry는 FastAPI 인스턴스 생성 전에 초기화해야 한다
+    _init_sentry()
     environment = application.environment()
 
     @asynccontextmanager
