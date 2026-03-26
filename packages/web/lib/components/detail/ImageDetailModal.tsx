@@ -124,16 +124,16 @@ export function ImageDetailModal({ imageId }: Props) {
       // Exit Animation
       const tl = gsap.timeline({
         onComplete: () => {
-          // Small delay to ensure floating image is completely hidden
-          // before resetting state and showing grid image
-          setTimeout(() => {
+          // Use gsap.delayedCall instead of setTimeout so it is context-managed
+          // and auto-cleaned if the component unmounts before the delay fires
+          gsap.delayedCall(0.05, () => {
             reset();
             if (window.history.length > 1) {
               router.back();
             } else {
               router.push("/");
             }
-          }, 50); // 50ms delay to ensure smooth transition
+          });
         },
       });
 
@@ -238,10 +238,12 @@ export function ImageDetailModal({ imageId }: Props) {
     const diff = touchCurrentY.current - touchStartY.current;
 
     // Only allow dragging down
-    if (diff > 0 && drawerRef.current) {
-      // Provide visual feedback - transform the drawer down
-      // Use GSAP set for performance
-      gsap.set(drawerRef.current, { y: diff });
+    if (diff > 0 && drawerRef.current && ctxRef.current) {
+      // Use ctxRef.current.add() so the gsap.set runs inside the GSAP context
+      // and is properly cleaned up on ctxRef.current.revert()
+      ctxRef.current.add(() => {
+        gsap.set(drawerRef.current, { y: diff });
+      });
     }
   };
 
@@ -256,12 +258,14 @@ export function ImageDetailModal({ imageId }: Props) {
     if (diff > 100) {
       // Threshold passed, close
       handleClose();
-    } else if (diff > 0 && drawerRef.current) {
-      // Reset position if not passed threshold
-      gsap.to(drawerRef.current, {
-        y: 0,
-        duration: 0.3,
-        ease: "power2.out",
+    } else if (diff > 0 && drawerRef.current && ctxRef.current) {
+      // Use ctxRef.current.add() so the gsap.to runs inside the GSAP context
+      ctxRef.current.add(() => {
+        gsap.to(drawerRef.current, {
+          y: 0,
+          duration: 0.3,
+          ease: "power2.out",
+        });
       });
     }
 

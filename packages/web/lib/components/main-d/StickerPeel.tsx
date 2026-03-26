@@ -21,6 +21,7 @@ import {
 } from "react";
 import { gsap } from "gsap";
 import { Draggable } from "gsap/Draggable";
+import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(Draggable);
 
@@ -68,54 +69,56 @@ export function StickerPeel({
   const filterId = useRef(`sp-${++idCounter}`);
   const pad = 10;
 
-  // Draggable
-  useEffect(() => {
-    const target = dragTargetRef.current;
-    if (!target) return;
+  // Draggable + lighting: run inside useGSAP so all gsap calls are context-managed
+  const { contextSafe } = useGSAP(
+    () => {
+      const target = dragTargetRef.current;
+      if (!target) return;
 
-    const [inst] = Draggable.create(target, {
-      type: "x,y",
-      // No bounds — free movement across entire canvas
-      inertia: true,
-      onDrag(this: Draggable) {
-        const rot = gsap.utils.clamp(-25, 25, this.deltaX * 0.4);
-        gsap.to(target, { rotation: rot, duration: 0.1, ease: "power1.out" });
-      },
-      onDragEnd() {
-        gsap.to(target, { rotation: 0, duration: 0.6, ease: "power2.out" });
-      },
-      onPress() {
-        // Bring to front when grabbed
-        gsap.set(target.parentNode, { zIndex: 50 });
-      },
-      onRelease() {
-        gsap.to(target.parentNode as HTMLElement, {
-          zIndex: "auto",
-          delay: 0.3,
-        });
-      },
-    });
+      // Draggable.create() is inside useGSAP — gsap calls within its callbacks
+      // are inside the GSAP context and are auto-cleaned on unmount.
+      Draggable.create(target, {
+        type: "x,y",
+        // No bounds — free movement across entire canvas
+        inertia: true,
+        onDrag(this: Draggable) {
+          const rot = gsap.utils.clamp(-25, 25, this.deltaX * 0.4);
+          gsap.to(target, { rotation: rot, duration: 0.1, ease: "power1.out" });
+        },
+        onDragEnd() {
+          gsap.to(target, { rotation: 0, duration: 0.6, ease: "power2.out" });
+        },
+        onPress() {
+          // Bring to front when grabbed
+          gsap.set(target.parentNode, { zIndex: 50 });
+        },
+        onRelease() {
+          gsap.to(target.parentNode as HTMLElement, {
+            zIndex: "auto",
+            delay: 0.3,
+          });
+        },
+      });
+    },
+    { scope: dragTargetRef }
+  );
 
-    return () => {
-      inst.kill();
-    };
-  }, []);
-
-  // Lighting follows mouse
+  // Lighting follows mouse — contextSafe wraps the gsap.set call so it runs
+  // inside the GSAP context and is properly cleaned up on unmount.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handler = (e: MouseEvent) => {
+    const handler = contextSafe((e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       if (pointLightRef.current) {
         gsap.set(pointLightRef.current, {
           attr: { x: e.clientX - r.left, y: e.clientY - r.top },
         });
       }
-    };
+    });
     el.addEventListener("mousemove", handler);
     return () => el.removeEventListener("mousemove", handler);
-  }, []);
+  }, [contextSafe]);
 
   // Touch peel
   useEffect(() => {
