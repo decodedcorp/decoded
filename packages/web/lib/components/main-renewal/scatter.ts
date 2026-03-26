@@ -40,6 +40,10 @@ const CARD_SLOTS: {
   { left: 90, top: 10, depth: "macro", baseRotate: 12, aspectRatio: "4 / 5" },
   { left: -5, top: 65, depth: "macro", baseRotate: 18, aspectRatio: "3 / 4" },
   { left: 92, top: 60, depth: "macro", baseRotate: -10, aspectRatio: "4 / 5" },
+  { left: 40, top: -8, depth: "macro", baseRotate: 8, aspectRatio: "3 / 4" },
+  { left: -6, top: 30, depth: "macro", baseRotate: -12, aspectRatio: "4 / 5" },
+  { left: 94, top: 35, depth: "macro", baseRotate: 14, aspectRatio: "3 / 4" },
+  { left: 45, top: 80, depth: "macro", baseRotate: -8, aspectRatio: "4 / 5" },
 
   // ── Foreground: 메인 인터랙티브 ──
   { left: 8, top: 8, depth: "foreground", baseRotate: -3, aspectRatio: "3 / 4" },
@@ -48,6 +52,8 @@ const CARD_SLOTS: {
   { left: 70, top: 35, depth: "foreground", baseRotate: 4, aspectRatio: "3 / 4" },
   { left: 15, top: 55, depth: "foreground", baseRotate: 2, aspectRatio: "3 / 4" },
   { left: 60, top: 58, depth: "foreground", baseRotate: -5, aspectRatio: "3 / 4" },
+  { left: 42, top: 50, depth: "foreground", baseRotate: 3, aspectRatio: "3 / 4" },
+  { left: 80, top: 15, depth: "foreground", baseRotate: -4, aspectRatio: "3 / 4" },
 
   // ── Midground: 중간 크기 ──
   { left: 5, top: 20, depth: "midground", baseRotate: 5, aspectRatio: "4 / 5" },
@@ -58,6 +64,10 @@ const CARD_SLOTS: {
   { left: 50, top: 45, depth: "midground", baseRotate: -3, aspectRatio: "4 / 5" },
   { left: 25, top: 70, depth: "midground", baseRotate: 6, aspectRatio: "3 / 4" },
   { left: 72, top: 72, depth: "midground", baseRotate: -4, aspectRatio: "4 / 5" },
+  { left: 18, top: 35, depth: "midground", baseRotate: 3, aspectRatio: "3 / 4" },
+  { left: 62, top: 22, depth: "midground", baseRotate: -5, aspectRatio: "4 / 5" },
+  { left: 45, top: 65, depth: "midground", baseRotate: 7, aspectRatio: "3 / 4" },
+  { left: 88, top: 70, depth: "midground", baseRotate: -6, aspectRatio: "4 / 5" },
 
   // ── Background: 작고 느림 ──
   { left: 18, top: 5, depth: "background", baseRotate: 8, aspectRatio: "1 / 1" },
@@ -70,6 +80,10 @@ const CARD_SLOTS: {
   { left: 78, top: 55, depth: "background", baseRotate: 10, aspectRatio: "4 / 5" },
   { left: 5, top: 75, depth: "background", baseRotate: -6, aspectRatio: "3 / 4" },
   { left: 58, top: 78, depth: "background", baseRotate: 8, aspectRatio: "1 / 1" },
+  { left: 28, top: 10, depth: "background", baseRotate: -7, aspectRatio: "4 / 5" },
+  { left: 72, top: 48, depth: "background", baseRotate: 5, aspectRatio: "1 / 1" },
+  { left: 15, top: 82, depth: "background", baseRotate: -10, aspectRatio: "4 / 5" },
+  { left: 85, top: 85, depth: "background", baseRotate: 12, aspectRatio: "1 / 1" },
 
   // ── Micro: 별가루 수준 ──
   { left: 12, top: 15, depth: "micro", baseRotate: 15, aspectRatio: "1 / 1" },
@@ -82,6 +96,12 @@ const CARD_SLOTS: {
   { left: 22, top: 85, depth: "micro", baseRotate: -8, aspectRatio: "1 / 1" },
   { left: 85, top: 80, depth: "micro", baseRotate: 10, aspectRatio: "1 / 1" },
   { left: 50, top: 88, depth: "micro", baseRotate: -15, aspectRatio: "1 / 1" },
+  { left: 30, top: 2, depth: "micro", baseRotate: 10, aspectRatio: "1 / 1" },
+  { left: 68, top: 42, depth: "micro", baseRotate: -14, aspectRatio: "1 / 1" },
+  { left: 8, top: 60, depth: "micro", baseRotate: 18, aspectRatio: "1 / 1" },
+  { left: 55, top: 52, depth: "micro", baseRotate: -10, aspectRatio: "1 / 1" },
+  { left: 42, top: 90, depth: "micro", baseRotate: 8, aspectRatio: "1 / 1" },
+  { left: 75, top: 88, depth: "micro", baseRotate: -16, aspectRatio: "1 / 1" },
 ];
 
 /** Depth → visual properties */
@@ -122,9 +142,9 @@ const DEPTH_CONFIG: Record<Depth, {
   background: {
     width: "clamp(45px, 6vw, 85px)",
     zBase: 5,
-    interactive: true,
+    interactive: false,
     cssFilter: "brightness(0.7)",
-    opacity: 0.6,
+    opacity: 0.5,
     floatAmplitude: 4,
     floatSpeed: 5,
   },

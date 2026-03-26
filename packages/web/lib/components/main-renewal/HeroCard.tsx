@@ -107,16 +107,13 @@ export function HeroCard({
       onRelease() {
         if (draggingRef.current) setShowSpots(false);
         draggingRef.current = false;
-        gsap.to(el, {
-          zIndex: position.zIndex,
-          delay: 0.3,
-          onComplete: () => {
-            if (!wasFocusedRef.current) {
-              floatRef.current?.kill();
-              startFloat(el);
-            }
-          },
-        });
+        // Delay z-index restore — but skip if card became focused via onClick
+        setTimeout(() => {
+          if (wasFocusedRef.current) return; // focused → don't reset z-index
+          gsap.set(el, { zIndex: position.zIndex });
+          floatRef.current?.kill();
+          startFloat(el);
+        }, 300);
       },
     });
 
@@ -175,7 +172,7 @@ export function HeroCard({
           y: targetY,
           opacity: 1,
           filter: "none",
-          zIndex: 40,
+          zIndex: 50,
           scale,
           duration: 0.5,
           ease: "power3.out",
@@ -188,7 +185,7 @@ export function HeroCard({
         gsap.fromTo(dots, { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out" });
       }
     } else if (isDimmed) {
-      gsap.to(el, { opacity: 0.2, scale: 0.95, duration: 0.4, ease: "power2.out" });
+      gsap.to(el, { opacity: 0.15, scale: 0.95, duration: 0.4, ease: "power2.out" });
     } else {
       animatingRef.current = true;
       const anim: gsap.TweenVars = {
@@ -235,9 +232,9 @@ export function HeroCard({
         top: position.top,
         left: position.left,
         width: position.width,
-        zIndex: position.zIndex,
+        zIndex: isFocused ? 50 : position.zIndex,
         transform: `rotate(${position.rotate}deg)`,
-        filter: position.cssFilter,
+        filter: isFocused ? "none" : position.cssFilter,
       }}
       tabIndex={interactive ? 0 : -1}
       role={interactive ? "button" : undefined}
