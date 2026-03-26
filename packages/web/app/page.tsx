@@ -77,10 +77,10 @@ export default async function Home({
   ] = await Promise.all([
     buildHomeLayout(userId),
     fetchFeaturedPostServer(),
-    fetchWeeklyBestPostsServer(8),
-    fetchWhatsNewPostsServer(4),
+    fetchWeeklyBestPostsServer(30),
+    fetchWhatsNewPostsServer(30),
     fetchDecodedPickServer(),
-    fetchArtistSpotlightServer(4),
+    fetchArtistSpotlightServer(30),
     fetchBestItemsServer(6),
     fetchTrendingKeywordsServer(8),
     userId ? fetchForYouPosts(userId, 9) : fetchTrendingPosts(9),
@@ -270,10 +270,10 @@ export default async function Home({
     });
   }
 
-  // 2. WhatsNew posts (have items)
+  // 2. WhatsNew posts (only with items/solutions)
   for (const wnPost of whatsNewData) {
     if (!wnPost.post.imageUrl) continue;
-    // Skip if same as decodedPick
+    if (wnPost.items.length === 0) continue; // items 있는 것만
     if (decodedPick && wnPost.post.id === decodedPick.post.id) continue;
     heroPosts.push({
       id: String(wnPost.post.id),
@@ -290,9 +290,10 @@ export default async function Home({
     });
   }
 
-  // 3. ArtistSpotlight posts (have items)
+  // 3. ArtistSpotlight posts (only with items/solutions)
   for (const spPost of artistSpotlight) {
     if (!spPost.post.imageUrl) continue;
+    if (spPost.items.length === 0) continue; // items 있는 것만
     if (heroPosts.some((hp) => hp.id === String(spPost.post.id))) continue;
     heroPosts.push({
       id: String(spPost.post.id),
@@ -309,17 +310,11 @@ export default async function Home({
     });
   }
 
-  // 4. WeeklyBest posts (no items, but still browsable in gallery)
+  // 4. WeeklyBest posts (only with items/solutions)
   for (const wbPost of weeklyBestPosts) {
     if (!wbPost.imageUrl) continue;
     if (heroPosts.some((hp) => hp.id === String(wbPost.id))) continue;
-    heroPosts.push({
-      id: String(wbPost.id),
-      heroData: buildHeroData(wbPost, []),
-      items: [],
-      galleryImage: `/api/v1/image-proxy?url=${encodeURIComponent(wbPost.imageUrl)}`,
-      galleryLabel: wbPost.artistName || wbPost.groupName || "Weekly Best",
-    });
+    // WeeklyBest doesn't have items data — skip (items-only filter)
   }
 
   // Fallback: if no heroPosts, use featuredPost
