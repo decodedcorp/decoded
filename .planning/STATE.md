@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Phase 47 context gathered
-last_updated: "2026-03-26T14:48:53.078Z"
+stopped_at: Completed 47-01-PLAN.md
+last_updated: "2026-03-26T15:02:26.774Z"
 progress:
   total_phases: 45
-  completed_phases: 42
-  total_plans: 97
-  completed_plans: 96
+  completed_phases: 43
+  total_plans: 98
+  completed_plans: 97
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 46 — follow-system-backend
+**Current focus:** Phase 47 — follow-system-frontend
 
 ## Current Position
 
-Phase: 46 (follow-system-backend) — EXECUTING
+Phase: 47 (follow-system-frontend) — EXECUTING
 Plan: 1 of 1
 
 ## Milestone Summary
@@ -107,6 +107,9 @@ v9.0 key constraints (from research):
 - [Phase 46]: ConnectionTrait must be imported explicitly for query_one on DatabaseConnection
 - [Phase 46]: struct update syntax (..UserResponse::from(user)) cleanly sets non-count fields in get_user_with_follow_counts
 - [Phase 46]: PATCH /me re-fetches follow counts after update for accurate response
+- [Phase 47]: openapi.json edit via python3 json.load/dump for minified JSON safety
+- [Phase 47]: Orval preserves snake_case: UserResponse fields are followers_count/following_count (not camelCase)
+- [Phase 47]: ProfileClient uses optional chaining (userData?.followers_count ?? 0) — PublicProfileClient uses direct access (non-null guard at line 189)
 
 ### Blockers/Concerns
 
@@ -123,9 +126,9 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-26T14:48:53.074Z
-Stopped at: Phase 47 context gathered
-Resume file: .planning/phases/47-follow-system-frontend/47-CONTEXT.md
+Last session: 2026-03-26T15:02:26.771Z
+Stopped at: Completed 47-01-PLAN.md
+Resume file: None
 
 Next step: Execute 42-03-PLAN.md
 
