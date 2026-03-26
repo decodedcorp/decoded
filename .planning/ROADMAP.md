@@ -146,6 +146,21 @@ Plans:
 **Goal**: Rate Limiting, 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파를 적용하여 보안 기반을 확립한다
 **Depends on**: Nothing (independent)
 **Requirements**: RATE-01, RATE-02, RATE-03, SEC-01, SEC-02, SEC-03
+**Success Criteria** (what must be TRUE):
+
+1. AI analyze endpoint (/api/v1/posts/analyze)에 GCRA 기반 Rate Limiting이 적용되어 per-user/per-IP로 요청이 제한된다
+2. Next.js image-proxy와 analyze proxy 라우트에 in-memory sliding window 방어 Rate Limiting이 적용된다
+3. 28개 API 라우트 파일에서 console.log/error가 NODE_ENV=development 가드로 보호된다
+4. API_BASE_URL 등 필수 환경변수가 모듈 로드 시 검증되어 누락 시 즉시 실패한다
+5. debug-env 라우트가 삭제되어 환경변수 정보 노출이 방지된다
+6. Rate limit 초과 시 429 + Retry-After 헤더가 반환된다
+
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 45-01-PLAN.md — Axum tower-governor GCRA rate limiting + JwtUserKeyExtractor (RATE-01, RATE-02)
+- [ ] 45-02-PLAN.md — Next.js rate limiting, env validation, debug log guard, error propagation, debug-env deletion (RATE-03, SEC-01, SEC-02, SEC-03)
 
 ### Phase 46: Component Refactoring
 
@@ -371,7 +386,7 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
 | 44: Memory Leak Prevention                    | v10.0     | 0/3            | Planning done | -          |
-| 45: Security Foundation                       | v10.0     | 0/TBD          | Not started   | -          |
+| 45: Security Foundation                       | v10.0     | 0/2            | Planning done | -          |
 | 46: Component Refactoring                     | v10.0     | 0/TBD          | Not started   | -          |
 | 47: Observability                             | v10.0     | 0/TBD          | Not started   | -          |
 | 48: Test Coverage                             | v10.0     | 0/TBD          | Not started   | -          |
@@ -379,4 +394,4 @@ v9.0: 39 → 40 → 41 → 42 → 43
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-26 (v10.0 Tech Debt Resolution — Phases 44-48, 21 requirements mapped)_
+_Last updated: 2026-03-26 (Phase 45 planned — 2 plans, 1 wave)_
