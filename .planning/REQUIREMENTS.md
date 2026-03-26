@@ -24,9 +24,9 @@
 
 - [x] **TRIES-01**: Rust 백엔드 `GET /api/v1/users/me/tries` 엔드포인트 구현 (페이지네이션)
 - [x] **TRIES-02**: OpenAPI spec 반영 + Orval hook 생성
-- [ ] **TRIES-03**: `TriesGrid.tsx` 타입 수정 (`result_image_url` → `image_url`, `item_count` 제거)
-- [ ] **TRIES-04**: 무한스크롤 연결 (useInfiniteQuery 패턴)
-- [ ] **TRIES-05**: 스텁 코드(`fetchMyTries → []`) 완전 제거
+- [x] **TRIES-03**: `TriesGrid.tsx` 타입 수정 (`result_image_url` → `image_url`, `item_count` 제거)
+- [x] **TRIES-04**: 무한스크롤 연결 (useInfiniteQuery 패턴)
+- [x] **TRIES-05**: 스텁 코드(`fetchMyTries → []`) 완전 제거
 
 ### Activity Tabs — Saved
 
@@ -75,9 +75,9 @@
 | FLLW-05 | Phase 47 | Complete |
 | TRIES-01 | Phase 48 | Complete |
 | TRIES-02 | Phase 48 | Complete |
-| TRIES-03 | Phase 49 | Pending |
-| TRIES-04 | Phase 49 | Pending |
-| TRIES-05 | Phase 49 | Pending |
+| TRIES-03 | Phase 49 | Complete |
+| TRIES-04 | Phase 49 | Complete |
+| TRIES-05 | Phase 49 | Complete |
 | SAVED-01 | Phase 48 | Complete |
 | SAVED-02 | Phase 48 | Complete |
 | SAVED-03 | Phase 50 | Pending |

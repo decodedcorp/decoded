@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Phase 49+50 context gathered
-last_updated: "2026-03-26T15:25:31.892Z"
+stopped_at: Completed 49-01-PLAN.md
+last_updated: "2026-03-26T15:34:32.239Z"
 progress:
   total_phases: 48
-  completed_phases: 44
-  total_plans: 100
-  completed_plans: 99
+  completed_phases: 45
+  total_plans: 101
+  completed_plans: 100
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 48 — tries-saved-backend
+**Current focus:** Phase 49 — tries-tab-frontend
 
 ## Current Position
 
-Phase: 48 (tries-saved-backend) — EXECUTING
-Plan: 1 of 2
+Phase: 49 (tries-tab-frontend) — EXECUTING
+Plan: 1 of 1
 
 ## Milestone Summary
 
@@ -113,6 +113,8 @@ v9.0 key constraints (from research):
 - [Phase 48]: list_my_tries uses SeaORM entity query (no JOIN needed); list_my_saved uses raw SQL JOIN for post title/thumbnail
 - [Phase 48]: per_page capped at 50 in service layer for tries/saved endpoints (not in Pagination struct)
 - [Phase 48]: openapi.json edited via python3 json.load/dump for minified JSON safety; TryItem and SavedItem schemas added; Orval regenerated useGetMyTries/useGetMySaved hooks
+- [Phase 49]: getMyTries raw function used (not useGetMyTries hook) for infinite pagination — Orval hooks are regular useQuery, same approach as useUserActivities in Phase 41
+- [Phase 49]: Native IntersectionObserver used for infinite scroll sentinel — react-intersection-observer not installed in project
 
 ### Blockers/Concerns
 
@@ -129,9 +131,9 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-26T15:25:31.889Z
-Stopped at: Phase 49+50 context gathered
-Resume file: .planning/phases/50-saved-tab-frontend/50-CONTEXT.md
+Last session: 2026-03-26T15:34:32.236Z
+Stopped at: Completed 49-01-PLAN.md
+Resume file: None
 
 Next step: Execute 42-03-PLAN.md
 
