@@ -14,9 +14,10 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
   const dotRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
+  const [flippedSide, setFlippedSide] = useState<"left" | "right" | null>(null);
 
-  // Card goes to the side that has more space from the edge
-  const isLeft = spot.side === "left";
+  const effectiveSide = flippedSide ?? spot.side;
+  const isLeft = effectiveSide === "left";
 
   const updateLine = useCallback(() => {
     const dot = dotRef.current;
@@ -44,29 +45,29 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
     lineEl.style.opacity = "1";
   }, [isLeft]);
 
+  // Smart positioning: flip side if card goes off-screen
   useEffect(() => {
-    // Delay to ensure layout is complete
+    const card = cardRef.current;
+    if (!card) return;
+
     const raf = requestAnimationFrame(() => {
+      const rect = card.getBoundingClientRect();
+      if (rect.left < 0 && spot.side === "left") {
+        setFlippedSide("right");
+      } else if (rect.right > window.innerWidth && spot.side === "right") {
+        setFlippedSide("left");
+      } else {
+        setFlippedSide(null);
+      }
       updateLine();
     });
+
     window.addEventListener("resize", updateLine);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", updateLine);
     };
-  }, [updateLine]);
-
-  // Card positioning: push it outside the image boundary
-  // For left-side spots (x < 50): card goes left, positioned via right
-  // For right-side spots (x >= 50): card goes right, positioned via left
-  const cardStyle: React.CSSProperties = {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    ...(isLeft
-      ? { right: "100%", marginRight: "12px" }
-      : { left: "100%", marginLeft: "12px" }),
-  };
+  }, [updateLine, spot.side]);
 
   return (
     <div
@@ -96,11 +97,11 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
         <div className="absolute inset-0 w-3.5 h-3.5 rounded-full bg-[#eafd67] animate-ping opacity-30" />
       </div>
 
-      {/* Item card — positioned relative to dot, pushed outside image */}
+      {/* Item card — smart positioned, flips if off-screen */}
       <div
         ref={cardRef}
-        className="pointer-events-auto whitespace-nowrap"
-        style={cardStyle}
+        className="absolute top-1/2 -translate-y-1/2 pointer-events-auto whitespace-nowrap"
+        style={{ [isLeft ? "right" : "left"]: "100%", [isLeft ? "marginRight" : "marginLeft"]: "12px" }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
