@@ -346,6 +346,113 @@ export class ThiingsGridPhysics {
     }
   }
 
+  // --- Grid position helpers ---
+
+  /**
+   * Calculate which grid cell positions are visible given the current physics offset
+   * and the container dimensions.
+   */
+  calculateVisiblePositions(
+    containerEl: HTMLElement,
+    gridWidth: number,
+    gridHeight: number,
+    viewportBuffer: number
+  ): Position[] {
+    const rect = containerEl.getBoundingClientRect();
+    const width = rect.width * viewportBuffer;
+    const height = rect.height * viewportBuffer;
+
+    const cellsX = Math.ceil(width / gridWidth);
+    const cellsY = Math.ceil(height / gridHeight);
+
+    const centerX = -Math.round(this.offset.x / gridWidth);
+    const centerY = -Math.round(this.offset.y / gridHeight);
+
+    const positions: Position[] = [];
+    const halfCellsX = Math.ceil(cellsX / 2);
+    const halfCellsY = Math.ceil(cellsY / 2);
+
+    for (let y = centerY - halfCellsY; y <= centerY + halfCellsY; y++) {
+      for (let x = centerX - halfCellsX; x <= centerX + halfCellsX; x++) {
+        positions.push({ x, y });
+      }
+    }
+
+    return positions;
+  }
+
+  /**
+   * Map a grid (x, y) coordinate to its spiral index.
+   */
+  getItemIndexForPosition(x: number, y: number): number {
+    if (x === 0 && y === 0) return 0;
+
+    const layer = Math.max(Math.abs(x), Math.abs(y));
+    const innerLayersSize = Math.pow(2 * layer - 1, 2);
+
+    let positionInLayer = 0;
+
+    if (y === 0 && x === layer) {
+      positionInLayer = 0;
+    } else if (y < 0 && x === layer) {
+      positionInLayer = -y;
+    } else if (y === -layer && x > -layer) {
+      positionInLayer = layer + (layer - x);
+    } else if (x === -layer && y < layer) {
+      positionInLayer = 3 * layer + (layer + y);
+    } else if (y === layer && x < layer) {
+      positionInLayer = 5 * layer + (layer + x);
+    } else {
+      positionInLayer = 7 * layer + (layer - y);
+    }
+
+    return innerLayersSize + positionInLayer;
+  }
+
+  /**
+   * Calculate the full set of grid items to render, applying viewport culling,
+   * item bounds checking, and MAX_RENDER_CELLS prioritization by distance.
+   */
+  calculateGridItems(
+    containerEl: HTMLElement,
+    gridWidth: number,
+    gridHeight: number,
+    viewportBuffer: number,
+    maxRenderCells: number,
+    itemCount: number | undefined,
+    hasMore: boolean | undefined
+  ): { items: Array<{ position: Position; gridIndex: number }>; maxVisibleIndex: number } {
+    const positions = this.calculateVisiblePositions(containerEl, gridWidth, gridHeight, viewportBuffer);
+    let maxVisibleIndex = 0;
+
+    let allItems = positions
+      .map((position) => {
+        const gridIndex = this.getItemIndexForPosition(position.x, position.y);
+
+        if (itemCount !== undefined) {
+          const isLoaded = gridIndex < itemCount;
+          if (!isLoaded && !hasMore) return null;
+        }
+
+        maxVisibleIndex = Math.max(maxVisibleIndex, gridIndex);
+        return { position, gridIndex };
+      })
+      .filter((item): item is { position: Position; gridIndex: number } => item !== null);
+
+    if (allItems.length > maxRenderCells) {
+      const cx = -this.offset.x / gridWidth;
+      const cy = -this.offset.y / gridHeight;
+      allItems.sort(
+        (a, b) =>
+          Math.pow(a.position.x - cx, 2) + Math.pow(a.position.y - cy, 2) -
+          (Math.pow(b.position.x - cx, 2) + Math.pow(b.position.y - cy, 2))
+      );
+      allItems = allItems.slice(0, maxRenderCells);
+    }
+
+    return { items: allItems, maxVisibleIndex };
+  }
+
   // --- Cleanup ---
 
   destroy(): void {
