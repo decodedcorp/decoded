@@ -27,7 +27,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
-  const { focusedId, toggleFocus, clearFocus, isFocused, isDimmed } =
+  const { focusedId, toggleFocus, clearFocus, isFocused, isDimmed, bumpZ } =
     useHeroFocus();
 
   // Glow entry animation
@@ -116,7 +116,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
         {/* Backdrop dim — inside card container so z-index works correctly */}
         {focusedId !== null && (
           <div
-            className="absolute inset-0 z-[35] cursor-pointer"
+            className="absolute inset-0 z-[9999] cursor-pointer"
             style={{ backgroundColor: "rgba(5,5,5,0.65)" }}
             onClick={clearFocus}
           />
@@ -130,6 +130,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
             isFocused={isFocused(img.id)}
             isDimmed={isDimmed(img.id)}
             onToggleFocus={handleToggleFocus}
+            bumpZ={bumpZ}
             priority={i < 4}
           />
         ))}

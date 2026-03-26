@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+
+/** Global z-index counter — increments on every card interaction */
+let globalZCounter = 100;
 
 export function useHeroFocus() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -23,5 +26,11 @@ export function useHeroFocus() {
     [focusedId],
   );
 
-  return { focusedId, toggleFocus, clearFocus, isFocused, isDimmed };
+  /** Get next z-index for any interaction (grab, click, etc.) */
+  const bumpZ = useCallback(() => {
+    globalZCounter += 1;
+    return globalZCounter;
+  }, []);
+
+  return { focusedId, toggleFocus, clearFocus, isFocused, isDimmed, bumpZ };
 }

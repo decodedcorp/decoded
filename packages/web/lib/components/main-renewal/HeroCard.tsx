@@ -18,6 +18,7 @@ interface HeroCardProps {
   isFocused: boolean;
   isDimmed: boolean;
   onToggleFocus: (id: string) => void;
+  bumpZ: () => number;
   priority?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function HeroCard({
   isFocused,
   isDimmed,
   onToggleFocus,
+  bumpZ,
   priority = false,
 }: HeroCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -37,8 +39,8 @@ export function HeroCard({
   const animatingRef = useRef(false);
   const wasFocusedRef = useRef(false);
   const preFocusPosRef = useRef({ x: 0, y: 0 });
+  const currentZRef = useRef(position.zIndex);
   const [showSpots, setShowSpots] = useState(false);
-  const [hidden, setHidden] = useState(false);
 
   const onToggleFocusRef = useRef(onToggleFocus);
   onToggleFocusRef.current = onToggleFocus;
@@ -60,16 +62,16 @@ export function HeroCard({
     const el = cardRef.current;
     if (!el) return;
 
-    // Entry animation
+    // Entry animation — autoAlpha handles visibility+opacity atomically
     gsap.fromTo(
       el,
-      { opacity: 0, y: 30, scale: 0.9 },
+      { autoAlpha: 0, y: 30, scale: 0.9 },
       {
-        opacity: position.initialOpacity,
+        autoAlpha: position.initialOpacity,
         y: 0,
         scale: 1,
         duration: 0.8,
-        delay: 0.1 + index * 0.06,
+        delay: 0.1 + index * 0.04,
         ease: "power3.out",
         onComplete: () => startFloat(el),
       },
@@ -87,7 +89,9 @@ export function HeroCard({
         onToggleFocusRef.current(image.id);
       },
       onPress() {
-        gsap.set(el, { zIndex: 50 });
+        const newZ = bumpZ();
+        currentZRef.current = newZ;
+        gsap.set(el, { zIndex: newZ });
         floatRef.current?.pause();
         draggingRef.current = false;
         setShowSpots(true);
@@ -107,10 +111,10 @@ export function HeroCard({
       onRelease() {
         if (draggingRef.current) setShowSpots(false);
         draggingRef.current = false;
-        // Delay z-index restore — but skip if card became focused via onClick
+        // Keep the bumped z-index — most recently interacted card stays on top
         setTimeout(() => {
-          if (wasFocusedRef.current) return; // focused → don't reset z-index
-          gsap.set(el, { zIndex: position.zIndex });
+          if (wasFocusedRef.current) return;
+          gsap.set(el, { zIndex: currentZRef.current });
           floatRef.current?.kill();
           startFloat(el);
         }, 300);
@@ -172,7 +176,7 @@ export function HeroCard({
           y: targetY,
           opacity: 1,
           filter: "none",
-          zIndex: 50,
+          zIndex: 10000,
           scale,
           duration: 0.5,
           ease: "power3.out",
@@ -192,7 +196,7 @@ export function HeroCard({
         opacity: position.initialOpacity,
         filter: position.cssFilter || "none",
         scale: 1,
-        zIndex: position.zIndex,
+        zIndex: currentZRef.current,
         duration: 0.4,
         ease: "power2.out",
         onComplete: () => {
@@ -218,7 +222,6 @@ export function HeroCard({
       ? "0 3px 12px rgba(0,0,0,0.5)"
       : "0 5px 22px rgba(0,0,0,0.6)";
 
-  if (hidden) return null;
 
   const cursorClass = interactive
     ? "cursor-grab active:cursor-grabbing"
@@ -227,14 +230,16 @@ export function HeroCard({
   return (
     <div
       ref={cardRef}
-      className={`absolute ${cursorClass} transform-gpu touch-none opacity-0 will-change-transform`}
+      className={`absolute ${cursorClass} transform-gpu touch-none will-change-transform`}
       style={{
         top: position.top,
         left: position.left,
         width: position.width,
-        zIndex: isFocused ? 50 : position.zIndex,
+        zIndex: isFocused ? 10000 : currentZRef.current,
         transform: `rotate(${position.rotate}deg)`,
         filter: isFocused ? "none" : position.cssFilter,
+        opacity: 0,
+        visibility: "hidden",
       }}
       tabIndex={interactive ? 0 : -1}
       role={interactive ? "button" : undefined}
@@ -275,7 +280,14 @@ export function HeroCard({
             onLoad={(e) => {
               const img = e.currentTarget;
               const ratio = img.naturalHeight / img.naturalWidth;
-              if (ratio > 1.8 || ratio < 0.4) setHidden(true);
+              if (ratio > 1.8 || ratio < 0.4) {
+                // Hide via DOM directly — no React re-render
+                const card = cardRef.current;
+                if (card) {
+                  card.style.display = "none";
+                  floatRef.current?.kill();
+                }
+              }
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
