@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** decoded-monorepo v10.0 — Production Stability & Tech Debt Resolution
-**Domain:** Polyglot monorepo hardening (Next.js 16 + Rust/Axum + Python/gRPC)
+**Project:** decoded-monorepo — v10.0 Profile Page Completion
+**Domain:** Social fashion discovery platform — profile completion milestone
 **Researched:** 2026-03-26
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v10.0 tech debt resolution targets five distinct problem areas across a production polyglot monorepo: rate limiting on AI-cost endpoints, cross-service Sentry error tracking, business-logic E2E test coverage, component decomposition of four monolith files, and memory leak elimination from GSAP/ObjectURL/Three.js patterns. The research confirms all five areas are achievable without introducing major new architectural dependencies — the stack already contains the right primitives (Playwright, tower, tracing, GSAP's `useGSAP`, moka cache), and the gaps are targeted additions: `tower-governor`, `@sentry/nextjs`, `sentry` (Rust crate), and `sentry-sdk[fastapi]` for Python.
+This milestone completes four stub areas on the decoded profile page: auth guard on `/profile`, real data for the Tries and Saved activity tabs, real follower/following counts in `FollowStats`, and a new public user profile route at `/profile/[userId]`. The existing architecture (React Query, Supabase, Orval-generated API client, Next.js proxy middleware) already supports all four features. No new packages are required. The implementation is additive — new files, targeted modifications to existing components, and one modification to `proxy.ts`.
 
-The recommended execution order is dictated by strict architectural dependencies: memory leaks first (isolated, no regressions, immediate production benefit), component refactoring second (required before clean E2E targets exist and before Sentry can group errors by meaningful component names), rate limiting in parallel with refactoring (backend-only, independent of frontend), Sentry fourth (stable components reduce alert noise; rate limiting must precede it so 429s are not reported as errors), and E2E tests last (integration assertions over the entire hardened system). Deviating from this sequence creates concrete, documented failure modes.
+The primary constraint is a missing backend: the Rust/Axum API has zero follow endpoints, no tries-list endpoint, and no saved-posts-list endpoint in the current OpenAPI spec. This blocks full implementation of two features. The pragmatic approach is to use Supabase direct queries (an established pattern in this codebase via `lib/supabase/queries/profile.ts`) for follow counts and the tries history grid, while deferring follow write actions and saved-posts list until the backend ships those endpoints. The one unblocked, high-value feature — the public user profile at `/profile/[userId]` — has a working backend endpoint (`GET /api/v1/users/{user_id}`), an existing proxy route, and an existing generated hook. It only needs a new Next.js page and client component.
 
-The highest-risk areas are GSAP animation continuity during component extraction (silent failures with no TypeScript errors), Axum rate-limiter state sharing (broken implementation appears to work until load-tested), and Sentry source map upload (the most common "looks done but isn't" failure). All three have clear prevention strategies and go/no-go verification steps documented in PITFALLS.md.
+The key risk is scope creep around the follow system. The UI (`FollowButton`, `FollowStats`) already exists and looks complete, which tempts teams to wire mutations that have no backend endpoint. The correct posture for v10.0 is: display real read counts (from Supabase direct query), render a non-functional follow button as a placeholder on the public profile, and defer all follow write operations to a dedicated follow-system milestone triggered by backend endpoint delivery.
 
 ---
 
@@ -19,121 +19,126 @@ The highest-risk areas are GSAP animation continuity during component extraction
 
 ### Recommended Stack
 
-The existing stack requires no architectural changes — only targeted additions. See [STACK.md](.planning/research/STACK.md) for full version and compatibility tables.
+No new packages are needed. The milestone is zero-dependency. All required tools are present: `@tanstack/react-query` v5 with `useInfiniteQuery` (already pattern-established in `useUserActivities`), `@supabase/auth-helpers-nextjs` for server-side session check in `proxy.ts`, `next/navigation` `redirect()` for the auth guard, and Orval-generated hooks (`useGetUserProfile`) for the public profile page.
 
-**Core technologies to add:**
-- `tower-governor 0.8` (Rust): Per-IP/per-user rate limiting using shared-Arc GCRA algorithm — the only correct approach in Tower/Axum without state-clone bugs; supports `SmartIpKeyExtractor` for proxy-aware IP detection
-- `@sentry/nextjs ^10.45.0`: App Router-native error capture with source map upload via webpack plugin; install via wizard (`bunx @sentry/wizard@latest -i nextjs`) to get correctly structured `instrumentation.ts` config files
-- `sentry 0.46` + `sentry-tracing 0.46` (Rust): Captures unhandled `AppError::Internal` via `sentry-tower` layer; integrates automatically with existing `tracing` calls at zero additional code-change cost
-- `sentry-sdk[fastapi] ^2.0` (Python): ASGI auto-instrumentation for FastAPI; must explicitly add `GRPCIntegration` or gRPC handler exceptions are not captured
-- In-memory sliding window (Next.js proxy): Zero-dependency soft gate using `Map<string, number[]>` — sufficient for single-process Vercel; do not add Upstash/Redis for this milestone
-
-**What not to add:** Upstash Redis (overkill for single-process deployment), `why-did-you-render` (debug tool, not a fix), Sentry Session Replay on initial install (adds ~50KB bundle, enable post-baseline), `react-scan` (performance scope, not stability scope), new ESLint plugins for component size (unmaintained).
+**Core technologies in use:**
+- `@tanstack/react-query@5.90.11`: data fetching, infinite scroll, mutation with cache invalidation — established patterns exist in the codebase; no changes required
+- `@supabase/supabase-js@2.86.0` + `@supabase/auth-helpers-nextjs@0.15.0`: session check in `proxy.ts` (admin pattern to extend), Supabase direct queries for tries/follow counts — already wired
+- Orval-generated API client (`useGetUserProfile`, `getMyActivities`): wraps the Rust backend REST API; runs via `bun run generate:api`; no new generation config needed
+- Next.js 16 `proxy.ts` (not `middleware.ts`): the project-specific middleware file; all route guards go here; existing admin pattern is the direct template
 
 ### Expected Features
 
-See [FEATURES.md](.planning/research/FEATURES.md) for full prioritization matrix. Note: FEATURES.md covers the Orval + Zod API code generation milestone (v9.0 context). The v10.0 stability work features are derived from CONCERNS.md and the ARCHITECTURE.md integration analysis.
+**Must have (table stakes) — v10.0:**
+- **Auth guard on `/profile`** — unauthenticated users expect a redirect to login, not a broken skeleton
+- **Tries tab real data** — users who ran VTON expect to see their history; stub returning `[]` reads as broken, not empty
+- **Saved tab real data** — saved items lost on page refresh is unacceptable; Supabase persistence required
+- **Followers/following real counts** — hardcoded `1234/567` in production destroys trust immediately
+- **`/profile/[userId]` public page** — clicking a username anywhere in the app must navigate somewhere; currently leads to a 404
 
-**Must have (table stakes for v10.0 stability):**
-- Rate limiting enforced at the Axum middleware layer — not optional, not proxy-only (proxy is bypassed by direct callers)
-- Sentry capturing errors across all three runtimes with readable stack traces (source maps are a go/no-go gate)
-- E2E test coverage of 6 critical flows: auth, post creation, AI detection, image detail, search, rate-limit 429 response
-- Component extraction maintaining animation continuity for ThiingsGrid, ImageDetailContent, ImageDetailModal, DecodedLogo
-- Memory leak fixes for ObjectURL (requestStore), GSAP context (event handlers), Three.js renderer (DecodedLogo), and event listeners
+**Should have — v10.x (backend-blocked):**
+- Follow/unfollow write action — requires `POST/DELETE /api/v1/users/{userId}/follow`; defer until backend ships it
+- Public profile `og:` metadata via `generateMetadata` — low cost once the page exists; high share value for K-pop fan culture
 
-**Should have (stability differentiators):**
-- Cross-service Sentry trace correlation (`Sentry-Trace` header forwarded Rust → Python gRPC calls)
-- Per-authenticated-user rate limiting keyed on JWT `sub` claim, not per-IP (trivially bypassed behind NAT)
-- `data-testid` attributes added proactively during component refactoring, not retroactively
-- `storageState` auth fixture for Playwright (pre-authenticated session, not per-test UI login flow)
-- Sentry `before_send` hook stripping user image URL fields from event payloads (privacy compliance)
+**Defer to v11+:**
+- Followers/following list modal — requires backend list endpoints
+- Boards/Collage API persistence — backend blocker; UI already exists in `SavedGrid`
+- Try-on result detail view — depends on Tries tab landing first
 
-**Defer to v10.x+:**
-- Redis-backed rate limiting (only when multi-instance or multi-region deployment)
-- Sentry Session Replay and Performance Profiling (enable after confirming error capture baseline)
-- MSW mock generation (requires `@faker-js/faker` + `msw`, separate milestone)
-- Zod strict mode on API response schemas (defer until OpenAPI spec is stable post-v9.0 migration)
+**Anti-features to avoid:**
+- Real-time follower count via WebSocket — no WebSocket infrastructure; `refetchOnWindowFocus` is sufficient
+- Block/mute system — scope is a separate moderation milestone, not profile completion
 
 ### Architecture Approach
 
-The architecture is additive: all five tech debt items insert into the existing Browser → Next.js → Rust/Axum → Python/gRPC → Supabase stack without structural changes. See [ARCHITECTURE.md](.planning/research/ARCHITECTURE.md) for full component diagram and data flow.
+The profile feature uses a two-layer data strategy: Orval-generated React Query hooks for Rust backend endpoints, and Supabase direct queries for data not yet exposed through the REST API. Both patterns already exist in `lib/hooks/useProfile.ts` and `lib/supabase/queries/profile.ts`. New features extend these files rather than introducing new patterns. Zustand stores (`profileStore`, `collectionStore`) act as UI state bridges — they must not hold server data; server data belongs in the React Query cache.
 
-**Major components and their v10.0 changes:**
-1. **Next.js proxy routes** (`app/api/v1/*`) — add soft rate-limit soft gate; fix 429 passthrough (currently swallowed as 500, a confirmed bug pattern in the proxy)
-2. **Rust Tower middleware stack** — insert `tower-governor` after `auth`; `sentry-tower::NewSentryLayer` as outermost layer (ordering is strict: Sentry outermost, rate limit inner)
-3. **React components** (ThiingsGrid ~948 LOC, ImageDetailContent ~671 LOC, ImageDetailModal ~637 LOC, DecodedLogo ~764 LOC) — extract hooks and sub-components; fix GSAP cleanup via `useGSAP` + `contextSafe()`
-4. **Zustand requestStore** — AbortController pattern for ObjectURL lifecycle; URL tracking `Set<string>` for complete cleanup on unmount
-5. **Playwright test suite** — extend existing visual QA infrastructure with `e2e/` tier using storageState auth, `data-testid` selectors, Page Object Model
+**Major components and their changes:**
+1. `proxy.ts` — add `/profile` (exact) and `/profile/:path*` to matcher; add session-based redirect branch for the exact `/profile` path only; session propagation runs for all profile sub-paths
+2. `app/profile/[userId]/page.tsx` + `UserProfileClient.tsx` — new files; reuse existing profile primitive components with different data sources, no edit, no private tabs
+3. `lib/hooks/useProfile.ts` — add `useFollowCounts`, `useIsFollowing`, `useFollowMutation`, `useMyTryOnHistory`, `useMySavedPosts`
+4. `lib/supabase/queries/profile.ts` — add `fetchFollowCounts`, `fetchIsFollowing`, `followUser`, `unfollowUser`, `fetchMyTryOnHistory`
+5. `lib/components/profile/FollowStats.tsx` — remove hardcoded defaults; accept real props from orchestrator
+6. `lib/components/profile/TriesGrid.tsx` — replace stub `fetchMyTries()` with `useMyTryOnHistory` + infinite scroll via `IntersectionObserver`
+7. `lib/components/profile/SavedGrid.tsx` — replace `collectionStore` mock load with real data hook; remove `MOCK_PINS`
 
 ### Critical Pitfalls
 
-See [PITFALLS.md](.planning/research/PITFALLS.md) for all 10 pitfalls with full prevention strategies and recovery steps.
+1. **Follow API called without proxy routes causes CORS errors** — the Rust backend has no follow endpoints in the current spec; calling the backend directly from the browser produces CORS errors. Verify the spec before writing any follow component code; add proxy routes first; run `generate:api` after spec update. Do not write manual fetch wrappers.
 
-1. **Axum rate limiter state not shared across Tower service clones** — `tower::RateLimitLayer` clones its counter per handler (Axum issue #2634); the rate limit never triggers. Use `tower-governor` with shared `Arc<GovernorConfig>`. Validate with load test: `for i in {1..200}; do curl POST /api/v1/posts/analyze; done` must return 429 before request 101.
+2. **Client-side auth guard causes flash of unauthorized content** — `authStore` initializes asynchronously; a `useEffect`-based redirect exposes the profile skeleton briefly to unauthenticated users. The fix is server-side in `proxy.ts` (pre-render). This is the only correct approach for the own-profile route.
 
-2. **GSAP animations silently break after component extraction** — GSAP refs lose DOM targets when sections are extracted to child components; no TypeScript error, no console error, just absent animations. Refactor sequence: fix `useGSAP` cleanup first, then extract markup with `forwardRef`, then move animation hooks to lowest owner. Test animations manually after every extraction step.
+3. **`proxy.ts` matcher scope mismatch blocks the public profile or misses session refresh** — using `/profile/:path*` as the auth redirect guard blocks the public `/profile/[userId]` route. The auth redirect must trigger only for the exact `/profile` path. However, session cookie propagation (cookie refresh) must apply to `/profile/:path*` as well. The proxy handler must distinguish the two cases in its logic, not just via the matcher pattern.
 
-3. **Sentry source maps not uploading, producing minified stack traces** — `SENTRY_AUTH_TOKEN` missing from CI/Vercel env is the most common cause. `withSentryConfig` must be the outermost `next.config.js` wrapper. Go/no-go gate: a test error must show TypeScript source lines, not `page-abc123.js:1:4821`.
+4. **Stale empty `["my-tries"]` React Query cache after real API is wired** — the stub returns `[]` and React Query caches it as a successful result. When the real API is wired, stale empty data is served until cache expiry. Fix: scope the query key by `userId` (`["my-tries", userId]`), which inherently invalidates old entries and prevents cross-user cache pollution on shared devices.
 
-4. **Sentry user context missing from client-side events** — `setUser()` on the server does not propagate to the browser SDK (documented in Sentry GitHub discussion #10019). Must call `Sentry.setUser()` in `authStore` client-side after session hydration, independently of the server call.
-
-5. **Playwright auth race condition in CI** — Supabase session hydrates asynchronously after `page.goto()`; tests pass locally (warm) but fail in CI (cold start). Fix: `storageState` setup project pre-authenticating via Supabase REST API + `waitForFunction` polling for authenticated DOM sentinel before executing authenticated actions.
-
-6. **ObjectURL race condition during rapid navigation** — compression Promise resolves after component unmounts, creating URLs from cleared store state. Fix: AbortController passed to compression; check `signal.aborted` before `createObjectURL`. Track all created URLs in `Set<string>` for complete cleanup.
+5. **`MOCK_PINS` in `collectionStore` ships to production** — `SavedGrid` currently loads `MOCK_PINS` (60+ lines of fake data with `picsum.photos` images). These will appear in production if not removed before the Saved tab PR merges. Grepping `MOCK_PINS` returning 0 results must be a PR gate condition.
 
 ---
 
 ## Implications for Roadmap
 
-The architecture's dependency graph directly mandates a 5-phase sequence. No phase can safely be reordered without triggering the pitfalls documented in PITFALLS.md.
+Based on combined research, a 5-phase structure is recommended for v10.0, plus one backend-triggered phase for v10.x.
 
-### Phase 1: Memory Leak Fixes
-**Rationale:** Smallest scope, no regressions possible, immediate production benefit, and a prerequisite for clean component refactoring. Fixing GSAP cleanup after structural extraction is exponentially harder than before it.
-**Delivers:** `useGSAP` + `contextSafe()` across all animated components; AbortController + URL tracking Set in `requestStore.ts`; Three.js `renderer.dispose()` in `DecodedLogo.tsx`; event listener cleanup audit across all components
-**Addresses:** Pitfalls 9 (ObjectURL race) and 10 (GSAP orphaned tweens from event handlers)
-**Avoids:** The "fix cleanup after the refactor" trap — GSAP context cleanup must own the lifecycle before DOM structure is reorganized
+### Phase 1: Auth Guard
+**Rationale:** Auth guard is the simplest feature (extending `proxy.ts` + redirect logic) and is a prerequisite for meaningful testing of all other own-profile features. Own-profile tabs (Tries, Saved) only function correctly when there is a guaranteed authenticated session. Must come first.
+**Delivers:** Unauthenticated redirect to `/login?redirect=/profile`; no flash of profile skeleton; server-side pre-render enforcement via `proxy.ts`
+**Addresses:** "Auth guard on `/profile`" (P1 table stakes)
+**Avoids:** Pitfall 2 (client-side flash), wrong redirect destination (must go to `/login`, not `/`)
 
-### Phase 2: Component Refactoring
-**Rationale:** Clean component boundaries are required before E2E tests can use stable `data-testid` selectors and before Sentry can group errors by meaningful component names. Monolith stack traces produce ungroupable Sentry events.
-**Delivers:** ThiingsGrid → `useThiingsPhysics` hook + `ThiingsCell` component; ImageDetailContent → `ImageDetailHero`, `ImageDetailSpots`, `ImageDetailShop`; ImageDetailModal → `useModalGSAP` hook + `ModalDrawer`; DecodedLogo → `useDecodedLogoWebGL` + `DecodedLogoFallback`; `data-testid` attributes on all interactive elements; Playwright visual baseline re-approval for affected pages
-**Uses:** `forwardRef` pattern for GSAP ref propagation into child components; `useGSAP` with `scope` parameter (established in Phase 1)
-**Avoids:** Pitfall 8 (GSAP refs silently lose targets); Anti-Pattern 3 (visual baseline update required after refactoring — must be done before merge)
+### Phase 2: Public User Profile (`/profile/[userId]`)
+**Rationale:** This is the only feature with zero backend blockers. `GET /api/v1/users/{user_id}` exists in the spec, the proxy route exists, and the generated hook exists. Only new Next.js files are needed. Shipping this early delivers immediate user-facing value (username clicks work anywhere in the app) and establishes the `UserProfileClient` component that the follow-system phase will extend.
+**Delivers:** `app/profile/[userId]/page.tsx` + `UserProfileClient.tsx`; read-only public profile (avatar, name, bio, stats); follow button placeholder (non-functional); no private tabs (Tries/Saved); proxy matcher updated for session propagation on `/profile/:path*`
+**Addresses:** "/profile/[userId] public page" (P1), "own vs. other differentiation" (P1)
+**Avoids:** Pitfall 3 (proxy matcher scope), duplicating `useUser()` hook that already exists
 
-### Phase 3: Rate Limiting (Rust + Next.js)
-**Rationale:** Backend-only work, independent of frontend. Can run in parallel with Phase 2 if team capacity allows. Must precede Sentry so that `tower-governor` 429 responses are positioned inside the `sentry-tower` layer and are not incorrectly reported as application errors.
-**Delivers:** `packages/api-server/src/middleware/rate_limit.rs` (new) with `tower-governor`; per-user JWT-keyed limiting on AI endpoints (`POST /posts/analyze`, `/posts/extract-metadata`, `/posts/upload`); `moka` cache with TTL eviction as backing store (not unbounded HashMap); `429` passthrough fix in Next.js proxy routes; in-memory sliding window soft gate in Next.js
-**Implements:** Tower middleware insertion pattern; `SmartIpKeyExtractor` (proxy-aware) for IP-keyed endpoints; custom extractor reading JWT `sub` claim for per-user limits
-**Avoids:** Pitfall 1 (shared Arc state required), Pitfall 2 (unbounded HashMap — use moka with TTL), Security mistake (per-IP is bypassable — key on JWT sub for AI endpoints)
+### Phase 3: Follow Counts (Real Data)
+**Rationale:** Follow counts are visible on every profile load. Replacing hardcoded `1234/567` with real data is high-trust, low-effort, and does not require backend follow write endpoints. Uses the established Supabase direct query pattern from `profile.ts`. Must verify `user_follows` table existence in Supabase before implementing — this is the one open question that could block this phase.
+**Delivers:** `useFollowCounts` hook; `fetchFollowCounts` Supabase query; `FollowStats.tsx` hardcoded defaults removed; real counts on both own profile and public profile
+**Addresses:** "Followers/following real counts" (P1)
+**Avoids:** Pitfall (hardcoded defaults shipping to production)
+**Prerequisite check:** Confirm `user_follows` table exists in Supabase schema before Phase 3 begins
 
-### Phase 4: Sentry Error Tracking (All Three Runtimes)
-**Rationale:** Refactored components in Phase 2 give clean stack traces; rate limiting in Phase 3 prevents 429s from being counted as errors. Three SDK installations are independent and do not require each other. Install all three runtimes in one phase to allow cross-service trace correlation setup.
-**Delivers:** `@sentry/nextjs` with wizard-generated config files + source maps verified; `sentry-tower::NewSentryLayer` in Rust middleware stack (outermost position) with `AppError::Internal`/`AppError::ExternalService` filtering; `sentry-sdk[fastapi,arq,grpc]` in Python with `GRPCIntegration`; `Sentry.setUser()` in `AuthProvider` client-side + server layout; `Sentry-Trace` header forwarding Rust → Python gRPC; Sentry tunnel route configured to prevent DSN exposure
-**Uses:** Wizard-generated config for Next.js (avoids instrumentation.ts misconfiguration); `sentry::init()` with `attach_stacktrace: true` in Rust `main.rs`
-**Avoids:** Pitfall 3 (user context split — set in both server and client), Pitfall 4 (source maps — verified as go/no-go gate), Pitfall 5 (Tokio async panic not captured without `sentry-tower` layer)
+### Phase 4: Tries Tab (Real Data + Infinite Scroll)
+**Rationale:** Tries tab has a clear Supabase data source (`user_tryon_history` table, confirmed accessible via `fetchTryOnCount`). The infinite scroll pattern is established in `useUserActivities`. This phase replaces the stub and wires the real data source, completing one of the two "no stub data" goals.
+**Delivers:** `useMyTryOnHistory` hook with `useInfiniteQuery`; `fetchMyTryOnHistory` Supabase query; replaced `TriesGrid` stub; inline `useInfiniteScrollTrigger` hook (~15 lines, no new package); query key scoped by `userId`
+**Addresses:** "Tries tab real data" (P1 table stakes)
+**Avoids:** Pitfall 4 (stale empty cache — query key must include `userId`)
+**Prerequisite check:** Confirm `user_tryon_history` schema includes `result_image_url` and other fields `TriesGrid` expects
 
-### Phase 5: E2E Business Logic Tests
-**Rationale:** Must be last — it is an integration assertion over the complete hardened system. Tests verify refactored components via stable `data-testid` selectors, confirm Sentry sees zero unexpected errors on happy paths, and assert 429 responses flow correctly to the UI. Running these tests before Phase 1-4 completes produces flaky results against unstable targets.
-**Delivers:** 6 E2E specs (`auth.spec.ts`, `post-creation.spec.ts`, `ai-detection.spec.ts`, `image-detail.spec.ts`, `search.spec.ts`, `rate-limit.spec.ts`); `storageState` auth fixture (Supabase REST API login, not UI login); Page Object Model in `e2e/pages/`; CI project separation (visual-qa weekly schedule, e2e on every PR); Docker Compose test environment design decision for full-stack AI detection tests
-**Avoids:** Pitfall 6 (auth race — storageState setup project is the first deliverable, before any test is written), Pitfall 7 (UI label coupling — `data-testid` only, no `getByText` in business logic tests)
+### Phase 5: Saved Tab (Real Data)
+**Rationale:** Saved tab has the most uncertainty — no `GET /api/v1/users/me/saved` endpoint in the OpenAPI spec, and `collectionStore` uses mock data that must be removed before any production merge. Placed last in v10.0 because it requires an upfront design decision (Supabase direct vs. undocumented backend endpoint) that should be made after the team has established the pattern from Phases 3 and 4.
+**Delivers:** `useMySavedPosts` hook; `MOCK_PINS` removal from `collectionStore`; real pin data in `SavedGrid` (flat list only for v10.0); Boards/Collage sub-tabs remain as UI-only placeholders
+**Addresses:** "Saved tab real data" (P1 table stakes)
+**Avoids:** Pitfall 5 (mock pins shipping to production — grep `MOCK_PINS` must return 0 before merge)
+**Prerequisite check:** Determine if `GET /api/v1/users/me/saved` exists on the live backend (not in spec) or if Supabase `saved_posts` table is the data source
+
+### Phase 6 (v10.x, backend-triggered): Follow System Write Operations
+**Rationale:** Follow/unfollow write operations are fully blocked on backend endpoint delivery. This phase is triggered externally when `POST/DELETE /api/v1/users/{userId}/follow` lands in the backend OpenAPI spec. The follow button placeholder from Phase 2 communicates intent without false functionality until then.
+**Delivers:** `useFollowMutation` hook with optimistic update + cache invalidation; `followUser`/`unfollowUser` mutations; functional follow button on public profile; `FollowStats` counts update without page reload after follow action
+**Addresses:** "Follow/unfollow action" (P2)
+**Avoids:** Pitfall 1 (CORS from missing proxy routes — add proxy routes before wiring mutation), Pitfall 6 (stale follow button state — mutation must invalidate both user stats and follow status queries)
 
 ### Phase Ordering Rationale
 
-- **Memory leaks before refactoring:** GSAP cleanup must be in place before DOM structure is reorganized. Fixing cleanup in a split component requires coordinating between parent and child owners — 3x harder than fixing it in the monolith. This is the most critical ordering constraint.
-- **Refactoring before Sentry:** Sentry groups errors by component name. Monolith components (`ThiingsGrid` at 948 lines) generate confusing, ungroupable stack traces. Refactoring first means Sentry events have meaningful groups from day one.
-- **Rate limiting before Sentry:** Tower layer ordering is strict. `sentry-tower::NewSentryLayer` must be outermost to capture all errors from inner layers. Rate limiting must be an inner layer (after auth, before handlers). Inserting them in this order requires establishing the middleware stack in Phase 3 first, then wrapping with Sentry in Phase 4.
-- **Sentry before E2E:** E2E happy-path tests should assert zero unexpected Sentry events. This requires Sentry to be capturing events before the tests run.
-- **E2E last:** Full-stack integration assertion requires the complete system to be stable. Testing against unstable animated components or before rate limiting is wired produces flaky results that erode test suite trust.
+- Phase 1 before everything: own-profile features require a guaranteed authenticated session; without the auth guard, Tries and Saved tab data fetching cannot assume a logged-in user
+- Phase 2 second because it has zero backend blockers and the `UserProfileClient` becomes a shared foundation for Phase 6; establishing the public profile routing also forces the proxy matcher to be updated correctly early
+- Phases 3-5 ordered by increasing uncertainty: follow counts (one Supabase query, predictable) → tries (known table, established `useInfiniteQuery` pattern) → saved (requires backend investigation before implementation begins)
+- Phase 6 is externally triggered and cannot be scheduled until the backend team confirms endpoint delivery
 
 ### Research Flags
 
-Phases requiring deeper research or design decisions during planning:
-- **Phase 3 (Rate Limiting — custom JWT extractor):** `tower-governor` provides `SmartIpKeyExtractor` out of the box, but a custom extractor reading JWT `sub` claim from the `Authorization` header requires a brief implementation spike. Verify the extractor trait API against tower-governor 0.8 before Phase 3 spec-writing.
-- **Phase 5 (E2E — test environment design):** The AI detection E2E flow requires Rust backend + Python AI server running simultaneously. The test environment design (local Docker Compose, preview deployment URL, or selective service mocking) is an unresolved architectural decision that must be made before Phase 5 spec-writing begins.
+Phases requiring deeper investigation before implementation begins:
 
-Phases with well-documented patterns (skip additional research-phase):
-- **Phase 1 (Memory Leaks):** All leak sites are identified in `CONCERNS.md`; GSAP `contextSafe()` and AbortController patterns are fully documented in official sources.
-- **Phase 2 (Component Refactoring):** Extraction strategy is structural; no external APIs; `forwardRef` and `useGSAP` patterns are standard.
-- **Phase 4 (Sentry):** Wizard handles most configuration; three independent SDK installs with official documentation for each runtime.
+- **Phase 3 (potentially blocking):** Confirm `user_follows` table exists in Supabase. The `types.ts` file (updated 2026-03-18) lists 11 tables with no `user_follows`. If absent, a DB migration coordinated with the backend team is a Phase 3 prerequisite — this could add lead time.
+- **Phase 4 (schema validation):** Confirm `user_tryon_history` has `result_image_url` and other fields expected by `TriesGrid`. The existing `fetchTryOnCount` only selects `id`. Run a Supabase query or inspect the schema directly before writing the Phase 4 Supabase query.
+- **Phase 5 (design decision):** Determine whether `GET /api/v1/users/me/saved` exists on the live backend (undocumented) or whether Supabase direct query is the only path. This decision affects whether a new proxy route is needed and which query pattern to follow.
+
+Phases with established patterns (skip additional research):
+
+- **Phase 1:** Exact pattern exists in `proxy.ts` for `/admin`. Extending to `/profile` is mechanical — no new concepts involved.
+- **Phase 2:** Backend endpoint exists, proxy route exists, generated hook exists. Standard Next.js App Router dynamic route. No research needed.
+- **Phase 4 (once schema confirmed):** `useInfiniteQuery` + `IntersectionObserver` pattern is fully established in `useUserActivities`. Replicate directly.
 
 ---
 
@@ -141,43 +146,40 @@ Phases with well-documented patterns (skip additional research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions verified against npm registry, Rust docs.rs, and official Sentry docs as of 2026-03-26. Version compatibility cross-checked against existing stack (axum 0.8.8, Next.js 16.2.1, React 19, FastAPI 0.115.11). |
-| Features | HIGH | v10.0 feature set derived directly from CONCERNS.md (known issues) + ARCHITECTURE.md integration analysis. No speculation required — this is existing-codebase work, not greenfield. |
-| Architecture | HIGH | Based on direct codebase inspection: 41 proxy route files, existing middleware stack in `mod.rs`, `Cargo.toml`, `pyproject.toml`. All claims derive from file inspection, not inference. |
-| Pitfalls | HIGH (memory leaks, GSAP, component splitting) / MEDIUM (Sentry polyglot correlation, Playwright/Supabase) | GSAP and memory pitfalls sourced from official GSAP docs and direct codebase analysis. Sentry multi-runtime cross-service correlation (Rust→Python gRPC) has limited real-world documentation at this specific combination. |
+| Stack | HIGH | Direct codebase inspection; all required packages confirmed present; no new dependencies needed; zero-package conclusion verified by reading the existing hook and proxy patterns |
+| Features | HIGH | OpenAPI spec enumerated directly (all 63-67 paths); existing components read; mock/stub states confirmed in source; industry patterns (Instagram/Pinterest/Weverse) from known platform behavior |
+| Architecture | HIGH | All 18 profile components inspected; existing hook patterns read; Supabase query patterns confirmed; `proxy.ts` admin implementation verified; data flow diagrams derived from codebase, not assumption |
+| Pitfalls | HIGH | Direct code reading of stub patterns, hardcoded values, and missing proxy routes confirmed in source; React Query cache behavior pitfalls from established v5 knowledge |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Sentry cross-service trace correlation (Rust → Python gRPC):** The `Sentry-Trace` header forwarding mechanism for gRPC metadata injection has limited documentation at the Rust+Python combination specifically. Validate this integration path during Phase 4 execution before declaring cross-service tracing complete. Fall back to independent per-service capture if correlation proves unreliable.
-- **tower-governor custom JWT sub extractor:** The extractor trait API for reading JWT claims from the Authorization header (for per-user rate limiting) requires a code spike during Phase 3 planning. Confirm the extractor compiles against tower-governor 0.8 before finalizing Phase 3 scope.
-- **Playwright Docker Compose test environment:** The AI detection E2E flow requires all three services running simultaneously. Whether to use local Docker Compose, a preview environment, or selective mocking is an open decision. Resolve before Phase 5 spec-writing to avoid re-scoping test coverage.
-- **Visual baseline re-approval scope (Phase 2):** Refactoring ThiingsGrid and ImageDetailContent will invalidate existing Playwright visual baselines for the images page, detail modal, and potentially the main page. Pre-map which baselines are affected before Phase 2 begins to avoid blocking CI for extended periods mid-refactor.
+- **`user_follows` table existence (blocking for Phase 3):** `types.ts` (updated 2026-03-18) lists 11 Supabase tables with no `user_follows`. If the table doesn't exist, Phase 3 requires a DB migration before any frontend work. Verify with `supabase db diff` or direct schema inspection before Phase 3 planning begins.
+
+- **`user_tryon_history` full schema (affects Phase 4):** Only `id` is used by the existing `fetchTryOnCount` query. The tries tab needs `result_image_url`, `created_at`, and potentially `item_count`. Confirm all required columns exist before writing the Phase 4 Supabase query.
+
+- **`GET /api/v1/users/me/saved` endpoint existence (blocking for Phase 5):** The save/unsave per-post endpoints exist (`lib/api/savedPosts.ts`), but no list endpoint is in the spec. Phase 5 design cannot be finalized until it is confirmed whether (a) the backend has an undocumented list endpoint or (b) Supabase direct is the only path. Fetch and inspect the live backend spec at the start of Phase 5.
+
+- **Public profile activity visibility (explicit scope cut):** `GET /api/v1/users/{user_id}/activities` does not exist in the spec. The Phase 2 public profile page will show no activity tabs for other users. This must be documented explicitly in Phase 2 implementation to prevent scope creep when reviewers ask "where are their posts?"
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Sentry Next.js official docs](https://docs.sentry.io/platforms/javascript/guides/nextjs/) — App Router wizard setup, instrumentation.ts pattern
-- [Sentry Rust/Axum official docs](https://docs.sentry.io/platforms/rust/guides/axum/) — tower-axum-matched-path feature, sentry 0.46.2 config
-- [tower-governor GitHub](https://github.com/benwis/tower-governor) — v0.8.0 stable, SmartIpKeyExtractor, shared Arc pattern
-- [Playwright Auth official docs](https://playwright.dev/docs/auth) — storageState pattern, auth-setup project dependencies
-- [GSAP React official docs](https://gsap.com/resources/React/) — useGSAP, contextSafe() for event handlers
-- [Orval React Query Guide](https://www.orval.dev/guides/react-query) — hook generation, tags-split mode (v9.0 context)
-- Direct codebase analysis — `CONCERNS.md`, `ARCHITECTURE.md`, 41 proxy route files, `Cargo.toml` (api-server), `pyproject.toml` (ai-server), existing middleware stack
+- `packages/api-server/openapi.json` — direct enumeration of all 63-67 backend endpoints; confirmed absence of follow, tries-list, saved-list endpoints
+- `packages/web/proxy.ts` — admin auth guard pattern; `createSupabaseMiddlewareClient` + `config.matcher` implementation confirmed
+- `packages/web/lib/hooks/useProfile.ts` — existing hook implementations; `useUser`, `useUserActivities`, `useInfiniteQuery` v5 pattern
+- `packages/web/lib/components/profile/` — all 18 profile components; stub states in `TriesGrid`, `SavedGrid`, `FollowStats` confirmed directly
+- `packages/web/lib/supabase/queries/profile.ts` — Supabase direct query pattern for `fetchTryOnCount`, `fetchUserProfileExtras`
+- `packages/web/lib/supabase/types.ts` — Supabase table schemas as of 2026-03-18; 11 tables listed
+- `packages/web/lib/stores/collectionStore.ts` — `MOCK_PINS` constant (60+ lines of fake data) confirmed
+- `packages/web/app/api/v1/users/` — existing proxy routes confirmed; absence of follow proxy routes confirmed
+- `packages/web/lib/api/savedPosts.ts` — per-post save/unsave/status endpoints confirmed; no list endpoint
 
 ### Secondary (MEDIUM confidence)
-- [Axum issue #2634](https://github.com/tokio-rs/axum/issues/2634) — RateLimitLayer clone-state bug confirmed
-- [Sentry GitHub discussion #10019](https://github.com/getsentry/sentry-javascript/discussions/10019) — setUser() not propagated server→client in App Router
-- [Playwright + Supabase login via REST](https://mokkapps.de/blog/login-at-supabase-via-rest-api-in-playwright-e2e-test) — storageState with Supabase auth REST API pattern
-- [Upstash ratelimit for Next.js](https://upstash.com/blog/nextjs-ratelimiting) — useful context for multi-region decision
-- [npm: @sentry/nextjs](https://www.npmjs.com/package/@sentry/nextjs) — Version 10.45.0 confirmed as latest
-
-### Tertiary (LOW confidence — needs validation during execution)
-- Sentry `Sentry-Trace` header forwarding into gRPC metadata for Rust→Python correlation — documented pattern exists; limited real-world reports for this exact runtime combination
-- `moka` cache TTL configuration as tower-governor backing store — community-documented but requires implementation spike to validate API compatibility with governor 0.8
+- Industry platform behavior (Instagram, Pinterest, Weverse) — follow system UX conventions, own vs. other profile differentiation, saved/collections hierarchy patterns
 
 ---
 *Research completed: 2026-03-26*

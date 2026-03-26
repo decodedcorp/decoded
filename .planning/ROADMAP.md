@@ -13,7 +13,7 @@
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
-- [ ] **v10.0 Tech Debt Resolution** — Phases 44-48
+- [ ] **v10.0 Profile Page Completion** — Phases 44-50
 
 ## Phases
 
@@ -60,7 +60,7 @@ See archived roadmap: `.planning/milestones/v4.0-ROADMAP.md`
 </details>
 
 <details>
-<summary>v5.0 AI Magazine & Archive Expansion (m7-Phases 01-03) — SHIPPED 2026-03-12</summary>
+<summary>✅ v5.0 AI Magazine & Archive Expansion (m7-Phases 01-03) — SHIPPED 2026-03-12</summary>
 
 See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 
@@ -96,7 +96,7 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 - [ ] **Phase m10-04: Docker & CI/CD Unification** - docker-compose 루트 통합, path-based GitHub Actions 워크플로우
 
 <details>
-<summary>v9.0 Type-Safe API Generation (Phases 39-43) — SHIPPED 2026-03-24</summary>
+<summary>✅ v9.0 Type-Safe API Generation (Phases 39-43) — SHIPPED 2026-03-24</summary>
 
 See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
@@ -108,121 +108,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
 </details>
 
-### v10.0 Tech Debt Resolution (Phases 44-48)
-
-**Milestone Goal:** 프로덕션 안정성과 코드 품질 확보 — 메모리 누수, 보안, 컴포넌트 리팩토링, 관측성, 테스트 커버리지
-
-- [x] **Phase 44: Memory Leak Prevention** — GSAP contextSafe(), ObjectURL, AbortController, useEffect 클린업 (completed 2026-03-26)
-- [x] **Phase 45: Security Foundation** — Rate Limiting (Axum + Next.js proxy), 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파 (completed 2026-03-26)
-- [x] **Phase 46: Component Refactoring** — ThiingsGrid(950줄), VtonModal(880줄), ItemDetailCard(771줄), ImageDetailModal(726줄) 분리 (completed 2026-03-26)
-- [x] **Phase 47: Observability** — Sentry (Next.js + Rust + Python), Web Vitals, 에러 전파 검증 (completed 2026-03-26)
-- [x] **Phase 48: Test Coverage** — Vitest 유닛, Playwright E2E (인증 + AI 파이프라인), data-testid 마킹 (completed 2026-03-26)
-
 ## Phase Details
-
-### Phase 44: Memory Leak Prevention
-
-**Goal**: GSAP contextSafe(), AbortController, useEffect 클린업 패턴을 전면 적용하여 메모리 누수를 방지하고, Chrome DevTools 프로파일링으로 검증한다
-**Depends on**: Nothing (first phase of v10.0)
-**Requirements**: MEM-01, MEM-02, MEM-03, MEM-04
-**Success Criteria** (what must be TRUE):
-
-1. 47개 GSAP 사용 컴포넌트의 이벤트 핸들러 애니메이션이 contextSafe() 패턴을 사용하며 언마운트 시 자동 클린업된다
-2. 모든 비동기 fetch 요청에 AbortController가 적용되어 컴포넌트 언마운트 시 abort()가 호출된다
-3. useEffect 내 setTimeout 워크어라운드가 제거되고 addEventListener/removeEventListener 직접 사용 패턴으로 정비된다
-4. 주요 페이지(메인, 피드, 아이템 상세)의 Chrome DevTools Memory 프로파일링에서 반복 네비게이션 시 메모리 증가가 없다
-
-
-**Plans**: 3 plans
-
-Plans:
-
-- [ ] 44-01-PLAN.md — GSAP contextSafe() + setTimeout workaround cleanup (MEM-01, MEM-03)
-- [ ] 44-02-PLAN.md — AbortController signal threading for all fetch paths (MEM-02)
-- [ ] 44-03-PLAN.md — Build verification + Chrome DevTools memory profiling checkpoint (MEM-04)
-
-### Phase 45: Security Foundation
-
-**Goal**: Rate Limiting, 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파를 적용하여 보안 기반을 확립한다
-**Depends on**: Nothing (independent)
-**Requirements**: RATE-01, RATE-02, RATE-03, SEC-01, SEC-02, SEC-03
-**Success Criteria** (what must be TRUE):
-
-1. AI analyze endpoint (/api/v1/posts/analyze)에 GCRA 기반 Rate Limiting이 적용되어 per-user/per-IP로 요청이 제한된다
-2. Next.js image-proxy와 analyze proxy 라우트에 in-memory sliding window 방어 Rate Limiting이 적용된다
-3. 28개 API 라우트 파일에서 console.log/error가 NODE_ENV=development 가드로 보호된다
-4. API_BASE_URL 등 필수 환경변수가 모듈 로드 시 검증되어 누락 시 즉시 실패한다
-5. debug-env 라우트가 삭제되어 환경변수 정보 노출이 방지된다
-6. Rate limit 초과 시 429 + Retry-After 헤더가 반환된다
-
-**Plans**: 2 plans
-
-Plans:
-
-- [ ] 45-01-PLAN.md — Axum tower-governor GCRA rate limiting + JwtUserKeyExtractor (RATE-01, RATE-02)
-- [ ] 45-02-PLAN.md — Next.js rate limiting, env validation, debug log guard, error propagation, debug-env deletion (RATE-03, SEC-01, SEC-02, SEC-03)
-
-### Phase 46: Component Refactoring
-
-**Goal**: 950줄, 880줄, 771줄, 726줄의 거대 컴포넌트를 커스텀 훅과 서브컴포넌트로 분리하여 300줄 이하로 만든다
-**Depends on**: Phase 44 (GSAP cleanup patterns established first)
-**Requirements**: REF-01, REF-02, REF-03, REF-04
-**Success Criteria** (what must be TRUE):
-
-1. ThiingsGrid.tsx가 300줄 이하로 줄어들고, PhysicsEngine 클래스와 Observer 헬퍼가 별도 파일로 분리된다
-2. VtonModal.tsx가 300줄 이하로 줄어들고, 3개 커스텀 훅과 3개 서브컴포넌트가 별도 파일로 분리된다
-3. ItemDetailCard.tsx가 300줄 이하로 줄어들고, adopt 로직과 GSAP 애니메이션이 커스텀 훅으로 추출된다
-4. ImageDetailModal.tsx가 300줄 이하로 줄어들고, GSAP 애니메이션/터치 핸들러가 커스텀 훅으로 추출된다
-5. 모든 컴포넌트의 외부 API(export, props)가 변경되지 않는다
-
-**Plans**: 3 plans
-
-Plans:
-
-- [ ] 46-01-PLAN.md — ThiingsGrid PhysicsEngine class + Observer helpers extraction (REF-01)
-- [ ] 46-02-PLAN.md — VtonModal hooks + subcomponent promotion (REF-02)
-- [ ] 46-03-PLAN.md — ItemDetailCard + ImageDetailModal hook extraction (REF-03, REF-04)
-
-### Phase 47: Observability
-
-**Goal**: Sentry를 Next.js, Rust, Python에 통합하고 Web Vitals 모니터링과 에러 전파 검증을 구축한다
-**Depends on**: Phase 45 (security foundation in place)
-**Requirements**: OBS-01, OBS-02, OBS-03
-**Success Criteria** (what must be TRUE):
-
-1. @sentry/nextjs가 설치되고 5개 설정 파일(instrumentation-client.ts, sentry.server.config.ts, sentry.edge.config.ts, instrumentation.ts, global-error.tsx)이 생성된다
-2. next.config.js가 withSentryConfig으로 래핑되어 소스맵 업로드가 활성화된다
-3. Rust API 서버에 sentry 0.47.0이 추가되고 main.rs가 sync main -> async_main 패턴으로 재구조화된다
-4. Python AI 서버에 sentry-sdk[fastapi,grpcio]가 추가되고 FastAPI 앱 생성 전에 init된다
-5. 모든 서비스에서 SENTRY_DSN 미설정 시 graceful degradation (크래시 없음)
-6. Web Vitals (LCP, CLS, INP)가 @sentry/nextjs에 의해 자동 수집된다
-
-**Plans**: 2 plans
-
-Plans:
-
-- [ ] 47-01-PLAN.md — Next.js @sentry/nextjs integration + Web Vitals + env config (OBS-01, OBS-02)
-- [ ] 47-02-PLAN.md — Rust sentry + Python sentry-sdk integration (OBS-01, OBS-03)
-
-### Phase 48: Test Coverage
-
-**Goal**: Vitest 유닛 테스트, Playwright E2E 테스트로 핵심 경로를 커버하고 data-testid를 체계적으로 마킹한다
-**Depends on**: Phase 46, Phase 47 (refactored components + observability)
-**Requirements**: REF-05, E2E-01, E2E-02, E2E-03, E2E-04
-**Success Criteria** (what must be TRUE):
-
-1. ThiingsGridPhysics 순수 함수(debounce, throttle, getDistance)에 Vitest 유닛 테스트가 통과한다
-2. playwright.config.ts가 bun dev를 사용하고 storageState 기반 인증 픽스처가 구축된다
-3. 로그인 플로우 + 메인 페이지 네비게이션 E2E 테스트가 작성된다
-4. AI 이미지 분석 파이프라인 E2E 테스트가 mocked backend으로 작성된다
-5. 4개 리팩토링된 컴포넌트 트리에 data-testid가 마킹된다
-
-**Plans**: 2 plans
-
-Plans:
-
-- [ ] 48-01-PLAN.md — Vitest unit tests + data-testid markup (REF-05, E2E-04)
-- [ ] 48-02-PLAN.md — Playwright config fix + auth fixture + E2E specs (E2E-01, E2E-02, E2E-03)
 
 ### Phase m8-01: Event Tracking Infrastructure
 
@@ -406,11 +292,128 @@ Plans:
 **Plans**: 3 plans
 
 
+### v10.0 Profile Page Completion
+
+**Milestone Goal:** 프로필 페이지의 미구현 기능을 모두 완성 — Auth guard, 공개 프로필, 팔로우 시스템(read), Tries/Saved 탭을 실제 데이터로 연결
+
+### Phase 44: Auth Guard
+
+**Goal**: 미로그인 유저가 `/profile` 접근 시 로그인 페이지로 리다이렉트되고, 로그인 후 원래 URL로 복귀한다
+**Depends on**: Nothing (first phase of v10.0)
+**Requirements**: AUTH-01, AUTH-02
+**Success Criteria**:
+
+1. 미로그인 유저가 `/profile` 접근 시 `/login?redirect=/profile`로 리다이렉트된다
+2. `ProfileClient.tsx`에서 401 에러 시 에러 UI 대신 로그인 페이지로 리다이렉트된다
+3. 로그인 완료 후 `redirect` 파라미터의 URL로 복귀된다
+4. 이미 로그인된 유저는 기존과 동일하게 프로필 페이지 접근 가능
+
+Plans:
+
+- [ ] 44-01-PLAN.md — proxy.ts matcher 확장 + ProfileClient 401 핸들링 리다이렉트
+
+### Phase 45: Public User Profile Route
+
+**Goal**: `/profile/[userId]`에서 다른 유저의 공개 프로필을 조회할 수 있고, 비공개 항목은 숨김 처리된다
+**Depends on**: Phase 44
+**Requirements**: ROUTE-01, ROUTE-02
+**Success Criteria**:
+
+1. `/profile/[userId]`에서 해당 유저의 프로필(아바타, 닉네임, 바이오, 통계)이 표시된다
+2. 자신의 프로필에는 수정 버튼, 타인 프로필에는 수정 버튼 숨김
+3. 비공개 항목(Saved 탭, Ink 크레딧, 프로필 수정)이 타인 프로필에서 숨겨진다
+4. 존재하지 않는 userId 접근 시 404 또는 에러 UI가 표시된다
+
+Plans:
+
+- [ ] 45-01-PLAN.md — app/profile/[userId]/page.tsx + PublicProfileClient + 비공개 항목 분기
+
+### Phase 46: Follow System Backend
+
+**Goal**: `user_follows` 테이블과 Follow count API가 구현되어 팔로워/팔로잉 수를 조회할 수 있다
+**Depends on**: Nothing (independent backend work)
+**Requirements**: FLLW-01, FLLW-02, FLLW-03
+**Success Criteria**:
+
+1. Supabase `user_follows` 테이블이 마이그레이션으로 생성된다 (follower_id, following_id, created_at)
+2. `GET /api/v1/users/{userId}/followers/count`와 `GET /api/v1/users/{userId}/following/count`가 정확한 수를 반환한다
+3. `UserResponse`에 `followers_count`, `following_count` 필드가 포함된다
+4. RLS 정책이 적용되어 모든 유저가 count를 조회할 수 있다
+
+Plans:
+
+- [ ] 46-01-PLAN.md — Supabase 마이그레이션 + Rust 핸들러 + UserResponse 확장
+
+### Phase 47: Follow System Frontend
+
+**Goal**: 프론트엔드에서 실제 팔로워/팔로잉 수가 표시되고 하드코딩이 제거된다
+**Depends on**: Phase 46
+**Requirements**: FLLW-04, FLLW-05
+**Success Criteria**:
+
+1. OpenAPI spec 업데이트 + Orval 재생성으로 follow 관련 hook이 자동 생성된다
+2. `FollowStats.tsx`의 하드코딩 값(`1234`/`567`)이 제거되고 실제 API 데이터가 표시된다
+3. 공개 프로필에서도 해당 유저의 팔로워/팔로잉 수가 표시된다
+
+Plans:
+
+- [ ] 47-01-PLAN.md — OpenAPI spec 반영 + Orval 재생성 + FollowStats 실데이터 연결
+
+### Phase 48: Tries & Saved Backend
+
+**Goal**: Tries/Saved list API 엔드포인트가 구현되어 프론트엔드에서 페이지네이션 데이터를 조회할 수 있다
+**Depends on**: Phase 44
+**Requirements**: TRIES-01, TRIES-02, SAVED-01, SAVED-02
+**Success Criteria**:
+
+1. `GET /api/v1/users/me/tries`가 `user_tryon_history` 기반 페이지네이션 응답을 반환한다
+2. `GET /api/v1/users/me/saved`가 `saved_posts` 기반 페이지네이션 응답을 반환한다
+3. OpenAPI spec 반영 + Orval 재생성으로 `useGetMyTries`, `useGetMySaved` hook이 생성된다
+4. 두 엔드포인트 모두 `page`, `per_page` 쿼리 파라미터를 지원한다
+
+Plans:
+
+- [ ] 48-01-PLAN.md — Rust tries/saved 핸들러 + DTOs + service + openapi.rs (TRIES-01, SAVED-01)
+- [ ] 48-02-PLAN.md — OpenAPI spec 업데이트 + Orval 재생성 (TRIES-02, SAVED-02)
+
+### Phase 49: Tries Tab Frontend
+
+**Goal**: Tries 탭이 실제 VTON 히스토리를 무한스크롤로 표시하고 스텁 코드가 완전 제거된다
+**Depends on**: Phase 48
+**Requirements**: TRIES-03, TRIES-04, TRIES-05
+**Success Criteria**:
+
+1. `TriesGrid.tsx` 타입이 실제 테이블 스키마와 일치한다 (`image_url`, `item_count` 제거)
+2. 생성된 hook 기반 무한스크롤로 실제 데이터가 표시된다
+3. 스텁 코드(`fetchMyTries → []`)가 완전히 제거된다
+4. 빈 상태/로딩/에러 상태가 올바르게 처리된다
+
+Plans:
+
+- [ ] 49-01-PLAN.md — TriesGrid 리라이트 + useInfiniteQuery + 스텁 제거
+
+### Phase 50: Saved Tab Frontend
+
+**Goal**: Saved 탭이 실제 저장된 포스트를 무한스크롤로 표시하고 모든 mock 데이터가 제거된다
+**Depends on**: Phase 48
+**Requirements**: SAVED-03, SAVED-04, SAVED-05
+**Success Criteria**:
+
+1. `SavedGrid.tsx`가 생성된 hook 기반으로 재구현된다
+2. `collectionStore.ts`의 MOCK_PINS/MOCK_BOARDS가 완전히 제거된다
+3. 무한스크롤로 다음 페이지가 자동 로드된다
+4. 빈 상태에서 "저장한 포스트가 없습니다" 안내가 표시된다
+
+Plans:
+
+- [ ] 50-01-PLAN.md — SavedGrid 리라이트 + collectionStore mock 제거 + useInfiniteQuery
+
 ## Progress
 
 **Execution Order:**
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
 v9.0: 39 → 40 → 41 → 42 → 43
+v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
@@ -429,13 +432,15 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
-| 44: Memory Leak Prevention                    | v10.0     | 0/3            | Planning done | -          |
-| 45: Security Foundation                       | v10.0     | 0/2            | Planning done | -          |
-| 46: Component Refactoring                     | v10.0     | 0/3            | Planning done | -          |
-| 47: Observability                             | v10.0     | 0/2            | Planning done | -          |
-| 48: Test Coverage                             | v10.0     | 0/TBD          | Not started   | -          |
+| 44: Auth Guard                                | v10.0     | 0/1            | Not started   | -          |
+| 45: Public User Profile Route                 | v10.0     | 0/1            | Not started   | -          |
+| 46: Follow System Backend                     | v10.0     | 0/1            | Not started   | -          |
+| 47: Follow System Frontend                    | v10.0     | 0/1            | Not started   | -          |
+| 48: Tries & Saved Backend                     | v10.0     | 0/2            | Not started   | -          |
+| 49: Tries Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
+| 50: Saved Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-26 (Phase 47 planned — 2 plans, 1 wave)_
+_Last updated: 2026-03-23 (v9.0 Phases 39-43 added, 28 requirements mapped)_

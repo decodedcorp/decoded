@@ -1,234 +1,210 @@
 # Feature Research
 
-**Domain:** Tech debt resolution — production stability for a Next.js 16 + Rust/Axum + Python AI monorepo
+**Domain:** Social fashion discovery platform — profile page completion (v10.0)
 **Researched:** 2026-03-26
-**Confidence:** HIGH (codebase audit completed, CONCERNS.md sourced, patterns verified against known production standards)
+**Confidence:** HIGH (OpenAPI spec analysis + existing codebase inspection + industry patterns from Instagram/Pinterest/Weverse)
 
-## Context: What This Milestone Resolves
+## Context: What Already Exists
 
-The decoded-monorepo has shipped through v9.0 with a well-structured multi-service architecture
-(Next.js 16, Rust/Axum, Python gRPC AI). The codebase audit in `.planning/codebase/CONCERNS.md`
-identified concrete gaps between the current state and production readiness. This milestone targets
-those gaps — not new features, but stability, observability, and correctness.
+The profile page (`/profile`) has a working foundation built in prior milestones:
 
-**Five concern areas from the audit:**
+- **Profile header, bio, stats** (Posts/Solutions/Points) — real API data via `useMe`, `useUserStats`
+- **Activity tabs** — Posts, Spots, Solutions with infinite scroll via `useUserActivities` — real API connected
+- **Profile edit modal** — name, bio, avatar URL via `PATCH /api/v1/users/me`
+- **Style DNA, Ink credits, Try-on count** — Supabase direct queries via `useProfileExtras`, `useTryOnCount`
+- **BadgeGrid, RankingList** — real API via `useMyBadges`, `useMyRanking`
+- **ProfileClient orchestrator, profileStore Zustand, useProfile hooks** — architecture in place
 
-1. **Rate limiting** — `POST /api/v1/posts/analyze` is unauthenticated and unprotected
-2. **Error tracking** — errors only reach console; no production visibility
-3. **E2E testing** — Playwright is installed but zero test files exist
-4. **Component refactoring** — 4 files exceed 600 LOC with tightly coupled animation + state
-5. **Memory leak prevention** — `URL.createObjectURL` leaks, GSAP context not guaranteed to clean up
+**What is stub/unconnected:**
+- `TriesGrid` — fetches from a `TODO: replace with real API` stub that returns `[]`
+- `SavedGrid` — uses `collectionStore` local state (no API persistence)
+- `FollowStats` — renders hardcoded `1234 followers / 567 following` mock values
+- `/profile/[userId]` route — does not exist; `GET /api/v1/users/{user_id}` endpoint exists but no UI
+- Auth guard on `/profile` — page renders regardless of login state; no redirect
+
+**Critical backend finding:** No follow, saved-posts, or VTON-tries endpoints exist in the current OpenAPI spec (`packages/api-server/openapi.json`). This is the primary constraint for v10.0.
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Must Have for Production Readiness)
+### Table Stakes (Users Expect These)
 
-Features required before any production traffic is acceptable. Missing these means the app cannot
-be safely operated.
+Features users assume exist in any social discovery platform. Missing = product feels broken.
 
-| Feature | Why Required | Complexity | Notes |
+| Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Rate limiting on analyze endpoint** | `POST /api/v1/posts/analyze` is unauthenticated. Repeated calls drain AI backend costs with no defense. One abusive client can render the service unavailable. | MEDIUM | Implement at the Next.js route handler layer using an in-memory or Redis-backed window. The Rust backend has `moka` in-memory cache already; preferred location is Next.js middleware so it runs before the proxy. Use Upstash Ratelimit (`@upstash/ratelimit`) on Vercel or a sliding window with `lru-cache` if self-hosted. |
-| **Structured error handling in API proxy** | All `/app/api/v1/**` route handlers currently swallow backend errors and return generic 500. Validation errors (422), auth errors (401), and rate limit responses (429) from the Rust backend are invisible to the client. | MEDIUM | Create a shared `proxyHandler` utility that reads `response.status` and `response.json()` from the upstream Rust API, then re-emits the same status + body to the browser. Eliminates the need to debug two layers for every error. See `CONCERNS.md` §3. |
-| **Remove debug logging from production paths** | `ImageDetailModal.tsx` logs `imageId`, `image`, and `error` in a `useEffect` with no `NODE_ENV` guard. Auth store and proxy routes log full error objects. In-browser visibility of session state and backend URLs is a security concern. | LOW | Wrap all `console.log` calls in `if (process.env.NODE_ENV === 'development')`. For API routes, replace `console.error(error)` with `console.error(error.message)` at minimum. Next.js strips `development`-only branches during production build. |
-| **Environment variable validation at startup** | Two env var names exist for the same backend URL (`API_BASE_URL` server-side, `NEXT_PUBLIC_API_BASE_URL` client-side). Missing values fail silently (default empty string). One misconfigured deployment produces hard-to-diagnose failures. | LOW | Create `packages/web/lib/config/env.ts` that throws at module load time if required server-side vars are absent. `NEXT_PUBLIC_*` vars cannot be validated at runtime on the server side, but a startup check in the custom server or a Next.js instrumentation hook (`instrumentation.ts`) covers server vars. |
-| **Memory leak prevention: URL.createObjectURL** | `requestStore.ts` creates preview URLs via `URL.createObjectURL()` but relies on the caller invoking `clearImages()`. If the user navigates away mid-upload, error paths skip the `revoke()` call, leaking memory. On low-RAM devices this causes tab crashes over extended sessions. | MEDIUM | Wrap `createObjectURL` in a `useEffect` cleanup inside the component that creates the preview. The store should own tracking only (Set of active URLs); the React component guarantees revoke via `return () => URL.revokeObjectURL(url)` in the useEffect. Add a `beforeunload` listener as a final safety net. See `CONCERNS.md` §Fragile Area 2. |
-| **GSAP context cleanup in modal** | `ImageDetailModal.tsx` creates a GSAP context in `useEffect` but cleanup is not guaranteed if the component unmounts during animation. Rapid open/close cycles produce conflicting animation states. | MEDIUM | Replace ad hoc `gsap.context()` in `useEffect` with `useGSAP()` from `@gsap/react`. The hook handles context creation and `revert()` on unmount automatically. Kill tweens on unmount via `context.revert()` in the cleanup return. See `CONCERNS.md` §Fragile Area 3. |
+| **Auth guard on /profile** | Any profile page behind authentication is standard. Unauthenticated access to personal data is confusing and insecure. | LOW | `proxy.ts` pattern already exists for `/admin`. Mirror it: add `/profile` matcher, redirect to `/login` (or `/`) if no session. Can also do client-side check in `ProfileClient` using `authStore.isInitialized + authStore.user`. |
+| **Tries tab — real data** | Users who ran virtual try-on expect to see their results in history. Empty state with no connection reads as broken, not empty. | MEDIUM | `GET /api/v1/users/me/tries` does NOT exist in current OpenAPI spec. Three options: (1) add endpoint to Rust backend, (2) query Supabase `vton_results` table directly (same pattern as `useTryOnCount`), (3) disable the tab visibly until endpoint exists. Option 2 is fastest for v10.0. |
+| **Saved tab — real data** | Bookmarking/saving items is a core behavior on fashion discovery platforms (Pinterest, Instagram saves). Currently uses local `collectionStore` with no persistence — data is lost on refresh. | MEDIUM | `GET /api/v1/users/me/saved` does NOT exist in OpenAPI spec. Supabase likely has a `saved_posts` or `bookmarks` table. Direct Supabase query (same pattern as `profileExtras`) is the pragmatic path. Needs API design decision. |
+| **Followers / Following counts — real data** | Any social platform shows social graph counts. Hardcoded `1234/567` breaks trust immediately. | LOW | `GET /api/v1/users/me` (`UserResponse`) needs to include `followers_count` and `following_count` fields — check if they exist in the model. If not in the response, a Supabase direct count query is an acceptable interim solution. |
+| **Other user profile `/profile/[userId]`** | Clicking on any username/avatar in Posts, Solutions, Comments expects a profile page. Without it, the discovery loop is broken — you can find items but not explore the person who posted them. | MEDIUM | `GET /api/v1/users/{user_id}` exists in OpenAPI spec. Route `/profile/[userId]` needs a new page and a `UserProfileClient` variant. The existing `ProfileClient` must be refactored to accept an optional `userId` prop or split into two components. |
+| **Own vs. other profile differentiation** | On your own profile: edit button, settings, private tabs (Tries/Saved). On others' profiles: follow button, no edit, no private tabs. | MEDIUM | Standard social pattern. `ProfileHeader` and action buttons must check `userId === currentUser.id`. The auth guard scope differs: `/profile` requires login; `/profile/[userId]` is public (or requires login for follow action only). |
+| **Infinite scroll on Tries/Saved tabs** | Posts/Spots/Solutions already use infinite scroll. Inconsistency on the same page tabs feels like a bug. | LOW | Already have `useInfiniteQuery` pattern from existing tabs. Once API or Supabase query is in place, wiring to the existing scroll infrastructure is LOW complexity. |
 
----
+### Differentiators (Competitive Advantage)
 
-### Differentiators (Advanced Observability and Quality)
-
-Features that raise operational quality above baseline. Not required for day-one production, but
-critical for sustainable operation beyond the first few weeks of real traffic.
+Features that enhance the decoded-specific value proposition — not required by convention, but valued by users on a K-pop fashion discovery platform.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Sentry error tracking (frontend)** | Currently errors only appear in browser console — invisible to the team once the user closes the tab. Sentry captures exceptions with stack traces, user context, and release version. Enables error trend detection and regression alerts. | MEDIUM | `@sentry/nextjs` wraps Next.js App Router with zero-config error boundaries. Initialize in `instrumentation.ts` for server-side, `sentry.client.config.ts` for browser. Enable `tracesSampleRate: 0.1` for performance tracing. Scrub PII (user email, tokens) via `beforeSend`. |
-| **Sentry error tracking (Rust API)** | The Rust/Axum backend has `tracing` + `tracing-subscriber` configured but no external sink. Errors are visible in server logs only when someone is watching. Production incidents cause silent data corruption or timeouts without alerting. | MEDIUM | Add `sentry` crate (`0.34+`) to `packages/api-server/Cargo.toml`. Initialize in `main.rs` before Axum starts. Use `sentry-tower` middleware to attach trace context to HTTP requests. Captures panics, `tracing::error!` events, and unhandled Axum errors. |
-| **Web Vitals monitoring** | Next.js 16 exposes Core Web Vitals (LCP, FID, CLS) via `reportWebVitals`. Without capturing these, performance regressions from new animation or bundle additions go undetected until user complaints. | LOW | Implement `packages/web/app/reportWebVitals.ts`. Send to Sentry performance or a custom analytics endpoint. LCP target: <2.5s. CLS target: <0.1. The GSAP + Lenis + Spline stack makes CLS monitoring especially important. |
-| **E2E test coverage for critical user paths** | Playwright is installed at v1.58 but no test files exist. PRs that break auth, upload, or image detail have no automated catch. Zero tests means every regression is caught by a human in review. | HIGH | Write tests covering: (1) auth flow (OAuth redirect → session cookie), (2) image upload → analysis → result display, (3) post detail modal open/close/escape. These three flows cover the highest-impact user paths. See `CONCERNS.md` §Testing Gaps for all 6 untested critical paths. |
-| **Vitest unit tests for stores and utilities** | `requestStore.ts` (433 lines, 4-step state machine) has no tests. Invalid step transitions are only caught manually. `authStore` OAuth flow has no coverage. Type conversion utilities (`apiToStoreCoord`) have no edge case tests. | HIGH | Write tests for: `requestStore` step transition guards, `authStore` session init and error recovery, `apiToStoreCoord` edge cases (0%, 100%, decimal precision). Vitest 4.1 is installed; add `packages/web/__tests__/` directory. Mock Supabase with `vi.mock('@supabase/supabase-js')`. |
-| **Component refactor: ThiingsGrid extraction** | `ThiingsGrid.tsx` (948 lines) embeds a custom physics engine (velocity, friction, grid cell management) inside the React component. Changes to either physics or rendering require understanding both simultaneously. High regression risk. | HIGH | Extract physics engine to `lib/utils/thiingsGridPhysics.ts` (pure class, no React imports). Component becomes a thin layer that calls physics utilities. Enables unit testing physics logic independently. See `CONCERNS.md` §Tech Debt 1. |
-| **Component refactor: ImageDetailModal animation extraction** | `ImageDetailModal.tsx` (637 lines) mixes GSAP timeline orchestration, drawer state machine, scroll forwarding, and JSX rendering. The GSAP context issue and scroll forwarding bug (`CONCERNS.md` §Fragile Area 3+4) are symptoms of this entanglement. | HIGH | Extract animation logic to `useDrawerAnimation(ref, isOpen)` custom hook. Extract drawer state transitions to `useDrawerState()`. The main component file drops to <200 lines of JSX + props. Fixes the GSAP cleanup issue as a side effect. |
-| **Bundle size monitoring in CI** | Three.js (`DecodedLogo.tsx`), GSAP, full lucide-react, and react-icons are loaded without tree-shaking verification or CI guards. No visibility into regressions as new dependencies are added. | MEDIUM | Add `size-limit` as a dev dependency. Configure thresholds in `.size-limit.json` (e.g., main bundle < 500KB gzipped). Add `bun run size` to CI after build. Configure lazy loading for `DecodedLogo` (`next/dynamic` with `ssr: false`). |
-| **WebGL fallback for DecodedLogo** | `DecodedLogo.tsx` uses Three.js with WebGL. In-app browsers (Instagram, KakaoTalk, LINE) frequently disable WebGL. No capability detection means the logo silently fails to render for a portion of Korean social app users — the primary target demographic. | MEDIUM | Add `canvas.getContext('webgl')` detection. Wrap in `<ErrorBoundary>` to catch Three.js initialization errors. Provide an SVG or static image `<img>` fallback that renders when WebGL is unavailable. |
+| **Follow button with optimistic update** | Standard platforms (Instagram, Twitter) update the button instantly and reconcile later. Decoded's social layer is nascent — a polished follow interaction establishes credibility. | MEDIUM | Requires `POST /api/v1/users/{user_id}/follow` and `DELETE /api/v1/users/{user_id}/follow` endpoints (not in current spec). Optimistic update via React Query `useMutation` with `onMutate` / `onError` rollback is the pattern. |
+| **Followers/Following modal list** | Clicking the follower/following count opens a list of user avatars with follow buttons — same as Instagram. Reinforces the social graph and drives discovery. | HIGH | Requires `GET /api/v1/users/{user_id}/followers` and `/following` endpoints (not in spec). Deferred unless backend is extended. |
+| **Try-on result detail view** | Tapping a VTON result card in the Tries tab shows full-screen result with the source post link. Closes the loop between discovery and try-on. | LOW | Once Tries tab has real data, adding a tap-to-expand behavior is pure UI — no new API needed beyond the result URL already returned. |
+| **Saved tab sub-tabs (Pins/Boards/Collage)** | `SavedGrid` already has `Pins/Boards/Collage` sub-tab UI implemented via `collectionStore`. Connecting this to persistent API data would make decoded's curation system a differentiator vs. flat bookmarks on other platforms. | HIGH | Requires board/collection API endpoints (not in spec). The UI is built; the backend is the blocker. For v10.0, persist pins to Supabase directly; defer Boards/Collage to a collections milestone. |
+| **Public profile shareable URL** | `/profile/[userId]` with proper `og:image`, `og:title` metadata makes profiles shareable on KakaoTalk, Instagram stories. K-pop fan culture is highly share-driven. | LOW | Once `/profile/[userId]` page exists, adding `generateMetadata` with user name/avatar is trivial — pure Next.js SSR metadata. High social/discovery value for LOW cost. |
 
----
-
-### Anti-Features (Do Not Build at This Stage)
-
-Features that seem appropriate for a tech debt milestone but create more problems than they solve.
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **XState for RequestStore state machine** | `requestStore.ts` has invalid state transition risk. XState would formalize the 4-step flow with explicit guards. | XState adds ~23KB to bundle, requires learning a new paradigm, and the current store's issues are fixable with input validation guards in Zustand without a full state machine library. Converting mid-milestone introduces high regression risk. | Add Zod validation at each `setStep()` call in the existing Zustand store. Guard `startDetection()` to require step 1 complete. Guard `setRevealReady()` to require step 2 complete. Same correctness, zero new dependency. |
-| **Immer middleware for Zustand** | `requestStore.ts` mutation risk (spots mutated after `setDetectedSpots`). Immer would enforce immutability. | Immer adds bundle weight and changes how all store updates are written. The actual risk is one function without deep clone. Over-engineering for an isolated issue. | Add `structuredClone(spots)` in `setDetectedSpots()` and add `Readonly<DetectedSpot[]>` to the type signature. Resolves the specific issue without middleware migration. |
-| **Full CI/CD pipeline with deploy automation** | The codebase lacks a CI/CD pipeline entirely. Seems adjacent to tech debt. | Deploy automation involves infrastructure decisions (Vercel vs self-hosted), secret management, and environment promotion that are out of scope for a stability milestone. Rushing this creates security gaps. | Scope CI to build + lint + typecheck + test only. Gate PR merges on passing CI. Deploy automation is a separate infrastructure milestone. |
-| **Sentry Session Replay** | Session Replay provides video-like reproduction of user issues. Sounds valuable. | Session Replay captures DOM content including potentially sensitive K-pop/fashion content and user-generated data. PII scrubbing is non-trivial. Adds ~25KB to the bundle. The decoded app's primary issue is unreported errors, not reproduction difficulty. | Enable Sentry error tracking first. Add breadcrumbs and user context tags. Only consider Session Replay after error volume is characterized and a specific reproduction gap is identified. |
-| **LogRocket or FullStory as Sentry alternative** | More product analytics features. | LogRocket and FullStory are session recording tools with error monitoring as a secondary feature. Sentry is purpose-built for error tracking and has a free tier suitable for current scale. Adding a product analytics tool at tech debt stage conflates error observability with product analytics. | Use Sentry for errors + performance. Use dedicated product analytics (PostHog, Mixpanel) as a separate initiative when product-market fit decisions require behavioral data. |
-| **Replacing Playwright with Cypress** | Some developers prefer Cypress DX. | Playwright 1.58 is already installed and configured. The project already has 40 visual QA tests written for Playwright. Migrating to Cypress would throw away existing infrastructure and tests for subjective DX preference. | Write the E2E tests in Playwright, the installed framework. Add a `playwright.config.ts` that covers the critical paths before expanding scope. |
-| **Full component storybook** | Isolated component development and documentation. | Storybook setup requires significant configuration for Next.js App Router and GSAP animation dependencies. It is not a prerequisite for the refactoring work. The existing 45-component design system has its own Visual QA suite. | Write Vitest tests for logic extracted from components during refactoring. Storybook is a documentation tool; address it as a dedicated documentation milestone after the design system stabilizes further. |
+| **Real-time follower count updates (WebSocket)** | Social platforms show live counts. Feels modern and engaging. | WebSocket infrastructure does not exist. Adding it for a count that changes infrequently adds significant backend complexity for minimal UX gain. | Poll on page focus (`refetchOnWindowFocus: true` in React Query). Count is fresh on return. |
+| **Block/mute user system** | Standard moderation on social platforms. | Requires complex relationship table, UI flows, and content filtering logic across every content feed. Out of scope for a follow-system MVP. | File user report (simpler) if moderation is needed. |
+| **Mutual follow / "friends" detection** | Instagram-style mutual follow badge feels personalized. | Requires backend join query across the follow graph. Adds complexity to the `UserResponse` shape without adding core discovery value. | Show simple follow state (following/not following). Add mutual detection in a later iteration. |
+| **Offline profile caching (PWA)** | Profile data should work offline. | Next.js SSR + Supabase auth make full offline mode non-trivial. Service worker conflicts with auth token refresh. | React Query's `staleTime` + `gcTime` provide adequate perceived performance without full offline. |
+| **Bulk follow import from other platforms** | "Follow everyone from your Instagram/Twitter" feature. | Requires OAuth integrations with third-party platforms and a matching algorithm. Scope is a separate milestone, not part of profile completion. | Manual search-and-follow. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Environment Variable Validation]
-    └──required-before──> [Rate Limiting] (rate limiter config reads env vars)
-    └──required-before──> [Sentry Setup] (DSN is an env var)
+[Auth Guard on /profile]
+    └──required-for──> [Tries Tab real data]   (must know who is "me")
+    └──required-for──> [Saved Tab real data]   (must know who is "me")
+    └──required-for──> [Follow button on /profile/[userId]]  (must know current user)
 
-[Remove Debug Logging]
-    └──required-before──> [Sentry Setup]
-    (Sentry captures console.error calls; unguarded debug logs create noise in Sentry)
+[GET /api/v1/users/{user_id} — already in OpenAPI spec]
+    └──required-by──> [/profile/[userId] page]
+    └──enhances──> [Followers/Following real counts] (if fields added to UserResponse)
 
-[Structured Error Handling in Proxy]
-    └──required-before──> [Sentry Frontend Error Tracking]
-    (errors swallowed at proxy level never surface to Sentry)
+[Tries Tab — Supabase direct OR new endpoint]
+    └──requires──> [vton_results Supabase table accessible to current user]
+    └──enables──> [Try-on result detail view]
 
-[GSAP Cleanup Fix (useGSAP migration)]
-    └──required-before──> [ImageDetailModal Refactor]
-    (extraction of animation hook only makes sense after cleanup semantics are correct)
+[Saved Tab — Supabase direct OR new endpoint]
+    └──requires──> [saved_posts or bookmarks Supabase table]
+    └──enables──> [Saved Pins persistence]
+    └──enables-later──> [Boards/Collage sub-tabs]
 
-[Memory Leak Fix: URL.createObjectURL]
-    └──independent──> [all other features]
+[/profile/[userId] page]
+    └──requires──> [GET /api/v1/users/{user_id}]  (already in spec)
+    └──enables──> [Public shareable URL with og: metadata]
+    └──enables──> [Follow button]
+    └──requires──> [Own vs. other differentiation logic]
 
-[Rate Limiting on analyze endpoint]
-    └──enhances──> [Structured Error Handling] (429 must propagate correctly)
+[Follow button]
+    └──requires──> [POST/DELETE /api/v1/users/{user_id}/follow]  (NOT in current spec — backend work required)
+    └──requires──> [/profile/[userId] page]
+    └──enables──> [Followers/Following list modal]
 
-[Vitest Unit Tests: requestStore]
-    └──required-before──> [RequestStore State Machine Guards]
-    (tests verify the guards work after implementation)
-
-[E2E Tests: upload flow]
-    └──required-after──> [Memory Leak Fix]
-    (upload E2E exercises the exact code path with URL.createObjectURL)
-
-[Component Refactor: ThiingsGrid]
-    └──enables──> [Vitest Unit Tests: physics engine]
-    (pure utility class is testable; React component is not)
-
-[Component Refactor: ImageDetailModal]
-    └──requires──> [GSAP Cleanup Fix]
-    └──enables──> [Vitest Unit Tests: drawer state]
-
-[Bundle Size Monitoring]
-    └──requires──> [CI pipeline (build step exists)]
-    └──enhances──> [Component Refactors] (validates refactors don't increase bundle)
-
-[WebGL Fallback for DecodedLogo]
-    └──independent──> [all other features]
-    └──note──> [prioritize only if in-app browser traffic is significant]
+[Followers/Following real counts in FollowStats]
+    └──requires──> [UserResponse includes followers_count + following_count fields]
+    └──OR──> [Direct Supabase count query on follows table]
 ```
 
 ### Dependency Notes
 
-- **Env validation and debug logging cleanup are prerequisites for Sentry.** Sentry configured before these are fixed produces noisy, low-value error reports that train the team to ignore alerts.
-- **Proxy error forwarding must precede frontend error tracking.** If backend errors are swallowed at the proxy layer, Sentry only sees "generic 500" — the same information you have today, just with more infrastructure overhead.
-- **GSAP cleanup (useGSAP migration) must precede the ImageDetailModal refactor.** Extracting animation logic into a custom hook while the cleanup semantics are broken means the extracted hook inherits the bug.
-- **Component refactors are independent of observability features.** They can proceed in parallel with Sentry/rate limiting work across different team members or phases.
-- **E2E tests should be written after the fragile areas are fixed**, not before. Writing a test against a leaking component verifies broken behavior — write tests to verify fixes.
+- **Auth guard is the simplest feature but unlocks everything.** It must be Phase 1. It takes 1-2 hours using the existing `proxy.ts` pattern.
+- **Tries and Saved tabs have no backend endpoints.** Both depend on Supabase direct queries as the v10.0 approach. This is consistent with how `useTryOnCount` and `profileExtras` already work.
+- **`/profile/[userId]` has a backend endpoint** (`GET /api/v1/users/{user_id}`). This is the highest-value unblocked feature — it only needs a new Next.js route and a refactored `ProfileClient`.
+- **Follow system is fully blocked on backend.** No follow endpoints exist in the OpenAPI spec. The UI (`FollowStats` buttons are already rendered) is ready but non-functional until the Rust backend exposes follow endpoints. For v10.0, focus on read-only real counts; write operations (follow/unfollow) belong to a follow-system milestone unless the backend is extended in parallel.
+- **FollowStats hardcoded values** are the lowest-trust element on the current profile. Even if a proper follow system isn't built, replacing mock values with real counts (even from a Supabase direct query) is a high-trust, low-cost fix.
 
 ---
 
 ## MVP Definition
 
-### Launch With (Phase 1: Safety Foundation)
+This is a subsequent milestone — not a greenfield MVP. "Launch with" means "complete for v10.0 profile completion."
 
-The minimum changes needed to make the app safe for real production traffic.
+### Launch With (v10.0)
 
-- [ ] **Rate limiting on `POST /api/v1/posts/analyze`** — prevent AI cost abuse
-- [ ] **Remove unguarded debug logging** — security and console hygiene
-- [ ] **Environment variable validation at startup** — prevent silent misconfiguration
-- [ ] **Memory leak fix: URL.createObjectURL** — prevent tab crashes on extended sessions
-- [ ] **GSAP context cleanup (useGSAP migration)** — prevent animation conflicts on rapid navigation
+Minimum to call the profile page "complete" — no stub data, no broken tabs.
 
-### Add After Safety Foundation (Phase 2: Observability)
+- [ ] **Auth guard on `/profile`** — redirect unauthenticated users to `/login` (or `/`). Uses existing `proxy.ts` middleware pattern. Blocks unauthorized access to private profile data.
+- [ ] **Tries tab — Supabase direct query** — replace `fetchMyTries` stub with real query against `vton_results` table. Infinite scroll using existing `useInfiniteQuery` pattern. Empty state remains if table is empty.
+- [ ] **Saved tab — Supabase direct query** — persist pins from `collectionStore` to Supabase `saved_posts` / `bookmarks` table. Load on mount. Replace local-only state with real data.
+- [ ] **Followers/Following real counts** — check if `UserResponse` from `GET /api/v1/users/me` includes counts. If yes, wire to `FollowStats`. If no, Supabase direct count as fallback. Remove hardcoded mock values.
+- [ ] **`/profile/[userId]` page** — new `app/profile/[userId]/page.tsx` + `UserProfileClient.tsx`. Fetches `GET /api/v1/users/{user_id}`. Shows public info (avatar, name, bio, stats, posts). No private tabs (Tries/Saved). Edit button hidden. Follow button placeholder (non-functional until backend extends).
 
-Add once the app is safe to operate and the signal-to-noise ratio in production is acceptable.
+### Add After Validation (v10.x)
 
-- [ ] **Sentry frontend error tracking** — gain visibility into production errors
-- [ ] **Sentry Rust API error tracking** — correlate frontend errors with backend causes
-- [ ] **Structured proxy error handling** — ensure Sentry sees real error codes, not generic 500s
-- [ ] **Web Vitals reporting** — detect performance regressions
+Add once v10.0 is confirmed working in production.
 
-### Add After Observability (Phase 3: Quality)
+- [ ] **Follow/unfollow action** — trigger: backend exposes `POST/DELETE /api/v1/users/{user_id}/follow`. Wire follow button with optimistic update.
+- [ ] **Followers/Following list modal** — trigger: backend exposes list endpoints. High social graph discovery value.
+- [ ] **Public profile og: metadata** — `generateMetadata` on `/profile/[userId]` with user avatar as og:image. Low cost once the page exists.
 
-Add once the team can observe what is breaking and has evidence of which paths need coverage.
+### Future Consideration (v11+)
 
-- [ ] **Vitest unit tests: requestStore and authStore** — verify state machine correctness
-- [ ] **E2E tests: auth flow + upload flow + modal** — regression catch for critical paths
-- [ ] **Component refactor: ThiingsGrid extraction** — reduce cognitive load for grid changes
-- [ ] **Component refactor: ImageDetailModal animation extraction** — reduce regression risk for modal
-- [ ] **Bundle size monitoring in CI** — prevent performance regressions from new dependencies
-- [ ] **WebGL fallback for DecodedLogo** — serve in-app browser users (Instagram, KakaoTalk)
+Defer until follow system backend is proven and collection system is scoped.
+
+- [ ] **Boards/Collage in Saved tab** — requires collection API endpoints. The UI is already built in `SavedGrid`; the backend is the blocker.
+- [ ] **Try-on result detail view** — tap-to-expand on Tries grid with source post link.
+- [ ] **Real-time follower counts** — only if WebSocket infrastructure is built.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User/Ops Value | Implementation Cost | Priority |
-|---------|---------------|---------------------|----------|
-| Rate limiting (analyze endpoint) | HIGH | MEDIUM | P1 |
-| Remove debug logging | HIGH | LOW | P1 |
-| Env variable validation | HIGH | LOW | P1 |
-| Memory leak fix (createObjectURL) | HIGH | MEDIUM | P1 |
-| GSAP cleanup (useGSAP migration) | HIGH | MEDIUM | P1 |
-| Structured proxy error handling | HIGH | MEDIUM | P1 |
-| Sentry frontend error tracking | HIGH | MEDIUM | P2 |
-| Sentry Rust API error tracking | HIGH | MEDIUM | P2 |
-| Vitest unit tests (stores) | HIGH | HIGH | P2 |
-| E2E tests (critical paths) | HIGH | HIGH | P2 |
-| Web Vitals reporting | MEDIUM | LOW | P2 |
-| Component refactor: ThiingsGrid | MEDIUM | HIGH | P2 |
-| Component refactor: ImageDetailModal | MEDIUM | HIGH | P2 |
-| Bundle size monitoring in CI | MEDIUM | MEDIUM | P2 |
-| WebGL fallback for DecodedLogo | MEDIUM | MEDIUM | P3 |
-| RequestStore state machine guards | MEDIUM | LOW | P2 |
-| Zustand immutability fix (structuredClone) | LOW | LOW | P2 |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Auth guard on `/profile` | HIGH | LOW | P1 |
+| Followers/Following real counts | HIGH | LOW | P1 |
+| `/profile/[userId]` public page | HIGH | MEDIUM | P1 |
+| Tries tab real data (Supabase) | MEDIUM | MEDIUM | P1 |
+| Saved tab real data (Supabase) | MEDIUM | MEDIUM | P1 |
+| Follow/unfollow button (write) | HIGH | HIGH (backend blocked) | P2 |
+| Public og: metadata on user profiles | MEDIUM | LOW | P2 |
+| Followers/Following list modal | MEDIUM | HIGH (backend blocked) | P3 |
+| Try-on result detail view | LOW | LOW | P3 |
+| Boards/Collage API persistence | MEDIUM | HIGH (backend blocked) | P3 |
 
 **Priority key:**
-- P1: Must have before real production traffic
-- P2: Should have, ship when P1 is complete
-- P3: Nice to have, schedule after milestone validates
+- P1: Required for v10.0 — profile completion milestone is incomplete without these
+- P2: Ship when backend is extended — high value, waiting on follow API
+- P3: Future milestone — meaningful but not blocking
+
+---
+
+## Competitor Feature Analysis
+
+Reference platforms: Instagram (follow system), Pinterest (saved/boards), Weverse (K-pop fan profiles), LikeToKnowIt (fashion discovery).
+
+| Feature | Instagram | Pinterest | Weverse | Our Approach |
+|---------|-----------|-----------|---------|--------------|
+| Follow counts | Real-time, prominent in header | Shown on profile, secondary | Shown with artist/fan split | Real counts from API/Supabase in `FollowStats` component (already UI-ready) |
+| Saved/Bookmarks | Private by default, flat list | Boards (public/private), sub-boards | Fan-made "Universe" collections | Saved tab with Pins (flat) for v10.0; Boards deferred |
+| Try-on/AR history | Instagram filter history (camera) | No equivalent | No equivalent | VTON results grid — decoded-specific differentiator |
+| Public user profile | Full public profile, all posts | Public boards, pins | Artist profiles public, fan profiles limited | Public posts + bio; Tries/Saved hidden; follow button |
+| Auth gate | Public browsing allowed; account needed for actions | Public browsing allowed | Account required for all content | `/profile/[userId]` is public; `/profile` (own) requires auth |
+| Own vs. other | Edit button appears only on own profile | Follows/edit only on own | N/A | `userId === currentUser.id` guard in `ProfileHeader` |
 
 ---
 
 ## Existing Code Impact Map
 
-Files and directories directly affected by this milestone's work.
-
-| File / Directory | Issue | Action |
-|-----------------|-------|--------|
-| `packages/web/app/api/v1/posts/analyze/route.ts` | No auth, no rate limiting | Add rate limit middleware + auth check |
-| `packages/web/app/api/v1/**/*.ts` | Inconsistent error forwarding | Extract shared `proxyHandler` utility |
-| `packages/web/lib/components/detail/ImageDetailModal.tsx` | Debug logs, GSAP leak, scroll forwarding incomplete | Remove logs; migrate to `useGSAP`; extract animation hook |
-| `packages/web/lib/stores/requestStore.ts` | `URL.createObjectURL` leak, step transitions unguarded, immutability gap | Fix leak in component; add Zod guards to steps; `structuredClone` on spots |
-| `packages/web/lib/stores/authStore.ts` | Logs full error objects | Sanitize error logging |
-| `packages/web/lib/components/ThiingsGrid.tsx` | 948 LOC, physics engine inline | Extract physics to `lib/utils/thiingsGridPhysics.ts` |
-| `packages/web/lib/components/DecodedLogo.tsx` | No WebGL detection, no error boundary | Add detection + fallback + ErrorBoundary |
-| `packages/web/lib/config/env.ts` | Does not exist | Create with startup validation for `API_BASE_URL`, `SUPABASE_*` |
-| `packages/web/instrumentation.ts` | Does not exist | Create for Sentry server-side init + env validation hook |
-| `packages/web/sentry.client.config.ts` | Does not exist | Create for browser Sentry init |
-| `packages/api-server/src/main.rs` | No external error sink | Add `sentry` crate init before Axum startup |
-| `packages/web/__tests__/` | Does not exist | Create with store tests and E2E test files |
+| Existing File | Current State | Required Change |
+|---------------|---------------|-----------------|
+| `packages/web/proxy.ts` | Protects `/admin` only | Add `/profile` to matcher; redirect to `/` if no session |
+| `app/profile/page.tsx` | No auth check; renders `ProfileClient` directly | Add server-side session check OR extend proxy matcher |
+| `ProfileClient.tsx` | Own profile only; hardcoded FollowStats | Extract shared logic; pass `userId` prop for other-user variant |
+| `TriesGrid.tsx` | Stub `fetchMyTries()` returning `[]` | Replace with Supabase direct query on `vton_results` table |
+| `SavedGrid.tsx` | Uses local `collectionStore` with no persistence | Add Supabase read/write for pins; keep local state as optimistic cache |
+| `FollowStats.tsx` | Hardcoded `followers=1234, following=567` | Accept real props from `UserResponse` or Supabase count |
+| `lib/hooks/useProfile.ts` | Has `useGetUserProfile` hook (for other-user) | Wire to new `/profile/[userId]` page client |
+| `app/profile/[userId]/` | Does not exist | New route: `page.tsx` + `UserProfileClient.tsx` |
 
 ---
 
 ## Sources
 
-- `.planning/codebase/CONCERNS.md` — primary source; codebase audit identifying all issues addressed here (HIGH confidence — first-party audit)
-- `packages/web/lib/stores/requestStore.ts`, `ImageDetailModal.tsx`, `ThiingsGrid.tsx` — direct file analysis (HIGH confidence — first-party code)
-- Sentry Next.js SDK documentation — `@sentry/nextjs` App Router integration, `instrumentation.ts` pattern (HIGH confidence — official)
-- `@gsap/react` `useGSAP` hook documentation — context lifecycle and cleanup guarantees (HIGH confidence — official GSAP docs)
-- Upstash Ratelimit + Next.js Route Handlers — sliding window rate limiting pattern for Vercel/Edge (MEDIUM confidence — widely used pattern)
-- Next.js 16 `instrumentation.ts` startup hook — official mechanism for server-side initialization (HIGH confidence — Next.js docs)
-- Vitest 4.1 + Playwright 1.58 installed in `packages/web/package.json` — confirmed available (HIGH confidence — direct inspection)
+- OpenAPI spec analysis: `packages/api-server/openapi.json` — all 60 endpoints enumerated, no follow/saved/tries endpoints found (HIGH confidence — direct spec inspection)
+- Existing codebase inspection: `ProfileClient.tsx`, `TriesGrid.tsx`, `SavedGrid.tsx`, `FollowStats.tsx`, `profileStore.ts`, `proxy.ts` (HIGH confidence — direct code reading)
+- Industry patterns: Instagram profile architecture (follow system, own vs. other guards), Pinterest saved/boards (collection hierarchy), Weverse (K-pop fan platform — share-first culture) (MEDIUM confidence — known platform behavior, not current docs)
+- Next.js 16 middleware pattern: `proxy.ts` existing implementation for `/admin` (HIGH confidence — codebase)
 
 ---
 
-*Feature research for: Tech debt resolution milestone — production stability*
+*Feature research for: decoded platform — v10.0 Profile Page Completion*
 *Researched: 2026-03-26*

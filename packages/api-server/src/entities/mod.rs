@@ -28,6 +28,7 @@ pub mod spots;
 pub mod subcategories;
 pub mod synonyms;
 pub mod user_badges;
+pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;
 pub mod votes;
@@ -131,3 +132,7 @@ pub use failed_batch_items::Model as FailedBatchItemsModel;
 pub use agent_sessions::ActiveModel as AgentSessionsActiveModel;
 pub use agent_sessions::Entity as AgentSessions;
 pub use agent_sessions::Model as AgentSessionsModel;
+
+pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
+pub use user_tryon_history::Entity as UserTryonHistory;
+pub use user_tryon_history::Model as UserTryonHistoryModel;

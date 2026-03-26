@@ -1,110 +1,94 @@
-# Requirements: decoded-monorepo v10.0
+# Requirements: decoded-monorepo v10.0 Profile Page Completion
 
 **Defined:** 2026-03-26
-**Core Value:** 프로덕션 안정성과 코드 품질 — 모든 서비스에 에러 트래킹, 비용 보호, 테스트 커버리지 확보
+**Core Value:** 완전한 사용자 경험 — 프로필 페이지의 모든 기능이 실제 데이터로 동작
 
-## v1 Requirements
+## v10.0 Requirements
 
-Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phases.
+### Auth & Routing
 
-### Memory Leak Prevention
+- [x] **AUTH-01**: `/profile` 라우트를 `proxy.ts` matcher에 추가하여 미로그인 시 `/login?redirect=/profile`로 리다이렉트
+- [x] **AUTH-02**: `ProfileClient.tsx`에서 401 에러 시 로그인 페이지로 리다이렉트 (현재: 에러 UI만 표시)
+- [x] **ROUTE-01**: `app/profile/[userId]/page.tsx` 생성 — 기존 `useUser(userId)` hook + API proxy 활용
+- [x] **ROUTE-02**: 공개 프로필에서 비공개 항목(Saved, Ink 크레딧, 프로필 수정) 숨김
 
-- [x] **MEM-01**: GSAP contextSafe() 패턴을 47개 GSAP 사용 컴포넌트의 이벤트 핸들러 애니메이션에 적용하여 언마운트 시 클린업 보장
-- [x] **MEM-02**: 모든 비동기 fetch 요청에 AbortController를 적용하여 컴포넌트 언마운트 시 abort (현재 0건 적용)
-- [x] **MEM-03**: useEffect 클린업 패턴 정비 — setTimeout 워크어라운드 제거, addEventListener/removeEventListener 직접 사용
-- [x] **MEM-04**: Chrome DevTools Memory 프로파일링으로 주요 페이지의 메모리 누수 제거 검증
+### Follow System
 
-### Component Refactoring
+- [x] **FLLW-01**: Supabase `user_follows` 테이블 생성 (마이그레이션 SQL)
+- [x] **FLLW-02**: Rust 백엔드 Follow API 구현 (`GET /users/{id}/followers/count`, `GET /users/{id}/following/count`)
+- [x] **FLLW-03**: `UserResponse`에 `followers_count`/`following_count` 필드 추가
+- [x] **FLLW-04**: OpenAPI spec 업데이트 + Orval 재생성
+- [x] **FLLW-05**: `FollowStats.tsx` 하드코딩(`1234`/`567`) 제거, 실제 데이터 연결
 
-- [x] **REF-01**: ThiingsGrid(950줄) 분리 — physics 엔진, spiral 계산, intersection observer를 커스텀 훅으로 추출하여 300줄 이하로
-- [x] **REF-02**: VtonModal(880줄) 분리 — 모달 상태, 폼 로직, 이미지 처리를 커스텀 훅과 서브컴포넌트로 분리
-- [x] **REF-03**: ItemDetailCard(771줄) 분리 — solution 관리, adopt dropdown, GSAP 스크롤 애니메이션을 커스텀 훅으로 추출
-- [x] **REF-04**: ImageDetailModal(726줄) 분리 — 모달 상태와 콘텐츠 컴포지션을 서브컴포넌트로 분리
-- [x] **REF-05**: 분리된 컴포넌트에 data-testid 속성 추가 (E2E 테스트 대상 마킹)
+### Activity Tabs — Tries
 
-### Rate Limiting
+- [x] **TRIES-01**: Rust 백엔드 `GET /api/v1/users/me/tries` 엔드포인트 구현 (페이지네이션)
+- [x] **TRIES-02**: OpenAPI spec 반영 + Orval hook 생성
+- [x] **TRIES-03**: `TriesGrid.tsx` 타입 수정 (`result_image_url` → `image_url`, `item_count` 제거)
+- [x] **TRIES-04**: 무한스크롤 연결 (useInfiniteQuery 패턴)
+- [x] **TRIES-05**: 스텁 코드(`fetchMyTries → []`) 완전 제거
 
-- [x] **RATE-01**: Axum에 tower-governor 미들웨어를 추가하여 AI 분석 엔드포인트에 GCRA 기반 Rate Limiting 적용
-- [x] **RATE-02**: Per-user JWT 기반 커스텀 키 추출기 구현 (IP 대신 유저 ID로 제한)
-- [x] **RATE-03**: Next.js proxy 레이어(image-proxy 등)에 in-memory sliding window 방어 Rate Limiting 추가
-- [x] **RATE-04**: 제한 초과 시 429 Too Many Requests 응답 + Retry-After 헤더 반환
+### Activity Tabs — Saved
 
-### Error Tracking (Sentry)
+- [x] **SAVED-01**: Rust 백엔드 `GET /api/v1/users/me/saved` 엔드포인트 구현 (기존 `saved_posts` 테이블 활용, 페이지네이션)
+- [x] **SAVED-02**: OpenAPI spec 반영 + Orval hook 생성
+- [x] **SAVED-03**: `SavedGrid.tsx`를 실제 데이터 기반으로 재구현
+- [x] **SAVED-04**: `collectionStore.ts` MOCK_PINS/MOCK_BOARDS 완전 제거
+- [x] **SAVED-05**: 무한스크롤 연결
 
-- [x] **SENT-01**: @sentry/nextjs 설치 및 설정 — instrumentation.ts, 소스맵 업로드, 클라이언트/서버 에러 수집
-- [x] **SENT-02**: Rust 백엔드에 sentry + sentry-tower 레이어 연동 — 기존 tracing 스택과 통합
-- [x] **SENT-03**: Python AI 서버에 sentry-sdk[fastapi] 연동 — gRPC 핸들러 에러 수집
-- [x] **SENT-04**: dev/prod 환경별 DSN 분리 설정 및 환경 태깅
+## Future Requirements (v10.1+)
 
-### E2E Testing
+### Follow Write System
 
-- [x] **E2E-01**: playwright.config.ts 수정(yarn→bun) + Supabase REST API 기반 storageState 인증 픽스처 구축
-- [x] **E2E-02**: 로그인 플로우 + 메인 페이지 네비게이션 E2E 테스트 작성
-- [x] **E2E-03**: AI 이미지 분석 파이프라인 E2E 테스트 (업로드 → 분석 → 결과 표시)
-- [x] **E2E-04**: 핵심 인터랙티브 컴포넌트에 data-testid 마킹
+- **FLLW-W01**: 팔로우/언팔로우 API 엔드포인트 (`POST/DELETE /users/{id}/follow`)
+- **FLLW-W02**: 팔로우 버튼 동작 연결 (optimistic update)
+- **FLLW-W03**: 팔로워/팔로잉 목록 페이지
 
-## Future Requirements
+### Profile Enhancements
 
-### Advanced Observability (v10.1+)
-
-- **OBS-01**: Sentry 크로스 서비스 트레이스 (Rust → Python gRPC trace 전파)
-- **OBS-02**: Web Vitals 모니터링 (LCP, FID, CLS 대시보드)
-- **OBS-03**: Sentry 알림 룰 및 Slack 연동
-
-### Extended Testing (v10.1+)
-
-- **TEST-01**: Docker Compose 기반 풀스택 E2E 테스트 환경
-- **TEST-02**: 크로스 브라우저 테스트 (Firefox, Safari)
-- **TEST-03**: 모바일 터치 이벤트 E2E 테스트
-
-### Extended Refactoring (v10.1+)
-
-- **XREF-01**: CircularGallery(792줄) 분리
-- **XREF-02**: DecodedLogo(764줄) 분리
-- **XREF-03**: NeonDoodles(699줄) 분리
-- **XREF-04**: ESLint max-lines 규칙 추가 (400줄 경고, 600줄 에러)
+- **PROF-E01**: 프로필 사진 파일 업로드 (현재 URL 입력)
+- **PROF-E02**: 소셜 계정 연동 관리 UI
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| GitHub Actions CI/CD | 사용자가 사용하지 않기로 결정 |
-| Full unit test coverage | 이번은 E2E 중심, unit은 리팩토링 훅에 한정 |
-| Redis 기반 분산 Rate Limiting | 현재 단일 서버 배포 — in-memory로 충분 |
-| Performance monitoring (APM) | Sentry 기본 설정 후 별도 마일스톤에서 |
-| 600줄 미만 컴포넌트 리팩토링 | 726줄 이상 4개 컴포넌트만 대상 |
+| 팔로우/언팔로우 write 액션 | v10.1 — read count 우선 |
+| 팔로워/팔로잉 목록 페이지 | 별도 마일스톤 |
+| Pins & Boards 컨셉 | mock 제거 후 단순 saved posts 그리드로 대체 |
+| 프로필 사진 파일 업로드 | 현재 URL 입력 방식 유지 |
+| DM / 메시지 시스템 | 별도 마일스톤 |
+| 실시간 알림 | 별도 마일스톤 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEM-01 | Phase 44 | Complete |
-| MEM-02 | Phase 44 | Complete |
-| MEM-03 | Phase 44 | Complete |
-| MEM-04 | Phase 44 | Complete |
-| REF-01 | Phase 46 | Complete |
-| REF-02 | Phase 46 | Complete |
-| REF-03 | Phase 46 | Complete |
-| REF-04 | Phase 46 | Complete |
-| REF-05 | Phase 48 | Complete |
-| RATE-01 | Phase 45 | Complete |
-| RATE-02 | Phase 45 | Complete |
-| RATE-03 | Phase 45 | Complete |
-| RATE-04 | Phase 45 | Complete |
-| SENT-01 | Phase 47 | Complete |
-| SENT-02 | Phase 47 | Complete |
-| SENT-03 | Phase 47 | Complete |
-| SENT-04 | Phase 47 | Complete |
-| E2E-01 | Phase 48 | Complete |
-| E2E-02 | Phase 48 | Complete |
-| E2E-03 | Phase 48 | Complete |
-| E2E-04 | Phase 48 | Complete |
+| AUTH-01 | Phase 44 | Complete |
+| AUTH-02 | Phase 44 | Complete |
+| ROUTE-01 | Phase 45 | Complete |
+| ROUTE-02 | Phase 45 | Complete |
+| FLLW-01 | Phase 46 | Complete |
+| FLLW-02 | Phase 46 | Complete |
+| FLLW-03 | Phase 46 | Complete |
+| FLLW-04 | Phase 47 | Complete |
+| FLLW-05 | Phase 47 | Complete |
+| TRIES-01 | Phase 48 | Complete |
+| TRIES-02 | Phase 48 | Complete |
+| TRIES-03 | Phase 49 | Complete |
+| TRIES-04 | Phase 49 | Complete |
+| TRIES-05 | Phase 49 | Complete |
+| SAVED-01 | Phase 48 | Complete |
+| SAVED-02 | Phase 48 | Complete |
+| SAVED-03 | Phase 50 | Complete |
+| SAVED-04 | Phase 50 | Complete |
+| SAVED-05 | Phase 50 | Complete |
 
 **Coverage:**
-- v1 requirements: 21 total
-- Mapped to phases: 21
+- v10.0 requirements: 19 total
+- Mapped to phases: 19
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after roadmap creation — all requirements mapped to Phases 44-48*
+*Last updated: 2026-03-26 after roadmap creation (7 phases, 44-50)*

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Settings, RefreshCw, Share2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { AxiosError } from "axios";
 import { Header } from "@/lib/components";
 import {
   ProfileHeader,
@@ -167,6 +169,7 @@ function ProfileError({
 }
 
 export function ProfileClient() {
+  const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActivityTab>("posts");
 
@@ -261,6 +264,14 @@ export function ProfileClient() {
   const isError = isUserError || isStatsError;
   const error = userError || statsError;
 
+  // 401 auth error -> redirect to login
+  useEffect(() => {
+    const axiosErr = error as AxiosError | null;
+    if (isError && axiosErr?.response?.status === 401) {
+      router.replace("/login?redirect=/profile");
+    }
+  }, [isError, error, router]);
+
   // Retry function
   const handleRetry = () => {
     refetchUser();
@@ -276,6 +287,11 @@ export function ProfileClient() {
 
   // Show error state
   if (isError && error) {
+    const axiosErr = error as AxiosError;
+    if (axiosErr.response?.status === 401) {
+      // Show skeleton while redirect is in flight
+      return <ProfileSkeleton />;
+    }
     return <ProfileError error={error} onRetry={handleRetry} />;
   }
 
@@ -358,7 +374,11 @@ export function ProfileClient() {
       <div className="md:hidden px-4 py-4 space-y-4">
         <ProfileHeader onEditClick={() => setIsEditModalOpen(true)} />
         <ProfileBio bio={userData?.bio ?? undefined} className="px-4" />
-        <FollowStats className="px-4" />
+        <FollowStats
+          followers={userData?.followers_count ?? 0}
+          following={userData?.following_count ?? 0}
+          className="px-4"
+        />
         <StyleDNACard
           keywords={profileExtras?.style_dna?.keywords}
           colors={profileExtras?.style_dna?.colors}
