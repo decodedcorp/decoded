@@ -112,7 +112,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
 **Milestone Goal:** 프로덕션 안정성과 코드 품질 확보 — 메모리 누수, 보안, 컴포넌트 리팩토링, 관측성, 테스트 커버리지
 
-- [ ] **Phase 44: Memory Leak Prevention** — GSAP contextSafe(), ObjectURL, AbortController, useEffect 클린업
+- [x] **Phase 44: Memory Leak Prevention** — GSAP contextSafe(), ObjectURL, AbortController, useEffect 클린업 (completed 2026-03-26)
 - [ ] **Phase 45: Security Foundation** — Rate Limiting (Axum + Next.js proxy), 디버그 로깅 제거, 환경변수 검증, 프록시 에러 전파
 - [ ] **Phase 46: Component Refactoring** — ThiingsGrid(950줄), VtonModal(880줄), ItemDetailCard(771줄), ImageDetailModal(726줄) 분리
 - [ ] **Phase 47: Observability** — Sentry (Next.js + Rust + Python), Web Vitals, 에러 전파 검증

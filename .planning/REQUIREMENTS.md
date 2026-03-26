@@ -12,7 +12,7 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 - [x] **MEM-01**: GSAP contextSafe() 패턴을 47개 GSAP 사용 컴포넌트의 이벤트 핸들러 애니메이션에 적용하여 언마운트 시 클린업 보장
 - [x] **MEM-02**: 모든 비동기 fetch 요청에 AbortController를 적용하여 컴포넌트 언마운트 시 abort (현재 0건 적용)
 - [x] **MEM-03**: useEffect 클린업 패턴 정비 — setTimeout 워크어라운드 제거, addEventListener/removeEventListener 직접 사용
-- [ ] **MEM-04**: Chrome DevTools Memory 프로파일링으로 주요 페이지의 메모리 누수 제거 검증
+- [x] **MEM-04**: Chrome DevTools Memory 프로파일링으로 주요 페이지의 메모리 누수 제거 검증
 
 ### Component Refactoring
 
@@ -81,7 +81,7 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 | MEM-01 | Phase 44 | Complete |
 | MEM-02 | Phase 44 | Complete |
 | MEM-03 | Phase 44 | Complete |
-| MEM-04 | Phase 44 | Pending |
+| MEM-04 | Phase 44 | Complete |
 | REF-01 | Phase 46 | Pending |
 | REF-02 | Phase 46 | Pending |
 | REF-03 | Phase 46 | Pending |
