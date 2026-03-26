@@ -1,84 +1,170 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useRef, useEffect } from "react";
 import { Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  useCollectionStore,
-  type CollectionTab,
-} from "@/lib/stores/collectionStore";
-import { PinGrid } from "@/lib/components/collection/PinGrid";
-import { BoardGrid } from "@/lib/components/collection/BoardGrid";
-import { CollageView } from "@/lib/components/collection/CollageView";
+import Image from "next/image";
+import Link from "next/link";
+import { getMySaved } from "@/lib/api/generated/users/users";
+import type { SavedItem } from "@/lib/api/generated/models";
 
-const SUB_TABS: { key: CollectionTab; label: string }[] = [
-  { key: "pins", label: "Pins" },
-  { key: "boards", label: "Boards" },
-  { key: "collage", label: "Collage" },
-];
+// ============================================================
+// Constants
+// ============================================================
+
+const PER_PAGE = 20;
+
+// ============================================================
+// Component
+// ============================================================
 
 export interface SavedGridProps {
   className?: string;
 }
 
 export function SavedGrid({ className }: SavedGridProps) {
-  const tab = useCollectionStore((s) => s.tab);
-  const setTab = useCollectionStore((s) => s.setTab);
-  const pins = useCollectionStore((s) => s.pins);
-  const boards = useCollectionStore((s) => s.boards);
-  const isLoading = useCollectionStore((s) => s.isLoading);
-  const loadCollection = useCollectionStore((s) => s.loadCollection);
-  const setSelectedPinId = useCollectionStore((s) => s.setSelectedPinId);
-  const [loaded, setLoaded] = useState(false);
+  const {
+    data,
+    isLoading,
+    isError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["/api/v1/users/me/saved"],
+    queryFn: async ({ pageParam }) =>
+      getMySaved({ page: pageParam as number, per_page: PER_PAGE }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.current_page < lastPage.pagination.total_pages
+        ? lastPage.pagination.current_page + 1
+        : undefined,
+    initialPageParam: 1,
+    staleTime: 1000 * 60,
+  });
+
+  const items: SavedItem[] = data?.pages.flatMap((page) => page.data) ?? [];
+
+  // IntersectionObserver sentinel for infinite scroll
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadCollection().then(() => setLoaded(true));
-    // loadCollection은 store에서 안정적인 참조이므로 의존성 배열에서 제외
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
 
-  if (isLoading && !loaded) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-[3/4] rounded-xl bg-muted animate-pulse"
+          />
+        ))}
       </div>
     );
   }
 
-  if (pins.length === 0 && boards.length === 0) {
+  if (isError) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          Failed to load saved posts
+        </p>
+        <button
+          onClick={() => refetch()}
+          className="mt-2 text-sm underline text-primary"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
     return (
       <div className="py-12 text-center">
         <Bookmark className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-        <p className="text-sm text-muted-foreground">No saved items yet</p>
+        <p className="text-sm text-muted-foreground">
+          저장한 포스트가 없습니다
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground/60">
+          관심 있는 포스트를 저장해 보세요
+        </p>
       </div>
     );
   }
 
   return (
-    <div className={cn("space-y-0", className)}>
-      {/* Sub-tab bar */}
-      <div className="flex gap-1 px-1 pb-3">
-        {SUB_TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-full transition-colors",
-              tab === key
-                ? "bg-foreground text-background"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+    <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-3", className)}>
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          href={`/images/${item.post_id}`}
+          className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/30 block"
+        >
+          <div className="relative aspect-[3/4]">
+            {item.post_thumbnail_url ? (
+              <Image
+                src={item.post_thumbnail_url}
+                alt={item.post_title ?? "Saved post"}
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, 33vw"
+              />
+            ) : (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <Bookmark className="h-8 w-8 text-muted-foreground/40" />
+              </div>
             )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+            <div className="flex items-end justify-between gap-1">
+              <span className="text-[11px] text-white/90 font-medium truncate">
+                {item.post_title ?? "Untitled"}
+              </span>
+              <span className="text-[10px] text-white/50 shrink-0">
+                {new Date(item.saved_at).toLocaleDateString("ko-KR", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          </div>
+        </Link>
+      ))}
 
-      {/* Content */}
-      {tab === "pins" && <PinGrid pins={pins} onSelectPin={setSelectedPinId} />}
-      {tab === "boards" && <BoardGrid boards={boards} />}
-      {tab === "collage" && (
-        <CollageView pins={pins} onSelectPin={setSelectedPinId} />
+      {/* Sentinel for infinite scroll trigger */}
+      <div ref={sentinelRef} className="col-span-full h-1" />
+
+      {/* Loading more indicator */}
+      {isFetchingNextPage && (
+        <div className="col-span-full grid grid-cols-2 md:grid-cols-3 gap-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={i}
+              className="aspect-[3/4] rounded-xl bg-muted animate-pulse"
+            />
+          ))}
+        </div>
       )}
     </div>
   );
