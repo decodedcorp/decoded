@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T15:09:51.200Z"
+last_updated: "2026-03-26T15:12:15.508Z"
 progress:
   total_phases: 45
-  completed_phases: 42
+  completed_phases: 43
   total_plans: 104
-  completed_plans: 102
+  completed_plans: 103
 ---
 
 # Project State
@@ -22,8 +22,8 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Current Position
 
-Phase: 47 (observability) — EXECUTING
-Plan: 2 of 2
+Phase: 47 (observability) — COMPLETE
+Plan: 2 of 2 (complete)
 
 ## Milestone Summary
 
@@ -67,6 +67,8 @@ Target features:
 - [Phase 46]: renderContent() kept inline in ImageDetailModal — 60 lines, avoids duplicate of ImageDetailContent which serves full-page use case
 - [Phase 47]: @sentry/nextjs/server subpath removed — not exported in v10.46.0; onRequestError is Next.js 15.3+ feature unavailable in this version
 - [Phase 47]: All Sentry env vars commented out by default in .env.local.example — graceful degradation when DSN absent; hideSourceMaps: true prevents source map exposure
+- [Phase 47]: sentry 0.47.0 API uses EventFilter::Event/Breadcrumb/Log/Ignore (not Exception); re-exports via sentry::integrations::tower:: and sentry::integrations::tracing::; SentryHttpLayer::new().enable_transaction() replaces deprecated with_transaction()
+- [Phase 47]: Python _init_sentry() guard pattern: check empty SENTRY_DSN, return early without init — both backend services gracefully start without Sentry in local dev
 
 ## Performance Metrics
 
@@ -82,3 +84,4 @@ Target features:
 | Phase 46 P02 | 320 | 2 tasks | 9 files |
 | Phase 46 P03 | 347 | 2 tasks | 7 files |
 | Phase 47 P01 | 184 | 2 tasks | 8 files |
+| Phase 47 P02 | 281 | 2 tasks | 6 files |
