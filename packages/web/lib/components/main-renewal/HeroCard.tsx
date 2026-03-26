@@ -19,6 +19,7 @@ interface HeroCardProps {
   isDimmed: boolean;
   onToggleFocus: (id: string) => void;
   bumpZ: () => number;
+  coverDone: boolean;
   priority?: boolean;
 }
 
@@ -30,6 +31,7 @@ export function HeroCard({
   isDimmed,
   onToggleFocus,
   bumpZ,
+  coverDone,
   priority = false,
 }: HeroCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -63,8 +65,7 @@ export function HeroCard({
     const el = cardRef.current;
     if (!el) return;
 
-    // Entry animation deferred until image loads
-    // Card stays visibility:hidden until onLoad triggers animation
+    // Entry animation handled by coverDone + imageLoaded effect below
 
     // Only add draggable for interactive cards
     if (!interactive) return;
@@ -117,6 +118,44 @@ export function HeroCard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Entry animation — triggered when cover is done AND image is loaded
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !coverDone || !imageLoadedRef.current) return;
+
+    // Random direction from outside viewport
+    const directions = [
+      { x: -window.innerWidth * 0.5, y: 0 },   // from left
+      { x: window.innerWidth * 0.5, y: 0 },     // from right
+      { x: 0, y: -window.innerHeight * 0.5 },    // from top
+      { x: 0, y: window.innerHeight * 0.5 },     // from bottom
+    ];
+    const dir = directions[index % 4];
+    const delay = index * 0.01; // Nearly simultaneous burst
+
+    gsap.fromTo(
+      el,
+      {
+        autoAlpha: 0,
+        x: dir.x + (Math.random() - 0.5) * 150,
+        y: dir.y + (Math.random() - 0.5) * 150,
+        scale: 0.4,
+        rotation: position.rotate + (Math.random() - 0.5) * 30,
+      },
+      {
+        autoAlpha: position.initialOpacity,
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotation: position.rotate,
+        duration: 0.5 + Math.random() * 0.2,
+        delay,
+        ease: "power4.out",
+        onComplete: () => startFloat(el),
+      },
+    );
+  }, [coverDone]);
 
   // Sync showSpots
   useEffect(() => {
@@ -274,23 +313,7 @@ export function HeroCard({
                 floatRef.current?.kill();
                 return;
               }
-              // Image loaded — now trigger entry animation
-              if (!imageLoadedRef.current) {
-                imageLoadedRef.current = true;
-                gsap.fromTo(
-                  card,
-                  { autoAlpha: 0, y: 30, scale: 0.9 },
-                  {
-                    autoAlpha: position.initialOpacity,
-                    y: 0,
-                    scale: 1,
-                    duration: 0.6,
-                    delay: index * 0.02,
-                    ease: "power3.out",
-                    onComplete: () => startFloat(card),
-                  },
-                );
-              }
+              imageLoadedRef.current = true;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />

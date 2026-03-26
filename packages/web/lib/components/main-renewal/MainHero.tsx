@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import gsap from "gsap";
 
 import type { FloatingHeroImage } from "./types";
 import { computeScatterPosition } from "./scatter";
 import { useHeroFocus } from "./useHeroFocus";
 import { HeroCard } from "./HeroCard";
+import { HeroCover } from "./HeroCover";
 
 interface MainHeroProps {
   images: FloatingHeroImage[];
@@ -27,6 +28,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
+  const [coverDone, setCoverDone] = useState(false);
   const { focusedId, toggleFocus, clearFocus, isFocused, isDimmed, bumpZ } =
     useHeroFocus();
 
@@ -131,6 +133,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
             isDimmed={isDimmed(img.id)}
             onToggleFocus={handleToggleFocus}
             bumpZ={bumpZ}
+            coverDone={coverDone}
             priority={i < 4}
           />
         ))}
@@ -144,6 +147,9 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
 
       {/* Noise grain */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-[46] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+
+      {/* Intro cover — animated sequence before hero is revealed */}
+      {!coverDone && <HeroCover onRevealed={() => setCoverDone(true)} />}
     </section>
   );
 }

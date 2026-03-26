@@ -125,10 +125,12 @@ export default async function Home({
         }
       : (defaultHeroData as MainHeroData);
 
+  // MasonryGrid: use second half of weeklyBest to differ from Hero gallery
+  const gridSource = weeklyBestPosts.filter((p) => p.imageUrl);
+  const gridOffset = Math.min(8, Math.floor(gridSource.length / 2));
   const gridItems: GridItemData[] =
-    weeklyBestPosts.length > 0
-      ? weeklyBestPosts
-          .filter((p) => p.imageUrl)
+    gridSource.length > 0
+      ? [...gridSource.slice(gridOffset), ...gridSource.slice(0, gridOffset)]
           .map((post, i) => ({
             id: post.id,
             imageUrl: post.imageUrl!,
@@ -316,9 +318,10 @@ export default async function Home({
   const forYouStyles = forYouPosts.map(toStyleCard);
   const trendingStyles = trendingPosts.map(toStyleCard);
 
-  // Editorial feature: use first whatsNew style with items
+  // Editorial feature: use a whatsNew style that won't overlap with DecodeShowcase
+  // DecodeShowcase uses the first whatsNew with 2+ items, so editorial picks a different one
   const editorialStyle: StyleCardData | undefined =
-    whatsNewStyles.length > 0 ? whatsNewStyles[0] : undefined;
+    whatsNewStyles.length > 1 ? whatsNewStyles[1] : whatsNewStyles[0] ?? undefined;
 
   // --- Build new section data ---
 
@@ -345,10 +348,10 @@ export default async function Home({
           ).values(),
         ].slice(0, 8);
 
-  // Section 2: DecodeShowcase — use first whatsNew post with items + real spot coordinates
-  const showcaseSource = whatsNewData.find(
-    (w) => w.post.imageUrl && w.items.length >= 2
-  );
+  // Section 2: DecodeShowcase — prefer artistSpotlight (different from whatsNew used elsewhere)
+  const showcaseSource =
+    artistSpotlight.find((s) => s.post.imageUrl && s.items.length >= 2) ||
+    whatsNewData.find((w) => w.post.imageUrl && w.items.length >= 2);
   const decodeShowcaseData: DecodeShowcaseData = showcaseSource
     ? {
         sourceImageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(showcaseSource.post.imageUrl!)}`,
@@ -398,32 +401,57 @@ export default async function Home({
         detectedItems: [],
       };
 
-  // Section 4: EditorialMagazine — whatsNew + spotlight cards with image proxy
+  // Section 4: EditorialMagazine — blend 3 sources, skip posts already used elsewhere
+  const usedPostIds = new Set<string | number>();
+  if (showcaseSource) usedPostIds.add(showcaseSource.post.id);
+  if (editorialStyle) usedPostIds.add(editorialStyle.id);
+  // Also skip posts from hero decodedPick
+  if (decodedPick) usedPostIds.add(decodedPick.post.id);
+
+  // Collect unique cards from 3 different pools
+  const magazinePool: { style: StyleCardData; category: string }[] = [];
+  for (const s of spotlightStyles) {
+    if (!usedPostIds.has(s.id) && s.imageUrl) {
+      magazinePool.push({ style: s, category: "Spotlight" });
+      usedPostIds.add(s.id);
+    }
+  }
+  for (const s of whatsNewStyles) {
+    if (!usedPostIds.has(s.id) && s.imageUrl) {
+      magazinePool.push({ style: s, category: "What's New" });
+      usedPostIds.add(s.id);
+    }
+  }
+  // Add weeklyBest posts for extra variety
+  for (const p of weeklyBestPosts) {
+    if (!usedPostIds.has(p.id) && p.imageUrl) {
+      magazinePool.push({
+        style: {
+          id: p.id,
+          title: p.artistName || p.groupName || "Style",
+          description: p.context || p.mediaTitle || "",
+          artistName: p.artistName || p.groupName || "Unknown",
+          imageUrl: p.imageUrl,
+          link: `/posts/${p.id}`,
+        },
+        category: "Weekly Best",
+      });
+      usedPostIds.add(p.id);
+    }
+  }
+
   const editorialMagazineData: EditorialMagazineData = {
-    cards: [
-      ...whatsNewStyles.slice(0, 4).map((s) => ({
-        id: `wn-${s.id}`,
-        imageUrl: s.imageUrl
-          ? `/api/v1/image-proxy?url=${encodeURIComponent(s.imageUrl)}`
-          : "",
-        title: s.title,
-        subtitle: s.description,
-        artistName: s.artistName,
-        category: "What's New",
-        link: s.link,
-      })),
-      ...spotlightStyles.slice(0, 4).map((s) => ({
-        id: `sp-${s.id}`,
-        imageUrl: s.imageUrl
-          ? `/api/v1/image-proxy?url=${encodeURIComponent(s.imageUrl)}`
-          : "",
-        title: s.title,
-        subtitle: s.description,
-        artistName: s.artistName,
-        category: "Spotlight",
-        link: s.link,
-      })),
-    ],
+    cards: magazinePool.slice(0, 8).map((entry) => ({
+      id: `mag-${entry.style.id}`,
+      imageUrl: entry.style.imageUrl
+        ? `/api/v1/image-proxy?url=${encodeURIComponent(entry.style.imageUrl)}`
+        : "",
+      title: entry.style.title,
+      subtitle: entry.style.description,
+      artistName: entry.style.artistName,
+      category: entry.category,
+      link: entry.style.link,
+    })),
   };
 
   // Section 5: VirtualTryOnTeaser — bestItems with image proxy
@@ -467,14 +495,22 @@ export default async function Home({
     ),
   };
 
-  // DomeGallery images — real post images from heroPosts
-  const domeImages = heroPosts
-    .filter((hp) => hp.galleryImage)
-    .slice(0, 20)
-    .map((hp) => ({
-      src: hp.galleryImage!,
-      alt: hp.galleryLabel || "Style",
-    }));
+  // DomeGallery images — use trendingPosts + later weeklyBest to avoid Hero overlap
+  const domeImages = [
+    ...trendingPosts
+      .filter((p) => p.imageUrl)
+      .map((p) => ({
+        src: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl!)}`,
+        alt: p.artistName || p.groupName || "Style",
+      })),
+    ...weeklyBestPosts
+      .filter((p) => p.imageUrl)
+      .slice(10, 20)
+      .map((p) => ({
+        src: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl!)}`,
+        alt: p.artistName || p.groupName || "Style",
+      })),
+  ].slice(0, 20);
 
   return (
     <div className="min-h-screen bg-[#050505]">
