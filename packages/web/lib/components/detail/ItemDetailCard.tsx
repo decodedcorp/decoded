@@ -91,12 +91,10 @@ export function ItemDetailCard({
         setAdoptTargetId(null);
       }
     };
-    // click 사용: mousedown 시 드롭다운 내부 버튼 클릭이 선점되는 이슈 회피
-    const tid = setTimeout(() => {
-      document.addEventListener("click", handleClickOutside);
-    }, 0);
+    // click fires after mousedown so no delay is needed — register directly.
+    // click 이벤트는 mousedown보다 늦게 발생하므로 setTimeout(0) 지연 불필요.
+    document.addEventListener("click", handleClickOutside);
     return () => {
-      clearTimeout(tid);
       document.removeEventListener("click", handleClickOutside);
     };
   }, [adoptTargetId]);
