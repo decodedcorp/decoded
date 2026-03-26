@@ -29,6 +29,7 @@ export interface ApiClientOptions {
   body?: unknown;
   requiresAuth?: boolean;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }
 
 /**
@@ -57,6 +58,7 @@ export async function apiClient<T>(options: ApiClientOptions): Promise<T> {
     body,
     requiresAuth = false,
     headers = {},
+    signal,
   } = options;
 
   // Build headers
@@ -86,6 +88,7 @@ export async function apiClient<T>(options: ApiClientOptions): Promise<T> {
     headers: requestHeaders,
     body:
       body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   // Handle errors
