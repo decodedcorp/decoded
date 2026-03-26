@@ -38,9 +38,9 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 
 ### E2E Testing
 
-- [ ] **E2E-01**: playwright.config.ts 수정(yarn→bun) + Supabase REST API 기반 storageState 인증 픽스처 구축
-- [ ] **E2E-02**: 로그인 플로우 + 메인 페이지 네비게이션 E2E 테스트 작성
-- [ ] **E2E-03**: AI 이미지 분석 파이프라인 E2E 테스트 (업로드 → 분석 → 결과 표시)
+- [x] **E2E-01**: playwright.config.ts 수정(yarn→bun) + Supabase REST API 기반 storageState 인증 픽스처 구축
+- [x] **E2E-02**: 로그인 플로우 + 메인 페이지 네비게이션 E2E 테스트 작성
+- [x] **E2E-03**: AI 이미지 분석 파이프라인 E2E 테스트 (업로드 → 분석 → 결과 표시)
 - [x] **E2E-04**: 핵심 인터랙티브 컴포넌트에 data-testid 마킹
 
 ## Future Requirements
@@ -95,9 +95,9 @@ Requirements for v10.0 Tech Debt Resolution milestone. Each maps to roadmap phas
 | SENT-02 | Phase 47 | Pending |
 | SENT-03 | Phase 47 | Pending |
 | SENT-04 | Phase 47 | Pending |
-| E2E-01 | Phase 48 | Pending |
-| E2E-02 | Phase 48 | Pending |
-| E2E-03 | Phase 48 | Pending |
+| E2E-01 | Phase 48 | Complete |
+| E2E-02 | Phase 48 | Complete |
+| E2E-03 | Phase 48 | Complete |
 | E2E-04 | Phase 48 | Complete |
 
 **Coverage:**
