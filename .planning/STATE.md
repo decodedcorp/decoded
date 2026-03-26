@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T14:33:45.511Z"
+last_updated: "2026-03-26T15:09:51.200Z"
 progress:
-  total_phases: 44
+  total_phases: 45
   completed_phases: 42
-  total_plans: 102
-  completed_plans: 101
+  total_plans: 104
+  completed_plans: 102
 ---
 
 # Project State
@@ -18,12 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 46 — component-refactoring
+**Current focus:** Phase 47 — observability
 
 ## Current Position
 
-Phase: 46 (component-refactoring) — COMPLETE
-Plan: 3 of 3
+Phase: 47 (observability) — EXECUTING
+Plan: 2 of 2
 
 ## Milestone Summary
 
@@ -65,6 +65,8 @@ Target features:
 - [Phase 46]: OtherSolutionsList handles empty state internally (add-more button or null) — removes conditional wrapping from ItemDetailCard
 - [Phase 46]: useImageModalAnimation takes refs as parameters — component owns ref declarations, hook owns GSAP animation lifecycle (ctxRef)
 - [Phase 46]: renderContent() kept inline in ImageDetailModal — 60 lines, avoids duplicate of ImageDetailContent which serves full-page use case
+- [Phase 47]: @sentry/nextjs/server subpath removed — not exported in v10.46.0; onRequestError is Next.js 15.3+ feature unavailable in this version
+- [Phase 47]: All Sentry env vars commented out by default in .env.local.example — graceful degradation when DSN absent; hideSourceMaps: true prevents source map exposure
 
 ## Performance Metrics
 
@@ -79,3 +81,4 @@ Target features:
 | Phase 46 P01 | 334 | 2 tasks | 4 files |
 | Phase 46 P02 | 320 | 2 tasks | 9 files |
 | Phase 46 P03 | 347 | 2 tasks | 7 files |
+| Phase 47 P01 | 184 | 2 tasks | 8 files |
