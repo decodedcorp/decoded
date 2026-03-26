@@ -60,7 +60,7 @@ See archived roadmap: `.planning/milestones/v4.0-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v5.0 AI Magazine & Archive Expansion (m7-Phases 01-03) — SHIPPED 2026-03-12</summary>
+<summary>v5.0 AI Magazine & Archive Expansion (m7-Phases 01-03) — SHIPPED 2026-03-12</summary>
 
 See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 
@@ -96,7 +96,7 @@ See archived roadmap: `.planning/milestones/v5.0-ROADMAP.md`
 - [ ] **Phase m10-04: Docker & CI/CD Unification** - docker-compose 루트 통합, path-based GitHub Actions 워크플로우
 
 <details>
-<summary>✅ v9.0 Type-Safe API Generation (Phases 39-43) — SHIPPED 2026-03-24</summary>
+<summary>v9.0 Type-Safe API Generation (Phases 39-43) — SHIPPED 2026-03-24</summary>
 
 See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
@@ -188,6 +188,21 @@ Plans:
 **Goal**: Sentry를 Next.js, Rust, Python에 통합하고 Web Vitals 모니터링과 에러 전파 검증을 구축한다
 **Depends on**: Phase 45 (security foundation in place)
 **Requirements**: OBS-01, OBS-02, OBS-03
+**Success Criteria** (what must be TRUE):
+
+1. @sentry/nextjs가 설치되고 5개 설정 파일(instrumentation-client.ts, sentry.server.config.ts, sentry.edge.config.ts, instrumentation.ts, global-error.tsx)이 생성된다
+2. next.config.js가 withSentryConfig으로 래핑되어 소스맵 업로드가 활성화된다
+3. Rust API 서버에 sentry 0.47.0이 추가되고 main.rs가 sync main -> async_main 패턴으로 재구조화된다
+4. Python AI 서버에 sentry-sdk[fastapi,grpcio]가 추가되고 FastAPI 앱 생성 전에 init된다
+5. 모든 서비스에서 SENTRY_DSN 미설정 시 graceful degradation (크래시 없음)
+6. Web Vitals (LCP, CLS, INP)가 @sentry/nextjs에 의해 자동 수집된다
+
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 47-01-PLAN.md — Next.js @sentry/nextjs integration + Web Vitals + env config (OBS-01, OBS-02)
+- [ ] 47-02-PLAN.md — Rust sentry + Python sentry-sdk integration (OBS-01, OBS-03)
 
 ### Phase 48: Test Coverage
 
@@ -403,10 +418,10 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 44: Memory Leak Prevention                    | v10.0     | 0/3            | Planning done | -          |
 | 45: Security Foundation                       | v10.0     | 0/2            | Planning done | -          |
 | 46: Component Refactoring                     | v10.0     | 0/3            | Planning done | -          |
-| 47: Observability                             | v10.0     | 0/TBD          | Not started   | -          |
+| 47: Observability                             | v10.0     | 0/2            | Planning done | -          |
 | 48: Test Coverage                             | v10.0     | 0/TBD          | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-26 (Phase 46 planned — 3 plans, 1 wave)_
+_Last updated: 2026-03-26 (Phase 47 planned — 2 plans, 1 wave)_
