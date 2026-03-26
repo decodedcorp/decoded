@@ -2,7 +2,9 @@
 //!
 //! 사용자 관련 비즈니스 로직
 
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait, Set, Statement,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -11,7 +13,9 @@ use crate::{
     utils::pagination::{PaginatedResponse, Pagination},
 };
 
-use super::dto::{UpdateUserDto, UserActivityItem, UserActivityType, UserStatsResponse};
+use super::dto::{
+    UpdateUserDto, UserActivityItem, UserActivityType, UserResponse, UserStatsResponse,
+};
 
 /// 사용자 ID로 프로필 조회
 pub async fn get_user_by_id(db: &DatabaseConnection, user_id: Uuid) -> AppResult<UserModel> {
@@ -79,4 +83,50 @@ pub async fn list_user_activities(
 ) -> AppResult<PaginatedResponse<UserActivityItem>> {
     // TODO(Phase 6+): 실제 Post/Spot/Solution 데이터와 조인
     Ok(PaginatedResponse::new(Vec::new(), pagination, 0))
+}
+
+async fn count_followers(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.user_follows WHERE following_id = $1",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0))
+}
+
+async fn count_following(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.user_follows WHERE follower_id = $1",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0))
+}
+
+/// 사용자 프로필 + 팔로워/팔로잉 수 조회
+pub async fn get_user_with_follow_counts(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+) -> AppResult<UserResponse> {
+    let user = get_user_by_id(db, user_id).await?;
+    let followers_count = count_followers(db, user_id).await?;
+    let following_count = count_following(db, user_id).await?;
+
+    Ok(UserResponse {
+        followers_count,
+        following_count,
+        ..UserResponse::from(user)
+    })
 }

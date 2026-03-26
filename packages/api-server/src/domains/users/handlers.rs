@@ -42,8 +42,8 @@ pub async fn get_user_profile(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> AppResult<Json<UserResponse>> {
-    let user = service::get_user_by_id(&state.db, user_id).await?;
-    Ok(Json(user.into()))
+    let user = service::get_user_with_follow_counts(&state.db, user_id).await?;
+    Ok(Json(user))
 }
 
 /// GET /api/v1/users/me - 내 프로필 조회
@@ -63,8 +63,8 @@ pub async fn get_my_profile(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<UserResponse>> {
-    let user_model = service::get_user_by_id(&state.db, user.id).await?;
-    Ok(Json(user_model.into()))
+    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    Ok(Json(user))
 }
 
 /// PATCH /api/v1/users/me - 프로필 수정
@@ -87,8 +87,9 @@ pub async fn update_my_profile(
     Extension(user): Extension<User>,
     Json(dto): Json<UpdateUserDto>,
 ) -> AppResult<Json<UserResponse>> {
-    let updated_user = service::update_user_profile(&state.db, user.id, dto).await?;
-    Ok(Json(updated_user.into()))
+    service::update_user_profile(&state.db, user.id, dto).await?;
+    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    Ok(Json(user))
 }
 
 /// GET /api/v1/users/me/activities - 활동 내역 조회
