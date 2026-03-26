@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v10.0
-milestone_name: Profile Page Completion
-status: defining_requirements
-stopped_at: null
-last_updated: "2026-03-26T10:42:00.000Z"
+milestone: v6.0
+milestone_name: Behavioral Intelligence & Dynamic UI
+status: unknown
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-03-26T11:49:01.179Z"
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 42
+  completed_phases: 40
+  total_plans: 95
+  completed_plans: 94
 ---
 
 # Project State
@@ -19,14 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** v10.0 Profile Page Completion — defining requirements
+**Current focus:** Phase 44 — auth-guard
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-26 — Milestone v10.0 started
+Phase: 44 (auth-guard) — EXECUTING
+Plan: 1 of 1
 
 ## Milestone Summary
 
@@ -100,6 +98,9 @@ v9.0 key constraints (from research):
 - [Phase 43]: Rollback strategy: revert openapi.json + re-run generate:api — generated files are gitignored so they are never committed and never need to be reverted
 - [Phase 43-03]: vitest environment: node for Zod schema tests (no DOM dependency)
 - [Phase 43-03]: HealthCheckResponse has top-level status field — plan interface snippet omitted it; fixture corrected by reading actual schema
+- [Phase 44]: sessionStorage for OAuth round-trip (Supabase allowlists fixed redirectTo origin/)
+- [Phase 44]: window.location.replace in authStore (not router.push) to avoid login page in browser history
+- [Phase 44]: req.nextUrl.pathname used for redirect param to prevent open redirect vulnerability
 
 ### Blockers/Concerns
 
@@ -116,8 +117,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T15:31:05.775Z
-Stopped at: Completed 43-03-PLAN.md
+Last session: 2026-03-26T11:49:01.175Z
+Stopped at: Completed 44-01-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md

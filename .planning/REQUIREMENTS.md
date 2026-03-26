@@ -7,8 +7,8 @@
 
 ### Auth & Routing
 
-- [ ] **AUTH-01**: `/profile` 라우트를 `proxy.ts` matcher에 추가하여 미로그인 시 `/login?redirect=/profile`로 리다이렉트
-- [ ] **AUTH-02**: `ProfileClient.tsx`에서 401 에러 시 로그인 페이지로 리다이렉트 (현재: 에러 UI만 표시)
+- [x] **AUTH-01**: `/profile` 라우트를 `proxy.ts` matcher에 추가하여 미로그인 시 `/login?redirect=/profile`로 리다이렉트
+- [x] **AUTH-02**: `ProfileClient.tsx`에서 401 에러 시 로그인 페이지로 리다이렉트 (현재: 에러 UI만 표시)
 - [ ] **ROUTE-01**: `app/profile/[userId]/page.tsx` 생성 — 기존 `useUser(userId)` hook + API proxy 활용
 - [ ] **ROUTE-02**: 공개 프로필에서 비공개 항목(Saved, Ink 크레딧, 프로필 수정) 숨김
 
@@ -64,8 +64,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 44 | Pending |
-| AUTH-02 | Phase 44 | Pending |
+| AUTH-01 | Phase 44 | Complete |
+| AUTH-02 | Phase 44 | Complete |
 | ROUTE-01 | Phase 45 | Pending |
 | ROUTE-02 | Phase 45 | Pending |
 | FLLW-01 | Phase 46 | Pending |
