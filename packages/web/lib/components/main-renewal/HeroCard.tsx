@@ -40,6 +40,7 @@ export function HeroCard({
   const wasFocusedRef = useRef(false);
   const preFocusPosRef = useRef({ x: 0, y: 0 });
   const currentZRef = useRef(position.zIndex);
+  const imageLoadedRef = useRef(false);
   const [showSpots, setShowSpots] = useState(false);
 
   const onToggleFocusRef = useRef(onToggleFocus);
@@ -62,20 +63,8 @@ export function HeroCard({
     const el = cardRef.current;
     if (!el) return;
 
-    // Entry animation — autoAlpha handles visibility+opacity atomically
-    gsap.fromTo(
-      el,
-      { autoAlpha: 0, y: 30, scale: 0.9 },
-      {
-        autoAlpha: position.initialOpacity,
-        y: 0,
-        scale: 1,
-        duration: 0.8,
-        delay: 0.1 + index * 0.04,
-        ease: "power3.out",
-        onComplete: () => startFloat(el),
-      },
-    );
+    // Entry animation deferred until image loads
+    // Card stays visibility:hidden until onLoad triggers animation
 
     // Only add draggable for interactive cards
     if (!interactive) return;
@@ -256,10 +245,8 @@ export function HeroCard({
         style={{
           border: (isFocused || showSpots)
             ? "1.5px solid rgba(234,253,103,0.5)"
-            : "1px solid rgba(255,255,255,0.08)",
-          boxShadow: (isFocused || showSpots)
-            ? `${shadow}, 0 0 24px rgba(234,253,103,0.2)`
-            : shadow,
+            : "1px solid rgba(255,255,255,0.06)",
+          boxShadow: shadow,
         }}
       >
         <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: position.aspectRatio }}>
@@ -280,13 +267,29 @@ export function HeroCard({
             onLoad={(e) => {
               const img = e.currentTarget;
               const ratio = img.naturalHeight / img.naturalWidth;
+              const card = cardRef.current;
+              if (!card) return;
               if (ratio > 1.8 || ratio < 0.4) {
-                // Hide via DOM directly — no React re-render
-                const card = cardRef.current;
-                if (card) {
-                  card.style.display = "none";
-                  floatRef.current?.kill();
-                }
+                card.style.display = "none";
+                floatRef.current?.kill();
+                return;
+              }
+              // Image loaded — now trigger entry animation
+              if (!imageLoadedRef.current) {
+                imageLoadedRef.current = true;
+                gsap.fromTo(
+                  card,
+                  { autoAlpha: 0, y: 30, scale: 0.9 },
+                  {
+                    autoAlpha: position.initialOpacity,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.6,
+                    delay: index * 0.02,
+                    ease: "power3.out",
+                    onComplete: () => startFloat(card),
+                  },
+                );
               }
             }}
           />

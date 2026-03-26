@@ -1,21 +1,28 @@
-import { MasonryGrid, PersonalizeBanner } from "@/lib/components/main-renewal";
+import {
+  MasonryGrid,
+  DecodeShowcase,
+  VirtualTryOnTeaser,
+  CommunityLeaderboard,
+  EditorialMagazine,
+} from "@/lib/components/main-renewal";
 import type {
   MainHeroData,
   GridItemData,
-  PersonalizeBannerData,
   HeroSpotAnnotation,
+  DecodeShowcaseData,
+  VTONTeaserData,
+  CommunityLeaderboardData,
+  EditorialMagazineData,
 } from "@/lib/components/main-renewal";
 import {
-  DynamicHomeFeed,
   DomeGallerySection,
   MainFooter,
   HeroItemSync,
+  EditorialSection,
+  TrendingListSection,
+  ForYouSection,
 } from "@/lib/components/main";
-import type {
-  StyleCardData,
-  HomeSectionData,
-  HomeSectionType,
-} from "@/lib/components/main";
+import type { StyleCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import {
   fetchFeaturedPostServer,
@@ -29,11 +36,9 @@ import {
 import {
   fetchForYouPosts,
   fetchTrendingPosts,
-  buildHomeLayout,
   type PersonalizedPostData,
 } from "@/lib/supabase/queries/personalization.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import bannerData from "@/lib/components/main-renewal/mock/personalize-banner.json";
 import defaultHeroData from "@/lib/components/main-renewal/mock/main-hero.json";
 import defaultGridItems from "@/lib/components/main-renewal/mock/main-grid-items.json";
 
@@ -54,7 +59,7 @@ export default async function Home({
 }: {
   searchParams: Promise<{ variant?: string }>;
 }) {
-  const { variant } = await searchParams;
+  await searchParams;
   // Resolve auth user for personalization
   const supabase = await createSupabaseServerClient();
   const {
@@ -62,9 +67,8 @@ export default async function Home({
   } = await supabase.auth.getUser();
   const userId = user?.id ?? null;
 
-  // Parallel fetch: layout config + all section data
+  // Parallel fetch: all section data
   const [
-    layoutConfig,
     featuredPost,
     weeklyBestPosts,
     whatsNewData,
@@ -74,8 +78,8 @@ export default async function Home({
     trendingKeywords,
     forYouPosts,
     trendingPosts,
+    rankingUsersResult,
   ] = await Promise.all([
-    buildHomeLayout(userId),
     fetchFeaturedPostServer(),
     fetchWeeklyBestPostsServer(30),
     fetchWhatsNewPostsServer(30),
@@ -85,6 +89,11 @@ export default async function Home({
     fetchTrendingKeywordsServer(8),
     userId ? fetchForYouPosts(userId, 9) : fetchTrendingPosts(9),
     fetchTrendingPosts(9),
+    supabase
+      .from("users")
+      .select("id, username, avatar_url, total_points, style_dna")
+      .order("total_points", { ascending: false })
+      .limit(10),
   ]);
 
   // --- Data transforms ---
@@ -131,27 +140,6 @@ export default async function Home({
           }))
       : (defaultGridItems as GridItemData[]);
 
-  const decodedPickStyle: StyleCardData | undefined = decodedPick
-    ? {
-        id: decodedPick.post.id,
-        title: decodedPick.post.context || "Decoded's Pick",
-        description: decodedPick.post.mediaTitle || "",
-        artistName:
-          decodedPick.post.artistName ||
-          decodedPick.post.groupName ||
-          "Unknown",
-        imageUrl: decodedPick.post.imageUrl || undefined,
-        link: `/posts/${decodedPick.post.id}`,
-        items: decodedPick.items.map((item) => ({
-          id: String(item.id),
-          label: item.label,
-          brand: item.brand,
-          name: item.name,
-          imageUrl: item.imageUrl,
-        })),
-      }
-    : undefined;
-
   const spotlightStyles: StyleCardData[] = artistSpotlight.map((s) => ({
     id: s.post.id,
     title: s.post.artistName || s.post.groupName || "Artist",
@@ -175,14 +163,6 @@ export default async function Home({
       name: item.name,
       imageUrl: item.imageUrl,
     })),
-  }));
-
-  const bestItemCards = bestItems.map((item) => ({
-    id: String(item.item.id),
-    brand: item.item.brand || "Unknown",
-    name: item.item.product_name || "Product",
-    imageUrl: item.imageUrl || undefined,
-    link: `/items/${item.item.id}`,
   }));
 
   // --- Build HeroPostEntry[] for HeroItemSync ---
@@ -270,10 +250,9 @@ export default async function Home({
     });
   }
 
-  // 2. WhatsNew posts (only with items/solutions)
+  // 2. WhatsNew posts
   for (const wnPost of whatsNewData) {
     if (!wnPost.post.imageUrl) continue;
-    if (wnPost.items.length === 0) continue; // items 있는 것만
     if (decodedPick && wnPost.post.id === decodedPick.post.id) continue;
     heroPosts.push({
       id: String(wnPost.post.id),
@@ -290,10 +269,9 @@ export default async function Home({
     });
   }
 
-  // 3. ArtistSpotlight posts (only with items/solutions)
+  // 3. ArtistSpotlight posts
   for (const spPost of artistSpotlight) {
     if (!spPost.post.imageUrl) continue;
-    if (spPost.items.length === 0) continue; // items 있는 것만
     if (heroPosts.some((hp) => hp.id === String(spPost.post.id))) continue;
     heroPosts.push({
       id: String(spPost.post.id),
@@ -310,11 +288,17 @@ export default async function Home({
     });
   }
 
-  // 4. WeeklyBest posts (only with items/solutions)
+  // 4. WeeklyBest posts (no items, image only)
   for (const wbPost of weeklyBestPosts) {
     if (!wbPost.imageUrl) continue;
     if (heroPosts.some((hp) => hp.id === String(wbPost.id))) continue;
-    // WeeklyBest doesn't have items data — skip (items-only filter)
+    heroPosts.push({
+      id: String(wbPost.id),
+      heroData: buildHeroData(wbPost, []),
+      items: [],
+      galleryImage: `/api/v1/image-proxy?url=${encodeURIComponent(wbPost.imageUrl)}`,
+      galleryLabel: wbPost.artistName || wbPost.groupName || "Weekly Best",
+    });
   }
 
   // Fallback: if no heroPosts, use featuredPost
@@ -329,13 +313,6 @@ export default async function Home({
     });
   }
 
-  const weeklyBestStyles = weeklyBestPosts.slice(0, 4).map((post) => ({
-    id: post.id,
-    artistName: post.artistName || post.groupName || "Unknown",
-    imageUrl: post.imageUrl || undefined,
-    link: `/posts/${post.id}`,
-  }));
-
   const forYouStyles = forYouPosts.map(toStyleCard);
   const trendingStyles = trendingPosts.map(toStyleCard);
 
@@ -343,70 +320,206 @@ export default async function Home({
   const editorialStyle: StyleCardData | undefined =
     whatsNewStyles.length > 0 ? whatsNewStyles[0] : undefined;
 
-  // --- Assemble section data for DynamicHomeFeed ---
+  // --- Build new section data ---
 
-  const sectionData: HomeSectionData = {
-    decodedPickStyle,
-    editorialStyle,
-    forYou: {
-      forYouPosts: forYouStyles,
-      trendingPosts: trendingStyles,
-      followingPosts: forYouStyles,
-    },
-    spotlightStyles,
-    whatsNewStyles,
-    bestItemCards,
-    weeklyBestStyles,
-    trendingKeywords:
-      trendingKeywords.length > 0
-        ? trendingKeywords
-        : // Fallback: derive from weeklyBestPosts artist names
-          [
-            ...new Map(
-              weeklyBestPosts
-                .filter((p) => p.artistName || p.groupName)
-                .map((p) => {
-                  const name = (p.artistName || p.groupName)!;
-                  return [
-                    name,
-                    {
-                      id: `artist-${name}`,
-                      label: name,
-                      href: `/search?q=${encodeURIComponent(name)}`,
-                      image: p.imageUrl || undefined,
-                    },
-                  ];
-                })
-            ).values(),
-          ].slice(0, 8),
+  // Trending keywords with fallback
+  const resolvedTrendingKeywords =
+    trendingKeywords.length > 0
+      ? trendingKeywords
+      : [
+          ...new Map(
+            weeklyBestPosts
+              .filter((p) => p.artistName || p.groupName)
+              .map((p) => {
+                const name = (p.artistName || p.groupName)!;
+                return [
+                  name,
+                  {
+                    id: `artist-${name}`,
+                    label: name,
+                    href: `/search?q=${encodeURIComponent(name)}`,
+                    image: p.imageUrl || undefined,
+                  },
+                ];
+              })
+          ).values(),
+        ].slice(0, 8);
+
+  // Section 2: DecodeShowcase — use first whatsNew post with items + real spot coordinates
+  const showcaseSource = whatsNewData.find(
+    (w) => w.post.imageUrl && w.items.length >= 2
+  );
+  const decodeShowcaseData: DecodeShowcaseData = showcaseSource
+    ? {
+        sourceImageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(showcaseSource.post.imageUrl!)}`,
+        artistName:
+          showcaseSource.post.artistName ||
+          showcaseSource.post.groupName ||
+          "DECODED",
+        tagline: "See how it's Decoded",
+        detectedItems: showcaseSource.items.slice(0, 4).map((item, i) => ({
+          id: String(item.id),
+          label: item.name || item.label,
+          brand: item.brand || undefined,
+          imageUrl: item.imageUrl
+            ? `/api/v1/image-proxy?url=${encodeURIComponent(item.imageUrl)}`
+            : undefined,
+          bbox: {
+            // Use real spot coordinates when available (position_left/top are percentage strings)
+            x: Math.max(
+              5,
+              Math.min(
+                70,
+                parseFloat(
+                  showcaseSource.spots?.[i]?.position_left ??
+                    String([15, 55, 10, 50][i % 4])
+                )
+              )
+            ),
+            y: Math.max(
+              5,
+              Math.min(
+                70,
+                parseFloat(
+                  showcaseSource.spots?.[i]?.position_top ??
+                    String([20, 15, 55, 60][i % 4])
+                )
+              )
+            ),
+            width: [28, 24, 26, 22][i % 4],
+            height: [32, 28, 30, 24][i % 4],
+          },
+        })),
+      }
+    : {
+        sourceImageUrl: "",
+        artistName: "DECODED",
+        tagline: "See how it's Decoded",
+        detectedItems: [],
+      };
+
+  // Section 4: EditorialMagazine — whatsNew + spotlight cards with image proxy
+  const editorialMagazineData: EditorialMagazineData = {
+    cards: [
+      ...whatsNewStyles.slice(0, 4).map((s) => ({
+        id: `wn-${s.id}`,
+        imageUrl: s.imageUrl
+          ? `/api/v1/image-proxy?url=${encodeURIComponent(s.imageUrl)}`
+          : "",
+        title: s.title,
+        subtitle: s.description,
+        artistName: s.artistName,
+        category: "What's New",
+        link: s.link,
+      })),
+      ...spotlightStyles.slice(0, 4).map((s) => ({
+        id: `sp-${s.id}`,
+        imageUrl: s.imageUrl
+          ? `/api/v1/image-proxy?url=${encodeURIComponent(s.imageUrl)}`
+          : "",
+        title: s.title,
+        subtitle: s.description,
+        artistName: s.artistName,
+        category: "Spotlight",
+        link: s.link,
+      })),
+    ],
   };
 
-  // Layout: Hero → TopItems → Editorial+Trending → ForYou(logged in) → MasonryGrid → DomeGallery → Footer
-  const newSections: HomeSectionType[] = [
-    "editorial-feature",
-    "trending-list",
-    ...(userId ? (["for-you"] as const) : []),
-  ];
+  // Section 5: VirtualTryOnTeaser — bestItems with image proxy
+  const vtonTeaserData: VTONTeaserData = {
+    pairs: bestItems.slice(0, 3).map((bi) => ({
+      id: String(bi.item.id),
+      beforeImageUrl: bi.imageUrl
+        ? `/api/v1/image-proxy?url=${encodeURIComponent(bi.imageUrl)}`
+        : "",
+      afterImageUrl: bi.imageUrl
+        ? `/api/v1/image-proxy?url=${encodeURIComponent(bi.imageUrl)}`
+        : "",
+      itemName: bi.item.product_name || "Product",
+      itemBrand: bi.item.brand || undefined,
+    })),
+    ctaLabel: "나의 스타일 DNA에 입혀보기",
+  };
+
+  // Section 8: CommunityLeaderboard — top users by total_points + trending tags
+  const rankingUsers = rankingUsersResult.data ?? [];
+  const leaderboardData: CommunityLeaderboardData = {
+    trendingUsers: rankingUsers
+      .filter((u) => u.username)
+      .map((u) => {
+        const dna = u.style_dna as Record<string, unknown> | null;
+        const styleTags: string[] = Array.isArray(dna?.tags)
+          ? (dna.tags as unknown[])
+              .filter((t): t is string => typeof t === "string")
+              .slice(0, 3)
+          : [];
+        return {
+          id: u.id,
+          username: u.username!,
+          avatarUrl: u.avatar_url ?? undefined,
+          styleTags,
+          score: u.total_points,
+        };
+      }),
+    trendingTags: resolvedTrendingKeywords.map((k) =>
+      typeof k === "string" ? k : k.label
+    ),
+  };
+
+  // DomeGallery images — real post images from heroPosts
+  const domeImages = heroPosts
+    .filter((hp) => hp.galleryImage)
+    .slice(0, 20)
+    .map((hp) => ({
+      src: hp.galleryImage!,
+      alt: hp.galleryLabel || "Style",
+    }));
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      {/* Hero + Items Strip + CircularGallery — post gallery changes hero */}
+      {/* ─── 1. Hero Collage ─── */}
       <HeroItemSync posts={heroPosts} />
 
-      {/* Editorial + Trending + ForYou(logged in) */}
-      <DynamicHomeFeed
-        sections={newSections}
-        layoutMode={layoutConfig.layoutMode}
-        data={sectionData}
-      />
+      {/* ─── 2. The Magic: AI Detection Showcase ─── */}
+      <DecodeShowcase data={decodeShowcaseData} />
 
-      {/* DECODED PICKS — Masonry Grid */}
+      {/* ─── 3. Editorial + Trending (combo row) ─── */}
+      <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
+        <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
+          <EditorialSection style={editorialStyle} embedded />
+          <TrendingListSection
+            keywords={resolvedTrendingKeywords}
+            embedded
+          />
+        </div>
+      </section>
+
+      {/* ─── 4. Editorial Magazine (Horizontal Scroll) ─── */}
+      <EditorialMagazine data={editorialMagazineData} />
+
+      {/* ─── 5. VTON Teaser: Before/After ─── */}
+      <VirtualTryOnTeaser data={vtonTeaserData} />
+
+      {/* ─── 6. Discovery Grid: DECODED PICKS ─── */}
       <section className="relative">
         <MasonryGrid items={gridItems as GridItemData[]} />
       </section>
 
-      {/* VTON CTA — full-bleed dome gallery */}
-      <DomeGallerySection />
+      {/* ─── 7. For You (logged-in only) ─── */}
+      {userId && (
+        <ForYouSection
+          forYouPosts={forYouStyles}
+          trendingPosts={trendingStyles}
+          followingPosts={forYouStyles}
+        />
+      )}
+
+      {/* ─── 8. Style DNA & Community Rank ─── */}
+      <CommunityLeaderboard data={leaderboardData} />
+
+      {/* ─── 9. Personalize Banner (VTON CTA) ─── */}
+      <DomeGallerySection images={domeImages.length > 0 ? domeImages : undefined} />
 
       {/* Footer */}
       <MainFooter />
