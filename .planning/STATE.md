@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-last_updated: "2026-03-26T14:03:16.851Z"
+last_updated: "2026-03-26T14:04:27.871Z"
 progress:
   total_phases: 43
-  completed_phases: 40
+  completed_phases: 41
   total_plans: 99
-  completed_plans: 97
+  completed_plans: 98
 ---
 
 # Project State
@@ -56,6 +56,9 @@ Target features:
 - [Phase 44]: MEM-04 manual Chrome DevTools heap snapshot profiling deferred — worktree environment cannot start dev server; user approved deferral, profiling to occur in next normal dev session
 - [Phase 45]: governor 0.10 added directly as companion to tower_governor 0.8 (StateInformationMiddleware not re-exported)
 - [Phase 45]: JWT sub extracted with insecure_disable_signature_validation() — safe since auth_middleware verifies upstream; IP fallback via ConnectInfo<SocketAddr> to avoid X-Forwarded-For spoofing
+- [Phase 45]: Rate limiter is in-memory per-process (not Redis) — acceptable for single-server deployment
+- [Phase 45]: console.log/error guarded (not deleted) — Phase 47 Sentry will replace with structured logging
+- [Phase 45]: debug-env route deleted entirely — no legitimate production use case
 
 ## Performance Metrics
 
@@ -66,3 +69,4 @@ Target features:
 | 44 | 03 | 300 | 1/2 | 0 |
 | Phase 44 P03 | 600 | 2 tasks | 0 files |
 | Phase 45 P01 | 417 | 2 tasks | 4 files |
+| Phase 45 P02 | 466 | 3 tasks | 30 files |
