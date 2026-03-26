@@ -1,18 +1,28 @@
 # Feature Research
 
-**Domain:** API code generation — Orval + Zod for OpenAPI-driven TypeScript client generation
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Orval official docs + DeepWiki architecture analysis + multiple production implementation references)
+**Domain:** Social fashion discovery platform — profile page completion (v10.0)
+**Researched:** 2026-03-26
+**Confidence:** HIGH (OpenAPI spec analysis + existing codebase inspection + industry patterns from Instagram/Pinterest/Weverse)
 
-## Context: What We Are Replacing
+## Context: What Already Exists
 
-The existing `packages/web/lib/api/` layer is a hand-written fetch client:
+The profile page (`/profile`) has a working foundation built in prior milestones:
 
-- `client.ts` — shared `apiClient<T>()` wrapper using `fetch`, Supabase JWT injection, empty `API_BASE_URL` to route through the Next.js `/api/v1/` proxy
-- Per-resource files (`posts.ts`, `users.ts`, `spots.ts`, `badges.ts`, `rankings.ts`, etc.) — typed request functions wrapping `apiClient`
-- React Query hooks in `lib/hooks/` that wrap the above per-resource functions
+- **Profile header, bio, stats** (Posts/Solutions/Points) — real API data via `useMe`, `useUserStats`
+- **Activity tabs** — Posts, Spots, Solutions with infinite scroll via `useUserActivities` — real API connected
+- **Profile edit modal** — name, bio, avatar URL via `PATCH /api/v1/users/me`
+- **Style DNA, Ink credits, Try-on count** — Supabase direct queries via `useProfileExtras`, `useTryOnCount`
+- **BadgeGrid, RankingList** — real API via `useMyBadges`, `useMyRanking`
+- **ProfileClient orchestrator, profileStore Zustand, useProfile hooks** — architecture in place
 
-Orval replaces the per-resource files and the React Query hook layer. The custom auth injection logic from `client.ts` migrates into an Orval **mutator function**.
+**What is stub/unconnected:**
+- `TriesGrid` — fetches from a `TODO: replace with real API` stub that returns `[]`
+- `SavedGrid` — uses `collectionStore` local state (no API persistence)
+- `FollowStats` — renders hardcoded `1234 followers / 567 following` mock values
+- `/profile/[userId]` route — does not exist; `GET /api/v1/users/{user_id}` endpoint exists but no UI
+- Auth guard on `/profile` — page renders regardless of login state; no redirect
+
+**Critical backend finding:** No follow, saved-posts, or VTON-tries endpoints exist in the current OpenAPI spec (`packages/api-server/openapi.json`). This is the primary constraint for v10.0.
 
 ---
 
@@ -20,207 +30,181 @@ Orval replaces the per-resource files and the React Query hook layer. The custom
 
 ### Table Stakes (Users Expect These)
 
-Features that any Orval + Zod integration must deliver. Missing these means the tooling does not function as a code generation pipeline.
+Features users assume exist in any social discovery platform. Missing = product feels broken.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **React Query hook generation** | The project already uses React Query throughout. Orval must emit `useQuery`/`useMutation` hooks, not bare fetch functions. Engineers expect drop-in replacements, not a new calling convention. | LOW | `client: 'react-query'` in config. Generates one `use[OperationId]` hook per OpenAPI path. GET → `useQuery`, POST/PUT/PATCH/DELETE → `useMutation`. |
-| **TypeScript model generation from OpenAPI** | Every endpoint needs typed request/response shapes. Writing these by hand against `https://dev.decoded.style` is what v9.0 replaces. | LOW | Orval reads the spec at generation time and emits `.ts` interface/type files into a `models/` directory. All 30+ endpoint shapes are covered automatically. |
-| **Custom mutator for auth + proxy routing** | Existing `client.ts` injects Supabase JWT and uses an empty `API_BASE_URL` so all requests route via the Next.js `/api/v1/` proxy (avoiding CORS and keeping backend URL server-side). Generated hooks must preserve this behavior. | MEDIUM | `output.override.mutator` config points to a hand-written `mutator.ts`. The mutator receives `AxiosRequestConfig` and returns `Promise<T>`. It replaces the entire transport layer for all generated hooks. |
-| **Single `generate:api` script** | Developers need one command to regenerate all clients when the backend spec changes. | LOW | `orval --config orval.config.ts` runs from `packages/web/`. Add to `package.json` scripts as `generate:api` and add to Turborepo pipeline before `build`. |
-| **Query key generation** | React Query cache invalidation requires stable, predictable keys. The existing manual hooks use ad hoc string arrays. | LOW | Auto-generated: `get[OperationId]QueryKey()` function per endpoint. Default key is the route path as an array (e.g. `['/posts/{postId}', { postId }]`). Can switch to operation ID with `useOperationIdAsQueryKey: true`. |
-| **tags-split output mode** | 30+ endpoints across ~10 domain tags (posts, users, spots, solutions, admin, badges, rankings, vton, events, categories). Flat single-file output is unmanageable at this scale. | LOW | `mode: 'tags-split'` creates one folder per OpenAPI tag (matching backend organization), then splits implementation/schemas/mocks within each folder. Matches the existing per-domain structure in `lib/api/`. |
-| **Separate schemas directory** | Model types must be importable from both generated hooks and other non-hook code (stores, utilities). Mixing them into the same file as hooks creates awkward imports. | LOW | `output.schemas: './src/generated/models'` puts all type definitions in a dedicated path. `output.operationSchemas` for operation-specific param/body types. |
-| **Index barrel exports** | Consumers import from a single path per tag, not from internal generated file paths that may change on next generation. | LOW | `indexFiles: true` (default) generates `index.ts` in each tag folder. `workspace` option generates a root `index.ts` with all exports. |
-| **Post-generation formatting** | Generated files must pass the existing pre-push CI (`just ci-web` runs ESLint + Prettier + tsc). Unformatted generated code will fail CI immediately. | LOW | `output.hooks.afterAllFilesWrite: ['prettier --write', 'eslint --fix']` runs formatters automatically after every generation. |
-
----
+| **Auth guard on /profile** | Any profile page behind authentication is standard. Unauthenticated access to personal data is confusing and insecure. | LOW | `proxy.ts` pattern already exists for `/admin`. Mirror it: add `/profile` matcher, redirect to `/login` (or `/`) if no session. Can also do client-side check in `ProfileClient` using `authStore.isInitialized + authStore.user`. |
+| **Tries tab — real data** | Users who ran virtual try-on expect to see their results in history. Empty state with no connection reads as broken, not empty. | MEDIUM | `GET /api/v1/users/me/tries` does NOT exist in current OpenAPI spec. Three options: (1) add endpoint to Rust backend, (2) query Supabase `vton_results` table directly (same pattern as `useTryOnCount`), (3) disable the tab visibly until endpoint exists. Option 2 is fastest for v10.0. |
+| **Saved tab — real data** | Bookmarking/saving items is a core behavior on fashion discovery platforms (Pinterest, Instagram saves). Currently uses local `collectionStore` with no persistence — data is lost on refresh. | MEDIUM | `GET /api/v1/users/me/saved` does NOT exist in OpenAPI spec. Supabase likely has a `saved_posts` or `bookmarks` table. Direct Supabase query (same pattern as `profileExtras`) is the pragmatic path. Needs API design decision. |
+| **Followers / Following counts — real data** | Any social platform shows social graph counts. Hardcoded `1234/567` breaks trust immediately. | LOW | `GET /api/v1/users/me` (`UserResponse`) needs to include `followers_count` and `following_count` fields — check if they exist in the model. If not in the response, a Supabase direct count query is an acceptable interim solution. |
+| **Other user profile `/profile/[userId]`** | Clicking on any username/avatar in Posts, Solutions, Comments expects a profile page. Without it, the discovery loop is broken — you can find items but not explore the person who posted them. | MEDIUM | `GET /api/v1/users/{user_id}` exists in OpenAPI spec. Route `/profile/[userId]` needs a new page and a `UserProfileClient` variant. The existing `ProfileClient` must be refactored to accept an optional `userId` prop or split into two components. |
+| **Own vs. other profile differentiation** | On your own profile: edit button, settings, private tabs (Tries/Saved). On others' profiles: follow button, no edit, no private tabs. | MEDIUM | Standard social pattern. `ProfileHeader` and action buttons must check `userId === currentUser.id`. The auth guard scope differs: `/profile` requires login; `/profile/[userId]` is public (or requires login for follow action only). |
+| **Infinite scroll on Tries/Saved tabs** | Posts/Spots/Solutions already use infinite scroll. Inconsistency on the same page tabs feels like a bug. | LOW | Already have `useInfiniteQuery` pattern from existing tabs. Once API or Supabase query is in place, wiring to the existing scroll infrastructure is LOW complexity. |
 
 ### Differentiators (Competitive Advantage)
 
-Features that go beyond the minimum and significantly improve developer experience, type safety, or test coverage.
+Features that enhance the decoded-specific value proposition — not required by convention, but valued by users on a K-pop fashion discovery platform.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Zod response validation** | Runtime type checking catches backend contract violations at the API boundary — before the data reaches components and causes cryptic render errors. | MEDIUM | Requires a second Orval config block with `client: 'zod'`. Generates `{operationName}Response` Zod schema. Must be wired into the mutator via `.parse()` on the response. Orval auto-detects Zod v3 vs v4 from `package.json` (v7.10.0+). |
-| **Zod request body validation** | Validate user-submitted data before it hits the network. Especially valuable for the upload/detect flow where invalid payloads cause confusing backend errors. | MEDIUM | Generates `{operationName}Body` Zod schemas. Call `schema.parse(body)` before invoking the mutation. Errors surface in the component with a clear validation message rather than a 400 from the server. |
-| **Auto-invalidation on mutation success** | Orval can generate `useInvalidate[Operation]` helpers that precisely target the affected query keys. Eliminates manual `queryClient.invalidateQueries()` calls in mutation `onSuccess` handlers. | MEDIUM | `output.override.query.useInvalidate: true`. The generated invalidator knows the correct query key because it is generated from the same spec as the query hook. |
-| **useInfiniteQuery for paginated endpoints** | Images grid and feed use infinite scroll. The cursor/offset parameter must be plumbed through correctly. Manual implementation today has this wired by hand. | MEDIUM | `output.override.query.useInfinite: true` + `useInfiniteQueryParam: 'cursor'` (or whichever param the backend uses). Generates `useInfinite[OperationId]` hooks alongside regular `use[OperationId]` hooks. |
-| **usePrefetch hooks for SSR** | Post detail and profile pages are good candidates for server-side prefetching. Generated `usePrefetch[OperationId]` can be called in route handlers to populate the React Query cache before the page renders. | MEDIUM | `output.override.query.usePrefetch: true`. Returns a function compatible with `queryClient.prefetchQuery`. Requires careful `"use client"` boundary management — the hook wrapper must live in a client component. |
-| **Zod coercion for query params** | URL query parameters arrive as strings. Coercion converts `"42"` → `42` and `"true"` → `true` automatically, without manual parsing in the component. | LOW | `output.override.zod.coerce: true` scoped to `query` context only. Avoids unwanted coercion on response bodies where type accuracy matters. |
-| **Zod strict mode on critical responses** | Detect when the backend sends unexpected fields — surfaces API contract drift immediately rather than silently ignoring extra data. | LOW | `output.override.zod.strict: true` scoped to `response` context for high-risk endpoints (auth, user profile). Generates `.strict()` (v3) or `strictObject()` (v4). Do not enable globally — see anti-features. |
-| **useOperationIdAsQueryKey** | Operation IDs (e.g. `getPostById`) produce human-readable query keys in React Query DevTools instead of raw route paths. Significantly easier to debug cache state. | LOW | `output.override.query.useOperationIdAsQueryKey: true`. One line of config. Only downside: operation IDs must be stable in the OpenAPI spec. |
-| **MSW mock generation** | Generated MSW handlers (`*.msw.ts`) and Faker-based mock data functions (`get[OperationId]ResponseMock()`) enable integration tests and component-level testing without a running backend. | HIGH | `output.mock: true`. Generates `*.msw.ts` files alongside hooks. Requires `@faker-js/faker` and `msw` (neither currently in the stack). MSW mock data will not satisfy strict Zod schemas — these must be used in separate test environments. |
-
----
+| **Follow button with optimistic update** | Standard platforms (Instagram, Twitter) update the button instantly and reconcile later. Decoded's social layer is nascent — a polished follow interaction establishes credibility. | MEDIUM | Requires `POST /api/v1/users/{user_id}/follow` and `DELETE /api/v1/users/{user_id}/follow` endpoints (not in current spec). Optimistic update via React Query `useMutation` with `onMutate` / `onError` rollback is the pattern. |
+| **Followers/Following modal list** | Clicking the follower/following count opens a list of user avatars with follow buttons — same as Instagram. Reinforces the social graph and drives discovery. | HIGH | Requires `GET /api/v1/users/{user_id}/followers` and `/following` endpoints (not in spec). Deferred unless backend is extended. |
+| **Try-on result detail view** | Tapping a VTON result card in the Tries tab shows full-screen result with the source post link. Closes the loop between discovery and try-on. | LOW | Once Tries tab has real data, adding a tap-to-expand behavior is pure UI — no new API needed beyond the result URL already returned. |
+| **Saved tab sub-tabs (Pins/Boards/Collage)** | `SavedGrid` already has `Pins/Boards/Collage` sub-tab UI implemented via `collectionStore`. Connecting this to persistent API data would make decoded's curation system a differentiator vs. flat bookmarks on other platforms. | HIGH | Requires board/collection API endpoints (not in spec). The UI is built; the backend is the blocker. For v10.0, persist pins to Supabase directly; defer Boards/Collage to a collections milestone. |
+| **Public profile shareable URL** | `/profile/[userId]` with proper `og:image`, `og:title` metadata makes profiles shareable on KakaoTalk, Instagram stories. K-pop fan culture is highly share-driven. | LOW | Once `/profile/[userId]` page exists, adding `generateMetadata` with user name/avatar is trivial — pure Next.js SSR metadata. High social/discovery value for LOW cost. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem appealing but create concrete problems for this project.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Editing generated files manually** | Tempting to patch a quirk in a generated hook inline | Generated files are fully overwritten on the next `generate:api` run. Any manual fix is silently lost. Creates a false confidence that something is fixed. | Fix the upstream OpenAPI spec or use `output.override` config to customize generation behavior. Generated files are build artifacts, not source code. |
-| **Committing generated files to version control** | Feels like a safety net — "at least the generated files are there if generation fails" | Generated files produce large, noisy diffs on every spec change. Merge conflicts are frequent and meaningless. The spec is the source of truth. | Add `packages/web/src/generated/` to `.gitignore`. Regenerate in CI as part of the `build` pipeline task. CI fails fast if spec is unreachable. |
-| **Enabling Zod validation on all contexts simultaneously** | Seems maximally safe — validate everything everywhere | Response validation adds parse overhead on every API call. Enabling strict mode globally causes parse failures on minor backend additions (new optional field → strict schema rejects it). Particularly painful during active backend development. | Enable Zod selectively: coerce for query params (low risk, high value), response validation only for auth/user endpoints (highest drift risk), skip strict mode entirely until the OpenAPI spec is stable. |
-| **Single-file output mode** | Simple — one import, easy to understand | 30+ endpoints in one file produces a massive generated file. IDE performance (autocomplete, type checking) degrades. Tree-shaking fails. Merge conflicts on regeneration are unresolvable. | Use `tags-split` mode which mirrors the existing per-domain organization in `lib/api/`. The folder structure is immediately recognizable to the team. |
-| **generateEachHttpStatus: true** | Want Zod schemas for 400/404/500 error shapes too | With 30+ endpoints, generating schemas for every HTTP status produces 150-200+ schemas. Most error shapes are identical (a generic `ErrorResponse` type) or are never machine-validated. Generation time increases significantly. | Generate only 2xx response schemas (the default). Handle error shapes generically in the mutator's error interceptor, the same way `client.ts` currently does. |
-| **Replacing the Next.js /api/v1/ proxy with direct backend calls** | Orval can be configured to call `https://dev.decoded.style` directly from the browser | The Next.js proxy exists for three reasons: (1) CORS — the backend does not whitelist browser origins, (2) secrets — `API_BASE_URL` is a server-side env var that must not leak to the browser, (3) centralized auth flow. Bypassing it breaks all three. | Configure the mutator `baseURL` to `""` (empty string). All generated hooks continue routing via `/api/v1/` exactly as the current manual `client.ts` does. |
-| **Zod generateEachHttpStatus for admin routes** | Admin dashboard has complex status flows | Admin routes behind auth middleware have additional behavioral complexity. Strict per-status Zod schemas for ~15 admin endpoints adds ~90 schemas that change frequently as the admin API evolves. | Handle admin error responses with the generic error pattern in the mutator. Admin-specific error shapes belong in the admin hook layer, not in generated schemas. |
+| **Real-time follower count updates (WebSocket)** | Social platforms show live counts. Feels modern and engaging. | WebSocket infrastructure does not exist. Adding it for a count that changes infrequently adds significant backend complexity for minimal UX gain. | Poll on page focus (`refetchOnWindowFocus: true` in React Query). Count is fresh on return. |
+| **Block/mute user system** | Standard moderation on social platforms. | Requires complex relationship table, UI flows, and content filtering logic across every content feed. Out of scope for a follow-system MVP. | File user report (simpler) if moderation is needed. |
+| **Mutual follow / "friends" detection** | Instagram-style mutual follow badge feels personalized. | Requires backend join query across the follow graph. Adds complexity to the `UserResponse` shape without adding core discovery value. | Show simple follow state (following/not following). Add mutual detection in a later iteration. |
+| **Offline profile caching (PWA)** | Profile data should work offline. | Next.js SSR + Supabase auth make full offline mode non-trivial. Service worker conflicts with auth token refresh. | React Query's `staleTime` + `gcTime` provide adequate perceived performance without full offline. |
+| **Bulk follow import from other platforms** | "Follow everyone from your Instagram/Twitter" feature. | Requires OAuth integrations with third-party platforms and a matching algorithm. Scope is a separate milestone, not part of profile completion. | Manual search-and-follow. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Custom Mutator (mutator.ts)]
-    └──required-by──> [React Query Hook Generation]
-    └──required-by──> [TypeScript Model Generation]  (mutator is the transport layer)
-    └──required-by──> [Zod Response Validation]      (mutator runs .parse() on response)
+[Auth Guard on /profile]
+    └──required-for──> [Tries Tab real data]   (must know who is "me")
+    └──required-for──> [Saved Tab real data]   (must know who is "me")
+    └──required-for──> [Follow button on /profile/[userId]]  (must know current user)
 
-[React Query Hook Generation]
-    └──enables──> [Query Key Generation]
-    └──enables──> [Auto-Invalidation on Mutation]
-    └──enables──> [useInfiniteQuery for Pagination]
-    └──enables──> [usePrefetch Hooks]
+[GET /api/v1/users/{user_id} — already in OpenAPI spec]
+    └──required-by──> [/profile/[userId] page]
+    └──enhances──> [Followers/Following real counts] (if fields added to UserResponse)
 
-[tags-split Output Mode]
-    └──requires──> [OpenAPI tags defined on backend endpoints]
-    └──enables──> [Index Barrel Exports per tag]
+[Tries Tab — Supabase direct OR new endpoint]
+    └──requires──> [vton_results Supabase table accessible to current user]
+    └──enables──> [Try-on result detail view]
 
-[Zod Schema Generation (separate config block, client: 'zod')]
-    └──requires──> [zod package installed]
-    └──enables──> [Zod Response Validation]
-    └──enables──> [Zod Request Body Validation]
-    └──enhances──> [Zod Coercion for Query Params]
-    └──enhances──> [Zod Strict Mode on Responses]
+[Saved Tab — Supabase direct OR new endpoint]
+    └──requires──> [saved_posts or bookmarks Supabase table]
+    └──enables──> [Saved Pins persistence]
+    └──enables-later──> [Boards/Collage sub-tabs]
 
-[afterAllFilesWrite Formatting]
-    └──requires──> [Prettier configured in packages/web]
-    └──requires──> [ESLint flat config in packages/web]
-    └──prevents──> [CI failure on generated file style]
+[/profile/[userId] page]
+    └──requires──> [GET /api/v1/users/{user_id}]  (already in spec)
+    └──enables──> [Public shareable URL with og: metadata]
+    └──enables──> [Follow button]
+    └──requires──> [Own vs. other differentiation logic]
 
-[MSW Mock Generation]
-    └──requires──> [@faker-js/faker installed]
-    └──requires──> [msw installed]
-    └──conflicts──> [Zod Strict Mode]  (Faker data fails strict schemas)
+[Follow button]
+    └──requires──> [POST/DELETE /api/v1/users/{user_id}/follow]  (NOT in current spec — backend work required)
+    └──requires──> [/profile/[userId] page]
+    └──enables──> [Followers/Following list modal]
 
-[useInfiniteQuery]
-    └──requires──> [Backend cursor/offset param documented in OpenAPI spec]
-
-[Auto-Invalidation on Mutation]
-    └──requires──> [useOperationIdAsQueryKey OR matching query key]
-    └──note──> [Only invalidates Orval-generated queries; hand-written queries need manual invalidation]
+[Followers/Following real counts in FollowStats]
+    └──requires──> [UserResponse includes followers_count + following_count fields]
+    └──OR──> [Direct Supabase count query on follows table]
 ```
 
 ### Dependency Notes
 
-- **Custom mutator must be implemented before any generated hook is usable.** Without it, generated hooks call raw axios with no auth token and no proxy routing. The mutator is the first deliverable in v9.0.
-- **Zod generation is a separate Orval config block.** `client: 'zod'` mode generates only validation schemas, not hooks. It runs in the same `orval.config.ts` as a second named entry alongside the `client: 'react-query'` entry. Both read the same spec, output to different directories.
-- **tags-split requires backend OpenAPI tags.** Verify that `https://dev.decoded.style/openapi.json` has tags defined on every operation before committing to this mode. If tags are missing, Orval falls back to a single file — acceptable temporarily but must be fixed in the spec.
-- **MSW mocks and strict Zod cannot coexist in the same test environment.** Faker generates plausible but not spec-perfect data. Enable MSW mocks in a separate test `orval.config.test.ts` without Zod strict mode.
-- **Auto-invalidation only covers Orval-generated query hooks.** The Supabase direct queries in `packages/shared/supabase/queries/` are not touched by Orval and are not auto-invalidated by generated mutation hooks.
+- **Auth guard is the simplest feature but unlocks everything.** It must be Phase 1. It takes 1-2 hours using the existing `proxy.ts` pattern.
+- **Tries and Saved tabs have no backend endpoints.** Both depend on Supabase direct queries as the v10.0 approach. This is consistent with how `useTryOnCount` and `profileExtras` already work.
+- **`/profile/[userId]` has a backend endpoint** (`GET /api/v1/users/{user_id}`). This is the highest-value unblocked feature — it only needs a new Next.js route and a refactored `ProfileClient`.
+- **Follow system is fully blocked on backend.** No follow endpoints exist in the OpenAPI spec. The UI (`FollowStats` buttons are already rendered) is ready but non-functional until the Rust backend exposes follow endpoints. For v10.0, focus on read-only real counts; write operations (follow/unfollow) belong to a follow-system milestone unless the backend is extended in parallel.
+- **FollowStats hardcoded values** are the lowest-trust element on the current profile. Even if a proper follow system isn't built, replacing mock values with real counts (even from a Supabase direct query) is a high-trust, low-cost fix.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v9.0)
+This is a subsequent milestone — not a greenfield MVP. "Launch with" means "complete for v10.0 profile completion."
 
-Minimum to replace all manual `lib/api/` clients and validate the generation pipeline end-to-end.
+### Launch With (v10.0)
 
-- [ ] **Custom mutator** (`lib/api/generated/mutator.ts`) — Supabase JWT injection from session, empty baseURL for proxy routing, error handling matching current `client.ts` behavior
-- [ ] **Orval config** (`packages/web/orval.config.ts`) — `client: 'react-query'`, `mode: 'tags-split'`, points at backend OpenAPI spec, outputs to `src/generated/`
-- [ ] **`generate:api` bun script** — wired into `packages/web/package.json` and Turborepo pipeline (runs before `build`)
-- [ ] **React Query hook generation** — all 30+ endpoints generating `use[OperationId]` hooks with correct query/mutation split
-- [ ] **TypeScript model generation** — all request/response types in `src/generated/models/`, manual types in `lib/api/types.ts` deleted
-- [ ] **afterAllFilesWrite formatting** — Prettier + ESLint run on generated files automatically
-- [ ] **Full migration of `lib/hooks/`** — all hooks that wrap `lib/api/` functions replaced with direct imports from generated hooks
-- [ ] **Delete `lib/api/*.ts`** — posts, users, spots, solutions, badges, rankings, categories, postLikes, savedPosts, comments, and the adapters folder removed after migration is verified
-- [ ] **`.gitignore` update** — `packages/web/src/generated/` excluded from version control
+Minimum to call the profile page "complete" — no stub data, no broken tabs.
 
-### Add After Validation (v9.x)
+- [ ] **Auth guard on `/profile`** — redirect unauthenticated users to `/login` (or `/`). Uses existing `proxy.ts` middleware pattern. Blocks unauthorized access to private profile data.
+- [ ] **Tries tab — Supabase direct query** — replace `fetchMyTries` stub with real query against `vton_results` table. Infinite scroll using existing `useInfiniteQuery` pattern. Empty state remains if table is empty.
+- [ ] **Saved tab — Supabase direct query** — persist pins from `collectionStore` to Supabase `saved_posts` / `bookmarks` table. Load on mount. Replace local-only state with real data.
+- [ ] **Followers/Following real counts** — check if `UserResponse` from `GET /api/v1/users/me` includes counts. If yes, wire to `FollowStats`. If no, Supabase direct count as fallback. Remove hardcoded mock values.
+- [ ] **`/profile/[userId]` page** — new `app/profile/[userId]/page.tsx` + `UserProfileClient.tsx`. Fetches `GET /api/v1/users/{user_id}`. Shows public info (avatar, name, bio, stats, posts). No private tabs (Tries/Saved). Edit button hidden. Follow button placeholder (non-functional until backend extends).
 
-Add once the generation pipeline is confirmed working in production and CI.
+### Add After Validation (v10.x)
 
-- [ ] **Zod request body validation** — second Orval config block with `client: 'zod'`, wire `{operationName}Body.parse()` into upload and create flows. Trigger: first runtime type mismatch caught in staging.
-- [ ] **Zod response validation** — enable for auth and user endpoints first. Trigger: backend spec change causes silent data corruption in the UI.
-- [ ] **useInfiniteQuery for images and feed** — enable once cursor parameter confirmed in OpenAPI spec. Trigger: infinite scroll regression caused by manual implementation gap.
-- [ ] **Auto-invalidation on mutation** — `useInvalidate` helpers for post create, like, save mutations. Trigger: stale cache complaints from QA.
-- [ ] **useOperationIdAsQueryKey** — enable for improved DevTools legibility. Trigger: debugging session complexity grows.
+Add once v10.0 is confirmed working in production.
 
-### Future Consideration (v10+)
+- [ ] **Follow/unfollow action** — trigger: backend exposes `POST/DELETE /api/v1/users/{user_id}/follow`. Wire follow button with optimistic update.
+- [ ] **Followers/Following list modal** — trigger: backend exposes list endpoints. High social graph discovery value.
+- [ ] **Public profile og: metadata** — `generateMetadata` on `/profile/[userId]` with user avatar as og:image. Low cost once the page exists.
 
-Defer until v9.0 migration is fully proven and the team has confidence in the generation workflow.
+### Future Consideration (v11+)
 
-- [ ] **MSW mock generation** — requires adding `@faker-js/faker` and `msw` to the dev stack. High value for component testing but significant setup investment.
-- [ ] **usePrefetch for SSR** — enables server-side prefetching for detail pages. Defer until App Router data fetching patterns are formalized in this project.
-- [ ] **Zod strict mode on responses** — risk of false-positive failures during active backend development. Enable once the OpenAPI spec is declared stable.
-- [ ] **Zod coercion for query params** — nice-to-have for explore/search. Low priority since current manual parameter handling works correctly.
+Defer until follow system backend is proven and collection system is scoped.
+
+- [ ] **Boards/Collage in Saved tab** — requires collection API endpoints. The UI is already built in `SavedGrid`; the backend is the blocker.
+- [ ] **Try-on result detail view** — tap-to-expand on Tries grid with source post link.
+- [ ] **Real-time follower counts** — only if WebSocket infrastructure is built.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | Developer Value | Implementation Cost | Priority |
-|---------|----------------|---------------------|----------|
-| Custom mutator (auth + proxy) | HIGH | MEDIUM | P1 |
-| React Query hook generation | HIGH | LOW | P1 |
-| TypeScript model generation | HIGH | LOW | P1 |
-| `generate:api` script + Turborepo pipeline | HIGH | LOW | P1 |
-| tags-split file organization | HIGH | LOW | P1 |
-| afterAllFilesWrite formatting | HIGH | LOW | P1 |
-| Migration: delete `lib/api/*.ts` | HIGH | MEDIUM | P1 |
-| Migration: replace `lib/hooks/` | HIGH | MEDIUM | P1 |
-| Zod request body validation | MEDIUM | MEDIUM | P2 |
-| Zod response validation | MEDIUM | MEDIUM | P2 |
-| Auto-invalidation on mutation | MEDIUM | LOW | P2 |
-| useInfiniteQuery for pagination | MEDIUM | MEDIUM | P2 |
-| useOperationIdAsQueryKey | LOW | LOW | P2 |
-| usePrefetch hooks | LOW | MEDIUM | P3 |
-| MSW mock generation | LOW | HIGH | P3 |
-| Zod strict mode on responses | LOW | LOW | P3 |
-| Zod coercion for query params | LOW | LOW | P3 |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Auth guard on `/profile` | HIGH | LOW | P1 |
+| Followers/Following real counts | HIGH | LOW | P1 |
+| `/profile/[userId]` public page | HIGH | MEDIUM | P1 |
+| Tries tab real data (Supabase) | MEDIUM | MEDIUM | P1 |
+| Saved tab real data (Supabase) | MEDIUM | MEDIUM | P1 |
+| Follow/unfollow button (write) | HIGH | HIGH (backend blocked) | P2 |
+| Public og: metadata on user profiles | MEDIUM | LOW | P2 |
+| Followers/Following list modal | MEDIUM | HIGH (backend blocked) | P3 |
+| Try-on result detail view | LOW | LOW | P3 |
+| Boards/Collage API persistence | MEDIUM | HIGH (backend blocked) | P3 |
 
 **Priority key:**
-- P1: Required for v9.0 milestone — migration is incomplete without these
-- P2: Ship when core is validated — significant DX or safety improvement
-- P3: Future milestone — valuable but not blocking
+- P1: Required for v10.0 — profile completion milestone is incomplete without these
+- P2: Ship when backend is extended — high value, waiting on follow API
+- P3: Future milestone — meaningful but not blocking
+
+---
+
+## Competitor Feature Analysis
+
+Reference platforms: Instagram (follow system), Pinterest (saved/boards), Weverse (K-pop fan profiles), LikeToKnowIt (fashion discovery).
+
+| Feature | Instagram | Pinterest | Weverse | Our Approach |
+|---------|-----------|-----------|---------|--------------|
+| Follow counts | Real-time, prominent in header | Shown on profile, secondary | Shown with artist/fan split | Real counts from API/Supabase in `FollowStats` component (already UI-ready) |
+| Saved/Bookmarks | Private by default, flat list | Boards (public/private), sub-boards | Fan-made "Universe" collections | Saved tab with Pins (flat) for v10.0; Boards deferred |
+| Try-on/AR history | Instagram filter history (camera) | No equivalent | No equivalent | VTON results grid — decoded-specific differentiator |
+| Public user profile | Full public profile, all posts | Public boards, pins | Artist profiles public, fan profiles limited | Public posts + bio; Tries/Saved hidden; follow button |
+| Auth gate | Public browsing allowed; account needed for actions | Public browsing allowed | Account required for all content | `/profile/[userId]` is public; `/profile` (own) requires auth |
+| Own vs. other | Edit button appears only on own profile | Follows/edit only on own | N/A | `userId === currentUser.id` guard in `ProfileHeader` |
 
 ---
 
 ## Existing Code Impact Map
 
-The following files in `packages/web` are directly affected by or must be integrated with the generated output.
-
-| Existing File/Directory | Relation to Orval Generation | Action |
-|------------------------|------------------------------|--------|
-| `lib/api/client.ts` | Contains auth injection + proxy routing logic | Auth logic moves into `mutator.ts`. `client.ts` is deleted after migration is verified. |
-| `lib/api/posts.ts`, `users.ts`, `spots.ts`, etc. | Per-resource typed fetch wrappers | Replaced entirely by generated hooks. Delete after each domain is migrated. |
-| `lib/api/types.ts` | Manual request/response type definitions | Replaced by generated model files in `src/generated/models/`. Delete when all types are covered. |
-| `lib/api/adapters/` | Data transformation adapters between API and UI | Evaluate case-by-case. If transformations are needed, keep them as utilities that consume generated types rather than raw API functions. |
-| `lib/hooks/*.ts` | React Query hooks wrapping `lib/api/` functions | Replaced by direct imports from generated `use[OperationId]` hooks. Files deleted after migration. |
-| `lib/hooks/admin/*.ts` | Admin-specific data hooks | Same pattern. Generated hooks replace manual wrapping. |
-| `app/api/v1/**` | Next.js server-side proxy routes | Keep unchanged. The mutator must route through these. `API_BASE_URL` stays `""` in mutator config. |
-| `packages/shared/supabase/queries/` | Supabase direct queries (images, items) | Not replaced by Orval. These target Supabase directly, not the Rust backend REST API. Keep as-is. |
+| Existing File | Current State | Required Change |
+|---------------|---------------|-----------------|
+| `packages/web/proxy.ts` | Protects `/admin` only | Add `/profile` to matcher; redirect to `/` if no session |
+| `app/profile/page.tsx` | No auth check; renders `ProfileClient` directly | Add server-side session check OR extend proxy matcher |
+| `ProfileClient.tsx` | Own profile only; hardcoded FollowStats | Extract shared logic; pass `userId` prop for other-user variant |
+| `TriesGrid.tsx` | Stub `fetchMyTries()` returning `[]` | Replace with Supabase direct query on `vton_results` table |
+| `SavedGrid.tsx` | Uses local `collectionStore` with no persistence | Add Supabase read/write for pins; keep local state as optimistic cache |
+| `FollowStats.tsx` | Hardcoded `followers=1234, following=567` | Accept real props from `UserResponse` or Supabase count |
+| `lib/hooks/useProfile.ts` | Has `useGetUserProfile` hook (for other-user) | Wire to new `/profile/[userId]` page client |
+| `app/profile/[userId]/` | Does not exist | New route: `page.tsx` + `UserProfileClient.tsx` |
 
 ---
 
 ## Sources
 
-- [Orval React Query Guide](https://www.orval.dev/guides/react-query) — hook generation pattern, query key naming, infinite query config (HIGH confidence — official docs)
-- [Orval Output Configuration Reference](https://www.orval.dev/reference/configuration/output) — mode options, client types, override structure, hooks config (HIGH confidence — official docs)
-- [Orval Zod Schema Validation Architecture (DeepWiki)](https://deepwiki.com/orval-labs/orval/5-zod-schema-validation) — two-phase generation, schema naming conventions, five schema types per operation (HIGH confidence — sourced from Orval codebase)
-- [Orval Zod Generation Configuration (DeepWiki)](https://deepwiki.com/orval-labs/orval/5.1-zod-generation-configuration) — strict, coerce, preprocess, per-context overrides, Zod v3/v4 auto-detection (HIGH confidence)
-- [Orval Output Modes (DeepWiki)](https://deepwiki.com/orval-labs/orval/2.2-output-modes) — tags-split recommended for large APIs (HIGH confidence — sourced from Orval codebase analysis)
-- [Orval Custom Axios Guide](https://www.orval.dev/guides/custom-axios) — mutator function signature `<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<T>` (HIGH confidence — official docs)
-- [Prototyp: Generating API client from OpenAPI/Swagger with Orval and TanStack Query](https://prototyp.digital/blog/generating-api-client-openapi-swagger-definitions) — migration workflow, production patterns (MEDIUM confidence)
-- [Andy Primawan: Generate TypeScript SDKs and React Query Hooks for Next.js with Orval](https://andyprimawan.com/generate-typescript-sdks-and-react-query-hooks-for-nextjs-with-orval-and-openapi-specs/) — full Next.js config with auth interceptors (MEDIUM confidence)
-- [Neteye Blog: Summoning Orval](https://www.neteye-blog.com/2025/09/summoning-orval-binding-backend-and-frontend-by-magic/) — CI/CD integration, afterAllFilesWrite pattern (MEDIUM confidence)
-- [Zod v4 compatibility issue tracker](https://github.com/orval-labs/orval/issues/2042) — Orval v7.10.0+ adds Zod v4 auto-detection (HIGH confidence — primary source)
-- [Orval invalidation from mutations discussion](https://github.com/anymaniax/orval/discussions/506) — useInvalidate hook behavior and manual invalidation patterns (MEDIUM confidence)
+- OpenAPI spec analysis: `packages/api-server/openapi.json` — all 60 endpoints enumerated, no follow/saved/tries endpoints found (HIGH confidence — direct spec inspection)
+- Existing codebase inspection: `ProfileClient.tsx`, `TriesGrid.tsx`, `SavedGrid.tsx`, `FollowStats.tsx`, `profileStore.ts`, `proxy.ts` (HIGH confidence — direct code reading)
+- Industry patterns: Instagram profile architecture (follow system, own vs. other guards), Pinterest saved/boards (collection hierarchy), Weverse (K-pop fan platform — share-first culture) (MEDIUM confidence — known platform behavior, not current docs)
+- Next.js 16 middleware pattern: `proxy.ts` existing implementation for `/admin` (HIGH confidence — codebase)
 
 ---
 
-*Feature research for: Orval + Zod API client generation (v9.0 milestone)*
-*Researched: 2026-03-23*
+*Feature research for: decoded platform — v10.0 Profile Page Completion*
+*Researched: 2026-03-26*

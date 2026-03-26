@@ -1,26 +1,31 @@
 # Stack Research
 
-**Domain:** Type-Safe API Client Generation — Orval + Zod for decoded-monorepo v9.0
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Orval v8.5.3 verified from GitHub releases; zod v4.x verified from npm; axios 1.13.x verified from npm)
+**Domain:** Profile Page Completion — Follow system, Auth guard, Infinite scroll tabs, Public user profile routing
+**Researched:** 2026-03-26
+**Confidence:** HIGH (codebase direct inspection + OpenAPI spec analysis)
 
 ---
 
 ## Context: Existing Stack — Do Not Re-Research
 
-Already installed and validated as of v8.0 monorepo consolidation. Zero changes to these:
+Validated from codebase inspection. Already installed, zero changes needed:
 
 | Package | Version | Status |
 |---------|---------|--------|
-| Next.js | 16.2.1 | Stays |
-| React | 19.2.4 | Stays |
+| Next.js | 16.0.7 | Stays |
+| React | 18.3.1 (PROJECT.md says 18) | Stays |
 | TypeScript | 5.9.3 | Stays |
-| @tanstack/react-query | 5.90.11 | Stays — Orval generates into this |
-| bun | 1.3.10+ | Stays — package manager |
-| Turborepo | (in use) | Stays — add `generate` task |
-| Supabase | 2.86.0 | Stays — NOT being migrated this milestone |
+| @tanstack/react-query | 5.90.11 | Stays — `useInfiniteQuery` already in use |
+| Zustand | 4.5.7 | Stays |
+| @supabase/supabase-js | 2.86.0 | Stays |
+| @supabase/auth-helpers-nextjs | 0.15.0 | Stays |
+| Orval-generated API client | (regenerated) | Stays — `useGetUserProfile`, `getMyActivities` already generated |
+| axios | (in use via Orval mutator) | Stays |
+| Tailwind CSS | 3.4.18 | Stays |
+| bun | 1.3.10+ | Stays |
 
-The existing manual API client in `packages/web/lib/api/` uses raw `fetch` with a custom `apiClient()` wrapper that injects Supabase JWT tokens. Orval's generated client must integrate with the same auth pattern — not introduce a second HTTP client with a different auth mechanism.
+**Critical discovery from OpenAPI spec inspection:**
+The Rust backend exposes exactly 5 user endpoints: `GET/PATCH /api/v1/users/me`, `GET /api/v1/users/me/activities`, `GET /api/v1/users/me/stats`, `GET /api/v1/users/{user_id}`. **There are no follow system endpoints** (`/follow`, `/followers`, `/following`) in the current backend spec. The follow system UI is mock data only.
 
 ---
 
@@ -28,183 +33,185 @@ The existing manual API client in `packages/web/lib/api/` uses raw `fetch` with 
 
 ### Core Technologies
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| orval | ^8.5.3 | CLI that reads OpenAPI spec and emits TypeScript React Query hooks + Zod schemas | Industry standard for OpenAPI-to-TypeScript codegen as of 2025-2026; generates one hook per endpoint; supports react-query v5, Zod v3/v4, custom mutators; v8 is the current stable major; actively maintained (v8.5.3 released March 6, 2025) |
-| zod | ^3.25 | Runtime validation library for generated schemas | Orval's Zod v4 support (added in Orval 7.10) has active edge-case bugs with certain string formats (issue #2249, #2304 as of July 2025); Zod v3 support in Orval is battle-tested and stable; use ^3.25 until Orval Zod v4 compatibility is confirmed stable |
-| axios | ^1.13.6 | HTTP client used as the default by Orval-generated code | Orval's react-query generator defaults to axios for the underlying HTTP calls; interceptors allow injecting the Supabase JWT token centrally (one place vs per-call); current stable is 1.13.6 with full bun compatibility |
+No new core framework or library additions required. All four milestone features
+are achievable with the existing stack.
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| None | — | — | The existing stack covers all four features. See supporting libraries below for the one optional addition. |
 
 ### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| @types/axios | (bundled in axios 1.x) | TypeScript types | Included — no separate install needed since axios 1.x ships its own types |
+| `next/navigation` (already in stack) | Next.js 16 built-in | `useRouter`, `usePathname`, `redirect()` for auth guard client and server redirects | Use `redirect()` (server) in `page.tsx` server component for auth guard; `useRouter().push('/login')` (client) as fallback in ProfileClient |
+| `@supabase/auth-helpers-nextjs` (already in stack) | 0.15.0 | `createSupabaseMiddlewareClient` for session check in `proxy.ts` | Already powers admin auth guard in `proxy.ts` — extend same pattern to `/profile` route |
+| `useIntersectionObserver` (implement inline, no package) | N/A | Trigger `fetchNextPage()` when sentinel element enters viewport | Build a ~15-line custom hook using native `IntersectionObserver` API; no third-party dependency needed given existing pattern in `useUserActivities` |
+
+**No new npm packages are needed.** The one judgment call is `IntersectionObserver` for
+infinite scroll — do not install `react-intersection-observer` package; the existing
+codebase implements this pattern inline and native browser API is sufficient for this
+feature's scroll trigger use case.
 
 ### Development Tools
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| orval CLI (from `orval` package) | Run `orval` to regenerate API client from OpenAPI spec | Installed as dev dependency; invoked via `bun run generate:api` |
-| `bunx orval` | One-off generation without global install | Works because orval ships a CLI binary |
+No new tools needed. Orval will regenerate the API client when backend adds follow
+endpoints. The current `bun run generate:api` workflow handles that automatically.
 
 ---
 
-## Architecture: Two-Config Pattern
+## Feature-by-Feature Stack Analysis
 
-Orval uses **two separate output configurations** in one `orval.config.ts` to generate react-query hooks AND Zod schemas in parallel without naming conflicts:
+### Feature 1: Auth Guard — Unauthenticated redirect
 
+**Stack needed:** `proxy.ts` extension (server-side) + optional client-side fallback
+
+**Pattern:**
+- Extend the existing `proxy.ts` `config.matcher` to include `/profile/:path*`
+- The `proxy()` function already does session check via `createSupabaseMiddlewareClient`
+- For `/profile`, redirect to `/login` (not `/` like admin — user should be told why)
+- Client-side fallback: `useAuthStore` already exposes session state; `ProfileClient` can early-return a redirect if session missing
+
+**Why no new packages:** `proxy.ts` already imports `createSupabaseMiddlewareClient` and
+`NextResponse.redirect`. Adding `/profile` to the matcher is a one-line config change.
+
+**Constraint:** Next.js 16 uses `proxy.ts` (not `middleware.ts`) per project convention.
+The `config.matcher` must include both `/admin/:path*` and `/profile/:path*`.
+
+---
+
+### Feature 2: Follow System — Followers/Following real data
+
+**Stack needed:** None yet. Backend has no follow endpoints.
+
+**Critical finding:** OpenAPI spec (inspected at `packages/api-server/openapi.json`) has
+zero follow-related endpoints. `UserResponse` schema has no `followers_count` or
+`following_count` fields. `UserStatsResponse` has no follow fields.
+
+**Current state:** `FollowStats.tsx` renders hardcoded `followers={1234}` and `following={567}`.
+`UserResponse` from the API contains only: `id`, `avatar_url`, `bio`, `display_name`,
+`email`, `is_admin`, `rank`, `total_points`, `username`.
+
+**What to do now (without backend):**
+- Wire `followers` and `following` props from `useUserStats()` if/when the backend adds
+  those fields to `UserStatsResponse`
+- For this milestone: display `0` counts from real data rather than hardcoded placeholders
+- `FollowStats.tsx` needs to accept `undefined` counts gracefully (show `—` or `0`)
+
+**When backend adds follow endpoints:** Orval will generate `useFollowUser`,
+`useUnfollowUser`, `useGetFollowers`, `useGetFollowing` hooks after `bun run generate:api`.
+No new packages needed at that point — hooks drop into the existing React Query setup.
+
+**Stack decision:** Do NOT build a custom Supabase follow table or Shadow API route for
+follow counts. Follow the "API-first" constraint from `PROJECT.md`. Mock or omit until
+backend is ready.
+
+---
+
+### Feature 3: Tries/Saved tabs — API connection + infinite scroll
+
+**Stack needed:** No new packages. Pattern already established.
+
+**Tries tab — current state:**
+- `TriesGrid.tsx` has a stub `fetchMyTries()` returning `[]`
+- Comment says: `Will be: GET /api/v1/users/me/tries`
+- That endpoint does NOT exist in the OpenAPI spec
+- `useTries.ts` in `lib/hooks/` is also a stub returning `{ tries: [], total: 0 }`
+
+**Saved tab — current state:**
+- `SavedGrid.tsx` uses `collectionStore` (Zustand), which manages `pins`, `boards`, `collage`
+- This is NOT API-driven — it's a local Zustand store with a `loadCollection()` action
+- No backend endpoint for saved items in the spec
+
+**What the milestone should do:**
+- **Tries tab:** Keep stub but add proper loading/empty states with real data shape; wire
+  to real API when backend exposes the endpoint. Use `useInfiniteQuery` pattern from
+  `useUserActivities` as the template.
+- **Saved tab:** The `collectionStore.loadCollection()` needs to fetch from real data
+  source — determine if this is Supabase direct query (like `useProfileExtras`) or backend
+  API. Current Supabase schema inspection needed but that's phase-specific research.
+
+**Infinite scroll pattern (already established):**
 ```typescript
-// packages/web/orval.config.ts
-import { defineConfig } from 'orval';
-
-export default defineConfig({
-  // Config 1: React Query hooks (primary — replaces lib/api/ files)
-  decodedApi: {
-    input: {
-      target: 'https://dev.decoded.style/api-docs/openapi.json',
-    },
-    output: {
-      mode: 'tags-split',           // One folder per OpenAPI tag (posts/, users/, etc.)
-      target: 'lib/api/generated',  // Output directory for hooks
-      schemas: 'lib/api/generated/model', // TypeScript type definitions
-      client: 'react-query',        // Generates useQuery / useMutation hooks
-      clean: true,                  // Delete stale generated files on each run
-      prettier: true,               // Auto-format output
-      override: {
-        mutator: {
-          path: './lib/api/custom-client.ts', // Custom axios instance with JWT injection
-          name: 'customClient',
-        },
-        query: {
-          useQuery: true,
-          useMutation: true,
-          signal: true,             // AbortController support
-        },
-      },
-    },
-  },
-
-  // Config 2: Zod schemas for runtime validation (separate output to avoid conflicts)
-  decodedApiZod: {
-    input: {
-      target: 'https://dev.decoded.style/api-docs/openapi.json',
-    },
-    output: {
-      mode: 'tags-split',
-      target: 'lib/api/generated',
-      client: 'zod',               // Generates Zod schemas only (no hooks)
-      fileExtension: '.zod.ts',    // Prevents naming collision with hook files
-      override: {
-        zod: {
-          generate: {
-            response: true,        // Validate API responses at runtime
-            body: true,            // Validate request bodies before sending
-            query: false,          // Skip query param schemas (less value, more noise)
-          },
-        },
-      },
-    },
-  },
+// Pattern already in useUserActivities — replicate for tries/saved
+const { fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  queryKey: [...],
+  queryFn: async ({ pageParam = 1 }) => fetchEndpoint({ page: pageParam }),
+  getNextPageParam: (lastPage) =>
+    lastPage.pagination.current_page < lastPage.pagination.total_pages
+      ? lastPage.pagination.current_page + 1
+      : undefined,
+  initialPageParam: 1,
 });
 ```
 
-**Why two configs instead of one:**
+The scroll trigger uses an `IntersectionObserver` sentinel div — implement as a reusable
+`useInfiniteScrollTrigger` hook inline in the profile hooks file. 15-20 lines, no package.
 
-- `client: 'react-query'` and `client: 'zod'` are mutually exclusive in a single config block
-- Using `fileExtension: '.zod.ts'` in the zod config prevents file name collisions with hook files
-- Both configs read from the same OpenAPI spec URL — no duplication of the source
+---
 
-### Custom Client (auth injection)
+### Feature 4: Public user profile — `/profile/[userId]`
 
-The `mutator` in Config 1 points to a custom axios instance that replicates the existing `apiClient()` auth pattern. This is the **only HTTP client** — the existing `lib/api/client.ts` fetch-based client is replaced by this:
+**Stack needed:** No new packages. Next.js dynamic routes + existing generated hook.
 
-```typescript
-// packages/web/lib/api/custom-client.ts
-import Axios, { AxiosRequestConfig } from 'axios';
-import { supabaseBrowserClient } from '@/lib/supabase/client';
+**Current state:**
+- `GET /api/v1/users/{user_id}` backend endpoint exists
+- `app/api/v1/users/[userId]/route.ts` proxy route exists (no auth required)
+- `useGetUserProfile(userId)` generated hook already wraps this endpoint (seen in `useProfile.ts`)
+- `useUser(userId)` wrapper hook already exists in `lib/hooks/useProfile.ts`
+- **Missing:** `app/profile/[userId]/page.tsx` and `app/profile/[userId]/ProfilePublicClient.tsx`
 
-const INSTANCE = Axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
-});
+**Pattern:** Mirror `app/profile/page.tsx` (private) but:
+- Use `useUser(userId)` instead of `useMe()`
+- Show follow button instead of edit button
+- No edit modal
+- Read-only activity tabs (posts/spots/solutions only — no tries/saved for other users)
+- No auth guard needed (public profile is accessible without login)
 
-INSTANCE.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabaseBrowserClient.auth.getSession();
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
-  }
-  return config;
-});
+**Routing:** Next.js App Router dynamic segment. Path: `app/profile/[userId]/page.tsx`.
+Conflicts to check: current `/profile` maps to `/profile/page.tsx`; adding
+`/profile/[userId]` is additive, no conflict.
 
-export const customClient = <T>(config: AxiosRequestConfig): Promise<T> => {
-  return INSTANCE(config).then(({ data }) => data);
-};
-```
+---
 
-**Key constraint:** The existing `lib/api/client.ts` routes through Next.js API proxy (`API_BASE_URL = ""`). The custom client must preserve this pattern — `baseURL` should be the empty string (routes through `/api/v1/...` proxy) not the direct Rust backend URL, unless the proxy is being removed in v9.0.
+## Proxy Routes Needed
+
+New backend proxy routes that do not exist yet:
+
+| Route | Status | Notes |
+|-------|--------|-------|
+| `GET /api/v1/users/me/tries` | NOT in backend spec | Build stub proxy; real endpoint pending backend |
+| `POST /api/v1/users/{userId}/follow` | NOT in backend spec | Do not build — follow system is backend-blocked |
+| `DELETE /api/v1/users/{userId}/follow` | NOT in backend spec | Do not build — follow system is backend-blocked |
+| `GET /api/v1/users/{userId}/followers` | NOT in backend spec | Do not build — backend-blocked |
+| `GET /api/v1/users/{userId}/following` | NOT in backend spec | Do not build — backend-blocked |
+
+Existing proxy routes that are sufficient:
+- `GET /api/v1/users/[userId]/route.ts` — already handles public profile
+- `GET /api/v1/users/me/activities/route.ts` — already handles activities pagination
 
 ---
 
 ## Installation
 
+No new packages to install. The milestone is zero-dependency.
+
 ```bash
-# In packages/web — all are web-package-scoped dependencies
-cd packages/web
-
-# Dev dependency: Orval CLI
-bun add -D orval
-
-# Runtime: axios (HTTP client for generated code)
-bun add axios
-
-# Runtime: Zod (schema validation for generated schemas)
-bun add zod
+# Nothing to install — all required stack is already present
+# Verify generated API exists (needs regeneration in fresh worktree):
+cd packages/web && bun run generate:api
 ```
-
-### Add generate script to packages/web/package.json
-
-```json
-{
-  "scripts": {
-    "generate:api": "orval"
-  }
-}
-```
-
-### Add to turbo.json (root)
-
-```json
-{
-  "tasks": {
-    "generate:api": {
-      "cache": false,
-      "outputs": ["lib/api/generated/**"]
-    }
-  }
-}
-```
-
-The `cache: false` is intentional — generated output should always re-run against the live spec. If the spec is stable, change to `"inputs": ["orval.config.ts"]` with cache enabled.
-
-### Add generated files to .gitignore
-
-```
-# Orval generated files — committed only if you want stable snapshots
-packages/web/lib/api/generated/
-```
-
-Decision point: whether to commit generated files (stable snapshot) or gitignore them (always regenerate). Recommendation: **gitignore and regenerate in CI `prebuild`**, same pattern as GraphQL codegen.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| orval | openapi-typescript + openapi-fetch | If project wants zero-dependency type generation without hooks; openapi-typescript generates types only; no hooks, no Zod — requires more manual wiring |
-| orval | openapi-zod-client (astahmer) | If project uses zodios HTTP client instead of axios/react-query; heavier dependency; smaller community |
-| orval | swagger-typescript-api | Older tool, less active maintenance, no Zod integration; avoid |
-| axios (via Orval default) | fetch (native) | Use native fetch if axios interceptors are overkill; Orval supports `httpClient: 'fetch'` but `runtimeValidation: true` with fetch is a newer feature with less battle-testing; axios + interceptors is the proven path for auth injection |
-| zod v3 | zod v4 | Use zod v4 when Orval's compatibility layer fully stabilizes (track issue #2042 and #2249); as of March 2026, v4 has edge-case bugs in Orval's generated output for certain OpenAPI string formats |
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| Inline `useInfiniteScrollTrigger` hook (~15 lines) | `react-intersection-observer` npm package | Package adds 3KB for a trivial observer wrapper; existing codebase doesn't use it; native API sufficient |
+| Extend existing `proxy.ts` matcher for auth guard | New `middleware.ts` file | Project explicitly uses `proxy.ts` (not `middleware.ts`) per Next.js 16 convention documented in `CLAUDE.md` |
+| Mock follow counts as `0` from real user data | Build Supabase `follows` table directly | Violates "API-first" constraint; creates a second data source that would conflict when backend adds follow endpoints |
+| `redirect()` from server page for auth guard | Client-side only `useEffect` redirect | Server redirect prevents flash of unauthenticated content; `proxy.ts` middleware redirect is the most reliable approach |
 
 ---
 
@@ -212,21 +219,33 @@ Decision point: whether to commit generated files (stable snapshot) or gitignore
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| A second HTTP client library (e.g., ky, got, unfetch) | Project already uses native fetch in lib/api/; Orval generated code uses axios; adding a third HTTP client would create three competing patterns | Use axios exclusively for generated code; keep Supabase client (which manages its own HTTP) separate |
-| openapi-generator (Java CLI) | Requires JVM; generates verbose boilerplate Java-style code; no bun integration | Orval (Node.js, bun-compatible CLI) |
-| rtk-query codegen | Only useful if project uses Redux Toolkit; this project uses Zustand + React Query — RTK Query would be a conflicting state layer | N/A |
-| @orval/zod (separate npm scope package) | This is Orval's internal monorepo package — not intended for direct installation by consumers; the `orval` package includes the zod generator | Just install `orval` — it includes all generators |
-| Global orval install (`bun add -g orval`) | Global tool versions can drift from project's pinned version; different devs get different outputs | Use local devDependency + `bun run generate:api` script |
-| Committing the OpenAPI spec JSON locally | The spec lives at `https://dev.decoded.style`; downloading and committing creates a stale local copy that diverges | Point `input.target` at the live URL directly; fail fast if backend is unreachable |
+| `react-intersection-observer` | Unnecessary package for a ~15-line observer pattern | Inline `useInfiniteScrollTrigger` hook using native `IntersectionObserver` |
+| Supabase `follows` table / direct query | Backend will own follow relationships; building a shadow Supabase table creates conflicting data sources | Wait for `POST /api/v1/users/{userId}/follow` endpoint from backend |
+| Custom `middleware.ts` file | Conflicts with existing `proxy.ts` convention in Next.js 16 | Extend `proxy.ts` config.matcher |
+| `swr` or any second data-fetching library | Project already standardized on TanStack Query | Use existing `useInfiniteQuery` from `@tanstack/react-query` |
+| Follow count data from `profileStore` Zustand | `profileStore` is for UI state, not server data | Follow data belongs in React Query cache when backend is ready |
+| New Orval config entry for follow endpoints | There are no follow endpoints to generate | Add follow endpoints to Orval config after backend ships them |
 
 ---
 
-## Bun Compatibility Notes
+## Stack Patterns by Variant
 
-- `orval` CLI is a Node.js binary distributed via npm; bun can install and run it without issues (`bunx orval` or via `bun run generate:api` script)
-- `axios` v1.x explicitly added a `bun` condition to its `exports` field — loads the Node.js build (not browser build) when running under bun
-- `zod` v3.x has no bun-specific issues — pure TypeScript library
-- Turborepo's `generate:api` task can include orval as a pipeline step with `dependsOn: []` (runs independently, not part of build chain unless spec changes trigger builds)
+**If backend adds follow endpoints (future):**
+- Run `bun run generate:api` — Orval generates `useFollowUser`, `useUnfollowUser`, `useGetFollowers`, `useGetFollowing`
+- Add proxy routes in `app/api/v1/users/[userId]/follow/route.ts`
+- Wire into `FollowStats` component
+- No new packages
+
+**If tries endpoint ships (future):**
+- Add `GET /api/v1/users/me/tries` to backend
+- Add proxy route `app/api/v1/users/me/tries/route.ts`
+- Replace `TriesGrid` stub with `useInfiniteQuery` using the same pattern as `useUserActivities`
+- No new packages
+
+**If saved items move to backend API (future):**
+- Determine if `collectionStore.loadCollection()` targets Supabase or REST API
+- If REST: add to OpenAPI spec, regenerate with Orval
+- If Supabase direct: keep `useQuery` pattern from `useProfileExtras`
 
 ---
 
@@ -234,31 +253,24 @@ Decision point: whether to commit generated files (stable snapshot) or gitignore
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| orval@^8.5.3 | @tanstack/react-query@^5 | Orval v8 targets TanStack Query v5 API (useQuery, useMutation signatures); v4 React Query would require Orval v6/v7 |
-| orval@^8.5.3 | zod@^3.25 | Stable; v3 is the fully-tested path |
-| orval@^8.5.3 | zod@^4.x | Beta-level support added in Orval 7.10; active edge-case bugs as of late 2025 (string format schemas); validate before adopting |
-| orval@^8.5.3 | TypeScript@^5.9 | Compatible; Orval generates modern TypeScript |
-| orval@^8.5.3 | Next.js@^16 | No framework-level conflict; generated files are plain TypeScript; `app/` Router compatible |
-| axios@^1.13.6 | bun@^1.3 | Compatible; axios 1.x ships `bun` export condition |
-| zod@^3.25 | React 19 | No dependency on React; pure schema library |
+| @supabase/auth-helpers-nextjs@0.15.0 | Next.js 16 | `createSupabaseMiddlewareClient` works with `proxy.ts` pattern; verified in existing admin auth guard |
+| @tanstack/react-query@5.90.11 | `useInfiniteQuery` (v5 API) | v5 uses `initialPageParam` and returns typed `InfiniteData<T>` — existing `useUserActivities` demonstrates the correct v5 pattern |
+| next/navigation `redirect()` | Next.js 16 App Router server components | Use in `page.tsx` (server component); not in `"use client"` components |
 
 ---
 
 ## Sources
 
-- https://github.com/orval-labs/orval/releases — Orval v8.5.3 release date (March 6, 2025), latest stable (HIGH confidence — official repo)
-- https://deepwiki.com/orval-labs/orval/5-zod-schema-validation — Orval Zod architecture: two-phase generation, @orval/zod internal package, Zod v3/v4 compatibility layer (MEDIUM confidence — DeepWiki analysis of official repo)
-- https://www.orval.dev/reference/configuration/output — Output config: `client`, `mode`, `override.zod`, `override.query`, `override.mutator`, `fileExtension` (HIGH confidence — official docs)
-- https://github.com/orval-labs/orval/blob/master/samples/react-query/custom-fetch/orval.config.ts — Official sample: react-query + custom fetch mutator pattern (HIGH confidence — official sample)
-- https://www.orval.dev/guides/client-with-zod — Two-config pattern for react-query + zod parallel generation; `.zod.ts` extension to avoid conflicts (HIGH confidence — official guide)
-- https://x.com/SoartecL/status/1920068137266954374 — Orval Zod v4 support added in 7.10 (MEDIUM confidence — official team tweet)
-- https://github.com/orval-labs/orval/issues/2249 — Orval Zod v4 string format edge-case bug (July 2025) (HIGH confidence — official issue tracker)
-- https://github.com/orval-labs/orval/issues/2304 — Orval Zod v4 + Hono validator error (HIGH confidence — official issue tracker)
-- https://www.npmjs.com/package/zod — Zod v4.3.6 latest, v3 still active and stable (HIGH confidence — official npm registry)
-- https://github.com/axios/axios/releases — Axios 1.13.6 latest as of March 2026 (HIGH confidence — official GitHub releases)
-- https://prototyp.digital/blog/generating-api-client-openapi-swagger-definitions — Complete orval.config example with tags-split, custom mutator, react-query (MEDIUM confidence — community article, verified against official docs)
+- `packages/api-server/openapi.json` — Direct inspection of all 67 backend endpoints; confirmed absence of follow, tries, saved endpoints (HIGH confidence — primary source)
+- `packages/web/app/api/v1/users/` — Direct inspection of existing proxy routes (HIGH confidence — codebase)
+- `packages/web/lib/hooks/useProfile.ts` — Confirmed `useUser(userId)` and `useUserActivities` hooks already exist (HIGH confidence — codebase)
+- `packages/web/proxy.ts` — Confirmed auth guard pattern using `createSupabaseMiddlewareClient` + `config.matcher` (HIGH confidence — codebase)
+- `packages/web/lib/components/profile/FollowStats.tsx` — Confirmed hardcoded mock data (HIGH confidence — codebase)
+- `packages/web/lib/components/profile/TriesGrid.tsx` — Confirmed stub `fetchMyTries()` returning `[]` (HIGH confidence — codebase)
+- `packages/web/lib/components/profile/SavedGrid.tsx` — Confirmed uses `collectionStore` Zustand, not API (HIGH confidence — codebase)
+- `packages/web/app/profile/` — Confirmed no `[userId]` subdirectory exists (HIGH confidence — codebase)
 
 ---
 
-*Stack research for: decoded-monorepo v9.0 Type-Safe API Generation (Orval + Zod)*
-*Researched: 2026-03-23*
+*Stack research for: decoded-monorepo v10.0 Profile Page Completion*
+*Researched: 2026-03-26*

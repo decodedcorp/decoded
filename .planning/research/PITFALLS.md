@@ -1,201 +1,155 @@
 # Pitfalls Research
 
-**Domain:** Orval + Zod API code generation — adding to existing Next.js + React Query project (decoded-monorepo v9.0)
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Orval + React Query mechanics, utoipa schema issues), MEDIUM (bun/Turborepo Orval CLI integration), MEDIUM (migration patterns from manual to generated hooks)
+**Domain:** Profile page completion — follow system, activity tab extensions, public user profiles, auth guard in Next.js + Supabase
+**Researched:** 2026-03-26
+**Confidence:** HIGH (based on direct codebase analysis + architecture patterns)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that force rewrites, break TypeScript compilation, or invalidate the generated output entirely.
-
----
-
-### Pitfall 1: OpenAPI 3.1 + utoipa Nullable Fields Generate Uncompilable Zod
+### Pitfall 1: Follow API Routes Missing from OpenAPI Spec and Proxy Layer
 
 **What goes wrong:**
-utoipa on Axum can emit OpenAPI 3.1 specs where `Option<T>` fields are represented as union type arrays — `type: ["string", "null"]` — instead of the OpenAPI 3.0 `nullable: true` approach. When Orval processes these alongside a pattern constraint (e.g., a field that is both numeric and string-parseable), it generates `zod.number().regex()` which does not exist in the Zod API. The output file will not compile.
+The Rust backend has no `/api/v1/users/{user_id}/follow` or `/api/v1/users/me/followers` endpoints in the current `openapi.json`. The frontend has a `FollowButton` component and `FollowStats` component with hardcoded defaults, but no proxy routes exist under `app/api/v1/users/` for follow operations. Implementing the follow system and calling these endpoints directly from the browser will fail with CORS errors because the backend does not whitelist browser origins.
 
 **Why it happens:**
-Orval's Zod generator has a code path for `allOf/oneOf` combined with `nullable` that can produce invalid method chains when the union type mixes number and string with a regex constraint. The root cause is that the generator applies `.regex()` to a `zod.number()` schema, which is a type mismatch — `regex` only exists on `zod.string()`. This was confirmed in Orval issue #2562 and is triggered specifically by OpenAPI 3.1 specs where numeric fields allow string representation.
+Developers see the existing `FollowButton` component and assume backend integration is just wiring a hook. They miss that (a) the backend endpoint may not yet exist, (b) even if it does the Next.js proxy route must be added first, and (c) Orval-generated hooks will not exist until the spec is updated and `generate:api` is re-run.
 
 **How to avoid:**
-1. Verify the utoipa version in `packages/api-server/Cargo.toml` — utoipa 4.x generates OpenAPI 3.1 by default. Check whether the spec endpoint (`/api-docs/openapi.json`) returns `"openapi": "3.1.0"` or `"3.0.x"`.
-2. If the spec is 3.1 and nullable fields use type arrays, configure utoipa to emit OpenAPI 3.0 format, or add a post-processing script to normalize `type: ["T", "null"]` → `{type: "T", nullable: true}` before Orval consumes the spec.
-3. As a fallback: in `orval.config.ts`, use `override.operationName` + `override.response` to manually correct only the affected schemas.
+1. Verify the backend spec at `https://dev.decoded.style` includes follow endpoints before writing any frontend code.
+2. Add proxy routes at `app/api/v1/users/[userId]/follow/route.ts` and `app/api/v1/users/me/followers/route.ts` before attempting API calls.
+3. Run `bun run generate:api` from `packages/web` after the spec is confirmed — do not write manual fetch wrappers for endpoints that belong in generated code.
 
 **Warning signs:**
-- TypeScript compilation error: `Property 'regex' does not exist on type 'ZodNumber'`
-- TypeScript compilation error: `Property 'stringFormat' does not exist`
-- Generated file contains `z.number().regex(...)` or `z.number().stringFormat(...)`
-- The spec's `openapi` field is `"3.1.0"` and you have `Option<CustomType>` in Axum handlers
+- CORS errors in the browser console when testing follow actions
+- 404 from the Next.js dev server when calling `/api/v1/users/.../follow`
+- `FollowStats` always shows hardcoded `1234 followers / 567 following` after "wiring up"
 
-**Phase to address:** Phase 1 (Setup & spec validation). Validate the spec and fix schema emission before running Orval for the first time. Do not proceed to generation until a clean spec is confirmed.
-
----
-
-### Pitfall 2: utoipa Missing `operationId` Breaks Generated Hook Names
-
-**What goes wrong:**
-Orval derives TypeScript function and hook names from the OpenAPI `operationId`. If utoipa handlers do not have explicit `operation_id` annotations, utoipa auto-generates them from the handler function name using snake_case (e.g., `get_posts_handler` → operationId `getPostsHandler`). The resulting React Query hook names become long and inconsistent (`useGetPostsHandlerQuery` instead of `useGetPosts`). Worse, if two handlers share a similar name pattern, utoipa may generate duplicate `operationId` values, which causes Orval to emit duplicate exports — a TypeScript error.
-
-**Why it happens:**
-utoipa's auto-generated `operationId` is based on the Rust function name, which often includes implementation detail suffixes like `_handler`, `_route`, `_endpoint`. The Orval name derivation is mechanical: it takes the operationId and maps to `use{OperationId}` (PascalCase). Without intentional naming in utoipa, the DX of the generated client degrades significantly.
-
-**How to avoid:**
-Before running Orval, audit every endpoint in the spec for its `operationId`. Add explicit `operation_id = "listPosts"` (camelCase) in each utoipa `#[utoipa::path(...)]` annotation in Rust. This is a Rust-side change that must happen before code generation. Create a spec linting step that asserts no duplicate `operationId` values and all ids follow `verbNoun` pattern (e.g., `listPosts`, `getPost`, `createPost`).
-
-**Warning signs:**
-- Generated hooks have `Handler` or `Route` in their names
-- TypeScript error: duplicate identifier in generated file
-- `operationId` values in the spec contain underscores (indicates auto-generation from Rust fn names)
-
-**Phase to address:** Phase 1 (Spec preparation). Fix operationIds in Rust before first generation run.
+**Phase to address:** Follow System phase — verify backend spec first, add proxy routes, then regenerate API client.
 
 ---
 
-### Pitfall 3: Snake_case API Response Fields + Orval Default = Type/Runtime Mismatch
+### Pitfall 2: Auth Guard Using Client-Side `authStore` State Causes Flash of Unauthorized Content
 
 **What goes wrong:**
-The Rust/Axum backend returns JSON with `snake_case` field names (`image_url`, `artist_name`, `created_at`). The existing `lib/api/types.ts` already mirrors this correctly. Orval, by default, preserves the casing from the spec — it generates TypeScript types with `snake_case` properties. This is actually correct behavior, but the pitfall is that if anyone configures Orval's `override.components.schemas.namingConvention` to convert to `camelCase` thinking it follows TypeScript conventions, the generated types will say `imageUrl` while the actual API response returns `image_url`. The TypeScript types will be wrong at runtime with all fields undefined.
+The current `authStore` is initialized asynchronously via `AuthProvider` on mount. If the auth guard for `/profile` is implemented as a client-side redirect (`useEffect` that checks `authStore.user === null`), there is a window between initial render and `isInitialized === true` where the profile page renders briefly for unauthenticated users before redirecting. On slower connections this flash is visible and can expose UI that should be gated.
 
 **Why it happens:**
-Developers conflate TypeScript naming conventions (camelCase for variables) with API response field names (snake_case from Rust/serde). Orval does not transform the actual runtime values — it only generates type definitions. Switching the type names to camelCase creates a lie: the TypeScript says `imageUrl` but fetch returns `image_url`.
+The existing `proxy.ts` (Next.js 16 file, not `middleware.ts`) only guards `/admin/*`. Developers copy the admin pattern but implement it client-side for profile because the server-side Supabase session check feels complex. The `authStore.isInitialized` flag exists precisely for this scenario but is frequently overlooked.
 
 **How to avoid:**
-Keep Orval's default case preservation. The generated types should exactly mirror what the backend returns. The existing `lib/api/types.ts` already uses snake_case correctly — the generated types should match this pattern. If camelCase is desired in the frontend, add a transformation layer in the custom mutator (not in Orval config), using a library like `camelcase-keys` applied to the response body before returning.
+Extend `proxy.ts` to include `/profile` in the matcher config. The existing `createSupabaseMiddlewareClient` is already wired for session checks. The guard should return `NextResponse.redirect(new URL("/login", req.url))` (not `/`) when no session exists. This is a server-side check before the page renders — zero flash.
 
-**Warning signs:**
-- `namingConvention: "camelCase"` appears in `orval.config.ts` schema overrides
-- After migration, components that previously showed data now show undefined fields
-- TypeScript types compile but runtime values are `undefined`
-
-**Phase to address:** Phase 2 (Generation configuration). Establish the correct naming policy before any hooks are migrated.
-
----
-
-### Pitfall 4: Next.js API Proxy + Orval baseURL Double-Prefixing
-
-**What goes wrong:**
-The current `lib/api/client.ts` uses `API_BASE_URL = ""` so all requests route through the Next.js API proxy (`/api/v1/...`). If Orval is configured with a `baseURL` pointing to the backend directly (`https://dev.decoded.style`), the generated client will bypass the proxy. This breaks: (1) auth token injection via Supabase session, (2) CORS — the backend does not accept browser-side direct calls, (3) the FormData multipart upload path that relies on the proxy to forward correctly.
-
-If instead the baseURL is set to `""` (empty, matching the current client) but the OpenAPI spec paths already include `/api/v1/`, the generated calls will double-prefix to `/api/v1/api/v1/...`.
-
-**Why it happens:**
-Orval prepends the configured `baseURL` to the path from the spec. The spec from the Rust backend includes full paths like `/api/v1/posts`. If both the baseURL and the spec paths contribute the prefix, the final URL doubles it. The existing manual client avoids this by using empty baseURL and relying on Next.js routing.
-
-**How to avoid:**
-1. Set Orval's baseURL to `""` (empty string) — routes through the proxy.
-2. Verify that the custom mutator strips any path prefix that would double up. Alternatively, configure `baseURL` pointing to the real backend for server-side generation and the proxy path for client-side.
-3. The safest approach: use a custom mutator that delegates to the existing `apiClient()` function in `lib/api/client.ts`, inheriting its proxy-routing and auth logic. This minimizes the surface area of change during initial migration.
-
-**Warning signs:**
-- Network requests show URLs like `/api/v1/api/v1/posts`
-- 404 errors immediately after switching to generated client
-- Browser CORS error on `dev.decoded.style` from the frontend origin
-
-**Phase to address:** Phase 2 (Generation + custom mutator setup). Validate URL construction with a single endpoint before migrating all hooks.
-
----
-
-### Pitfall 5: Multipart Upload Endpoints Cannot Be Directly Generated
-
-**What goes wrong:**
-The `POST /api/v1/posts/upload` and `POST /api/v1/posts` (FormData) endpoints use multipart/form-data with a binary file field. Orval changed how it generates the type for binary fields between v7.20 and v8.0 — it now generates `string` instead of `Blob` for binary-typed fields. The generated function signature will accept a `string` where a `File` or `Blob` is needed, causing a runtime failure on upload.
-
-Additionally, the current `uploadImage()` in `posts.ts` has custom retry logic (exponential backoff, progress callbacks) that cannot be expressed in an Orval-generated hook. A generated hook would lose this critical UX behavior.
-
-**Why it happens:**
-Orval's multipart/form-data type detection relies on the OpenAPI spec correctly annotating binary fields with `format: binary`. If utoipa emits these fields differently (e.g., as `type: string` without the binary format), Orval generates a plain string type. Even with correct annotation, Orval's generated code may use `Blob` when `File` is needed (since `File extends Blob` but FormData behaves differently).
-
-**How to avoid:**
-Explicitly exclude the upload endpoints from Orval generation using `override.operationsSuffix` exclusions or separate them into a non-generated `lib/api/upload.ts` that keeps the existing manual implementation. Mark these endpoints with a comment in the spec or in `orval.config.ts` to prevent accidental migration. The rule: **endpoints with progress callbacks, retry logic, or binary uploads stay manual**.
-
-**Warning signs:**
-- Generated type for file parameter is `string` instead of `File | Blob`
-- TypeScript error when passing a `File` object to a generated function parameter
-- Upload progress UI stops working after migration to generated hook
-
-**Phase to address:** Phase 2 (Generation configuration) — exclude these endpoints. Phase 3 (Migration) — explicitly do not migrate upload functions.
-
----
-
-### Pitfall 6: Existing React Query Hook Query Keys Collide with Generated Keys
-
-**What goes wrong:**
-The existing hooks (e.g., `usePosts`, `useProfile`) define their own query keys using patterns like `["posts", params]` or `["profile", userId]`. Orval generates query keys from the operationId and parameters. When both old and new hooks coexist during migration, they may use different query key structures for the same endpoint. React Query's cache will treat them as distinct — causing duplicate fetches, stale data, and cache invalidation that doesn't propagate.
-
-A specific known issue (Orval #2359): when both `useQuery` and `useInfiniteQuery` are generated for the same endpoint, both use the same query key function. Any code calling `queryClient.invalidateQueries` with one key will not invalidate the other, breaking cache coherence for paginated endpoints like `useImages` and `usePosts`.
-
-**Why it happens:**
-Query key design is a contract between producer and consumer. Orval generates keys mechanically from the spec structure. The existing hooks were designed with different key conventions. During a gradual migration where both old and new hooks are in use, two sources of truth for cache state coexist.
-
-**How to avoid:**
-1. Plan migration endpoint-by-endpoint, not feature-by-feature. For each endpoint, migrate ALL consumers of the old hook before removing it. Never leave both old and new hooks active for the same endpoint.
-2. Configure Orval's `override.query.queryKey` to match the existing key structure where possible, ensuring cache continuity.
-3. For pagination endpoints that use both `useQuery` and `useInfiniteQuery`, configure Orval to generate different keys: use `queryKey: (params) => ["posts", "list", params]` for regular and `queryKey: (params) => ["posts", "infinite", params]` for infinite variants.
-4. After full migration, do a global search for old query key strings to confirm no dual-key situations remain.
-
-**Warning signs:**
-- React Query DevTools shows two entries for the same logical data
-- Infinite scroll stops refreshing when new posts are created (invalidation not reaching infinite key)
-- Data briefly shows stale state when navigating between pages that use old vs. new hooks
-
-**Phase to address:** Phase 3 (Migration) — requires a strict per-endpoint migration plan.
-
----
-
-### Pitfall 7: bun + Orval CLI — `npx orval` vs `bunx orval` Behavioral Difference
-
-**What goes wrong:**
-Orval is typically invoked via `npx orval` or as a script. Under bun, `bunx orval` works but has a subtle difference: bun's package execution may resolve Orval from a different location than the installed workspace version, especially in a Turborepo monorepo where the root installs tools and the web package uses workspace:* references. The result can be a version mismatch where the Orval config syntax from v8.x is parsed by a v7.x binary (or vice versa), causing silent configuration failures.
-
-Additionally, Turborepo's `--filter` argument conflicts with bun's own `--filter` flag when running scripts through `turbo run generate`. This was a known issue in Turborepo 2.6.x with bun.
-
-**Why it happens:**
-bun resolves binaries differently from npm/yarn when `bunx` is used without a lockfile entry. In a hoisted bun monorepo, the binary resolution path for `bunx orval` depends on whether `orval` is installed at the root or in `packages/web`. If installed only at the web package level, `bunx orval` run from the monorepo root may not find it.
-
-**How to avoid:**
-1. Install Orval as a devDependency in `packages/web/package.json` (not root), pinned to an exact version.
-2. Add a `generate` script to `packages/web/package.json`: `"generate": "orval"` and invoke it via `bun run generate` from within `packages/web/`.
-3. In `turbo.json`, add a `generate` task that depends on the spec being available and outputs to the generated directory. Use `bun run generate` (not `bunx orval`) in the turbo task.
-4. Verify by running `bun run generate` from `packages/web/` directly and confirming the Orval version in the output matches `package.json`.
-
-**Warning signs:**
-- `bunx orval` outputs a different version than `bun run orval --version`
-- Orval config keys in `orval.config.ts` show "unknown option" errors
-- `turbo run generate` hangs or exits without output
-
-**Phase to address:** Phase 1 (Setup). Establish the correct invocation pattern before writing the Orval config.
-
----
-
-### Pitfall 8: Committed vs. Gitignored Generated Files Creates CI Drift
-
-**What goes wrong:**
-If generated files are gitignored and regenerated on-demand (e.g., in a pre-build script), the TypeScript check in CI (`bun run typecheck`) will fail if the generate step does not run first. The existing `packages/web/scripts/pre-push.sh` runs `tsc --noEmit` — if generated files are absent, TypeScript cannot resolve imports from the generated module.
-
-Conversely, if generated files are committed, CI may pass even when the spec has changed and the committed files are stale. A developer updating the backend spec without regenerating the client will push stale types that silently diverge from the actual API.
-
-**Why it happens:**
-There is no inherent synchronization between the OpenAPI spec in the Rust backend and the generated TypeScript files in the Next.js frontend. The two artifacts live in different package directories and have no build-time dependency in Turborepo unless explicitly configured.
-
-**How to avoid:**
-The recommended approach for this project: **commit generated files**, but add a CI step that reruns generation and asserts no diff:
+```typescript
+// proxy.ts addition
+export const config = {
+  matcher: ["/admin/:path*", "/profile"],
+};
 ```
-bun run generate && git diff --exit-code packages/web/src/generated/
-```
-If there is a diff, CI fails — forcing the developer to regenerate and commit updated files before merging.
 
-Update `packages/web/scripts/pre-push.sh` to run `bun run generate` before `tsc --noEmit`, ensuring the local pre-push hook always has current generated files.
+If a client-side fallback is also needed (belt-and-suspenders), check `authStore.isInitialized` before redirecting — never redirect when `isInitialized === false`.
 
 **Warning signs:**
-- CI TypeScript check fails with "Cannot find module '../generated/...'"
-- `git diff` after running `bun run generate` shows changes (spec has drifted from generated output)
-- Developer merges a Rust backend PR without a corresponding frontend regeneration commit
+- Brief flash of profile skeleton/content before redirect on incognito window
+- `isLoading: true` in profile page briefly showing skeleton before 401 error triggers
+- The existing `ProfileError` component showing "프로필을 불러올 수 없습니다" for unauthenticated users instead of redirecting
 
-**Phase to address:** Phase 1 (Setup) — define the git strategy. Phase 4 (CI) — add the drift detection step.
+**Phase to address:** Auth Guard phase — must be implemented in `proxy.ts`, not as a client hook.
+
+---
+
+### Pitfall 3: Public Profile Route `/profile/[userId]` Conflicts with Proxy Matcher and Session Propagation
+
+**What goes wrong:**
+The current profile page is at `/profile` (no dynamic segment). Adding `/profile/[userId]` as a dynamic route creates a silent issue: if the auth guard in `proxy.ts` only matches `/profile` exactly, the public profile route at `/profile/[userId]` has no server-side session propagation, breaking Supabase cookie refresh for authenticated users viewing other profiles. Follow button initial state will be wrong (shows "Follow" even when already following).
+
+**Why it happens:**
+Next.js App Router resolves dynamic segments last (static routes take priority), so `/profile` and `/profile/[userId]` coexist without routing conflict. But the `proxy.ts` matcher uses path patterns. Developers add the route and forget to update the matcher for session cookie propagation — they see it "works" for anonymous viewing but miss that authenticated state doesn't sync.
+
+**How to avoid:**
+Update `proxy.ts` matcher to include `/profile/:path*` — ensures session cookies are refreshed on all profile routes. The proxy handler must distinguish: if path is `/profile` with no segment, require auth and redirect to login. If path is `/profile/[userId]`, allow through but still run session refresh.
+
+```typescript
+export const config = {
+  matcher: ["/admin/:path*", "/profile", "/profile/:path*"],
+};
+```
+
+**Warning signs:**
+- Authenticated user visits `/profile/someUserId`, follow button shows wrong initial state
+- Supabase session expires while user is on a public profile page — no cookie refresh
+- `useUser(userId)` returns stale data because auth token was not refreshed
+
+**Phase to address:** Public Profile page phase.
+
+---
+
+### Pitfall 4: `TriesGrid` Stub Returns Empty Array — React Query Caches Stale Empty State
+
+**What goes wrong:**
+`TriesGrid.tsx` has `async function fetchMyTries(): Promise<TryResult[]> { return []; }`. The React Query cache entry for `["my-tries"]` is populated with an empty array and remains there for `staleTime: 60s`. When the real API is wired in later, cached components in the same page session continue to render the empty state until the cache expires or is manually invalidated.
+
+**Why it happens:**
+The stub returns a value (not throws), so React Query considers the query successful and caches `[]`. This is invisible during development because each page refresh is a fresh cache. It only surfaces when users navigate within the app without a hard refresh.
+
+**How to avoid:**
+When replacing the stub with the real API call:
+1. Change the query key to include a user identifier: `["my-tries", userId]`
+2. The current key `["my-tries"]` with no user scope means a user viewing another person's tries sees their own cached result
+3. Call `queryClient.invalidateQueries({ queryKey: ["my-tries"] })` at the point of API wiring, or change the key structure which inherently invalidates old entries
+
+**Warning signs:**
+- Empty state shows on first load even after API is connected
+- React Query DevTools shows `["my-tries"]` with `status: success`, `data: []`
+- Works on hard refresh but not on soft navigation
+
+**Phase to address:** Tries tab API connection phase.
+
+---
+
+### Pitfall 5: `SavedGrid` Mock Data in `collectionStore` Creates Two Sources of Truth
+
+**What goes wrong:**
+`SavedGrid.tsx` reads from `collectionStore` which calls `loadCollection()`. That function populates `pins` and `boards` from `MOCK_PINS` constant in `collectionStore.ts`. If the real saved posts API is connected without replacing the store's data source, the component shows mock pins plus real saved posts, or shows mock pins even in production.
+
+The real saved posts API (`savedPosts.ts`) operates at a per-post level (save/unsave/status for a single post ID), not at a grid level. There is no `GET /api/v1/users/me/saved` endpoint in the current OpenAPI spec.
+
+**Why it happens:**
+The `SavedGrid` uses Zustand store as its data layer, not React Query directly. The real per-post save API in `lib/api/savedPosts.ts` does not have a "list all saved posts" endpoint. Developers assume saved grid just needs to call `fetchSavedPosts()` without verifying the endpoint exists.
+
+**How to avoid:**
+Before implementing the Saved tab, verify whether the backend has a `GET /api/v1/users/me/saved` endpoint. If it does not exist, the Saved grid cannot be meaningfully implemented — display a "Coming soon" state or skip the tab. If it exists, replace `loadCollection()` in `collectionStore` with the real API call and remove the `MOCK_PINS` constant entirely.
+
+**Warning signs:**
+- Saved grid shows placeholder images from `picsum.photos` in staging
+- Pin count in the grid doesn't match the save/unsave action count from post detail pages
+- `loadCollection()` is called but the grid never updates after a user saves a post
+
+**Phase to address:** Saved tab implementation phase — start by auditing the backend spec for a list endpoint.
+
+---
+
+### Pitfall 6: `FollowButton` Local State Diverges from Server State on Navigation
+
+**What goes wrong:**
+`FollowButton` manages follow state with `useState(initialFollowing)`. If `initialFollowing` is passed from a parent that fetched follow status at page load, and the user follows/unfollows and then navigates away and back, the component re-mounts with the original `initialFollowing` prop from the stale React Query cache — not the updated value. The follow action mutation does not invalidate the query that provides the follow status.
+
+**Why it happens:**
+This is the "optimistic update without cache invalidation" pattern. The `onFollowChange` callback in `FollowButton` triggers only what the parent wires it to. If no follow mutation hook is created with an `onSuccess` invalidation, the cache stays stale.
+
+**How to avoid:**
+Create a `useFollowUser(targetUserId)` mutation hook that:
+1. Calls the follow/unfollow API endpoint
+2. On success, invalidates `profileKeys.user(targetUserId)` and `profileKeys.stats()` for the current user (following count changes)
+3. Passes `isFollowing` from query data into `FollowButton.initialFollowing` — the component re-derives from server state on each mount
+
+**Warning signs:**
+- User follows someone, navigates away, comes back, button shows "Follow" again instead of "Following"
+- Follower count in `FollowStats` doesn't change after clicking follow
+- React Query DevTools shows no invalidation triggered by follow mutations
+
+**Phase to address:** Follow system phase — wire as a proper mutation with cache invalidation.
 
 ---
 
@@ -205,50 +159,65 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Keeping both old and new hooks simultaneously "temporarily" | Faster migration per feature | Query key collisions, cache bugs, confusion over which hook to use | Never — migrate per-endpoint atomically |
-| Using Orval for upload endpoints with binary fields | Consistent generated client | Progress callbacks lost, type mismatch for `File` vs `string` | Never — keep upload functions manual |
-| Pointing generated client directly to backend URL (bypassing proxy) | Simpler config | CORS failures in browser, auth token injection breaks | Only for server-side (Next.js Route Handlers), never for client-side |
-| Skipping operationId audit, accepting utoipa auto-generated ids | Saves one Rust PR | Hook names contain `Handler`/`Route` suffixes, bad DX forever | Never — fix operationIds before generation |
-| Gitignoring generated files without a CI regeneration step | Cleaner repo | TypeScript check fails in CI, spec drift silently accumulates | Only if a pre-build `generate` step is added to every CI job |
-| Committing generated files without a drift check | TypeScript always happy | Stale types ship without detection | Only if a drift check is added to CI |
+| Keeping `MOCK_PINS` in `collectionStore` while wiring other tabs | Faster shipping of non-saved tabs | Saved tab always shows fake data; QA failure if shipped | Never — replace with empty array before merging |
+| Client-side only auth guard via `useEffect` | Avoids touching `proxy.ts` | Flash of unauthorized content; profile skeleton shown to logged-out users | Never for `/profile` own-profile route |
+| Using `["my-tries"]` as query key without user scope | Simple key | Cache pollution between users on shared device; stale empty state | Never — always scope by userId |
+| Keeping hardcoded `followers = 1234, following = 567` defaults in `FollowStats` | Visible in component library | Wrong counts shown if API errors or data unavailable | Never in production code — use `0` or undefined |
+| Adding `/profile/[userId]` page without updating proxy matcher | Page routes correctly | Authenticated state doesn't propagate; cookie refresh skipped | Never — proxy.ts update is 2 lines |
+| Writing manual fetch functions for follow endpoints instead of regenerating Orval | Avoids waiting for backend spec update | Two API client patterns in codebase; manual code not covered by type generation | Only as temporary shim for 1 sprint, must be removed after spec update |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when wiring Orval into the existing system.
+Common mistakes when connecting to external services.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Supabase JWT auth | Hardcoding the token retrieval in the Orval mutator using `import { supabase }` at module level | Use the existing `getAuthToken()` from `lib/api/client.ts` inside the mutator function — token is fetched per-request, not at module init |
-| React Query `QueryClient` | Not providing a shared `QueryClient` to generated hooks — each hook creates its own | Wrap the app in a single `QueryClientProvider` and verify generated hooks use the same client (they use context, not local instantiation) |
-| Next.js Route Handler proxy | Configuring Orval's baseURL as `https://dev.decoded.style` for both client and server components | Use empty-string baseURL for client components (proxy routing), backend URL only in server-side fetch calls |
-| Turborepo task graph | Not declaring the `generate` task as a dependency of `build` and `typecheck` | Add `"generate": { "outputs": ["src/generated/**"] }` to `turbo.json` and make `build` depend on it |
-| Orval config file format | Using `.js` config with CJS `module.exports` when the package is ESM | Use `orval.config.ts` (TypeScript) or `orval.config.mjs` (ESM) to match the project's module system |
-| utoipa spec endpoint | Fetching spec from `https://dev.decoded.style/api-docs/openapi.json` in Orval config | In development, fetch from local `packages/api-server` running on localhost, or download and commit a static spec file to avoid network dependency in codegen |
+| Orval `generate:api` for follow endpoints | Running generation before updating `packages/api-server/openapi.json` with follow endpoints | Confirm backend spec has follow operations first, copy updated spec file, then run `bun run generate:api` from `packages/web` |
+| Supabase session in `proxy.ts` for `/profile` | Using `supabase.auth.getUser()` instead of `supabase.auth.getSession()` | `getSession()` is the pattern used for admin guard — reads from JWT cookie without network call; stay consistent |
+| React Query invalidation after follow mutation | Invalidating only `profileKeys.user(targetUserId)` | Also invalidate `profileKeys.stats()` for current user — their following count changes; optionally `profileKeys.me()` if user object contains follow counts |
+| Public profile `useUser(userId)` before route param resolves | Passing `""` (empty string) as userId | The `useUser` hook has `enabled: !!userId` guard — pass `undefined` when userId is unavailable; `""` evaluates truthy in some JS checks |
+| Auth redirect destination | Redirecting to `/` (home) on unauthenticated access to `/profile` | Redirect to `/login?redirect=/profile` so the user returns to profile after login; admin guard redirects to `/` for stealth reasons — profile should not be stealthy |
 
 ---
 
 ## Performance Traps
 
-Patterns that degrade build or runtime performance.
+Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Orval barrel file (`indexFiles: true`) + Next.js without `optimizePackageImports` | Large initial bundle, slow cold start | Enable `experimental.optimizePackageImports` in `next.config.js` for the generated directory | At any scale — barrel files defeat tree-shaking |
-| Generated hooks imported into layout or root component | Every page loads all API types | Import only the specific hook needed per page/component | At > 20 generated hooks |
-| Running `bun run generate` synchronously before every dev server start | 5-10s startup delay | Run generate only when spec changes (watch mode or manual trigger) | Immediately in development |
-| Both old `usePosts` and new generated `useGetPosts` querying simultaneously | Double network requests, doubled cache entries | Enforce atomic migration — one hook per endpoint at a time | Immediately during migration |
+| Fetching full followers list inline on profile page without pagination | Profile page becomes slow for users with many followers | Only fetch follower/following counts for stats display; use infinite scroll if a followers list modal is shown | At ~1k followers (first page response exceeds 200ms on mobile) |
+| Loading saved posts grid on profile page load regardless of active tab | Unnecessary network request delays initial paint | Gate the saved posts query with `enabled: activeTab === "saved"` — the existing `useUserActivities` already uses this pattern | At 50+ saved items on slower connections |
+| Invalidating all profile queries on follow action | Every profile section re-fetches unnecessarily | Use targeted `invalidateQueries` with specific keys — only follow stats query, not full user profile | At ~20 simultaneous invalidations |
+| No `staleTime` on public profile queries | Network request on every navigation to a user profile | Set `staleTime: 1000 * 60 * 5` matching own profile in `useMe` | High navigation frequency (users browsing multiple profiles) |
 
 ---
 
 ## Security Mistakes
 
+Domain-specific security issues beyond general web security.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using untrusted/external OpenAPI specs with Orval | Code injection via `x-enum-descriptions` field (CVE-2026-23947, CVE-2026-25141) — arbitrary code executed in generated output | Only consume the spec from the known backend (`dev.decoded.style`) or a committed local copy; use Orval >= 8.2.0 which patches these CVEs |
-| Logging generated API response bodies in the custom mutator during development | PII (user data, email, profile info) in logs | Add log filtering in the mutator; strip sensitive fields before any debug logging |
-| Exposing the backend API URL in generated client code for server-side routes | Backend URL becomes visible in client bundle | Use environment variable (`process.env.API_BASE_URL`) not a hardcoded URL; verify it is not `NEXT_PUBLIC_` prefixed |
+| Public profile renders all fields from `UserResponse` including private ones | Sensitive data (email, is_admin, ink_credits) visible to anyone | The backend `GET /api/v1/users/{user_id}` should return public-only fields — verify the response schema before rendering; create a `PublicUserProfile` type that excludes sensitive fields |
+| Follow button renders on own profile page | User can follow themselves; pollutes follower counts | Add guard: `if (targetUserId === currentUser?.id) return null` before rendering `FollowButton` |
+| Auth redirect goes to `/` without explaining why | User lands on home with no context, may think the site is broken | Redirect to `/login?redirect=/profile` with clear message; admin stealth-redirect pattern is intentional there but wrong for user-facing pages |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Follow button shows "Follow" while mutation is in-flight | Perceived lag — button seems unresponsive | Optimistic update: immediately flip button state, revert on error; `useState` in `FollowButton` already supports this if the parent wires the mutation correctly |
+| `FollowStats` shows loading skeleton while counts load | Stats flicker during profile load | Fetch followers and following counts in a single query; render both as skeleton until both resolve |
+| Navigating to `/profile/[userId]` for non-existent user shows raw JSON error | White screen or JSON visible in browser | Add `notFound()` in the public profile page server component when API returns 404; the proxy already forwards status codes |
+| Own profile accessible via `/profile/[userId]` and `/profile` — two URLs | Duplicate content, confusing canonical URL | Redirect `/profile/[currentUserId]` to `/profile` in the public profile server component |
+| Auth redirect goes to `/` instead of login | User has no path to authenticate | Redirect to `/login?redirect=/profile` — standard pattern distinct from the admin stealth redirect |
 
 ---
 
@@ -256,14 +225,14 @@ Patterns that degrade build or runtime performance.
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Spec validation:** Orval runs without errors — verify generated TypeScript also compiles (`bun run typecheck`) before declaring setup done
-- [ ] **Auth injection:** Generated hooks appear to work — verify authenticated endpoints actually send `Authorization: Bearer <token>` (check Network tab with a logged-in user)
-- [ ] **Upload endpoints:** Generated client exists for upload routes — verify the manual upload functions in `lib/api/posts.ts` are explicitly excluded from generation and still work
-- [ ] **Query key migration:** All consumers of an old hook are removed — search for imports of the old hook name across the entire `packages/web/` directory
-- [ ] **Proxy routing:** Generated client calls succeed in local dev — verify the same calls succeed in production where `NEXT_PUBLIC_API_BASE_URL` may differ
-- [ ] **Infinite scroll:** Regular query hook is replaced — also check that the infinite query variant uses a distinct query key (Orval issue #2359)
-- [ ] **CI drift check:** Generate runs in CI — verify that a spec change without regeneration causes CI to fail (test by modifying a field in the spec and not regenerating)
-- [ ] **Zod validation:** Zod schemas are generated — verify they are actually applied at runtime (Orval generates schemas but does not auto-apply them; you must wire them to the mutator or React Query's `select`)
+- [ ] **Follow System:** `FollowButton` renders and toggles visually — verify the API mutation is wired, cache is invalidated, and `FollowStats` counts update without a page reload
+- [ ] **Auth Guard:** Navigating to `/profile` in an incognito window redirects — verify redirect goes to `/login?redirect=/profile` (not `/`), and returning after login lands back on `/profile`
+- [ ] **TriesGrid:** Grid renders empty state — verify the stub `fetchMyTries` is replaced with a real API call and query key includes `userId`
+- [ ] **SavedGrid:** Grid renders — verify `MOCK_PINS` constant is removed from `collectionStore.ts` before merging; `picsum.photos` images in production is a QA failure
+- [ ] **Public Profile `/profile/[userId]`:** Page renders another user's profile — verify Settings/Share buttons from own profile are replaced with Follow button and navigation, not just hidden
+- [ ] **FollowStats real data:** Counts display — verify hardcoded `followers = 1234, following = 567` defaults are removed and the component receives real data or shows `0`
+- [ ] **Proxy matcher coverage:** Auth guard is active — verify `proxy.ts` matcher includes both `/profile` and `/profile/:path*` for session propagation
+- [ ] **Orval regeneration:** `generate:api` runs without errors — verify `packages/api-server/openapi.json` is updated before regenerating; running against stale spec produces stale types
 
 ---
 
@@ -273,13 +242,12 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Uncompilable Zod from OpenAPI 3.1 nullable | MEDIUM | Write a spec normalization script that converts `type: ["T", "null"]` to `{type: "T", nullable: true}` and run it before Orval; re-run generation |
-| Query key collisions causing cache bugs | MEDIUM | Identify all dual-hook endpoints in React Query DevTools; rollback those endpoints to old hooks; migrate them atomically with explicit key config |
-| Upload endpoint broken after migration | LOW | Revert the migration of upload endpoints; add them to the Orval exclusion list; restore manual implementation from git |
-| baseURL double-prefix causing 404s | LOW | Update the custom mutator to strip the `/api/v1` prefix from the path before calling fetch, or reconfigure baseURL in `orval.config.ts` |
-| Generated files causing CI typecheck failure | LOW | Add `bun run generate` as a pre-step in the CI typecheck job; commit the regenerated files |
-| bun/Turborepo version conflict with Orval CLI | LOW | Pin Orval version in `packages/web/package.json`; add `bun run generate` as a local script; avoid `bunx orval` at monorepo root |
-| Spec drift after backend changes | MEDIUM | Establish a process: every backend PR that changes API shape must include a frontend regeneration commit; enforce with CI drift check |
+| Follow API called without proxy (CORS error) | LOW | Add proxy route at `app/api/v1/users/[userId]/follow/route.ts`; point generated hook through empty baseURL |
+| Client-side auth guard shows flash of content | LOW | Move guard to `proxy.ts` matcher — 2-line change; flash disappears immediately |
+| Stale empty `["my-tries"]` cache after API is wired | LOW | Change query key to include `userId`, or call `queryClient.invalidateQueries` on mount |
+| Mock pins visible in production | MEDIUM | Remove `MOCK_PINS` from `collectionStore`, replace `loadCollection()` with API call or `[]`; verify with hard refresh in staging |
+| `/profile/[userId]` capturing wrong paths | MEDIUM | Add explicit static routes for any path that must not be treated as userId; App Router resolves static before dynamic |
+| Orval generated types out of sync with follow API | MEDIUM | Re-verify `packages/api-server/openapi.json` matches live backend, run `bun run generate:api`, fix TypeScript errors before proceeding |
 
 ---
 
@@ -289,34 +257,32 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| OpenAPI 3.1 nullable → uncompilable Zod | Phase 1: Spec validation | Run `bun run generate && bun run typecheck` — zero TypeScript errors |
-| Missing/duplicate operationId | Phase 1: Spec preparation (Rust-side fix) | Spec linting script finds zero duplicate operationIds and zero auto-generated suffixes |
-| Snake_case/camelCase naming policy | Phase 2: Orval config | Generated types mirror existing `lib/api/types.ts` field names exactly |
-| Next.js proxy + baseURL double-prefix | Phase 2: Custom mutator setup | Single endpoint smoke test — network request shows correct URL, no double prefix |
-| Multipart upload exclusion | Phase 2: Generation config | Orval config has explicit exclusions for upload endpoints; `uploadImage()` still works |
-| Query key collisions | Phase 3: Migration (per-endpoint plan) | React Query DevTools shows one cache entry per endpoint after migration |
-| bun + Orval CLI invocation | Phase 1: Setup | `bun run generate` from `packages/web/` runs correct Orval version and generates files |
-| Generated files CI drift | Phase 4: CI integration | CI fails when spec changes without corresponding regeneration commit |
+| Follow API missing from spec and proxy | Follow System (before any component code) | `curl https://dev.decoded.style/api/v1/users/{id}/follow` returns 200/405 (not 404); proxy route file exists |
+| Auth guard client-side flash | Auth Guard phase | Incognito navigation to `/profile` immediately redirects; no skeleton visible before redirect |
+| `/profile/[userId]` proxy matcher gap | Public Profile phase | Authenticated user visits public profile; Supabase cookie refreshed (verify Network tab) |
+| Stale empty tries cache | Tries tab API connection phase | Navigate away and back; tries grid reloads from API; no stale empty state |
+| Mock pins in saved grid | Saved tab phase | Grep `MOCK_PINS` and `picsum.photos` returns 0 results before PR merge |
+| Follow button state diverges from server | Follow System phase | Follow user, navigate away, navigate back; button still shows "Following" |
+| `FollowStats` hardcoded defaults | Follow System phase | Remove default values from `FollowStats` props; component must fail to render or show `0` when no data |
 
 ---
 
 ## Sources
 
-- [Orval GitHub Issues — Zod uncompilable types after OpenAPI 3.1 upgrade (#2562)](https://github.com/orval-labs/orval/issues/2562)
-- [Orval GitHub Issues — Zod: Code Generation fails for type id/string + pattern (#3097)](https://github.com/orval-labs/orval/issues/3097)
-- [Orval GitHub Issues — Query key collision for infinite + regular query (#2359)](https://github.com/orval-labs/orval/issues/2359)
-- [Orval GitHub Issues — multipart/form-data binary type regression (#2864)](https://github.com/orval-labs/orval/issues/2864)
-- [Orval GitHub Issues — Incorrect import paths with indexFiles=false (#2382)](https://github.com/orval-labs/orval/issues/2382)
-- [Orval Discussion — Converting schema field names from snake_case (#218)](https://github.com/orval-labs/orval/discussions/218)
-- [Orval Security Advisory — CVE-2026-23947 code injection via x-enum-descriptions](https://github.com/orval-labs/orval/security/advisories/GHSA-h526-wf6g-67jv)
-- [utoipa GitHub Issues — nullable $ref should include type: object (#973)](https://github.com/juhaku/utoipa/issues/973)
-- [utoipa GitHub Issues — Query params should not be nullable (#1215)](https://github.com/juhaku/utoipa/issues/1215)
-- [Orval Custom HTTP Client guide](https://orval.dev/guides/custom-client)
-- [Orval DeepWiki — Zod Schema Validation architecture](https://deepwiki.com/orval-labs/orval/5-zod-schema-validation)
-- [Turborepo + bun compatibility issues — GitHub Issue #4762](https://github.com/vercel/turborepo/issues/4762)
-- [Barrel files and Next.js tree-shaking — Vercel blog](https://vercel.com/blog/how-we-optimized-package-imports-in-next-js)
-- [OpenAPI nullable with oneOf/allOf — Speakeasy](https://www.speakeasy.com/openapi/schemas/null)
+- Direct codebase analysis:
+  - `/packages/web/lib/components/profile/FollowStats.tsx` — hardcoded `followers = 1234, following = 567` defaults confirmed
+  - `/packages/web/lib/components/profile/TriesGrid.tsx` — stub `fetchMyTries` returning `[]` confirmed
+  - `/packages/web/lib/stores/collectionStore.ts` — `MOCK_PINS` constant confirmed (60+ lines of mock data)
+  - `/packages/web/proxy.ts` — only `/admin/:path*` in matcher, no profile guard
+  - `/packages/web/lib/components/shared/FollowButton.tsx` — local `useState` only, no mutation hook wired
+  - `/packages/web/app/api/v1/users/` directory — no follow proxy routes (`/me/followers`, `/[userId]/follow`) confirmed
+  - `/packages/api-server/openapi.json` — no follow, saved list, or tries endpoints in spec (verified via path enumeration)
+  - `/packages/web/lib/hooks/useProfile.ts` — existing query key patterns, `useUser` hook with `enabled: !!userId`
+  - `/packages/web/lib/api/savedPosts.ts` — per-post save/unsave exists but no list endpoint
+- Architecture patterns from `.planning/codebase/ARCHITECTURE.md`
+- Known codebase concerns from `.planning/codebase/CONCERNS.md`
 
 ---
-*Pitfalls research for: Orval + Zod API code generation added to existing Next.js + React Query monorepo*
-*Researched: 2026-03-23*
+
+*Pitfalls research for: Profile Page Completion (v10.0) — follow system, activity tabs, public profile, auth guard*
+*Researched: 2026-03-26*
