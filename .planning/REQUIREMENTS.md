@@ -64,31 +64,31 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| ROUTE-01 | — | Pending |
-| ROUTE-02 | — | Pending |
-| FLLW-01 | — | Pending |
-| FLLW-02 | — | Pending |
-| FLLW-03 | — | Pending |
-| FLLW-04 | — | Pending |
-| FLLW-05 | — | Pending |
-| TRIES-01 | — | Pending |
-| TRIES-02 | — | Pending |
-| TRIES-03 | — | Pending |
-| TRIES-04 | — | Pending |
-| TRIES-05 | — | Pending |
-| SAVED-01 | — | Pending |
-| SAVED-02 | — | Pending |
-| SAVED-03 | — | Pending |
-| SAVED-04 | — | Pending |
-| SAVED-05 | — | Pending |
+| AUTH-01 | Phase 44 | Pending |
+| AUTH-02 | Phase 44 | Pending |
+| ROUTE-01 | Phase 45 | Pending |
+| ROUTE-02 | Phase 45 | Pending |
+| FLLW-01 | Phase 46 | Pending |
+| FLLW-02 | Phase 46 | Pending |
+| FLLW-03 | Phase 46 | Pending |
+| FLLW-04 | Phase 47 | Pending |
+| FLLW-05 | Phase 47 | Pending |
+| TRIES-01 | Phase 48 | Pending |
+| TRIES-02 | Phase 48 | Pending |
+| TRIES-03 | Phase 49 | Pending |
+| TRIES-04 | Phase 49 | Pending |
+| TRIES-05 | Phase 49 | Pending |
+| SAVED-01 | Phase 48 | Pending |
+| SAVED-02 | Phase 48 | Pending |
+| SAVED-03 | Phase 50 | Pending |
+| SAVED-04 | Phase 50 | Pending |
+| SAVED-05 | Phase 50 | Pending |
 
 **Coverage:**
 - v10.0 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after codebase audit*
+*Last updated: 2026-03-26 after roadmap creation (7 phases, 44-50)*
