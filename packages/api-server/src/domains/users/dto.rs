@@ -109,6 +109,26 @@ pub struct UserStatsResponse {
     pub rank: String,
 }
 
+/// VTON 히스토리 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryItem {
+    pub id: Uuid,
+    pub image_url: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 저장된 포스트 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SavedItem {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_thumbnail_url: Option<String>,
+    pub saved_at: DateTime<Utc>,
+}
+
 /// 사용자 활동 타입
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
