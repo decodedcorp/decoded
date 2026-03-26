@@ -167,6 +167,21 @@ Plans:
 **Goal**: 950줄, 880줄, 771줄, 726줄의 거대 컴포넌트를 커스텀 훅과 서브컴포넌트로 분리하여 300줄 이하로 만든다
 **Depends on**: Phase 44 (GSAP cleanup patterns established first)
 **Requirements**: REF-01, REF-02, REF-03, REF-04
+**Success Criteria** (what must be TRUE):
+
+1. ThiingsGrid.tsx가 300줄 이하로 줄어들고, PhysicsEngine 클래스와 Observer 헬퍼가 별도 파일로 분리된다
+2. VtonModal.tsx가 300줄 이하로 줄어들고, 3개 커스텀 훅과 3개 서브컴포넌트가 별도 파일로 분리된다
+3. ItemDetailCard.tsx가 300줄 이하로 줄어들고, adopt 로직과 GSAP 애니메이션이 커스텀 훅으로 추출된다
+4. ImageDetailModal.tsx가 300줄 이하로 줄어들고, GSAP 애니메이션/터치 핸들러가 커스텀 훅으로 추출된다
+5. 모든 컴포넌트의 외부 API(export, props)가 변경되지 않는다
+
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 46-01-PLAN.md — ThiingsGrid PhysicsEngine class + Observer helpers extraction (REF-01)
+- [ ] 46-02-PLAN.md — VtonModal hooks + subcomponent promotion (REF-02)
+- [ ] 46-03-PLAN.md — ItemDetailCard + ImageDetailModal hook extraction (REF-03, REF-04)
 
 ### Phase 47: Observability
 
@@ -387,11 +402,11 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
 | 44: Memory Leak Prevention                    | v10.0     | 0/3            | Planning done | -          |
 | 45: Security Foundation                       | v10.0     | 0/2            | Planning done | -          |
-| 46: Component Refactoring                     | v10.0     | 0/TBD          | Not started   | -          |
+| 46: Component Refactoring                     | v10.0     | 0/3            | Planning done | -          |
 | 47: Observability                             | v10.0     | 0/TBD          | Not started   | -          |
 | 48: Test Coverage                             | v10.0     | 0/TBD          | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-26 (Phase 45 planned — 2 plans, 1 wave)_
+_Last updated: 2026-03-26 (Phase 46 planned — 3 plans, 1 wave)_
