@@ -14,13 +14,13 @@ use crate::{
     config::{AppConfig, AppState},
     error::AppResult,
     middleware::{auth::User, auth_middleware},
-    utils::pagination::PaginatedResponse,
+    utils::pagination::{PaginatedResponse, Pagination},
 };
 
 use super::{
     dto::{
-        UpdateUserDto, UserActivitiesQuery, UserActivityItem, UserActivityType, UserResponse,
-        UserStatsResponse,
+        SavedItem, TryItem, UpdateUserDto, UserActivitiesQuery, UserActivityItem, UserActivityType,
+        UserResponse, UserStatsResponse,
     },
     service,
 };
@@ -147,12 +147,66 @@ pub async fn get_my_stats(
     Ok(Json(stats))
 }
 
+/// GET /api/v1/users/me/tries - VTON 히스토리 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/tries",
+    tag = "users",
+    security(
+        ("bearer_auth" = [])
+    ),
+    params(
+        ("page" = Option<u64>, Query, description = "페이지 번호 (기본 1)"),
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수 (기본 20, 최대 50)")
+    ),
+    responses(
+        (status = 200, description = "VTON 히스토리 조회 성공", body = PaginatedResponse<TryItem>),
+        (status = 401, description = "인증 필요")
+    )
+)]
+pub async fn get_my_tries(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(pagination): Query<Pagination>,
+) -> AppResult<Json<PaginatedResponse<TryItem>>> {
+    let result = service::list_my_tries(&state.db, user.id, pagination).await?;
+    Ok(Json(result))
+}
+
+/// GET /api/v1/users/me/saved - 저장된 포스트 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/saved",
+    tag = "users",
+    security(
+        ("bearer_auth" = [])
+    ),
+    params(
+        ("page" = Option<u64>, Query, description = "페이지 번호 (기본 1)"),
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수 (기본 20, 최대 50)")
+    ),
+    responses(
+        (status = 200, description = "저장된 포스트 조회 성공", body = PaginatedResponse<SavedItem>),
+        (status = 401, description = "인증 필요")
+    )
+)]
+pub async fn get_my_saved(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(pagination): Query<Pagination>,
+) -> AppResult<Json<PaginatedResponse<SavedItem>>> {
+    let result = service::list_my_saved(&state.db, user.id, pagination).await?;
+    Ok(Json(result))
+}
+
 /// Users 도메인 라우터
 pub fn router(app_config: AppConfig) -> Router<AppState> {
     let protected_routes = Router::new()
         .route("/me", get(get_my_profile).patch(update_my_profile))
         .route("/me/activities", get(get_my_activities))
         .route("/me/stats", get(get_my_stats))
+        .route("/me/tries", get(get_my_tries))
+        .route("/me/saved", get(get_my_saved))
         .route_layer(from_fn_with_state(app_config, auth_middleware));
 
     Router::new()
