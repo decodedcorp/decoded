@@ -14,6 +14,22 @@ export interface HeroSpotAnnotation {
   brand?: string;
   imageUrl?: string; // Item product image URL
   side: "left" | "right";
+  price?: string;
+  productLink?: string;
+}
+
+/**
+ * Deterministic scatter position for a hero card.
+ * All values are CSS strings. Computed by seeded PRNG — identical on SSR and client.
+ */
+export interface ScatterPosition {
+  top: string;
+  left: string;
+  width: string;
+  rotate: number;
+  zIndex: number;
+  tier: "hero" | "medium" | "small";
+  aspectRatio: string;
 }
 
 /** Hero section data -- "The Hook" */
@@ -25,6 +41,15 @@ export interface MainHeroData {
   ctaLink: string; // e.g. "/magazine"
   ctaLabel?: string; // e.g. "VIEW EDITORIAL"
   spots?: HeroSpotAnnotation[]; // Floating item annotation spots
+}
+
+/** Individual floating image in the hero scattered collage */
+export interface FloatingHeroImage {
+  id: string;
+  imageUrl: string;
+  label?: string;
+  link: string;
+  spots?: HeroSpotAnnotation[];
 }
 
 /** Grid item for masonry layout */
@@ -47,6 +72,92 @@ export interface GridItemSpot {
   brand: string;
   price: string;
   productLink?: string;
+}
+
+// ─── DecodeShowcase: "The Magic" AI detection section ───
+
+/** A single detected item with bounding box coordinates */
+export interface DetectedItem {
+  id: string;
+  label: string;
+  brand?: string;
+  price?: string;
+  imageUrl?: string;
+  productLink?: string;
+  /** Bounding box as percentage of image (0-100) */
+  bbox: { x: number; y: number; width: number; height: number };
+}
+
+/** Data for the AI detection showcase section */
+export interface DecodeShowcaseData {
+  /** The source image to "decode" */
+  sourceImageUrl: string;
+  /** Artist/celebrity name */
+  artistName: string;
+  /** Detected items with bounding boxes */
+  detectedItems: DetectedItem[];
+  /** Optional tagline */
+  tagline?: string;
+}
+
+// ─── VirtualTryOnTeaser: VTON Before/After section ───
+
+/** A single VTON comparison pair */
+export interface VTONComparisonPair {
+  id: string;
+  /** Original model wearing the item */
+  beforeImageUrl: string;
+  /** Virtual try-on result */
+  afterImageUrl: string;
+  /** Item being tried on */
+  itemName: string;
+  itemBrand?: string;
+}
+
+/** Data for the VTON teaser section */
+export interface VTONTeaserData {
+  pairs: VTONComparisonPair[];
+  ctaLabel?: string;
+}
+
+// ─── CommunityLeaderboard: Style DNA & Rank section ───
+
+/** A trending user entry */
+export interface TrendingUser {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  /** Style DNA tags (e.g. "Minimal", "Streetwear") */
+  styleTags: string[];
+  /** Badge or rank icon */
+  badge?: string;
+  /** Activity score or ink count */
+  score: number;
+}
+
+/** Data for the community leaderboard section */
+export interface CommunityLeaderboardData {
+  trendingUsers: TrendingUser[];
+  /** Weekly highlight hashtags */
+  trendingTags?: string[];
+}
+
+// ─── EditorialMagazine: Horizontal scroll magazine section ───
+
+/** A magazine-style card in the horizontal feed */
+export interface MagazineCard {
+  id: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  artistName: string;
+  category?: string;
+  link: string;
+}
+
+/** Data for the editorial magazine section */
+export interface EditorialMagazineData {
+  cards: MagazineCard[];
 }
 
 /** Personalize banner -- soft wall CTA */
