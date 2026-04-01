@@ -166,7 +166,7 @@ Plans:
 2. 이벤트 20개 미만인 유저에게는 메인페이지에 에디토리얼/트렌딩 기본 피드가 표시된다 (기존 경험 유지)
 3. 이벤트 20개 이상인 로그인 유저에게는 메인페이지에 "For You" 개인화 피드가 표시된다
 4. 추천 API 실패 또는 데이터 부족 시 기본 피드로 자동 폴백된다 (에러 없이)
-   **Plans**: TBD
+   **Plans**: 2 plans
 
 Plans:
 
@@ -184,7 +184,7 @@ Plans:
 1. 행동 데이터가 충분한 유저에게 메인페이지 MasonryGrid가 `dense` 또는 `editorial` 레이아웃 중 선호도에 맞는 형태로 렌더링된다
 2. `/magazine/personal` 페이지가 mock LayoutJSON 대신 유저의 선호 카테고리/아티스트 기반 실제 콘텐츠를 표시한다
 3. 어드민 패널에서 결과 0건 검색어 목록을 확인할 수 있다 (콘텐츠 확보 시그널로 활용)
-   **Plans**: TBD
+   **Plans**: 2 plans
 
 Plans:
 
@@ -460,7 +460,7 @@ Plans:
 2. `/explore` 탭은 영향받지 않으며 기존과 동일한 전체 포스트 목록을 표시한다
 3. `useInfinitePosts`에 `hasMagazine: true`를 전달하면 Supabase 쿼리에 `.not("post_magazine_title", "is", null)` 조건이 적용된다
 4. `openapi.json`에 `has_magazine` boolean 파라미터가 추가되고 `bun run generate:api` 후 `ListPostsParams` 타입에 필드가 생성된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 52-01: `useInfinitePosts` Supabase 필터 추가 (FILT-01) — `hasMagazine` 조건 활성화
@@ -477,7 +477,7 @@ Plans:
 3. SpotDot 위에 `top_solution` 썸네일이 표시된다 (solution이 있는 spot의 경우)
 4. Maximize 버튼 클릭 시 GSAP exit 애니메이션 후 `router.push`로 전환되며 브라우저 히스토리가 올바르게 쌓인다
 5. Maximize 후 풀 페이지에서 뒤로가기 버튼이 이전 페이지(`/explore` 또는 `/editorial`)로 돌아간다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 53-01: `usePostDetailForImage` REST 마이그레이션 — `getPost` + `postDetailToImageDetail` adapter (DETL-01)
@@ -493,7 +493,7 @@ Plans:
 2. `spotCount === 0`이거나 undefined인 카드에는 배지가 표시되지 않는다
 3. Editorial 카드에 `post_magazine_title` 값이 오버레이로 표시된다 (editorial filter 적용 후 non-null 보장)
 4. Explore 카드의 배지는 기존 카드 레이아웃과 시각적으로 충돌하지 않는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 54-01: `useInfinitePosts` `spotCount` 실데이터 매핑 + `ExploreCardCell` 배지 UI (CARD-01)
@@ -510,7 +510,7 @@ Plans:
 3. Maximize2 버튼 클릭 → GSAP exit → 풀 페이지 → 뒤로가기로 editorial 복귀 (hard reload 없음)
 4. `/explore` 탭에서 spot_count 배지가 있는 카드 확인 → 드로어에서 SpotDot top_solution 표시 확인
 5. TypeScript 타입 에러 0건, `bun run build` 성공
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 55-01: 수동 E2E 스모크 테스트 체크리스트 실행 + `bun run build` 검증
