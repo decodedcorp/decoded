@@ -349,9 +349,12 @@ export default async function Home({
         ].slice(0, 8);
 
   // Section 2: DecodeShowcase — prefer artistSpotlight (different from whatsNew used elsewhere)
+  // Filter by spot count (not items) — each spot is a unique position on the image
   const showcaseSource =
-    artistSpotlight.find((s) => s.post.imageUrl && s.items.length >= 2) ||
-    whatsNewData.find((w) => w.post.imageUrl && w.items.length >= 2);
+    artistSpotlight.find(
+      (s) => s.post.imageUrl && (s.spots ?? []).length >= 2
+    ) ||
+    whatsNewData.find((w) => w.post.imageUrl && (w.spots ?? []).length >= 2);
   const decodeShowcaseData: DecodeShowcaseData = showcaseSource
     ? {
         sourceImageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(showcaseSource.post.imageUrl!)}`,
@@ -360,39 +363,25 @@ export default async function Home({
           showcaseSource.post.groupName ||
           "DECODED",
         tagline: "See how it's Decoded",
-        detectedItems: showcaseSource.items.slice(0, 4).map((item, i) => ({
-          id: String(item.id),
-          label: item.name || item.label,
-          brand: item.brand || undefined,
-          imageUrl: item.imageUrl
-            ? `/api/v1/image-proxy?url=${encodeURIComponent(item.imageUrl)}`
-            : undefined,
-          bbox: {
-            // Use real spot coordinates when available (position_left/top are percentage strings)
-            x: Math.max(
-              5,
-              Math.min(
-                70,
-                parseFloat(
-                  showcaseSource.spots?.[i]?.position_left ??
-                    String([15, 55, 10, 50][i % 4])
-                )
-              )
-            ),
-            y: Math.max(
-              5,
-              Math.min(
-                70,
-                parseFloat(
-                  showcaseSource.spots?.[i]?.position_top ??
-                    String([20, 15, 55, 60][i % 4])
-                )
-              )
-            ),
-            width: [28, 24, 26, 22][i % 4],
-            height: [32, 28, 30, 24][i % 4],
-          },
-        })),
+        // One item per spot (first solution) — ensures unique positions
+        detectedItems: (showcaseSource.spots ?? [])
+          .filter((spot) => (spot.solutions ?? []).length > 0)
+          .slice(0, 4)
+          .map((spot) => {
+            const sol = spot.solutions[0];
+            const cx = parseFloat(spot.position_left || "50");
+            const cy = parseFloat(spot.position_top || "50");
+            return {
+              id: String(sol.id),
+              label: sol.title,
+              brand: (sol.metadata as any)?.brand || undefined,
+              imageUrl: sol.thumbnail_url
+                ? `/api/v1/image-proxy?url=${encodeURIComponent(sol.thumbnail_url)}`
+                : undefined,
+              // bbox x/y = spot center point, width/height minimal (dot rendering)
+              bbox: { x: cx, y: cy, width: 0, height: 0 },
+            };
+          }),
       }
     : {
         sourceImageUrl: "",
