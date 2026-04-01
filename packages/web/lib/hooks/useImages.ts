@@ -201,7 +201,9 @@ export function useInfinitePosts(params: {
       if (groupName) {
         query = query.ilike("group_name", `%${groupName}%`);
       }
-      // Note: hasMagazine filter not yet supported via Supabase query
+      if (hasMagazine) {
+        query = query.not("post_magazine_id", "is", null);
+      }
 
       // Sort
       if (sort === "popular") {
