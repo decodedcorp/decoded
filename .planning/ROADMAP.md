@@ -445,10 +445,10 @@ Plans:
 1. Supabase에서 `post_magazine_title IS NOT NULL` 행이 조회되며 row 수가 확인된다
 2. 조회 결과가 0이면 editorial automation (#38) 이슈를 escalation으로 기록하고 다음 단계가 블로킹된다
 3. 조회 결과가 1 이상이면 이후 Phase 52-54의 시각적 검증이 가능하다는 사실이 문서화된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 51-01: DB 조회 — `post_magazine_title IS NOT NULL` 행 수 확인 및 결과 문서화
+- [ ] 51-01-PLAN.md — SQL 검증 쿼리 실행 + 결과 보고서 작성 (DATA-01)
 
 ### Phase 52: Editorial Filter Fix
 
