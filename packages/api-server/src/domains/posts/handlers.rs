@@ -206,7 +206,8 @@ pub async fn create_post_with_solutions(
         ("user_id" = Option<Uuid>, Query, description = "사용자 ID 필터"),
         ("sort" = Option<String>, Query, description = "정렬: recent | popular | trending"),
         ("page" = Option<u64>, Query, description = "페이지 번호"),
-        ("per_page" = Option<u64>, Query, description = "페이지당 개수")
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수"),
+        ("has_magazine" = Option<bool>, Query, description = "매거진(editorial) 보유 여부. true = post_magazine_id가 있는 post만"),
     ),
     responses(
         (status = 200, description = "Post 목록 조회 성공", body = PaginatedResponse<crate::domains::posts::dto::PostListItem>),
