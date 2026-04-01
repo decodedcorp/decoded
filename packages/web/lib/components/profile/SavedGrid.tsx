@@ -34,7 +34,6 @@ export function SavedGrid({ className }: SavedGridProps) {
   useEffect(() => {
     loadCollection().then(() => setLoaded(true));
     // loadCollection은 store에서 안정적인 참조이므로 의존성 배열에서 제외
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (isLoading && !loaded) {

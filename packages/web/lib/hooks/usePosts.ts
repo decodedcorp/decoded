@@ -10,7 +10,11 @@ import {
   type PostDetail,
   type LegacyPostDetail,
 } from "@/lib/supabase/queries/posts";
-import { listPosts, updatePost as updatePostGenerated, deletePost as deletePostGenerated } from "@/lib/api/generated/posts/posts";
+import {
+  listPosts,
+  updatePost as updatePostGenerated,
+  deletePost as deletePostGenerated,
+} from "@/lib/api/generated/posts/posts";
 import type {
   Post,
   PostsListResponse,
@@ -121,7 +125,7 @@ export function useInfinitePosts(params: UseInfinitePostsParams = {}) {
       });
 
       return {
-        items: response.data as any as Post[],
+        items: response.data as unknown as Post[],
         currentPage: response.pagination.current_page,
         totalPages: response.pagination.total_pages,
         hasMore:

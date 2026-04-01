@@ -37,7 +37,8 @@ export const oauthButtonVariants = cva(
 export type OAuthProvider = "kakao" | "google" | "apple";
 
 export interface OAuthButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">,
     VariantProps<typeof oauthButtonVariants> {
   /**
    * OAuth provider type

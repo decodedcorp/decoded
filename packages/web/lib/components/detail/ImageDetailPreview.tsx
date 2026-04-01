@@ -57,8 +57,7 @@ export function ImageDetailPreview({
 
   const aiSummary = (image as { ai_summary?: string | null }).ai_summary;
   const itemCount = image.items?.length ?? 0;
-  const account =
-    (image.postImages?.[0]?.post?.account as string) || "unknown";
+  const account = (image.postImages?.[0]?.post?.account as string) || "unknown";
 
   return (
     <div className="flex flex-col gap-8 px-6 py-8 md:px-8 md:py-10">
@@ -81,7 +80,9 @@ export function ImageDetailPreview({
             {itemCount}개의 아이템이 포함된 룩
           </p>
         )}
-        {((artistTags?.length ?? 0) > 0 || (brands?.length ?? 0) > 0 || (styleTags?.length ?? 0) > 0) && (
+        {((artistTags?.length ?? 0) > 0 ||
+          (brands?.length ?? 0) > 0 ||
+          (styleTags?.length ?? 0) > 0) && (
           <div className="flex flex-wrap gap-2 pt-2">
             {artistTags?.map((a) => (
               <span

@@ -38,7 +38,7 @@ export function ImageDetailModal({ imageId }: Props) {
   useEffect(() => {
     if (!imageId) return;
     track({ event_type: "post_view", entity_id: imageId });
-  }, [imageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imageId]);
 
   // Debug: Log imageId and data state (development only)
   useEffect(() => {
@@ -112,7 +112,8 @@ export function ImageDetailModal({ imageId }: Props) {
   const activeImageSrc =
     imgSrc ||
     (image as { image_url?: string })?.image_url ||
-    (image as any)?.postImages?.[0]?.post?.image_url;
+    (image as unknown as { postImages?: { post?: { image_url?: string } }[] })
+      ?.postImages?.[0]?.post?.image_url;
 
   const handleClose = useCallback(() => {
     if (isClosing || !ctxRef.current) return;
@@ -508,7 +509,6 @@ export function ImageDetailModal({ imageId }: Props) {
       });
 
       // Calculate Target Position
-      let targetProps = {};
 
       // Desktop: Center of Left Area
       // Drawer Width Logic (must match CSS classes):
@@ -529,7 +529,7 @@ export function ImageDetailModal({ imageId }: Props) {
       const targetWidth = Math.min(leftSpace * 0.7, 500);
       const targetHeight = viewportHeight * 0.75;
 
-      targetProps = {
+      const targetProps = {
         top: (viewportHeight - targetHeight) / 2,
         left: (leftSpace - targetWidth) / 2,
         width: targetWidth,
@@ -646,40 +646,60 @@ export function ImageDetailModal({ imageId }: Props) {
           />
 
           {/* Spot Markers on Floating Image - with hover tooltip (brand, label, category) */}
-          {image?.items && image.items.length > 0 && (() => {
-            const imageRect = getContainedImageRect();
-            if (!imageRect) return null;
-            const accentColor = (magazine?.layout_json as { design_spec?: { accent_color?: string } })?.design_spec?.accent_color;
+          {image?.items &&
+            image.items.length > 0 &&
+            (() => {
+              const imageRect = getContainedImageRect();
+              if (!imageRect) return null;
+              const accentColor = (
+                magazine?.layout_json as {
+                  design_spec?: { accent_color?: string };
+                }
+              )?.design_spec?.accent_color;
 
-            return (
-              <div className="absolute inset-0 pointer-events-none z-20">
-                {image.items.map((item, idx) => {
-                  const center = Array.isArray(item.center) ? item.center : null;
-                  if (!center || center.length < 2) return null;
-                  const fracX = typeof center[0] === "number" ? center[0] : parseFloat(String(center[0])) || 0;
-                  const fracY = typeof center[1] === "number" ? center[1] : parseFloat(String(center[1])) || 0;
-                  const pixelLeft = imageRect.left + imageRect.width * (fracX > 1 ? fracX / 100 : fracX);
-                  const pixelTop = imageRect.top + imageRect.height * (fracY > 1 ? fracY / 100 : fracY);
-                  const meta = item.metadata as unknown as Record<string, unknown> | undefined;
-                  const brand = meta?.brand as string | undefined;
-                  const category = meta?.sub_category as string | undefined;
+              return (
+                <div className="absolute inset-0 pointer-events-none z-20">
+                  {image.items.map((item, idx) => {
+                    const center = Array.isArray(item.center)
+                      ? item.center
+                      : null;
+                    if (!center || center.length < 2) return null;
+                    const fracX =
+                      typeof center[0] === "number"
+                        ? center[0]
+                        : parseFloat(String(center[0])) || 0;
+                    const fracY =
+                      typeof center[1] === "number"
+                        ? center[1]
+                        : parseFloat(String(center[1])) || 0;
+                    const pixelLeft =
+                      imageRect.left +
+                      imageRect.width * (fracX > 1 ? fracX / 100 : fracX);
+                    const pixelTop =
+                      imageRect.top +
+                      imageRect.height * (fracY > 1 ? fracY / 100 : fracY);
+                    const meta = item.metadata as unknown as
+                      | Record<string, unknown>
+                      | undefined;
+                    const brand = meta?.brand as string | undefined;
+                    const category = meta?.sub_category as string | undefined;
 
-                  return (
-                    <SpotDot
-                      key={item.id ?? idx}
-                      mode="pixel"
-                      leftPx={pixelLeft}
-                      topPx={pixelTop}
-                      label={item.product_name ?? ""}
-                      brand={brand}
-                      category={category}
-                      accentColor={accentColor}
-                    />
-                  );
-                })}
-              </div>
-            );
-          })()}
+                    return (
+                      <SpotDot
+                        key={item.id ?? idx}
+                        mode="pixel"
+                        leftPx={pixelLeft}
+                        topPx={pixelTop}
+                        label={item.product_name ?? ""}
+                        brand={brand}
+                        category={category}
+                        accentColor={accentColor}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })()}
         </div>
       )}
 

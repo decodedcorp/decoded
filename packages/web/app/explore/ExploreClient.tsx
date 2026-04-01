@@ -28,7 +28,10 @@ type Props = {
  * - GET /api/v1/posts with pagination
  * - Supports category filtering via API params
  */
-export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Props) {
+export function ExploreClient({
+  initialPosts: _initialPosts,
+  hasMagazine,
+}: Props) {
   const activeFilter = useFilterStore((state) => state.activeFilter);
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);

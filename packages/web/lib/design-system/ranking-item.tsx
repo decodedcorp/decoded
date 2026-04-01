@@ -39,7 +39,8 @@ export const rankingItemVariants = cva(
 );
 
 export interface RankingItemProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "children">,
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "children">,
     VariantProps<typeof rankingItemVariants> {
   /**
    * Direction of rank change

@@ -14,7 +14,11 @@ import {
   updateSpot as updateSpotGenerated,
   deleteSpot as deleteSpotGenerated,
 } from "@/lib/api/generated/spots/spots";
-import type { SpotListItem, CreateSpotDto, UpdateSpotDto } from "@/lib/api/generated/models";
+import type {
+  SpotListItem,
+  CreateSpotDto,
+  UpdateSpotDto,
+} from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -106,7 +110,8 @@ export function useDeleteSpot() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ spotId }: DeleteSpotVariables) => deleteSpotGenerated(spotId),
+    mutationFn: ({ spotId }: DeleteSpotVariables) =>
+      deleteSpotGenerated(spotId),
     onSuccess: (_, { postId }) => {
       queryClient.invalidateQueries({ queryKey: spotKeys.list(postId) });
     },

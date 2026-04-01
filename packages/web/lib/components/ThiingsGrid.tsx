@@ -572,7 +572,7 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
     const innerLayersSize = Math.pow(2 * layer - 1, 2);
 
     // Calculate position within current layer
-    let positionInLayer = 0;
+    let positionInLayer: number;
 
     if (y === 0 && x === layer) {
       // Starting position (middle right)

@@ -211,7 +211,6 @@ export function useLogStream(): UseLogStreamReturn {
     return () => {
       stopInterval();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { entries, isStreaming, isPaused, toggle, clear, start, scrollRef };

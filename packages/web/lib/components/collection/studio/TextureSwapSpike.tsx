@@ -55,16 +55,19 @@ export function TextureSwapSpike() {
 
       // Enumerate all objects to find magazine-like objects
       try {
-        const allObjects = (splineApp as any)._scene?.children || [];
+        const allObjects =
+          (splineApp as unknown as { _scene?: { children?: unknown[] } })._scene
+            ?.children || [];
         const names: string[] = [];
 
-        function walk(obj: any, depth = 0) {
-          if (obj.name) names.push("  ".repeat(depth) + obj.name);
-          if (obj.children)
-            obj.children.forEach((c: any) => walk(c, depth + 1));
+        function walk(obj: unknown, depth = 0) {
+          const o = obj as { name?: string; children?: unknown[] };
+          if (o.name) names.push("  ".repeat(depth) + o.name);
+          if (o.children)
+            o.children.forEach((c: unknown) => walk(c, depth + 1));
         }
 
-        allObjects.forEach((obj: any) => walk(obj));
+        allObjects.forEach((obj: unknown) => walk(obj));
         setObjectNames(names);
         log(`Found ${names.length} objects in scene`, "info");
       } catch (err) {
@@ -86,23 +89,43 @@ export function TextureSwapSpike() {
           );
 
           // Inspect material
-          const mat = (obj as any).material;
+          const mat = (
+            obj as unknown as {
+              material?: {
+                layers?: {
+                  type?: string;
+                  image?: { data?: unknown; name?: string };
+                }[];
+              };
+            }
+          ).material;
           if (mat) {
             log(
               `  Material found. Layers: ${mat.layers?.length ?? "none"}`,
               "info"
             );
-            mat.layers?.forEach((layer: any, i: number) => {
-              const hasImage = layer.image !== undefined;
-              log(
-                `  Layer[${i}]: type=${layer.type ?? "?"}, hasImage=${hasImage}`,
-                "info"
-              );
-              if (hasImage) {
-                log(`    image.data type: ${typeof layer.image?.data}`, "info");
-                log(`    image.name: ${layer.image?.name ?? "none"}`, "info");
+            mat.layers?.forEach(
+              (
+                layer: {
+                  type?: string;
+                  image?: { data?: unknown; name?: string };
+                },
+                i: number
+              ) => {
+                const hasImage = layer.image !== undefined;
+                log(
+                  `  Layer[${i}]: type=${layer.type ?? "?"}, hasImage=${hasImage}`,
+                  "info"
+                );
+                if (hasImage) {
+                  log(
+                    `    image.data type: ${typeof layer.image?.data}`,
+                    "info"
+                  );
+                  log(`    image.name: ${layer.image?.name ?? "none"}`, "info");
+                }
               }
-            });
+            );
           } else {
             log(`  No material on object`, "error");
           }
@@ -126,7 +149,13 @@ export function TextureSwapSpike() {
           return;
         }
 
-        const mat = (obj as any).material;
+        const mat = (
+          obj as unknown as {
+            material?: {
+              layers?: { image?: { data?: unknown; name?: string } }[];
+            };
+          }
+        ).material;
         if (!mat?.layers) {
           log(`No material layers on "${objectName}"`, "error");
           return;
@@ -134,7 +163,8 @@ export function TextureSwapSpike() {
 
         // Approach 1: Find texture layer and set image.data
         const texLayer = mat.layers.find(
-          (layer: any) => layer.image !== undefined
+          (layer: { image?: { data?: unknown; name?: string } }) =>
+            layer.image !== undefined
         );
         if (!texLayer) {
           log(`No texture layer found on "${objectName}"`, "error");

@@ -89,7 +89,8 @@ const connectorVariants = cva("transition-colors duration-200", {
 });
 
 export interface StepIndicatorProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof stepIndicatorVariants> {
   /** Current active step (1-indexed) */
   currentStep: number;

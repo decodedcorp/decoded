@@ -3,7 +3,10 @@
 import { RefObject, useCallback, useMemo, useRef, useState } from "react";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
-import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/mutation-types";
+import type {
+  PostMagazineLayout,
+  RelatedEditorialItem,
+} from "@/lib/api/mutation-types";
 import type { Json } from "@/lib/supabase/types";
 import { normalizeItem, solutionToShopItem } from "./types";
 import type { UiItem } from "./types";
@@ -152,12 +155,12 @@ export function ImageDetailContent({
       { bbox?: number[] | null; center?: Json | null; score?: number | null }
     > = {};
     if (Array.isArray(itemLocations)) {
-      itemLocations.forEach((loc: any) => {
+      itemLocations.forEach((loc: Record<string, unknown>) => {
         if (loc && loc.item_id) {
-          map[loc.item_id.toString()] = {
-            bbox: loc.bbox,
-            center: loc.center || loc,
-            score: loc.score,
+          map[(loc.item_id as number | string).toString()] = {
+            bbox: loc.bbox as number[] | null,
+            center: (loc.center as Json) || (loc as unknown as Json),
+            score: loc.score as number | null,
           };
         }
       });
@@ -231,248 +234,256 @@ export function ImageDetailContent({
   return (
     <div className="detail-content relative" style={magazineCssVars}>
       <>
-      {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
-        <span className="font-serif text-[10px] uppercase tracking-[1em] text-primary/5 writing-mode-vertical-rl rotate-180 opacity-50">
-          Decoded Editorial Archive — {new Date(image.created_at).getFullYear()}
-        </span>
-      </div>
-
-      {/* Section 1: Magazine Title (text header) or Hero Image */}
-      {hasMagazine ? (
-        <MagazineTitleSection
-          title={magazineLayout.title}
-          subtitle={magazineLayout.subtitle}
-        />
-      ) : (
-        !hideImage && (
-          <HeroSection image={image} isModal={isModal} onClick={onHeroClick} />
-        )
-      )}
-
-      {/* AI Summary Section — only rendered when summary exists */}
-      {aiSummary && (
-        <section
-          className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
-        >
-          <div className="w-full">
-            <AISummarySection summary={aiSummary} isModal={isModal} />
-          </div>
-        </section>
-      )}
-
-      {/* Section 2: Interactive Showcase (non-magazine) or static post image with spot dots (magazine) */}
-      {Boolean(hasMagazine && imageUrl) && (
-        <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
-          <div className="relative overflow-hidden rounded-xl">
-            <Image
-              src={imageUrl!}
-              alt="Post image"
-              width={384}
-              height={0}
-              className="h-auto w-full"
-              sizes="(max-width: 768px) 80vw, 384px"
-              priority
-            />
-            {/* Spot overlay dots */}
-            {normalizedItems.map((item) => {
-              if (!item.normalizedCenter) return null;
-              const meta = item.metadata as unknown as
-                | Record<string, unknown>
-                | undefined;
-              return (
-                <SpotDot
-                  key={item.id}
-                  mode="percent"
-                  x={item.normalizedCenter.x}
-                  y={item.normalizedCenter.y}
-                  label={item.product_name ?? ""}
-                  brand={meta?.brand as string | undefined}
-                  category={meta?.sub_category as string | undefined}
-                  accentColor={accentColor}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-      {!hasMagazine && hasItemsWithCoordinates && (
-        <InteractiveShowcase
-          image={image}
-          items={normalizedItems}
-          isModal={isModal}
-          scrollContainerRef={scrollContainerRef}
-          activeIndex={activeIndex}
-          onActiveIndexChange={onActiveIndexChange}
-          renderImage={!hideImage}
-          onAddSolution={(spotId) => setSpotIdToAddSolution(spotId)}
-          postOwnerId={
-            (image as ImageDetailWithPostOwner).post_owner_id ?? null
-          }
-        />
-      )}
-
-      {/* Add Solution Sheet - for items without product info */}
-      <AddSolutionSheet
-        spotId={spotIdToAddSolution ?? ""}
-        postId={image.id}
-        isOpen={!!spotIdToAddSolution}
-        onClose={() => setSpotIdToAddSolution(null)}
-      />
-
-      {hasMagazine ? (
-        <>
-          {/* Magazine: Editorial Section */}
-          <MagazineEditorialSection
-            editorial={magazineLayout.editorial}
-            accentColor={accentColor}
-          />
-
-          {/* Magazine: Celebrity Style Archive */}
-          <MagazineCelebSection
-            celebs={magazineLayout.celeb_list}
-            accentColor={accentColor}
-          />
-
-          {/* Magazine: The Look + per-item Related Items */}
-          <MagazineItemsSection
-            items={magazineLayout.items}
-            relatedItems={magazineLayout.related_items}
-            accentColor={accentColor}
-          />
-        </>
-      ) : (
-        <>
-          {/* Shop Grid (show if any items exist, even without coordinates) */}
-          {hasItems && (
-            <div>
-              {itemsFromPost &&
-                image.postImages &&
-                image.postImages.length > 0 && (
-                  <div className="mx-auto max-w-6xl px-4 py-3 md:px-8">
-                    <p className="text-sm text-muted-foreground">
-                      Items from post: @
-                      {String(
-                        (image.postImages[0].post as Record<string, unknown>)
-                          ?.account ?? ""
-                      )}
-                    </p>
-                  </div>
-                )}
-              <ShopGrid
-                items={solutionsLoading ? normalizedItems : shopItems}
-                isModal={isModal}
-                postId={image.id}
-                onAddSolutionClick={(spotId) => setSpotIdToAddSolution(spotId)}
-              />
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Related Posts - 같은 유저가 올린 다른 포스트 */}
-      {(image.postImages?.[0]?.post as Record<string, unknown>)?.account && (
-        <RelatedImages
-          currentPostId={image.id}
-          account={String(
-            (image.postImages![0].post as Record<string, unknown>).account
-          )}
-          userId={
-            (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
-          }
-          isModal={isModal}
-        />
-      )}
-
-      {/* Try Gallery Section — pass items for VTON */}
-      <TryGallerySection
-        postId={image.id}
-        items={normalizedItems
-          .filter((item) => item.imageUrl)
-          .map(
-            (item): VtonPreloadItem => ({
-              id: String(item.id),
-              title: item.product_name || item.sam_prompt || `Item ${item.id}`,
-              thumbnail_url: item.imageUrl!,
-              description: item.description,
-              keywords: null,
-            })
-          )}
-      />
-
-      {/* Social Actions & Comments */}
-      <div className="px-6 py-6 md:px-10 border-t border-border">
-        <SocialActions
-          initialLiked={initialLiked}
-          initialSaved={initialSaved}
-          likeCount={likeCount}
-          commentCount={commentCount}
-          showComment
-          variant="default"
-          onLike={handleLike}
-          onSave={handleSave}
-          onShare={handleShare}
-          onComment={scrollToComments}
-        />
-      </div>
-      <div ref={commentSectionRef}>
-        <ImageCommentSection imageId={image.id} />
-      </div>
-
-      {/* Magazine: Related Editorials - 맨 마지막 */}
-      {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
-        <MagazineRelatedSection relatedEditorials={relatedEditorials} />
-      )}
-
-      {/* Fallback: Show basic info if no items */}
-      {!hasItems && !hasMagazine && (
-        <div className="mx-auto max-w-4xl px-4 py-16 md:px-8">
-          <div className="mb-8">
-            <div className="mb-4 flex flex-wrap gap-2">
-              {image.status && (
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${
-                    image.status === "pending"
-                      ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
-                      : image.status === "extracted"
-                        ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                        : "bg-slate-100 text-slate-900 dark:bg-slate-800/80 dark:text-slate-100"
-                  }`}
-                >
-                  {image.status}
-                </span>
-              )}
-              {image.with_items && (
-                <span className="rounded-full bg-blue-500/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-100">
-                  Items Detected
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Created: {new Date(image.created_at).toLocaleDateString()}
-            </p>
-          </div>
-
-          <div className="mb-12">
-            <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-              Image Details
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Image ID:{" "}
-              <code className="rounded bg-muted px-2 py-1 text-sm">
-                {image.id}
-              </code>
-            </p>
-          </div>
-
-          <div>
-            <h2 className="mb-4 text-2xl font-semibold">Details</h2>
-            <p className="text-muted-foreground">
-              No items with coordinates found for this image.
-            </p>
-          </div>
+        {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
+          <span className="font-serif text-[10px] uppercase tracking-[1em] text-primary/5 writing-mode-vertical-rl rotate-180 opacity-50">
+            Decoded Editorial Archive —{" "}
+            {new Date(image.created_at).getFullYear()}
+          </span>
         </div>
-      )}
+
+        {/* Section 1: Magazine Title (text header) or Hero Image */}
+        {hasMagazine ? (
+          <MagazineTitleSection
+            title={magazineLayout.title}
+            subtitle={magazineLayout.subtitle}
+          />
+        ) : (
+          !hideImage && (
+            <HeroSection
+              image={image}
+              isModal={isModal}
+              onClick={onHeroClick}
+            />
+          )
+        )}
+
+        {/* AI Summary Section — only rendered when summary exists */}
+        {aiSummary && (
+          <section
+            className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
+          >
+            <div className="w-full">
+              <AISummarySection summary={aiSummary} isModal={isModal} />
+            </div>
+          </section>
+        )}
+
+        {/* Section 2: Interactive Showcase (non-magazine) or static post image with spot dots (magazine) */}
+        {Boolean(hasMagazine && imageUrl) && (
+          <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
+            <div className="relative overflow-hidden rounded-xl">
+              <Image
+                src={imageUrl!}
+                alt="Post image"
+                width={384}
+                height={0}
+                className="h-auto w-full"
+                sizes="(max-width: 768px) 80vw, 384px"
+                priority
+              />
+              {/* Spot overlay dots */}
+              {normalizedItems.map((item) => {
+                if (!item.normalizedCenter) return null;
+                const meta = item.metadata as unknown as
+                  | Record<string, unknown>
+                  | undefined;
+                return (
+                  <SpotDot
+                    key={item.id}
+                    mode="percent"
+                    x={item.normalizedCenter.x}
+                    y={item.normalizedCenter.y}
+                    label={item.product_name ?? ""}
+                    brand={meta?.brand as string | undefined}
+                    category={meta?.sub_category as string | undefined}
+                    accentColor={accentColor}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+        {!hasMagazine && hasItemsWithCoordinates && (
+          <InteractiveShowcase
+            image={image}
+            items={normalizedItems}
+            isModal={isModal}
+            scrollContainerRef={scrollContainerRef}
+            activeIndex={activeIndex}
+            onActiveIndexChange={onActiveIndexChange}
+            renderImage={!hideImage}
+            onAddSolution={(spotId) => setSpotIdToAddSolution(spotId)}
+            postOwnerId={
+              (image as ImageDetailWithPostOwner).post_owner_id ?? null
+            }
+          />
+        )}
+
+        {/* Add Solution Sheet - for items without product info */}
+        <AddSolutionSheet
+          spotId={spotIdToAddSolution ?? ""}
+          postId={image.id}
+          isOpen={!!spotIdToAddSolution}
+          onClose={() => setSpotIdToAddSolution(null)}
+        />
+
+        {hasMagazine ? (
+          <>
+            {/* Magazine: Editorial Section */}
+            <MagazineEditorialSection
+              editorial={magazineLayout.editorial}
+              accentColor={accentColor}
+            />
+
+            {/* Magazine: Celebrity Style Archive */}
+            <MagazineCelebSection
+              celebs={magazineLayout.celeb_list}
+              accentColor={accentColor}
+            />
+
+            {/* Magazine: The Look + per-item Related Items */}
+            <MagazineItemsSection
+              items={magazineLayout.items}
+              relatedItems={magazineLayout.related_items}
+              accentColor={accentColor}
+            />
+          </>
+        ) : (
+          <>
+            {/* Shop Grid (show if any items exist, even without coordinates) */}
+            {hasItems && (
+              <div>
+                {itemsFromPost &&
+                  image.postImages &&
+                  image.postImages.length > 0 && (
+                    <div className="mx-auto max-w-6xl px-4 py-3 md:px-8">
+                      <p className="text-sm text-muted-foreground">
+                        Items from post: @
+                        {String(
+                          (image.postImages[0].post as Record<string, unknown>)
+                            ?.account ?? ""
+                        )}
+                      </p>
+                    </div>
+                  )}
+                <ShopGrid
+                  items={solutionsLoading ? normalizedItems : shopItems}
+                  isModal={isModal}
+                  postId={image.id}
+                  onAddSolutionClick={(spotId) =>
+                    setSpotIdToAddSolution(spotId)
+                  }
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Related Posts - 같은 유저가 올린 다른 포스트 */}
+        {(image.postImages?.[0]?.post as Record<string, unknown>)?.account && (
+          <RelatedImages
+            currentPostId={image.id}
+            account={String(
+              (image.postImages![0].post as Record<string, unknown>).account
+            )}
+            userId={
+              (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
+            }
+            isModal={isModal}
+          />
+        )}
+
+        {/* Try Gallery Section — pass items for VTON */}
+        <TryGallerySection
+          postId={image.id}
+          items={normalizedItems
+            .filter((item) => item.imageUrl)
+            .map(
+              (item): VtonPreloadItem => ({
+                id: String(item.id),
+                title:
+                  item.product_name || item.sam_prompt || `Item ${item.id}`,
+                thumbnail_url: item.imageUrl!,
+                description: item.description,
+                keywords: null,
+              })
+            )}
+        />
+
+        {/* Social Actions & Comments */}
+        <div className="px-6 py-6 md:px-10 border-t border-border">
+          <SocialActions
+            initialLiked={initialLiked}
+            initialSaved={initialSaved}
+            likeCount={likeCount}
+            commentCount={commentCount}
+            showComment
+            variant="default"
+            onLike={handleLike}
+            onSave={handleSave}
+            onShare={handleShare}
+            onComment={scrollToComments}
+          />
+        </div>
+        <div ref={commentSectionRef}>
+          <ImageCommentSection imageId={image.id} />
+        </div>
+
+        {/* Magazine: Related Editorials - 맨 마지막 */}
+        {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
+          <MagazineRelatedSection relatedEditorials={relatedEditorials} />
+        )}
+
+        {/* Fallback: Show basic info if no items */}
+        {!hasItems && !hasMagazine && (
+          <div className="mx-auto max-w-4xl px-4 py-16 md:px-8">
+            <div className="mb-8">
+              <div className="mb-4 flex flex-wrap gap-2">
+                {image.status && (
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${
+                      image.status === "pending"
+                        ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
+                        : image.status === "extracted"
+                          ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                          : "bg-slate-100 text-slate-900 dark:bg-slate-800/80 dark:text-slate-100"
+                    }`}
+                  >
+                    {image.status}
+                  </span>
+                )}
+                {image.with_items && (
+                  <span className="rounded-full bg-blue-500/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-100">
+                    Items Detected
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Created: {new Date(image.created_at).toLocaleDateString()}
+              </p>
+            </div>
+
+            <div className="mb-12">
+              <h1 className="mb-4 text-4xl font-bold md:text-5xl">
+                Image Details
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Image ID:{" "}
+                <code className="rounded bg-muted px-2 py-1 text-sm">
+                  {image.id}
+                </code>
+              </p>
+            </div>
+
+            <div>
+              <h2 className="mb-4 text-2xl font-semibold">Details</h2>
+              <p className="text-muted-foreground">
+                No items with coordinates found for this image.
+              </p>
+            </div>
+          </div>
+        )}
       </>
     </div>
   );

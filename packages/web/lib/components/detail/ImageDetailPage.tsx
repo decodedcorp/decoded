@@ -26,7 +26,8 @@ export function ImageDetailPage({ imageId }: Props) {
   const router = useRouter();
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
-  const { data: magazine, isLoading: magazineLoading } = usePostMagazine(magazineId);
+  const { data: magazine, isLoading: magazineLoading } =
+    usePostMagazine(magazineId);
   const pageRef = useRef<HTMLDivElement>(null);
   const [showLightbox, setShowLightbox] = useState(false);
   const track = useTrackEvent();
@@ -35,7 +36,7 @@ export function ImageDetailPage({ imageId }: Props) {
   useEffect(() => {
     if (!imageId) return;
     track({ event_type: "post_view", entity_id: imageId });
-  }, [imageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imageId]);
 
   // Fade-in animation for direct access
   useEffect(() => {
@@ -84,7 +85,8 @@ export function ImageDetailPage({ imageId }: Props) {
     }
   };
 
-  const showMagazine = !!magazineId && !!magazine?.layout_json && magazine.status === "published";
+  const showMagazine =
+    !!magazineId && !!magazine?.layout_json && magazine.status === "published";
 
   if (isLoading || (magazineId && magazineLoading)) {
     return (

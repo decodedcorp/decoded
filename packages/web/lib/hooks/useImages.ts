@@ -26,11 +26,16 @@ import type {
   ImagePageWithPostId,
   ImageDetail,
   ImageRow,
+  PostImageRow,
 } from "@decoded/shared/supabase/queries/images";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
 import type { ItemRow } from "@/lib/components/detail/types";
-import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/mutation-types";
+import type {
+  Post,
+  PostsListParams,
+  PostMagazineResponse,
+} from "@/lib/api/mutation-types";
 
 /**
  * @deprecated Use useInfiniteFilteredImages with unified adapter instead.
@@ -224,18 +229,20 @@ export function useInfinitePosts(params: {
       const totalPages = Math.ceil(totalItems / limit);
       const hasMore = page < totalPages;
 
-      const items: PostGridItem[] = (data ?? []).map((post: any) => ({
-        id: post.id,
-        imageUrl: post.image_url,
-        postId: post.id,
+      const items: PostGridItem[] = (
+        (data ?? []) as unknown as Array<Record<string, unknown>>
+      ).map((post) => ({
+        id: post.id as string,
+        imageUrl: post.image_url as string,
+        postId: post.id as string,
         postSource: "post" as const,
-        postAccount: post.artist_name ?? post.group_name ?? "",
-        postCreatedAt: post.created_at,
+        postAccount: (post.artist_name ?? post.group_name ?? "") as string,
+        postCreatedAt: post.created_at as string,
         spotCount: 0,
-        viewCount: post.view_count,
-        // editorial 오버레이: 매거진 타이틀 우선, 없으면 post.title
-        title:
-          post.post_magazine_title ?? post.title ?? null,
+        viewCount: post.view_count as number,
+        title: (post.post_magazine_title ?? post.title ?? null) as
+          | string
+          | null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
@@ -323,7 +330,7 @@ export function usePostDetailForImage(postId: string) {
             item_ids: null,
             metadata: [],
             ts: post.created_at,
-          } as any,
+          } as unknown as PostImageRow["post"],
         ],
         postImages: [
           {
@@ -335,7 +342,7 @@ export function usePostDetailForImage(postId: string) {
               item_ids: null,
               metadata: [],
               ts: post.created_at,
-            } as any,
+            } as unknown as PostImageRow["post"],
             created_at: post.created_at,
             item_locations: spots.map((s, idx) => ({
               item_id: idx + 1,
@@ -345,7 +352,7 @@ export function usePostDetailForImage(postId: string) {
               ],
             })),
             item_locations_updated_at: post.updated_at,
-          } as any,
+          } as unknown as PostImageRow,
         ],
       };
     },

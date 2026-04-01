@@ -4,7 +4,10 @@ import {
   createComment as createCommentGenerated,
   deleteComment as deleteCommentGenerated,
 } from "@/lib/api/generated/comments/comments";
-import type { CommentResponse, CreateCommentDto } from "@/lib/api/generated/models";
+import type {
+  CommentResponse,
+  CreateCommentDto,
+} from "@/lib/api/generated/models";
 
 export const commentKeys = {
   all: ["comments"] as const,

@@ -166,7 +166,9 @@ export async function fetchWhatsNewPostsServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -214,7 +216,9 @@ export async function fetchDecodedPickServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -252,7 +256,9 @@ export async function fetchArtistSpotlightServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -307,15 +313,6 @@ export async function fetchTrendingKeywordsServer(
   const keywords: TrendingKeyword[] = [];
 
   // Get popular artists — try with view_count, fallback to created_at
-  let posts:
-    | {
-        artist_name: string | null;
-        group_name: string | null;
-        thumbnail_url: string | null;
-      }[]
-    | null = null;
-  let error: any = null;
-
   const result = await supabase
     .from("posts")
     .select("artist_name, group_name, thumbnail_url")
@@ -323,9 +320,14 @@ export async function fetchTrendingKeywordsServer(
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  posts = result.data as any;
-  error = result.error;
+  const { error } = result;
+  const posts = result.data as
+    | {
+        artist_name: string | null;
+        group_name: string | null;
+        thumbnail_url: string | null;
+      }[]
+    | null;
 
   if (!error && posts) {
     // Count artist occurrences and keep first image per artist
@@ -499,7 +501,7 @@ export async function fetchWhatsNewItemsServer(
   interface SolutionRowResult {
     id: string;
     title: string | null;
-    metadata: any;
+    metadata: Record<string, unknown> | null;
     spot: {
       post: {
         image_url: string | null;
@@ -510,7 +512,7 @@ export async function fetchWhatsNewItemsServer(
   return ((data as unknown as SolutionRowResult[]) ?? []).map((row) => ({
     item: {
       id: row.id,
-      brand: row.metadata?.brand || "Unknown",
+      brand: (row.metadata?.brand as string) || "Unknown",
       product_name: row.title,
     },
     imageUrl: row.spot?.post?.image_url || null,
@@ -553,7 +555,7 @@ export async function fetchBestItemsServer(
   interface BestSolutionRowResult {
     id: string;
     title: string | null;
-    metadata: any; // Type as any for now to handle JSONB safely
+    metadata: Record<string, unknown> | null;
     click_count: number;
     spot: {
       post: {
@@ -565,7 +567,7 @@ export async function fetchBestItemsServer(
   return ((data as unknown as BestSolutionRowResult[]) ?? []).map((row) => ({
     item: {
       id: row.id,
-      brand: (row.metadata as any)?.brand || "Unknown",
+      brand: (row.metadata?.brand as string) || "Unknown",
       product_name: row.title,
     },
     imageUrl: row.spot?.post?.image_url || null,

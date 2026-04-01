@@ -27,7 +27,7 @@ export const customInstance = async <T>(
     cancelToken: source.token,
   }).then(({ data }) => data);
 
-  // @ts-ignore — Orval generated code calls promise.cancel() if TanStack Query cancels
+  // @ts-expect-error — Orval generated code calls promise.cancel() if TanStack Query cancels
   promise.cancel = () => {
     source.cancel("Query was cancelled by React Query");
   };

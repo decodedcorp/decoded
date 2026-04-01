@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
-import type { ImageRow } from "@/lib/supabase/types";
+import type { ImageRow, Json } from "@/lib/supabase/types";
 import { normalizeItem, type UiItem } from "@/lib/components/detail/types";
 
 /**
@@ -21,14 +21,15 @@ export function useNormalizedItems(
     const firstPostImage = img.postImages?.[0];
     const itemLocations = firstPostImage?.item_locations;
 
-    const itemLocationsMap: Record<string, any> = {};
+    const itemLocationsMap: Record<string, unknown> = {};
 
     if (Array.isArray(itemLocations)) {
-      itemLocations.forEach((loc: any) => {
+      itemLocations.forEach((loc: Record<string, unknown>) => {
         if (loc && loc.item_id) {
           // Extract center/box from location object
           // Data format: { item_id: 123, center: [...], bbox: [...] }
-          itemLocationsMap[loc.item_id.toString()] = loc.center || loc;
+          itemLocationsMap[(loc.item_id as number | string).toString()] =
+            loc.center || loc;
         }
       });
     } else if (itemLocations && typeof itemLocations === "object") {
@@ -38,7 +39,7 @@ export function useNormalizedItems(
     return items.map((item) => {
       // Check if we have an override for this item ID
       const overrideLocation = itemLocationsMap[item.id.toString()];
-      return normalizeItem(item, undefined, overrideLocation);
+      return normalizeItem(item, undefined, overrideLocation as Json | null);
     });
   }, [image]);
 }

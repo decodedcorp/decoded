@@ -35,7 +35,8 @@ export const navItemVariants = cva(
 );
 
 export interface NavItemProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, "onClick">,
+  extends
+    Omit<React.HTMLAttributes<HTMLElement>, "onClick">,
     VariantProps<typeof navItemVariants> {
   /**
    * Icon element to display
