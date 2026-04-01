@@ -13,7 +13,8 @@
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
-- [ ] **v10.0 Profile Page Completion** — Phases 44-50
+- [x] **v10.0 Profile Page Completion** — Phases 44-50 (shipped 2026-03-26)
+- [ ] **v11.0 Explore & Editorial Data Integration** — Phases 51-55
 
 ## Phases
 
@@ -107,6 +108,29 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] Phase 43: CI Hardening and Tooling (3/3 plans) — completed 2026-03-24
 
 </details>
+
+<details>
+<summary>✅ v10.0 Profile Page Completion (Phases 44-50) — SHIPPED 2026-03-26</summary>
+
+- [x] Phase 44: Auth Guard (1/1 plans) — completed
+- [x] Phase 45: Public User Profile Route (1/1 plans) — completed
+- [x] Phase 46: Follow System Backend (1/1 plans) — completed
+- [x] Phase 47: Follow System Frontend (1/1 plans) — completed
+- [x] Phase 48: Tries & Saved Backend (2/2 plans) — completed
+- [x] Phase 49: Tries Tab Frontend (1/1 plans) — completed
+- [x] Phase 50: Saved Tab Frontend (1/1 plans) — completed
+
+</details>
+
+### v11.0 Explore & Editorial Data Integration
+
+**Milestone Goal:** Explore/Editorial 페이지의 데이터 연동과 상세페이지 연결을 완성하여 콘텐츠 탐색 → 상세 뷰 플로우 제공 (Target: 2026-04-05)
+
+- [ ] **Phase 51: Data Validation Gate** - DB에서 editorial post 존재 확인 (magazine_id 있는 post)
+- [ ] **Phase 52: Editorial Filter Fix** - hasMagazine 필터 실제 동작 + OpenAPI has_magazine 파라미터 추가
+- [ ] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation
+- [ ] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이
+- [ ] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증
 
 ## Phase Details
 
@@ -310,7 +334,7 @@ Plans:
 
 Plans:
 
-- [ ] 44-01-PLAN.md — proxy.ts matcher 확장 + ProfileClient 401 핸들링 리다이렉트
+- [x] 44-01-PLAN.md — proxy.ts matcher 확장 + ProfileClient 401 핸들링 리다이렉트
 
 ### Phase 45: Public User Profile Route
 
@@ -326,7 +350,7 @@ Plans:
 
 Plans:
 
-- [ ] 45-01-PLAN.md — app/profile/[userId]/page.tsx + PublicProfileClient + 비공개 항목 분기
+- [x] 45-01-PLAN.md — app/profile/[userId]/page.tsx + PublicProfileClient + 비공개 항목 분기
 
 ### Phase 46: Follow System Backend
 
@@ -342,7 +366,7 @@ Plans:
 
 Plans:
 
-- [ ] 46-01-PLAN.md — Supabase 마이그레이션 + Rust 핸들러 + UserResponse 확장
+- [x] 46-01-PLAN.md — Supabase 마이그레이션 + Rust 핸들러 + UserResponse 확장
 
 ### Phase 47: Follow System Frontend
 
@@ -357,7 +381,7 @@ Plans:
 
 Plans:
 
-- [ ] 47-01-PLAN.md — OpenAPI spec 반영 + Orval 재생성 + FollowStats 실데이터 연결
+- [x] 47-01-PLAN.md — OpenAPI spec 반영 + Orval 재생성 + FollowStats 실데이터 연결
 
 ### Phase 48: Tries & Saved Backend
 
@@ -373,8 +397,8 @@ Plans:
 
 Plans:
 
-- [ ] 48-01-PLAN.md — Rust tries/saved 핸들러 + DTOs + service + openapi.rs (TRIES-01, SAVED-01)
-- [ ] 48-02-PLAN.md — OpenAPI spec 업데이트 + Orval 재생성 (TRIES-02, SAVED-02)
+- [x] 48-01-PLAN.md — Rust tries/saved 핸들러 + DTOs + service + openapi.rs (TRIES-01, SAVED-01)
+- [x] 48-02-PLAN.md — OpenAPI spec 업데이트 + Orval 재생성 (TRIES-02, SAVED-02)
 
 ### Phase 49: Tries Tab Frontend
 
@@ -390,7 +414,7 @@ Plans:
 
 Plans:
 
-- [ ] 49-01-PLAN.md — TriesGrid 리라이트 + useInfiniteQuery + 스텁 제거
+- [x] 49-01-PLAN.md — TriesGrid 리라이트 + useInfiniteQuery + 스텁 제거
 
 ### Phase 50: Saved Tab Frontend
 
@@ -406,7 +430,90 @@ Plans:
 
 Plans:
 
-- [ ] 50-01-PLAN.md — SavedGrid 리라이트 + collectionStore mock 제거 + useInfiniteQuery
+- [x] 50-01-PLAN.md — SavedGrid 리라이트 + collectionStore mock 제거 + useInfiniteQuery
+
+### v11.0 Explore & Editorial Data Integration
+
+**Milestone Goal:** Explore/Editorial 페이지의 데이터 연동과 상세페이지 연결을 완성하여 콘텐츠 탐색 → 상세 뷰 플로우 제공 (Target: 2026-04-05)
+
+### Phase 51: Data Validation Gate
+
+**Goal**: Editorial post가 DB에 실제로 존재하는지 확인하여 모든 코드 변경의 전제 조건을 충족한다
+**Depends on**: Nothing (first phase of v11.0)
+**Requirements**: DATA-01
+**Success Criteria** (what must be TRUE):
+1. Supabase에서 `post_magazine_title IS NOT NULL` 행이 조회되며 row 수가 확인된다
+2. 조회 결과가 0이면 editorial automation (#38) 이슈를 escalation으로 기록하고 다음 단계가 블로킹된다
+3. 조회 결과가 1 이상이면 이후 Phase 52-54의 시각적 검증이 가능하다는 사실이 문서화된다
+**Plans**: TBD
+
+Plans:
+- [ ] 51-01: DB 조회 — `post_magazine_title IS NOT NULL` 행 수 확인 및 결과 문서화
+
+### Phase 52: Editorial Filter Fix
+
+**Goal**: `/editorial` 페이지가 매거진 연결 포스트만 표시하고, `has_magazine` 필터가 타입 안전하게 API에 노출된다
+**Depends on**: Phase 51
+**Requirements**: FILT-01, FILT-02
+**Success Criteria** (what must be TRUE):
+1. `/editorial` 탭을 방문하면 `/explore`와 다른 콘텐츠가 표시된다 — `post_magazine_title`이 있는 포스트만 노출
+2. `/explore` 탭은 영향받지 않으며 기존과 동일한 전체 포스트 목록을 표시한다
+3. `useInfinitePosts`에 `hasMagazine: true`를 전달하면 Supabase 쿼리에 `.not("post_magazine_title", "is", null)` 조건이 적용된다
+4. `openapi.json`에 `has_magazine` boolean 파라미터가 추가되고 `bun run generate:api` 후 `ListPostsParams` 타입에 필드가 생성된다
+**Plans**: TBD
+
+Plans:
+- [ ] 52-01: `useInfinitePosts` Supabase 필터 추가 (FILT-01) — `hasMagazine` 조건 활성화
+- [ ] 52-02: `openapi.json` `has_magazine` 파라미터 추가 + Orval 재생성 (FILT-02)
+
+### Phase 53: Detail Data Migration
+
+**Goal**: 사이드 드로어가 매거진 메타데이터와 AI summary를 표시하고, Maximize 버튼이 페이지 전체 새로고침 없이 부드럽게 전환된다
+**Depends on**: Phase 52
+**Requirements**: DETL-01, DETL-02
+**Success Criteria** (what must be TRUE):
+1. 카드를 클릭하면 열리는 사이드 드로어에 `post_magazine_id`가 존재하며 매거진 타이틀, 브랜드, 스타일 태그가 렌더링된다
+2. 드로어의 AI summary 섹션이 실제 `ai_summary` 텍스트를 표시한다 (null이면 섹션 미노출)
+3. SpotDot 위에 `top_solution` 썸네일이 표시된다 (solution이 있는 spot의 경우)
+4. Maximize 버튼 클릭 시 GSAP exit 애니메이션 후 `router.push`로 전환되며 브라우저 히스토리가 올바르게 쌓인다
+5. Maximize 후 풀 페이지에서 뒤로가기 버튼이 이전 페이지(`/explore` 또는 `/editorial`)로 돌아간다
+**Plans**: TBD
+
+Plans:
+- [ ] 53-01: `usePostDetailForImage` REST 마이그레이션 — `getPost` + `postDetailToImageDetail` adapter (DETL-01)
+- [ ] 53-02: `handleMaximize` soft navigation — `window.location.href` → GSAP animate-out + `router.push` (DETL-02)
+
+### Phase 54: Card Enrichment
+
+**Goal**: Explore 카드에 spot 수 배지가 표시되고, Editorial 카드에 매거진 타이틀 오버레이가 보인다
+**Depends on**: Phase 52
+**Requirements**: CARD-01, CARD-02
+**Success Criteria** (what must be TRUE):
+1. `spotCount > 0`인 Explore 카드에 숫자 배지가 표시된다 (하드코딩 `0` 제거)
+2. `spotCount === 0`이거나 undefined인 카드에는 배지가 표시되지 않는다
+3. Editorial 카드에 `post_magazine_title` 값이 오버레이로 표시된다 (editorial filter 적용 후 non-null 보장)
+4. Explore 카드의 배지는 기존 카드 레이아웃과 시각적으로 충돌하지 않는다
+**Plans**: TBD
+
+Plans:
+- [ ] 54-01: `useInfinitePosts` `spotCount` 실데이터 매핑 + `ExploreCardCell` 배지 UI (CARD-01)
+- [ ] 54-02: `ExploreCardCell` editorial 타이틀 오버레이 확인 및 non-null 검증 (CARD-02)
+
+### Phase 55: End-to-End Verification
+
+**Goal**: 탐색 → 사이드 드로어 → 풀 페이지 전체 플로우가 실제 데이터로 오류 없이 동작함이 확인된다
+**Depends on**: Phase 53, Phase 54
+**Requirements**: DATA-01 (cross-check)
+**Success Criteria** (what must be TRUE):
+1. `/editorial` 탭 클릭 → magazine 연결 포스트만 보임 → editorial 타이틀 오버레이 확인 가능
+2. Editorial 카드 클릭 → 사이드 드로어 열림 → `magazineId` non-null → 매거진 섹션 렌더링 확인
+3. Maximize2 버튼 클릭 → GSAP exit → 풀 페이지 → 뒤로가기로 editorial 복귀 (hard reload 없음)
+4. `/explore` 탭에서 spot_count 배지가 있는 카드 확인 → 드로어에서 SpotDot top_solution 표시 확인
+5. TypeScript 타입 에러 0건, `bun run build` 성공
+**Plans**: TBD
+
+Plans:
+- [ ] 55-01: 수동 E2E 스모크 테스트 체크리스트 실행 + `bun run build` 검증
 
 ## Progress
 
@@ -414,6 +521,7 @@ Plans:
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
 v9.0: 39 → 40 → 41 → 42 → 43
 v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
+v11.0: 51 → 52 → 53, 54 (parallel) → 55
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
@@ -432,15 +540,20 @@ v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
-| 44: Auth Guard                                | v10.0     | 0/1            | Not started   | -          |
-| 45: Public User Profile Route                 | v10.0     | 0/1            | Not started   | -          |
-| 46: Follow System Backend                     | v10.0     | 0/1            | Not started   | -          |
-| 47: Follow System Frontend                    | v10.0     | 0/1            | Not started   | -          |
-| 48: Tries & Saved Backend                     | v10.0     | 0/2            | Not started   | -          |
-| 49: Tries Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
-| 50: Saved Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
+| 44: Auth Guard                                | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 45: Public User Profile Route                 | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 46: Follow System Backend                     | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 47: Follow System Frontend                    | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 48: Tries & Saved Backend                     | v10.0     | 2/2            | Complete      | 2026-03-26 |
+| 49: Tries Tab Frontend                        | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 50: Saved Tab Frontend                        | v10.0     | 1/1            | Complete      | 2026-03-26 |
+| 51: Data Validation Gate                      | v11.0     | 0/1            | Not started   | -          |
+| 52: Editorial Filter Fix                      | v11.0     | 0/2            | Not started   | -          |
+| 53: Detail Data Migration                     | v11.0     | 0/2            | Not started   | -          |
+| 54: Card Enrichment                           | v11.0     | 0/2            | Not started   | -          |
+| 55: End-to-End Verification                   | v11.0     | 0/1            | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-03-23 (v9.0 Phases 39-43 added, 28 requirements mapped)_
+_Last updated: 2026-04-01 (v11.0 Phases 51-55 added, 7 requirements mapped)_

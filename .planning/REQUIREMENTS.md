@@ -53,19 +53,19 @@ Requirements for Explore & Editorial Data Integration. 기존 UI/디자인은 �
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| FILT-01 | — | Pending |
-| FILT-02 | — | Pending |
-| DETL-01 | — | Pending |
-| DETL-02 | — | Pending |
-| CARD-01 | — | Pending |
-| CARD-02 | — | Pending |
+| DATA-01 | Phase 51 | Pending |
+| FILT-01 | Phase 52 | Pending |
+| FILT-02 | Phase 52 | Pending |
+| DETL-01 | Phase 53 | Pending |
+| DETL-02 | Phase 53 | Pending |
+| CARD-01 | Phase 54 | Pending |
+| CARD-02 | Phase 54 | Pending |
 
 **Coverage:**
 - v11.0 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 (pending roadmap)
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 — traceability updated after roadmap creation (Phases 51-55)*
