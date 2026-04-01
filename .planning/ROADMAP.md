@@ -126,7 +126,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
 **Milestone Goal:** Explore/Editorial 페이지의 데이터 연동과 상세페이지 연결을 완성하여 콘텐츠 탐색 → 상세 뷰 플로우 제공 (Target: 2026-04-05)
 
-- [ ] **Phase 51: Data Validation Gate** - DB에서 editorial post 존재 확인 (magazine_id 있는 post)
+- [x] **Phase 51: Data Validation Gate** - DB에서 editorial post 존재 확인 (magazine_id 있는 post) (completed 2026-04-01)
 - [ ] **Phase 52: Editorial Filter Fix** - hasMagazine 필터 실제 동작 + OpenAPI has_magazine 파라미터 추가
 - [ ] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation
 - [ ] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이
