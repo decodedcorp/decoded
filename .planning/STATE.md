@@ -1,30 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Behavioral Intelligence & Dynamic UI
-status: unknown
-stopped_at: Completed 50-01-PLAN.md
-last_updated: "2026-03-26T15:46:56.223Z"
+milestone: v11.0
+milestone_name: Explore & Editorial Data Integration
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-04-01T07:50:00.000Z"
 progress:
-  total_phases: 48
-  completed_phases: 46
-  total_plans: 102
-  completed_plans: 101
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-26)
+See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 50 — saved-tab-frontend
+**Current focus:** Milestone v11.0 — Defining requirements
 
 ## Current Position
 
-Phase: 50 (saved-tab-frontend) — EXECUTING
-Plan: 1 of 1
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-01 — Milestone v11.0 started
 
 ## Milestone Summary
 
