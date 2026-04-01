@@ -1,409 +1,414 @@
 # Architecture Research
 
-**Domain:** Profile completion — follow system, tries/saved tabs, public user profile, auth guard
-**Researched:** 2026-03-26
-**Confidence:** HIGH (direct codebase inspection + backend OpenAPI spec analysis)
+**Domain:** Explore & Editorial Data Integration — detail page connection, spot/solution display
+**Researched:** 2026-04-01
+**Confidence:** HIGH (all findings from direct codebase inspection + OpenAPI spec analysis)
 
-## Existing Profile Architecture (Current State)
-
-### System Overview
+## Current Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  app/profile/page.tsx (server, no auth gate currently)              │
-│    └── ProfileClient.tsx (client orchestrator, "use client")        │
-├─────────────────────────────────────────────────────────────────────┤
-│  React Query hooks (lib/hooks/useProfile.ts)                        │
-│  ┌───────────┐  ┌────────────┐  ┌──────────┐  ┌──────────────────┐ │
-│  │  useMe()  │  │useUserStats│  │useMyBadges│  │useUserActivities │ │
-│  └─────┬─────┘  └─────┬──────┘  └─────┬────┘  └────────┬─────────┘ │
-│        │              │               │                 │            │
-├────────┴──────────────┴───────────────┴─────────────────┴───────────┤
-│  Data Layer (split between Orval-generated and Supabase-direct)     │
-│  ┌──────────────────────────────────┐  ┌────────────────────────┐   │
-│  │ lib/api/generated/users/users.ts │  │ lib/supabase/queries/  │   │
-│  │  useGetMyProfile()               │  │ profile.ts             │   │
-│  │  useGetMyStats()                 │  │  fetchUserProfileExtras│   │
-│  │  useGetUserProfile(userId)       │  │  fetchTryOnCount()     │   │
-│  │  getMyActivities()               │  └────────────────────────┘   │
-│  └──────────────────────┬───────────┘                               │
-│                         │ via lib/api/mutator/custom-instance.ts     │
-├─────────────────────────┴───────────────────────────────────────────┤
-│  Transport Layer                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  app/api/v1/users/me/route.ts (GET/PATCH)                    │   │
-│  │  app/api/v1/users/me/activities/route.ts (GET)               │   │
-│  │  app/api/v1/users/me/stats/route.ts (GET)                    │   │
-│  │  app/api/v1/users/[userId]/route.ts (GET, no auth required)  │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                  proxies to https://dev.decoded.style                │
-├─────────────────────────────────────────────────────────────────────┤
-│  State Bridge (Zustand)                                             │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  lib/stores/profileStore.ts                                  │    │
-│  │   user, stats, badges, rankings, badgeModalMode             │    │
-│  │   setUserFromApi(), setStatsFromApi() (React Query to store) │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          Next.js App Router (packages/web)               │
+├─────────────────────────────┬───────────────────────────────────────────┤
+│  /explore  (page.tsx)       │  /editorial  (page.tsx)                   │
+│  @modal parallel route      │  = <ExploreClient hasMagazine />          │
+├─────────────────────────────┴───────────────────────────────────────────┤
+│                   ExploreClient.tsx  (shared grid engine)                │
+│   props: hasMagazine?: boolean                                           │
+│   ┌──────────────────────────────────────────────────────────────────┐   │
+│   │  useInfinitePosts({ category, hasMagazine })                     │   │
+│   │   ↓ Supabase direct (hasMagazine filter NOT applied — bug)      │   │
+│   │  ThiingsGrid (virtual infinite scroll, FLIP-aware)              │   │
+│   │  ExploreCardCell (Link → /posts/[id], captures FLIP state)      │   │
+│   └──────────────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  filterStore (category)   searchStore (query)   transitionStore (FLIP)  │
+├─────────────────────────────────────────────────────────────────────────┤
+│     @modal/(.)posts/[id]  (App Router intercepting route)               │
+│     ↓ ImageDetailModal (side drawer, GSAP mount/close/swipe animation)  │
+│       ├── usePostDetailForImage  → Supabase: posts + spots + solutions  │
+│       ├── usePostMagazine        → REST: /api/v1/post-magazines/:id     │
+│       ├── ImageDetailPreview (tags, summary, CTA)                       │
+│       └── SpotDot overlays (positioned by spot.center fractions)        │
+├─────────────────────────────────────────────────────────────────────────┤
+│     /posts/[id]  (full page — direct URL access or Maximize button)     │
+│     ↓ ImageDetailPage → ImageDetailContent (full editorial layout)       │
+│       └── usePostDetailForImage (same hook as modal)                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Data Sources:
+  Supabase direct ← useInfinitePosts  (grid list — bypasses REST API)
+  Supabase direct ← usePostDetailForImage  (post + spots + solutions detail)
+  REST API        ← usePostMagazine  (/api/v1/post-magazines/:id)
+  Orval-generated ← listPosts, getPost  (exist but unused by grid/detail flows)
 ```
 
-### Component Responsibilities (Existing)
+## Critical Findings from Codebase Inspection
 
-| Component | Responsibility | Location |
-|-----------|----------------|----------|
-| `ProfileClient.tsx` | Client orchestrator — fetches all data, manages tab state, renders skeletons/errors | `app/profile/ProfileClient.tsx` |
-| `FollowStats.tsx` | Renders followers/following counts (currently hardcoded: 1234/567) | `lib/components/profile/FollowStats.tsx` |
-| `ActivityTabs.tsx` | Tab bar for posts/spots/solutions/tries/saved | `lib/components/profile/ActivityTabs.tsx` |
-| `TriesGrid.tsx` | Renders VTON try-on results (stub — `fetchMyTries()` returns `[]`) | `lib/components/profile/TriesGrid.tsx` |
-| `SavedGrid.tsx` | Renders saved items via `collectionStore` (mock Pins/Boards/Collage data) | `lib/components/profile/SavedGrid.tsx` |
-| `profileStore.ts` | Zustand bridge: API data to store for modal state and component reads | `lib/stores/profileStore.ts` |
-| `collectionStore.ts` | Zustand store for saved Pins/Boards — currently loaded with mock data | `lib/stores/collectionStore.ts` |
+### Finding 1: `hasMagazine` Filter Is Silently Ignored
+
+`useInfinitePosts` in `packages/web/lib/hooks/useImages.ts` accepts `hasMagazine?: boolean` but the Supabase query body contains an explicit comment: "Note: hasMagazine filter not yet supported via Supabase query" (line 204). The filter parameter is accepted, stored in the React Query key, but never applied to the actual query. Editorial page (`/editorial/page.tsx`) passes `hasMagazine` but receives all posts — no editorial filtering.
+
+**Fix:** The Supabase `posts` table already stores `post_magazine_title`. The query in `useInfinitePosts` already reads `post.post_magazine_title` (line 237). Adding `.not("post_magazine_title", "is", null)` when `hasMagazine === true` is a one-line fix that requires no backend changes.
+
+### Finding 2: REST API Has No `has_magazine` Filter Param
+
+Inspecting `packages/api-server/openapi.json`, the `GET /api/v1/posts` endpoint has these parameters: `artist_name`, `group_name`, `context`, `category`, `user_id`, `sort`, `page`, `per_page`. There is no `has_magazine` or `has_solutions` parameter. The `PostsListParams` type in `mutation-types.ts` (used only by `fetchPostsServer` for server components) includes `has_magazine?: boolean` and `has_solutions?: boolean`, but these are not backed by the actual backend endpoint.
+
+**Implication:** Any migration from Supabase direct to REST API for the editorial filter requires a backend change first. This is a future milestone concern, not a v11.0 blocker.
+
+### Finding 3: `spot_count` Always Returns 0 in Grid
+
+`useInfinitePosts` maps each post to `PostGridItem` with `spotCount: 0` hardcoded (line 228 in `useImages.ts`). The Supabase query selects `*` from the `posts` table but does NOT join `spots`. The REST API `PaginatedResponse_PostListItem` schema includes `spot_count` as a proper computed field. To show real spot counts on grid cards, the list query must either join the `spots` table or migrate to the REST API.
+
+### Finding 4: Maximize Navigation Uses Hard Browser Reload
+
+`useImageModalAnimation.handleMaximize` (line 278-281 in `useImageModalAnimation.ts`) calls `window.location.href = /posts/${imageId}`. This is a full browser reload — clears React Query cache, does not animate the modal out, and double-pushes browser history. `router` is already available as a parameter to the hook.
+
+### Finding 5: Detail Data Flow Is Already Wired Correctly
+
+`ImageDetailModal` correctly fetches `post_magazine_id` from `usePostDetailForImage`, then fetches the full magazine via `usePostMagazine`. `ImageDetailPreview` receives `magazineTitle`, `artistTags` (artist_name, group_name), `brands`, `styleTags` as props — all extracted from the magazine `layout_json`. `SpotDot` overlays are already positioned using `item.center` fractions. The detail view works end-to-end once real posts with `post_magazine_id` exist in the database.
 
 ---
 
-## Critical Finding: Backend API Gap
+## Component Responsibilities
 
-**The follow system does not exist in the backend OpenAPI spec.**
-
-Inspecting `packages/api-server/openapi.json` (all 63 paths enumerated):
-
-- Available `/api/v1/users/*` endpoints: `GET/PATCH /me`, `GET /me/activities`, `GET /me/stats`, `GET /{user_id}`
-- `UserActivityType` enum: only `"post" | "spot" | "solution"` — no tries or saved
-- `UserResponse` schema: no `followers_count`, `following_count` fields
-- `UserStatsResponse` schema: no follow-related fields
-- No `/api/v1/users/me/followers`, `/api/v1/users/{id}/follow`, `/api/v1/users/me/saved-posts`, or `/api/v1/users/me/tries` paths exist
-
-**This is the primary constraint on all four features.** Architecture decisions must route around missing backend endpoints using the established Supabase-direct pattern.
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `ExploreClient.tsx` | Grid orchestrator — filter state, pagination, layout | `useInfinitePosts`, `ThiingsGrid`, `filterStore`, `searchStore` |
+| `ExploreCardCell.tsx` | Individual card — image, editorial title overlay, FLIP capture, navigation | `transitionStore` (write), `Link` (navigate) |
+| `ThiingsGrid.tsx` | Virtual infinite scroll canvas with FLIP-aware rendering | `ExploreCardCell` via `renderItem` prop |
+| `@modal/(.)posts/[id]/page.tsx` | Intercepting route shell | `ImageDetailModal` |
+| `ImageDetailModal.tsx` | Side drawer container — GSAP animation, gesture close, maximize | `usePostDetailForImage`, `usePostMagazine`, `transitionStore` (read), `useImageModalAnimation` |
+| `ImageDetailPreview.tsx` | Drawer content — tags, AI summary, CTA button | Props only (no direct hooks) |
+| `SpotDot.tsx` | Dot overlay with label on floating image | Props only |
+| `ImageDetailPage.tsx` | Full-page container — fade-in, share, lightbox | `usePostDetailForImage`, `usePostMagazine`, `ImageDetailContent` |
+| `useInfinitePosts` | Data fetching for grid list | Supabase direct (needs `hasMagazine` fix + `spotCount` fix) |
+| `usePostDetailForImage` | Data fetching for detail page | Supabase direct: posts + spots + solutions |
+| `usePostMagazine` | Magazine metadata fetching | REST API: `/api/v1/post-magazines/:id` |
+| `transitionStore` | GSAP FLIP state bridge between grid and modal | Written by `ExploreCardCell`, read by `useImageModalAnimation` |
+| `filterStore` | Active category filter | Written by filter UI, read by `ExploreClient` |
 
 ---
 
-## Feature Integration Architecture
+## Data Flow
 
-### Feature 1: Auth Guard (#19)
+### Grid List Flow (Current — `hasMagazine` fix needed)
 
-**What's needed:** Redirect unauthenticated users away from `/profile`.
-
-**Integration approach:**
-
-The existing `proxy.ts` (Next.js 16 middleware equivalent at root) already implements admin auth guard. The same pattern applies to `/profile`.
-
-Auth check addition to `proxy.ts`:
-1. `supabase.auth.getSession()` — already called for admin paths
-2. If no session and path matches `/profile` exactly → redirect to `/login?redirect=/profile`
-
-**New files needed:** None — modify `proxy.ts` only.
-**Modified files:** `proxy.ts` — extend `matcher` config, add profile redirect branch.
-
-**Data flow:**
 ```
-User navigates to /profile
+filterStore.activeFilter + hasMagazine flag
     ↓
-proxy.ts intercepts (server-side before page renders)
+ExploreClient → useInfinitePosts({ category, hasMagazine, limit })
     ↓
-supabase.auth.getSession() via middleware client
-    ↓ no session
-NextResponse.redirect("/login?redirect=/profile")
-    ↓ session exists
-NextResponse.next() → page.tsx → ProfileClient.tsx
-```
-
-**Note on matcher scope:** The matcher must NOT be `/profile/:path*` — that would block public user profiles at `/profile/[userId]`. Protect only the exact `/profile` path.
-
----
-
-### Feature 2: Follow System (#17)
-
-**What's needed:** Real follower/following counts in `FollowStats.tsx`, follow/unfollow action on other user profiles.
-
-**Constraint:** Backend has no follow endpoints. `UserResponse` has no follow count fields.
-
-**Architecture decision — Supabase direct query:**
-
-The project has an established pattern for Supabase-direct queries when backend endpoints don't exist (`fetchUserProfileExtras`, `fetchTryOnCount` in `lib/supabase/queries/profile.ts`). Follow counts use the same approach.
-
-**Prerequisite:** A `user_follows` table must exist in Supabase. The current `types.ts` (updated 2026-03-18) lists 11 tables and does not include `user_follows`. This is an open question — confirm before building.
-
-**New additions to `lib/supabase/queries/profile.ts`:**
-- `fetchFollowCounts(userId)` → `{ followers: number, following: number }`
-- `fetchIsFollowing(viewerId, targetId)` → `boolean`
-- `followUser(viewerId, targetId)` → `void`
-- `unfollowUser(viewerId, targetId)` → `void`
-
-**New query keys in `lib/hooks/useProfile.ts`:**
-```typescript
-profileKeys.followCounts = (userId: string) =>
-  [...profileKeys.all, "followCounts", userId] as const
-profileKeys.isFollowing = (viewerId: string, targetId: string) =>
-  [...profileKeys.all, "isFollowing", viewerId, targetId] as const
-```
-
-**New hooks in `lib/hooks/useProfile.ts`:**
-- `useFollowCounts(userId)` — read-only, used on both my and other user's profile
-- `useFollowMutation(targetId)` — follow/unfollow, used only on other user's profile
-
-**New component:** `lib/components/profile/FollowButton.tsx` — follow/unfollow action, only rendered on `UserProfileClient` (not own profile).
-
-**Modified files:**
-- `lib/components/profile/FollowStats.tsx` — remove hardcoded defaults (1234/567), accept real props
-- `ProfileClient.tsx` — pass follow counts from `useFollowCounts(userId)` to `FollowStats`
-
-**Data flow (my profile):**
-```
-ProfileClient mounts, userId = userData?.id
+Supabase: posts table
+  WHERE status = 'active'
+  AND image_url IS NOT NULL
+  AND context = category (if not 'all')
+  [MISSING: AND post_magazine_title IS NOT NULL (when hasMagazine=true)]
     ↓
-useFollowCounts(userId) → Supabase direct query on user_follows
+PostGridItem[] → GridItem[] (spotCount: 0 hardcoded)
     ↓
-FollowStats receives { followers, following } as props
+ThiingsGrid renders ExploreCardCell per item
+  - image (Next/Image)
+  - editorialTitle overlay (when hasMagazine && item.editorialTitle)
+  - [MISSING: spot count badge]
+    ↓ user clicks
+transitionStore.setTransition(id, flipState, rect, imgSrc)
+    ↓
+Link navigates to /posts/{id} with scroll:false
 ```
 
-**Data flow (other user profile):**
+### Detail Modal Flow (Current — `handleMaximize` fix needed)
+
 ```
-UserProfileClient mounts, targetUserId from URL params
-    ↓ parallel
-useUser(targetUserId)           → REST API /api/v1/users/{userId}
-useFollowCounts(targetUserId)   → Supabase direct
-useIsFollowing(viewer, target)  → Supabase direct (skip if not logged in)
+App Router intercepts /posts/{id} → @modal/(.)posts/[id]
     ↓
-FollowStats receives real counts
-FollowButton rendered with isFollowing state (hidden if viewing own profile)
+ImageDetailModal mounts
+    → useImageModalAnimation: GSAP context created, drawer slides in
+    → transitionStore.originRect: floating image animates from card position
+    ↓
+usePostDetailForImage(id)
+    → Supabase: posts + spots + solutions → ImageDetail (with items[])
+    ↓
+magazineId = image.post_magazine_id (from ImageDetailWithPostOwner adapter)
+    → usePostMagazine(magazineId) → REST: /api/v1/post-magazines/:id
+    ↓
+ImageDetailPreview receives:
+    magazineTitle  = magazine.layout_json.title
+    artistTags     = [artist_name, group_name] (deduped, from ImageDetailWithPostOwner)
+    brands         = magazine.layout_json.items[].brand (deduped)
+    styleTags      = magazine.layout_json.design_spec.style_tags
+    ↓
+SpotDot overlays on floating image (desktop):
+    positioned via item.center [fracX, fracY] × imageRect dimensions
+    ↓ user clicks Maximize2
+window.location.href = /posts/{id}   ← FULL RELOAD (needs fix)
+```
+
+### Target Flow for v11.0
+
+```
+Editorial filter (hasMagazine=true):
+  Supabase query adds: .not("post_magazine_title", "is", null)
+  → shows only posts with magazine content
+
+Grid cards:
+  spotCount: real value (either from Supabase spots JOIN or REST API migration)
+  → ExploreCardCell renders spot count badge when spotCount > 0
+
+Modal maximize:
+  Animate modal out (GSAP: backdrop + drawer opacity 0)
+  → router.push(/posts/{id})   ← soft navigation, preserves history
 ```
 
 ---
 
-### Feature 3: Tries/Saved Activity Tabs (#16)
-
-#### Tries Tab
-
-**Constraint:** No backend endpoint. `TriesGrid.tsx` stub returns `[]`. Supabase `user_tryon_history` table confirmed in `types.ts` comments. The existing `fetchTryOnCount()` confirms this table is accessible via Supabase direct.
-
-**Architecture decision — Supabase direct query with infinite scroll:**
-
-**Prerequisite:** Confirm `user_tryon_history` schema has `result_image_url` (or equivalent). The stub type expects this field.
-
-**New additions to `lib/supabase/queries/profile.ts`:**
-- `fetchMyTryOnHistory(userId, page, perPage)` → `{ data: TryOnResult[], total: number }`
-
-**New hook in `lib/hooks/useProfile.ts`:**
-- `useMyTryOnHistory(userId)` using `useInfiniteQuery`, page-based cursor
-
-**Modified files:**
-- `lib/components/profile/TriesGrid.tsx` — replace `fetchMyTries()` stub with `useMyTryOnHistory(userId)`, add infinite scroll via IntersectionObserver
-
-**Query key:**
-```typescript
-profileKeys.tryHistory = (userId: string) =>
-  [...profileKeys.all, "tryHistory", userId] as const
-```
-
-#### Saved Tab
-
-**Constraint:** `SavedGrid.tsx` uses `collectionStore` with mock Pins/Boards/Collage data. The save/unsave actions exist in `lib/api/savedPosts.ts` calling `/api/v1/posts/{postId}/saved`, but the GET (list) endpoint is NOT in the OpenAPI spec.
-
-**Architecture decision — investigate then connect:**
-
-Two possible paths depending on backend reality:
-- Path A: Backend has `GET /api/v1/users/me/saved-posts` (undocumented) — add proxy route, connect via React Query
-- Path B: Backend has no list endpoint — use Supabase direct on a `saved_posts` table
-
-**Path A new files:**
-- `app/api/v1/users/me/saved-posts/route.ts` — new proxy route (GET, auth required)
-- Hook `useMySavedPosts()` in `lib/hooks/useProfile.ts`
-
-**Modified files:**
-- `lib/components/profile/SavedGrid.tsx` — replace `collectionStore` with real hook
-
-**Note:** The current `collectionStore` Pins/Boards/Collage UI is elaborate and conceptually different from "saved posts list." If backend saved posts are post thumbnails, `SavedGrid.tsx` needs a visual redesign, not just a data swap.
-
----
-
-### Feature 4: Other User Profile Page (#18)
-
-**What's needed:** New route `/profile/[userId]` showing public profile.
-
-**Existing infrastructure already available:**
-- `app/api/v1/users/[userId]/route.ts` — proxy already exists (GET, no auth required)
-- `useGetUserProfile(userId)` — Orval-generated hook in `lib/api/generated/users/users.ts`
-- `useUser(userId)` wrapper already implemented in `lib/hooks/useProfile.ts`
-
-**New files:**
-- `app/profile/[userId]/page.tsx` — server component, extracts `params.userId`
-- `app/profile/[userId]/UserProfileClient.tsx` — client orchestrator for public profile
-
-**Architecture decision — separate client components, shared primitive components:**
-
-`UserProfileClient.tsx` reuses profile components but with different props and no edit capability:
-- `ProfileHeader` — needs to accept user data as props (refactor needed — currently reads from `profileStore`)
-- `ProfileBio` — already accepts `bio` prop, no change needed
-- `FollowStats` — accepts real counts from `useFollowCounts`
-- `FollowButton` — new, shown only when viewer !== target
-- Activity display — limited (no tries/saved for other users since backend has no public activities endpoint)
-
-**No activity tabs for public profile (current backend constraint):** The backend `GET /api/v1/users/{user_id}` returns only profile data. There is no `GET /api/v1/users/{user_id}/activities` endpoint. Public activity visibility is deferred until backend support exists.
-
-**Auth guard interaction:** The `proxy.ts` matcher for profile auth guard must be exact `/profile`, not `/profile/:path*`, so public profile pages pass through without auth.
-
----
-
-## New Project Structure
+## Recommended Project Structure Changes
 
 ```
 packages/web/
-├── app/
-│   ├── profile/
-│   │   ├── page.tsx                          # existing — no change
-│   │   ├── ProfileClient.tsx                 # MODIFY — wire real FollowStats
-│   │   └── [userId]/                         # NEW
-│   │       ├── page.tsx                      # NEW — server, extract userId param
-│   │       └── UserProfileClient.tsx         # NEW — public profile orchestrator
-│   │
-│   └── api/v1/users/
-│       ├── me/route.ts                       # existing
-│       ├── me/activities/route.ts            # existing
-│       ├── me/stats/route.ts                 # existing
-│       ├── me/saved-posts/route.ts           # NEW (conditional on backend)
-│       └── [userId]/route.ts                 # existing
-│
 ├── lib/
-│   ├── components/profile/
-│   │   ├── FollowStats.tsx                  # MODIFY — remove hardcoded defaults
-│   │   ├── FollowButton.tsx                 # NEW — follow/unfollow action
-│   │   ├── ProfileHeader.tsx                # MODIFY — accept user prop (not only store)
-│   │   ├── TriesGrid.tsx                    # MODIFY — replace stub with real query
-│   │   └── SavedGrid.tsx                    # MODIFY — replace mock with real data
-│   │
 │   ├── hooks/
-│   │   └── useProfile.ts                   # MODIFY — add useFollowCounts,
-│   │                                       #   useIsFollowing, useFollowMutation,
-│   │                                       #   useMyTryOnHistory, useMySavedPosts
+│   │   └── useImages.ts           # MODIFY (2 changes):
+│   │                              #   1. Add hasMagazine Supabase filter
+│   │                              #   2. Add spotCount from spots JOIN or REST
 │   │
-│   └── supabase/queries/
-│       └── profile.ts                      # MODIFY — add fetchFollowCounts,
-│                                           #   fetchIsFollowing, followUser,
-│                                           #   unfollowUser, fetchMyTryOnHistory
+│   ├── components/
+│   │   ├── explore/
+│   │   │   └── ExploreCardCell.tsx  # MODIFY: add spot count badge UI
+│   │   │
+│   │   └── detail/
+│   │       └── ImageDetailModal.tsx # no change (data flow already correct)
+│   │
+│   └── ThiingsGrid.tsx             # MAYBE MODIFY: add spotCount to GridItem type
 │
-└── proxy.ts                                # MODIFY — add profile auth guard (exact /profile)
+└── lib/hooks/
+    └── useImageModalAnimation.ts   # MODIFY: handleMaximize → router.push
+```
+
+No new routes, no new stores, no new hooks. All changes are modifications to existing files.
+
+---
+
+## Architectural Patterns
+
+### Pattern 1: Fix `hasMagazine` Filter in Supabase Query
+
+**What:** Add `.not("post_magazine_title", "is", null)` to the Supabase query in `useInfinitePosts` when `hasMagazine === true`.
+
+**When to use:** Required for Editorial page to show only magazine-linked posts.
+
+**Trade-offs:** Keeps Supabase direct (not ideal long-term vs REST API), but zero backend changes and immediately unblocks editorial data validation.
+
+```typescript
+// useImages.ts — inside useInfinitePosts queryFn, after existing filters:
+if (hasMagazine) {
+  query = query.not("post_magazine_title", "is", null);
+}
+```
+
+### Pattern 2: Spot Count via Supabase Aggregate (short-term)
+
+**What:** In `useInfinitePosts`, after the main posts query, do a single batch query for spot counts across all returned post IDs. Map counts back to PostGridItem.
+
+**When to use:** When REST API migration is not yet done but real spot counts are needed.
+
+**Trade-offs:** Two Supabase queries per page instead of one. Acceptable for grid loads with 40 items per page. Not needed if migrating to REST API which already returns `spot_count`.
+
+```typescript
+// After main posts query, inside queryFn:
+const postIds = (data ?? []).map((p: any) => p.id);
+const { data: spotCounts } = await supabaseBrowserClient
+  .from("spots")
+  .select("post_id")
+  .in("post_id", postIds);
+
+const countMap: Record<string, number> = {};
+(spotCounts ?? []).forEach((s: any) => {
+  countMap[s.post_id] = (countMap[s.post_id] ?? 0) + 1;
+});
+
+// Then in the items mapping:
+spotCount: countMap[post.id] ?? 0,
+```
+
+### Pattern 3: Animated Soft Navigation for Maximize
+
+**What:** In `handleMaximize`, animate modal out via GSAP then call `router.push()` instead of hard-reloading via `window.location.href`.
+
+**When to use:** Immediately. The `router` instance is already passed into the hook.
+
+**Trade-offs:** Adds a short animation delay (200ms) before navigation. Preserves browser history, React Query cache, and provides a smooth transition.
+
+```typescript
+// useImageModalAnimation.ts — replace handleMaximize:
+const handleMaximize = useCallback(() => {
+  if (isClosing || !ctxRef.current) return;
+  setIsClosing(true);
+
+  ctxRef.current.add(() => {
+    gsap.to(
+      [backdropRef.current, drawerRef.current],
+      {
+        opacity: 0,
+        duration: 0.2,
+        ease: "power2.in",
+        onComplete: () => {
+          reset();
+          router.push(`/posts/${imageId}`);
+        },
+      }
+    );
+  });
+}, [imageId, isClosing, router, reset]); // eslint-disable-line react-hooks/exhaustive-deps
 ```
 
 ---
 
-## Data Flow Changes
+## Recommended Build Order
 
-### Auth Guard (new)
+Build in this sequence because each step validates the previous:
 
-```
-User navigates to /profile
-    ↓
-proxy.ts matcher: ["/admin/:path*", "/profile"]
-    ↓ no session
-NextResponse.redirect("/login?redirect=/profile")
-    ↓ session exists
-NextResponse.next() → page.tsx → ProfileClient.tsx renders
-```
+### Step 1: Data Validation Gate (no code change)
 
-### Follow Counts (new)
+**Goal:** Confirm editorial posts exist in production/dev Supabase with non-null `post_magazine_title`.
 
-```
-ProfileClient.tsx
-    ↓ userData?.id available
-useFollowCounts(userId)
-    → supabaseBrowserClient
-      .from("user_follows")
-      .select("*", { count: "exact" })
-      .eq("follower_id", userId)   // following count
-      + .eq("followee_id", userId) // followers count
-    ↓
-FollowStats({ followers: N, following: M })
+Run in Supabase dashboard or via browser console:
+```sql
+SELECT id, post_magazine_title, artist_name
+FROM posts
+WHERE post_magazine_title IS NOT NULL
+  AND status = 'active'
+LIMIT 20;
 ```
 
-### Tries (new)
+If zero rows: the editorial automation (#38) has not yet produced posts. Steps 2-4 can still be built but cannot be visually validated. Document this as a pending dependency.
 
-```
-ProfileClient.tsx: activeTab === "tries"
-    ↓
-TriesGrid calls useMyTryOnHistory(userId)
-    → useInfiniteQuery
-    → supabaseBrowserClient
-      .from("user_tryon_history")
-      .select("id, result_image_url, created_at, item_count")
-      .eq("user_id", userId)
-      .range(offset, offset + perPage - 1)
-    ↓
-IntersectionObserver at grid bottom triggers fetchNextPage()
-```
+If rows exist: proceed with confidence.
 
-### Public Profile Route (new)
+**Dependency:** None. This is a prerequisite check.
 
-```
-/profile/[userId] navigated to
-    ↓
-proxy.ts: matcher does NOT match /profile/[userId] → no auth check
-    ↓
-app/profile/[userId]/page.tsx extracts params.userId
-    ↓
-UserProfileClient.tsx mounts, parallel fetches:
-  useUser(userId) → GET /api/v1/users/{userId} (existing proxy)
-  useFollowCounts(userId) → Supabase direct
-  useIsFollowing(viewer, userId) → Supabase direct (skipped if not logged in)
-    ↓
-Render read-only profile: ProfileHeader, ProfileBio, FollowStats
-Render FollowButton if viewer !== target and viewer is authenticated
-```
+### Step 2: Fix `hasMagazine` Filter (`useImages.ts`)
+
+**File:** `packages/web/lib/hooks/useImages.ts`
+
+**Change:** Add `hasMagazine` Supabase filter (one line). Confirm React Query key already includes `hasMagazine` (it does — line 183 of `useImages.ts` includes `hasMagazine` in the queryKey object). No cache invalidation issues.
+
+**Validate:** Navigate to `/editorial`. With the fix applied and data existing, the grid should show only posts with magazine titles. Without the fix, both `/explore` and `/editorial` show identical results.
+
+**Dependency:** Step 1 (need data to validate).
+
+### Step 3: Fix Maximize Navigation (`useImageModalAnimation.ts`)
+
+**File:** `packages/web/lib/hooks/useImageModalAnimation.ts`
+
+**Change:** Replace `window.location.href` with animated `router.push` in `handleMaximize`. The `router` and `reset` are already in scope. Use the GSAP pattern from `handleClose` as the model.
+
+**Validate:** Open any post in the modal drawer. Click Maximize2. Should animate out smoothly and navigate to full post page. Browser back button should return to explore grid (not a dead state).
+
+**Dependency:** None. Independent fix.
+
+### Step 4: Add Spot Count Display to Grid Cards
+
+**Files (in order):**
+1. `packages/web/lib/components/ThiingsGrid.tsx` — add `spotCount?: number` to `GridItem` type
+2. `packages/web/lib/hooks/useImages.ts` — add spot count batch query inside `useInfinitePosts` queryFn, map to `PostGridItem.spotCount`
+3. `packages/web/app/explore/ExploreClient.tsx` — pass `spotCount: item.spotCount` in the `gridItems` mapping
+4. `packages/web/lib/components/explore/ExploreCardCell.tsx` — render spot count badge (e.g., `"3 spots"` pill in bottom-left, only when `spotCount > 0`)
+
+**Validate:** Open Explore grid. Posts with spots should show a count badge. Posts without spots should not show a badge. Verify no visible performance regression (batch query runs once per page, not per card).
+
+**Dependency:** Step 2 (verify editorial filter before adding badge to editorial cards).
 
 ---
 
-## Anti-Patterns to Avoid
+## Integration Points
 
-### Anti-Pattern 1: Widening proxy.ts auth guard to /profile/:path*
+### External Services
 
-**What people do:** `matcher: ["/admin/:path*", "/profile/:path*"]` to guard all profile sub-paths.
-**Why it's wrong:** This blocks `/profile/[userId]` which is a public route.
-**Do this instead:** Protect only the exact `/profile` path. Implement as a path equality check in the proxy function body, not just via the matcher.
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Supabase | Browser client (`supabaseBrowserClient`) | `posts`, `spots`, `solutions` tables. `useInfinitePosts` and `usePostDetailForImage` use this directly |
+| Rust/Axum REST API | Next.js proxy route + Orval hooks | `usePostMagazine` uses REST. Grid list currently bypasses REST |
+| Cloudflare R2 | Direct image URLs | `image_url` served via CDN — no proxy needed |
 
-### Anti-Pattern 2: Fetching follow data inside ProfileHeader component
+### Internal Boundaries
 
-**What people do:** Add Supabase query directly in `ProfileHeader.tsx`.
-**Why it's wrong:** Profile components are presentational. Mixing data fetching in them breaks reuse in `UserProfileClient` and makes testing harder.
-**Do this instead:** Fetch in orchestrator components, pass counts as props to `FollowStats`.
-
-### Anti-Pattern 3: Expanding collectionStore with API calls
-
-**What people do:** Add `loadFromApi()` to `collectionStore` to fetch real saved posts.
-**Why it's wrong:** `collectionStore` was designed as a Pins/Boards/Collage UI state machine. Saved posts from the backend are a different entity. This conflates two responsibilities.
-**Do this instead:** Add `useMySavedPosts()` hook in `useProfile.ts`. Have `SavedGrid` call it directly. Deprecate the mock loading in `collectionStore`.
-
-### Anti-Pattern 4: Duplicating the existing useUser() hook
-
-**What people do:** Create a new fetch function for the public profile page.
-**Why it's wrong:** `useGetUserProfile(userId)` already exists in Orval-generated code. `useUser(userId)` wrapper already exists in `lib/hooks/useProfile.ts`. The proxy route already exists.
-**Do this instead:** Import `useUser(userId)` from `lib/hooks/useProfile.ts` in `UserProfileClient.tsx`.
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `ExploreClient` ↔ `ThiingsGrid` | Props: `items: GridItem[]`, `renderItem`, `onReachEnd`, `hasMore` | `GridItem` is the data contract — `spotCount` field is the only addition needed |
+| `ExploreCardCell` ↔ `transitionStore` | Zustand write: `setTransition(id, flipState, rect, imgSrc)` | Must execute before `Link` navigation for FLIP to work — order is correct (onClick fires before navigation) |
+| `ImageDetailModal` ↔ `transitionStore` | Zustand read: `originRect`, `imgSrc`; write: `reset()` | Read on mount drives GSAP entry animation; reset() must be called before navigating away |
+| `useInfinitePosts` ↔ `filterStore` | `filterStore.activeFilter` passed as `category` | React Query queryKey includes filter — cache auto-invalidates on category change |
+| `@modal` route ↔ main layout | Next.js App Router parallel routes | `@modal/default.tsx` renders null when no modal active; App Router handles the interception |
 
 ---
 
-## Open Questions (Require Investigation Before Building)
+## Anti-Patterns
 
-1. **Does `user_follows` table exist in Supabase?** The `types.ts` file (updated 2026-03-18) lists 11 tables with no `user_follows`. If the table doesn't exist, follow counts are blocked pending DB migration coordinated with the backend team.
+### Anti-Pattern 1: Fetching Spot Count Per Card Inside `ExploreCardCell`
 
-2. **Does `user_tryon_history` have `result_image_url`?** The `TriesGrid.tsx` stub expects this field. `fetchTryOnCount()` only selects `id`. Full schema needs verification before implementing the tries tab.
+**What people do:** Add a `useQuery` call inside `ExploreCardCell` to fetch spot count for that specific post.
 
-3. **Does `GET /api/v1/users/me/saved-posts` exist on the live backend?** It is not in the OpenAPI spec. `lib/api/savedPosts.ts` references `POST/DELETE /api/v1/posts/{postId}/saved` but no GET list endpoint. Either the spec is incomplete or the list endpoint doesn't exist.
+**Why it's wrong:** Triggers N+1 queries — one Supabase call per visible card. With 40 cards per page, this fires 40 concurrent queries on every grid render.
 
-4. **Should public user profiles show any activity?** The backend has no `GET /api/v1/users/{user_id}/activities` endpoint. If the feature scope requires showing other users' posts on their profile, this needs either a backend endpoint addition or Supabase direct query with public RLS policy.
+**Do this instead:** Batch fetch all spot counts for the current page's post IDs in a single query inside `useInfinitePosts`. Pass `spotCount` as data flowing through `PostGridItem → GridItem → ExploreCardCell`.
+
+### Anti-Pattern 2: Using `window.location.href` for Client-Side Navigation
+
+**What people do:** Call `window.location.href = /posts/${id}` for the modal maximize action.
+
+**Why it's wrong:** Causes full browser reload — clears React Query cache, skips GSAP cleanup animation, corrupts browser history stack (creates two entries), and breaks the back button.
+
+**Do this instead:** Animate the modal out first via GSAP, then call `router.push()`. The GSAP context `ctxRef.current?.revert()` runs on component unmount regardless, so cleanup is safe.
+
+### Anti-Pattern 3: Creating a Separate EditorialClient Component
+
+**What people do:** Copy-paste `ExploreClient.tsx` into an `EditorialClient.tsx` with the `hasMagazine` filter hardcoded.
+
+**Why it's wrong:** Two components diverge immediately. Filter bar, skeleton states, error states, pagination logic all need to be maintained twice.
+
+**Do this instead:** Keep `ExploreClient` as the single grid engine. The `hasMagazine` prop pattern is already the correct architecture — `editorial/page.tsx` is 4 lines: `return <ExploreClient hasMagazine />`. Any editorial-specific behavior is a branch inside the shared component.
+
+### Anti-Pattern 4: Filtering Editorial Posts Client-Side After Full Fetch
+
+**What people do:** Fetch all posts and then `.filter(p => p.editorialTitle)` in the component.
+
+**Why it's wrong:** Downloads all posts to the browser before filtering. With pagination, page 1 might return 40 posts with zero editorial content, causing an empty grid despite editorial posts existing later in the dataset.
+
+**Do this instead:** Apply the `post_magazine_title IS NOT NULL` filter at the Supabase query level so only relevant posts are fetched, paginated correctly.
+
+---
+
+## Scalability Considerations
+
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Current (< 10k posts) | Supabase direct queries are fine. `hasMagazine` filter fix unblocks editorial immediately |
+| 10k-100k posts | Migrate `useInfinitePosts` to REST API (`GET /api/v1/posts`). Add `has_magazine` backend param. REST API enables CDN caching of list responses |
+| 100k+ posts | Backend needs database index on `post_magazine_title IS NOT NULL`. Cursor-based pagination (current Supabase approach) scales better than page-based at high offsets |
+
+### Scaling Priorities
+
+1. **First bottleneck:** Supabase direct queries from browser at high concurrency — fix: migrate list query to REST API with server-side caching (`next: { revalidate: 60 }` already used by `fetchPostsServer`)
+2. **Second bottleneck:** Spot count batch query adds a second DB round-trip per page load — fix: include spot_count as computed column in REST API response (already done: `PaginatedResponse_PostListItem.spot_count` exists)
 
 ---
 
 ## Sources
 
-- `packages/api-server/openapi.json` — all 63 API paths and schemas enumerated directly (HIGH confidence)
-- `packages/web/lib/hooks/useProfile.ts` — existing hook implementations read directly (HIGH confidence)
-- `packages/web/app/profile/ProfileClient.tsx` — existing orchestrator component (HIGH confidence)
-- `packages/web/lib/components/profile/` — all 18 profile components inspected (HIGH confidence)
-- `packages/web/lib/supabase/types.ts` — Supabase table schemas, updated 2026-03-18 (HIGH confidence)
-- `packages/web/proxy.ts` — existing admin auth guard implementation (HIGH confidence)
-- `packages/web/lib/supabase/queries/profile.ts` — existing Supabase direct query pattern (HIGH confidence)
-- `packages/web/lib/stores/profileStore.ts` and `collectionStore.ts` — current state management (HIGH confidence)
-- `packages/web/lib/api/savedPosts.ts` — saved posts action endpoints (HIGH confidence)
+- `packages/web/app/explore/ExploreClient.tsx` — shared grid engine, `hasMagazine` prop wiring
+- `packages/web/app/editorial/page.tsx` — editorial page (4-line wrapper)
+- `packages/web/lib/hooks/useImages.ts` — `useInfinitePosts` (Supabase direct), `usePostDetailForImage`, `usePostMagazine`
+- `packages/web/lib/components/explore/ExploreCardCell.tsx` — FLIP capture, `editorialTitle` overlay, navigation link
+- `packages/web/lib/components/detail/ImageDetailModal.tsx` — side drawer, `usePostMagazine` consumer, `SpotDot` positioning
+- `packages/web/lib/components/detail/ImageDetailPreview.tsx` — drawer content: tags, AI summary, CTA
+- `packages/web/lib/hooks/useImageModalAnimation.ts` — GSAP context, `handleMaximize` (hard reload issue)
+- `packages/web/lib/stores/transitionStore.ts` — FLIP state bridge
+- `packages/web/app/@modal/(.)posts/[id]/page.tsx` — intercepting route
+- `packages/web/app/posts/[id]/page.tsx` — full page route
+- `packages/api-server/openapi.json` — confirmed: no `has_magazine` param in `GET /api/v1/posts`; `PaginatedResponse_PostListItem` includes `spot_count` and `post_magazine_title`; `PostDetailResponse` includes `post_magazine_id`, `ai_summary`, `spots[]`
 
 ---
-
-*Architecture research for: v10.0 Profile Page Completion (follow system, tries/saved tabs, public user profile, auth guard)*
-*Researched: 2026-03-26*
+*Architecture research for: v11.0 Explore & Editorial Data Integration*
+*Researched: 2026-04-01*
