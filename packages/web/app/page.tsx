@@ -541,7 +541,7 @@ export default async function Home({
       )}
 
       {/* ─── 8. Style DNA & Community Rank ─── */}
-      <CommunityLeaderboard data={leaderboardData} />
+      {/* <CommunityLeaderboard data={leaderboardData} /> */}
 
       {/* ─── 9. Personalize Banner (VTON CTA) ─── */}
       <DomeGallerySection images={domeImages.length > 0 ? domeImages : undefined} />
