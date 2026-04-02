@@ -552,8 +552,11 @@ v11.0: 51 → 52 → 53, 54 (parallel) → 55
 | 53: Detail Data Migration                     | v11.0     | 0/2            | Not started   | -          |
 | 54: Card Enrichment                           | v11.0     | 0/2            | Not started   | -          |
 | 55: End-to-End Verification                   | v11.0     | 0/1            | Not started   | -          |
+| 56: Explore UI Enhancement                    | v11.0     | 3/3            | Complete      | 2026-04-02 |
+| 57: Editorial Layout & Detail View            | v11.0     | 2/2            | Complete      | 2026-04-02 |
+| 58: Artist Discovery                          | v11.0     | 1/1            | Complete      | 2026-04-02 |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-04-01 (v11.0 Phases 51-55 added, 7 requirements mapped)_
+_Last updated: 2026-04-02 (Phases 56, 57, 58 complete)_
