@@ -307,27 +307,12 @@ export function useImageModalAnimation({
     if (isClosing || isMaximizing || !ctxRef.current) return;
     setIsMaximizing(true);
 
-    ctxRef.current.add(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          reset();
-          window.location.href = `/posts/${imageId}`;
-        },
-      });
-
-      // Fade out drawer only — keep backdrop visible for seamless transition
-      tl.to(
-        drawerRef.current,
-        { opacity: 0, duration: 0.25, ease: "power3.in" },
-        0
-      );
-
-      // Fade out floating image on desktop
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if (isDesktop && leftImageContainerRef.current) {
-        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.25 }, 0);
-      }
-    });
+    // Instant transition — hide modal elements and navigate immediately.
+    // The full page has its own fade-in animation for a smooth entry.
+    if (drawerRef.current) drawerRef.current.style.opacity = "0";
+    if (leftImageContainerRef.current) leftImageContainerRef.current.style.opacity = "0";
+    reset();
+    window.location.href = `/posts/${imageId}`;
   }, [isClosing, isMaximizing, imageId, reset]);
 
   return {
