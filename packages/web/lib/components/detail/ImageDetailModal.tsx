@@ -4,7 +4,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Maximize2 } from "lucide-react";
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
-import { ImageDetailPreview } from "./ImageDetailPreview";
 import { ImageDetailContent } from "./ImageDetailContent";
 import { SpotDot } from "./SpotDot";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
@@ -213,8 +212,19 @@ export function ImageDetailModal({ imageId }: Props) {
       );
     }
 
-    // Non-magazine posts: lightweight preview
-    return <ImageDetailPreview image={image} onViewFull={handleMaximize} />;
+    // Non-magazine posts: use same ImageDetailContent as full page (with isModal + hideImage)
+    return (
+      <ImageDetailContent
+        image={image}
+        magazineLayout={null}
+        relatedEditorials={[]}
+        isModal
+        hideImage
+        scrollContainerRef={
+          scrollContainerRef as React.RefObject<HTMLElement>
+        }
+      />
+    );
   };
 
   return (

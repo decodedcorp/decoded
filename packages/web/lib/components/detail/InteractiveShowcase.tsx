@@ -151,12 +151,12 @@ export function InteractiveShowcase({
       {/* Right: Scrollable Item Details (Desktop) / Bottom: Scrollable (Mobile) */}
       <div
         ref={cardsContainerRef}
-        className={`w-full px-4 py-6 bg-background relative z-20 ${
+        className={`w-full px-4 py-6 bg-background relative ${
           isModal
             ? renderImage
               ? "overflow-visible"
               : "w-full pt-0"
-            : "lg:w-1/2 lg:pl-8 lg:pt-12"
+            : "z-20 lg:w-1/2 lg:pl-8 lg:pt-12"
         }`}
       >
         {items.map((item, index) => (
