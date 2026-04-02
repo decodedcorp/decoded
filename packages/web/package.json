@@ -16,6 +16,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.4",
     "@decoded/shared": "workspace:*",
     "@gsap/react": "^2.1.2",
     "@radix-ui/react-slot": "^1.2.4",

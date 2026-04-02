@@ -6,6 +6,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: 'http://localhost:54321',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+    },
   },
   resolve: {
     alias: {
