@@ -174,14 +174,24 @@ export default function MasonryGridItem({
     >
       {/* Background image */}
       {useDynamicRatio ? (
-        <img
-          src={item.imageUrl}
-          alt={item.title}
-          width={imgW}
-          height={imgH}
-          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
+        <>
+          <div
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: `url(${item.imageUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "blur(24px) brightness(0.7)",
+              transform: "scale(1.15)",
+            }}
+          />
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="relative z-10 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        </>
       ) : (
         <Image
           src={item.imageUrl}

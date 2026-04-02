@@ -19,17 +19,30 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
   const content = (
     <Link href={style.link} className="group block h-full">
       <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_260px] rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/[0.06]">
-        {/* Left: Editorial image — wide landscape ratio */}
+        {/* Left: Editorial image — full image with blur bg */}
         <div className="relative aspect-[16/10] lg:aspect-auto overflow-hidden isolate">
           <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
             {style.imageUrl ? (
-              <Image
-                src={style.imageUrl}
-                alt={style.artistName}
-                fill
-                sizes="(max-width: 1024px) 100vw, 65vw"
-                className="object-cover"
-              />
+              <>
+                {/* Blurred background fills letterbox */}
+                <div
+                  className="absolute inset-0 z-0"
+                  style={{
+                    backgroundImage: `url(${style.imageUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    filter: "blur(24px) brightness(0.7)",
+                    transform: "scale(1.15)",
+                  }}
+                />
+                <Image
+                  src={style.imageUrl}
+                  alt={style.artistName}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 65vw"
+                  className="relative z-10 object-contain"
+                />
+              </>
             ) : (
               <div className="absolute inset-0 bg-neutral-800" />
             )}
