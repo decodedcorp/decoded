@@ -65,7 +65,8 @@ export function ImageDetailContent({
 }: Props) {
   const hasMagazine = !!magazineLayout;
   const imageUrl = typeof image.image_url === "string" ? image.image_url : null;
-  const accentColor = magazineLayout?.design_spec?.accent_color;
+  // D-08: Always use brand color — per-post design_spec.accent_color override removed
+  const accentColor = "var(--mag-accent)";
   const commentSectionRef = useRef<HTMLDivElement>(null);
 
   const handleShare = useCallback(async () => {
@@ -224,9 +225,9 @@ export function ImageDetailContent({
 
   const commentCount = useCommentCount(image.id);
 
-  const magazineCssVars = accentColor
-    ? ({ "--magazine-accent": accentColor } as React.CSSProperties)
-    : undefined;
+  // D-08: Always set --magazine-accent to brand color (accentColor is always "var(--mag-accent)")
+  const magazineCssVars = { "--magazine-accent": accentColor } as React.CSSProperties;
+  // Note: PostBadge intentionally not rendered (D-06 — clean image-centric UX)
 
   return (
     <div className="detail-content relative" style={magazineCssVars}>
