@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
+
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { DecodeShowcaseData } from "./types";
 import { PostImage } from "@/lib/components/shared/PostImage";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -318,13 +319,12 @@ export default function DecodeShowcase({
                 }}
               >
                 {item.imageUrl ? (
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-neutral-900 border border-[var(--mag-accent)]/40 shadow-[0_0_8px_rgba(var(--mag-accent-rgb,200,170,100),0.3)]">
-                    <Image
+                  <div className="w-14 h-14 rounded-lg border border-[var(--mag-accent)]/40 shadow-[0_0_8px_rgba(var(--mag-accent-rgb,200,170,100),0.3)]">
+                    <ItemImage
                       src={item.imageUrl}
                       alt={item.label}
-                      fill
-                      className="object-cover"
-                      sizes="56px"
+                      size="thumbnail"
+                      className="rounded-lg"
                     />
                   </div>
                 ) : (
@@ -359,13 +359,12 @@ export default function DecodeShowcase({
                 }}
               >
                 {item.imageUrl ? (
-                  <div className="relative flex-none w-14 h-14 rounded-lg overflow-hidden bg-neutral-800">
-                    <Image
+                  <div className="flex-none w-14 h-14 rounded-lg">
+                    <ItemImage
                       src={item.imageUrl}
                       alt={item.label}
-                      fill
-                      className="object-cover"
-                      sizes="56px"
+                      size="thumbnail"
+                      className="rounded-lg"
                     />
                   </div>
                 ) : (
