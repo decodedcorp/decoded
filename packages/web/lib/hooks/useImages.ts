@@ -308,6 +308,11 @@ export function usePostDetailForImage(postId: string) {
         id: postId,
         image_hash: "",
         image_url: post.image_url,
+        post_owner_id: post.user_id ?? null,
+        post_magazine_id: (post as Record<string, unknown>).post_magazine_id as string | null ?? null,
+        artist_name: post.artist_name ?? null,
+        group_name: post.group_name ?? null,
+        ai_summary: (post as Record<string, unknown>).ai_summary as string | null ?? null,
         status: post.status as
           | "pending"
           | "extracted"
@@ -366,7 +371,21 @@ export function usePostMagazine(magazineId: string | null | undefined) {
     queryKey: ["post-magazines", magazineId],
     queryFn: async () => {
       if (!magazineId) return null;
-      return fetchPostMagazine(magazineId);
+
+      const { data, error } = await (supabaseBrowserClient as any)
+        .from("post_magazines")
+        .select("*")
+        .eq("id", magazineId)
+        .single();
+
+      if (error || !data) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[usePostMagazine] Error:", error);
+        }
+        return null;
+      }
+
+      return data as unknown as PostMagazineResponse;
     },
     enabled: !!magazineId,
     staleTime: 1000 * 60 * 5,

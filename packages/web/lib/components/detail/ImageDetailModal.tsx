@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Maximize2 } from "lucide-react";
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
 import { ImageDetailPreview } from "./ImageDetailPreview";
+import { ImageDetailContent } from "./ImageDetailContent";
 import { SpotDot } from "./SpotDot";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
 import { ReportErrorButton } from "./ReportErrorButton";
@@ -155,22 +156,24 @@ export function ImageDetailModal({ imageId }: Props) {
 
     const publishedMagazineLayout =
       magazineId && magazine?.layout_json && magazine.status === "published" ? magazine.layout_json : null;
-    const magazineTitle = publishedMagazineLayout?.title ?? null;
-    const brands = publishedMagazineLayout?.items?.map((item) => item.brand).filter((b): b is string => !!b && b.trim() !== "") ?? [];
-    const uniqueBrands = [...new Set(brands)];
-    const styleTags = (publishedMagazineLayout?.design_spec as { style_tags?: string[] })?.style_tags ?? [];
-    const img = image as ImageDetailWithPostOwner;
-    const artistTags = [img?.artist_name, img?.group_name]
-      .filter((v): v is string => !!v && v.trim() !== "")
-      .filter((v, i, arr) => arr.indexOf(v) === i);
 
+    // Magazine posts: use same ImageDetailContent as full page (with isModal to skip GSAP)
+    if (publishedMagazineLayout) {
+      return (
+        <ImageDetailContent
+          image={image}
+          magazineLayout={publishedMagazineLayout}
+          relatedEditorials={magazine?.related_editorials ?? []}
+          isModal
+          scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
+        />
+      );
+    }
+
+    // Non-magazine posts: lightweight preview
     return (
       <ImageDetailPreview
         image={image}
-        magazineTitle={magazineTitle}
-        artistTags={artistTags}
-        brands={uniqueBrands}
-        styleTags={styleTags}
         onViewFull={handleMaximize}
       />
     );
