@@ -17,7 +17,7 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { getPost } from "@/lib/api/generated/posts/posts";
+import { getPost, listPosts } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
 import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
 import { spotToItemRow } from "@/lib/components/detail/types";
@@ -190,6 +190,37 @@ export function useInfinitePosts(params: {
     ],
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
+
+      // hasMagazine=true → REST API 사용 (Supabase posts 뷰에 magazine 컬럼 없음)
+      if (hasMagazine) {
+        const response = await listPosts({
+          page,
+          per_page: limit,
+          sort,
+          has_magazine: true,
+          artist_name: mediaName ?? artistName,
+          group_name: castName ? undefined : groupName,
+          context: contextType ?? (category && category !== "all" ? category : undefined),
+        });
+
+        const items: PostGridItem[] = response.data.map((post) => ({
+          id: post.id,
+          imageUrl: post.image_url,
+          postId: post.id,
+          postSource: "post" as const,
+          postAccount: post.artist_name ?? post.group_name ?? "",
+          postCreatedAt: post.created_at,
+          spotCount: post.spot_count ?? 0,
+          viewCount: post.view_count,
+          title: post.post_magazine_title ?? post.title ?? null,
+        }));
+
+        const totalPages = response.pagination.total_pages;
+        const hasMore = page < totalPages;
+        return { items, nextPage: hasMore ? page + 1 : null, hasMore };
+      }
+
+      // 일반 모드 → Supabase 직접 쿼리
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
@@ -208,9 +239,6 @@ export function useInfinitePosts(params: {
       }
       if (groupName) {
         query = query.ilike("group_name", `%${groupName}%`);
-      }
-      if (hasMagazine) {
-        query = query.not("post_magazine_id", "is", null);
       }
 
       // mediaName from hierarchical filter — matches group_name column
@@ -257,10 +285,7 @@ export function useInfinitePosts(params: {
         postCreatedAt: post.created_at,
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
-        // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
-        // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
-        // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
-        title: post.post_magazine_title ?? post.title ?? null,
+        title: post.title ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
