@@ -123,13 +123,13 @@ export function ImageDetailPage({ imageId }: Props) {
         {/* Action Buttons */}
         <div className="fixed right-4 top-16 md:top-20 z-50 flex gap-2">
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
             aria-label="Like"
           >
             <Heart className="h-5 w-5" />
           </button>
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
             aria-label="Save"
           >
             <Bookmark className="h-5 w-5" />
@@ -137,14 +137,14 @@ export function ImageDetailPage({ imageId }: Props) {
           <ReportErrorButton postId={image.id} size="md" />
           <button
             onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
             aria-label="Share"
           >
             <Share2 className="h-5 w-5" />
           </button>
           <button
             onClick={handleClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
             aria-label="Close"
           >
             <X className="h-5 w-5" />

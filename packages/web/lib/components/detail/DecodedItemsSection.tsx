@@ -142,7 +142,7 @@ export function DecodedItemsSection({ spots, solutions }: Props) {
                 </h2>
               </div>
               {items.length > 3 && (
-                <span className="text-[13px] font-medium font-sans text-primary cursor-pointer hover:underline">
+                <span className="text-[13px] font-medium font-sans text-primary cursor-pointer hover:underline py-3 px-2 -my-3 -mx-2">
                   View All
                 </span>
               )}

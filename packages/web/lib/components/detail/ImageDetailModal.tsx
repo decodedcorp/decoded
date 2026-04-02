@@ -330,7 +330,7 @@ export function ImageDetailModal({ imageId }: Props) {
           <ReportErrorButton postId={image?.id} size="md" />
           <button
             onClick={handleMaximize}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/80 text-white backdrop-blur-sm transition-transform hover:scale-105 hover:bg-black active:scale-95 dark:bg-white/80 dark:text-black dark:hover:bg-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white backdrop-blur-sm transition-transform hover:scale-105 hover:bg-black active:scale-95 dark:bg-white/80 dark:text-black dark:hover:bg-white"
             aria-label="View Full Page"
             title="Open in full page"
           >
@@ -339,7 +339,7 @@ export function ImageDetailModal({ imageId }: Props) {
           <button
             data-testid="image-detail-close"
             onClick={handleClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-accent active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-accent active:scale-95"
             aria-label="Close"
             title="Close"
           >

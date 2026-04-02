@@ -49,13 +49,18 @@ export default function DecodeShowcase({
     () => {
       if (!sectionRef.current || !showcaseRef.current) return;
 
+      const isMobile = window.innerWidth < 768;
+      const pinDistance = isMobile
+        ? detectedItems.length * 120
+        : detectedItems.length * 250;
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           pin: true,
           scrub: 1,
           start: "top top",
-          end: `+=${detectedItems.length * 250}`,
+          end: `+=${pinDistance}`,
         },
       });
 
@@ -167,8 +172,8 @@ export default function DecodeShowcase({
           Cards are pushed outside via calc(100% + gap).
         */}
         <div
-          className="relative mx-auto"
-          style={{ width: "min(45vw, 360px)", overflow: "visible" }}
+          className="relative mx-auto overflow-hidden md:overflow-visible"
+          style={{ width: "min(80vw, 360px)" }}
         >
           {/* Image — clipped */}
           <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-neutral-900">
@@ -249,7 +254,7 @@ export default function DecodeShowcase({
                 ref={(el) => {
                   cardRefs.current[i] = el;
                 }}
-                className="absolute z-20 flex items-center gap-3 rounded-xl
+                className="absolute z-20 hidden md:flex items-center gap-3 rounded-xl
                            bg-black/80 backdrop-blur-sm border border-[var(--mag-accent)]/30
                            px-4 py-3 w-[200px] pointer-events-none"
                 style={{

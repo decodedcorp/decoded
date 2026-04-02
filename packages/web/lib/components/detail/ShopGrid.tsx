@@ -185,7 +185,7 @@ export function ShopGrid({
           className={`flex md:grid md:grid-cols-3 lg:grid-cols-4 overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory md:snap-none w-full ${
             isModal
               ? "gap-3 md:gap-4 px-4 md:px-6 pb-8 md:pb-10 pt-2 md:pt-4"
-              : "gap-4 md:gap-6 px-6 md:px-8 pb-12 pt-4"
+              : "gap-4 md:gap-6 px-4 md:px-8 pb-12 pt-4"
           }`}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
@@ -201,8 +201,8 @@ export function ShopGrid({
                 key={item.id}
                 className={`shop-card flex-none md:flex-auto snap-center md:snap-start group flex flex-col ${
                   isModal
-                    ? "w-[45%] sm:w-[30%] md:w-auto"
-                    : "w-[45%] sm:w-[30%] md:w-auto"
+                    ? "w-[43%] sm:w-[30%] md:w-auto"
+                    : "w-[43%] sm:w-[30%] md:w-auto"
                 }`}
               >
                 <SpotlightCard className="h-full flex flex-col bg-card/50 backdrop-blur-sm">

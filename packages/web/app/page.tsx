@@ -534,7 +534,7 @@ export default async function Home({
   ].slice(0, 20);
 
   return (
-    <div className="min-h-screen bg-[#050505]">
+    <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       {/* ─── 1. Hero Collage ─── */}
       <HeroItemSync posts={heroPosts} />
 

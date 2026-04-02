@@ -332,7 +332,7 @@ export default function VirtualTryOnTeaser({
         <div className="mt-8 flex justify-center">
           <button
             ref={ctaRef}
-            className="px-8 py-3 rounded-full bg-[var(--mag-accent)] text-[var(--mag-bg)] font-semibold text-sm
+            className="px-8 py-3 min-h-[44px] rounded-full bg-[var(--mag-accent)] text-[var(--mag-bg)] font-semibold text-sm
                        transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mag-accent)]"
             disabled={!ctaActive}
             style={{ opacity: 0.35, transform: "scale(0.96)" }}

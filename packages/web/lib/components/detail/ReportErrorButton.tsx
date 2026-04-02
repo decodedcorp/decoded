@@ -72,7 +72,7 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
 
   const buttonClasses =
     size === "md"
-      ? "flex h-10 w-10 items-center justify-center rounded-full bg-background/80 text-muted-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-red-500/10 hover:text-red-500 active:scale-95 border border-border"
+      ? "flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-muted-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-red-500/10 hover:text-red-500 active:scale-95 border border-border"
       : "p-1 rounded-full text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10 transition-colors";
 
   const iconSize = size === "md" ? 20 : 14;

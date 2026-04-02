@@ -20,7 +20,7 @@ function CarouselDots({ total, current, onDotClick }: CarouselDotsProps) {
           key={index}
           type="button"
           onClick={() => onDotClick(index)}
-          className={`h-2 rounded-full transition-all duration-300 ${
+          className={`p-2 -m-1 rounded-full transition-all duration-300 flex items-center justify-center ${
             index === current
               ? "w-8 bg-white"
               : "w-2 bg-white/40 hover:bg-white/60"

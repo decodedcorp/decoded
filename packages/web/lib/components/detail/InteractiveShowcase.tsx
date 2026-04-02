@@ -142,7 +142,7 @@ export function InteractiveShowcase({
       {renderImage && (
         <div
           ref={imageContainerRef}
-          className={`sticky top-0 w-full z-10 ${isModal ? "h-[40vh]" : "h-[40vh] lg:h-screen lg:w-1/2"}`}
+          className={`sticky top-0 w-full z-10 ${isModal ? "h-[30vh] md:h-[40vh]" : "h-[30vh] md:h-[40vh] lg:h-screen lg:w-1/2"}`}
         >
           <ImageCanvas image={image} items={items} activeIndex={activeIndex} />
         </div>
