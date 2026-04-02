@@ -13,8 +13,7 @@ import { FollowButton } from "@/lib/components/shared/FollowButton";
 import { useSpots } from "@/lib/hooks/useSpots";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import { useTrackDwellTime } from "@/lib/hooks/useTrackDwellTime";
-import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
-import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 // Register GSAP Flip plugin
 if (typeof window !== "undefined") {
@@ -98,9 +97,6 @@ export const FeedCard = memo(
     });
 
     const { id, imageUrl, hasItems } = item;
-
-    const { width: imgW, height: imgH } = useImageDimensions(imageUrl);
-    const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.FeedCard;
 
     // Fetch spots for cards with items
     const { data: spotsData } = useSpots(item.postId!, {
@@ -221,51 +217,19 @@ export const FeedCard = memo(
           )}
 
           {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
-          <div
-            className={cn(
-              "relative overflow-hidden",
-              useDynamicRatio ? "bg-black" : "aspect-[4/5] bg-muted"
-            )}
-          >
-            {imageUrl && !imageError ? (
-              <>
-                {useDynamicRatio && (
-                  <div
-                    className="absolute inset-0 z-0"
-                    style={{
-                      backgroundImage: `url(${imageUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      filter: "blur(24px) brightness(0.7)",
-                      transform: "scale(1.15)",
-                    }}
-                  />
-                )}
-                <img
-                  src={imageUrl}
-                  loading={priority ? "eager" : "lazy"}
-                  decoding="async"
-                  fetchPriority={priority ? "high" : "auto"}
-                  alt={`Image ${id}`}
-                  className={cn(
-                    "transition-opacity duration-200 ease-out",
-                    isLoaded ? "opacity-100" : "opacity-0",
-                    useDynamicRatio
-                      ? "relative z-10 w-full object-contain max-h-[80vh]"
-                      : "h-full w-full object-cover object-top"
-                  )}
-                  onError={() => setImageError(true)}
-                  onLoad={() => setIsLoaded(true)}
-                />
-              </>
-            ) : (
-              <div
-                className={cn(
-                  useDynamicRatio
-                    ? "aspect-[3/4] bg-neutral-900"
-                    : "h-full w-full bg-muted"
-                )}
+          <div className="relative overflow-hidden">
+            {imageUrl ? (
+              <PostImage
+                src={imageUrl}
+                alt={`Image ${id}`}
+                maxHeight="80vh"
+                flagKey="FeedCard"
+                priority={priority}
+                onLoad={() => setIsLoaded(true)}
+                onError={() => setImageError(true)}
               />
+            ) : (
+              <div className="w-full aspect-[3/4] bg-neutral-900" />
             )}
 
             {/* Subtle spot indicators */}

@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+
+interface PostImageProps {
+  src: string;
+  alt: string;
+  /** Max height CSS value, e.g. "80vh", "300px", "60vh" */
+  maxHeight?: string;
+  /** Additional className on the container */
+  className?: string;
+  /** Additional className on the img element */
+  imgClassName?: string;
+  /** Loading priority */
+  priority?: boolean;
+  /** Feature flag key — which component is using this */
+  flagKey?: keyof typeof FEATURE_FLAGS.dynamicImageRatio;
+  /** Callback when image loads */
+  onLoad?: () => void;
+  /** Callback when image errors */
+  onError?: () => void;
+}
+
+/**
+ * PostImage — shared post image display with blur background.
+ *
+ * Reddit-style object-contain + blurred background fills letterbox.
+ * When feature flag is off, falls back to object-cover (original behavior).
+ */
+export function PostImage({
+  src,
+  alt,
+  maxHeight = "80vh",
+  className,
+  imgClassName,
+  priority = false,
+  flagKey = "FeedCard",
+  onLoad,
+  onError,
+}: PostImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const useDynamic = FEATURE_FLAGS.dynamicImageRatio[flagKey];
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    onLoad?.();
+  };
+
+  const handleError = () => {
+    setHasError(true);
+    onError?.();
+  };
+
+  if (hasError || !src) {
+    return <div className={cn("w-full bg-neutral-900", className)} style={{ aspectRatio: "3/4" }} />;
+  }
+
+  if (!useDynamic) {
+    // Fallback: original object-cover behavior
+    return (
+      <div className={cn("relative overflow-hidden bg-muted", className)}>
+        <img
+          src={src}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          className={cn(
+            "h-full w-full object-cover transition-opacity duration-200 ease-out",
+            isLoaded ? "opacity-100" : "opacity-0",
+            imgClassName
+          )}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      </div>
+    );
+  }
+
+  // Dynamic: blur background + object-contain
+  return (
+    <div className={cn("relative overflow-hidden bg-black", className)}>
+      {/* Blurred background fills letterbox space */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${src})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "blur(24px) brightness(0.7)",
+          transform: "scale(1.15)",
+        }}
+      />
+      <img
+        src={src}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        className={cn(
+          "relative z-10 w-full object-contain transition-opacity duration-200 ease-out",
+          isLoaded ? "opacity-100" : "opacity-0",
+          imgClassName
+        )}
+        style={{ maxHeight }}
+        onLoad={handleLoad}
+        onError={handleError}
+      />
+    </div>
+  );
+}

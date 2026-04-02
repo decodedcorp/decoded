@@ -65,3 +65,4 @@ packages/backend/target/
 .claude/skills/gstack/bin/gstack-global-discover
 .agents/skills/gstack*/node_modules/
 .dmux/
+.gstack/

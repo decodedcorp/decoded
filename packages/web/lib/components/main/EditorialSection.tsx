@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "motion/react";
 import type { StyleCardData } from "./StyleCard";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 interface EditorialSectionProps {
   style?: StyleCardData;
@@ -23,36 +24,22 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
         <div className="relative aspect-[16/10] lg:aspect-auto overflow-hidden isolate">
           <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
             {style.imageUrl ? (
-              <>
-                {/* Blurred background fills letterbox */}
-                <div
-                  className="absolute inset-0 z-0"
-                  style={{
-                    backgroundImage: `url(${style.imageUrl})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    filter: "blur(24px) brightness(0.7)",
-                    transform: "scale(1.15)",
-                  }}
-                />
-                <Image
-                  src={style.imageUrl}
-                  alt={style.artistName}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 65vw"
-                  className="relative z-10 object-contain"
-                />
-              </>
+              <PostImage
+                src={style.imageUrl}
+                alt={style.artistName}
+                className="absolute inset-0"
+                flagKey="FeedCard"
+              />
             ) : (
               <div className="absolute inset-0 bg-neutral-800" />
             )}
           </div>
 
           {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent z-20" />
 
           {/* Top-left: EDITORIAL */}
-          <div className="absolute top-5 left-6">
+          <div className="absolute top-5 left-6 z-20">
             <h2 className="text-xl md:text-2xl font-bold uppercase tracking-[0.1em] text-white">
               Editorial
             </h2>
@@ -60,7 +47,7 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
           </div>
 
           {/* Bottom-left: LATEST STORIES */}
-          <div className="absolute bottom-5 left-6">
+          <div className="absolute bottom-5 left-6 z-20">
             <p className="text-lg md:text-xl font-bold uppercase tracking-wide text-white">
               Latest Stories
             </p>

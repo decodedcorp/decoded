@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchPostsByUserProfile } from "@/lib/supabase/queries/profile";
-import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
-import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 interface PostItem {
   id: string;
@@ -21,42 +20,19 @@ export interface PostsGridProps {
 }
 
 function PostsGridItem({ post }: { post: PostItem }) {
-  const { width: imgW, height: imgH } = useImageDimensions(post.imageUrl);
-  const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.PostsGrid;
-
   return (
     <Link
       href={`/posts/${post.id}`}
-      className={cn(
-        "group relative rounded-lg overflow-hidden",
-        useDynamicRatio ? "bg-black" : "aspect-[4/5] bg-muted"
-      )}
+      className="group relative rounded-lg overflow-hidden"
     >
-      {useDynamicRatio && (
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `url(${post.imageUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "blur(24px) brightness(0.7)",
-            transform: "scale(1.15)",
-          }}
-        />
-      )}
-      <img
+      <PostImage
         src={post.imageUrl}
         alt={post.title || "Post"}
-        className={cn(
-          "transition-transform duration-300 group-hover:scale-105",
-          useDynamicRatio
-            ? "relative z-10 w-full object-contain max-h-[300px]"
-            : "h-full w-full object-cover"
-        )}
-        loading="lazy"
+        maxHeight="300px"
+        flagKey="PostsGrid"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-20" />
+      <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
         <p className="text-xs font-medium text-white truncate">
           {post.title}
         </p>

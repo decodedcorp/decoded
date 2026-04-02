@@ -1,14 +1,12 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 
 import type { GridItemData, GridItemSpot } from "./types";
-import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
-import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -33,13 +31,6 @@ function clampHeight(aspectRatio: number, index: number): number {
   return Math.min(v.max, Math.max(v.min, Math.round(v.base * aspectRatio)));
 }
 
-/** Calculate card height from real image dimensions, clamped to 200-500px range */
-function realHeight(imgW: number | undefined, imgH: number | undefined, columnWidth: number): number {
-  if (!imgW || !imgH) return 320; // fallback
-  const ratio = imgH / imgW;
-  const height = Math.round(columnWidth * ratio);
-  return Math.min(500, Math.max(200, height));
-}
 
 /* ------------------------------------------------------------------ */
 /*  Spot Marker + Tooltip                                              */
@@ -87,11 +78,7 @@ export default function MasonryGridItem({
   const spotsRef = useRef<HTMLDivElement>(null);
 
   const aspectRatio = item.aspectRatio ?? 1;
-  const { width: imgW, height: imgH } = useImageDimensions(item.imageUrl);
-  const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.MasonryGridItem;
-  const height = useDynamicRatio
-    ? realHeight(imgW, imgH, 280)
-    : clampHeight(aspectRatio, index);
+  const height = clampHeight(aspectRatio, index);
   const hasSpots = item.spots && item.spots.length > 0;
 
   /* ---- GSAP: parallax + entry animation ---- */
@@ -173,34 +160,13 @@ export default function MasonryGridItem({
       onMouseLeave={handleMouseLeave}
     >
       {/* Background image */}
-      {useDynamicRatio ? (
-        <>
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              backgroundImage: `url(${item.imageUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              filter: "blur(24px) brightness(0.7)",
-              transform: "scale(1.15)",
-            }}
-          />
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            className="relative z-10 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        </>
-      ) : (
-        <Image
-          src={item.imageUrl}
-          alt={item.title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-        />
-      )}
+      <PostImage
+        src={item.imageUrl}
+        alt={item.title}
+        className="h-full"
+        imgClassName="transition-transform duration-500 group-hover:scale-105"
+        flagKey="MasonryGridItem"
+      />
 
       {/* Spot overlay markers */}
       {hasSpots && (
