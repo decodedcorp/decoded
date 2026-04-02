@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Maximize2 } from "lucide-react";
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
 import { ImageDetailContent } from "./ImageDetailContent";
-import { SpotDot } from "./SpotDot";
+import { ImageCanvas } from "./ImageCanvas";
+import { normalizeItem } from "./types";
+import type { UiItem } from "./types";
+import type { Json } from "@/lib/supabase/types";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
 import { ReportErrorButton } from "./ReportErrorButton";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
@@ -36,15 +39,14 @@ export function ImageDetailModal({ imageId }: Props) {
   const leftImageContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Floating image sizing state (for spot positioning with object-contain)
-  const [naturalSize, setNaturalSize] = useState<{
+  // Floating image sizing state (for fallback img path)
+  const [_naturalSize, setNaturalSize] = useState<{
     width: number;
     height: number;
   } | null>(null);
-  const [containerSize, setContainerSize] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+
+  // Active item index for scroll-spot sync
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   // Image source: store (immediate) -> fetched data
   const activeImageSrc =
@@ -53,13 +55,43 @@ export function ImageDetailModal({ imageId }: Props) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (image as any)?.postImages?.[0]?.post?.image_url;
 
+  // Normalize items for ImageCanvas (same logic as ImageDetailContent)
+  const normalizedItems: UiItem[] = useMemo(() => {
+    if (!image?.items) return [];
+    const firstPostImage = image.postImages?.[0];
+    const itemLocations = firstPostImage?.item_locations;
+    const locMap: Record<
+      string,
+      { bbox?: number[] | null; center?: Json | null; score?: number | null }
+    > = {};
+    if (Array.isArray(itemLocations)) {
+      itemLocations.forEach((loc: Record<string, unknown>) => {
+        if (loc?.item_id) {
+          locMap[String(loc.item_id)] = {
+            bbox: loc.bbox as number[] | null,
+            center: (loc.center as Json | null) || (loc as unknown as Json),
+            score: loc.score as number | null,
+          };
+        }
+      });
+    } else if (itemLocations && typeof itemLocations === "object") {
+      Object.assign(locMap, itemLocations);
+    }
+    return image.items.map((item) =>
+      normalizeItem(item, undefined, locMap[item.id.toString()])
+    );
+  }, [image?.items, image?.postImages]);
+
+  const hasItemsWithCoordinates = normalizedItems.some(
+    (item) => item.normalizedBox !== null
+  );
+
   const {
     handleClose,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
     handleMaximize,
-    isClosing,
   } = useImageModalAnimation({
     imageId,
     activeImageSrc,
@@ -88,43 +120,10 @@ export function ImageDetailModal({ imageId }: Props) {
     if (error) console.error("[ImageDetailModal] error:", error);
   }, [imageId, image, error]);
 
-  // Track floating image container size for spot positioning
-  useEffect(() => {
-    if (!leftImageContainerRef.current) return;
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setContainerSize({ width, height });
-      }
-    });
-    resizeObserver.observe(leftImageContainerRef.current);
-    return () => resizeObserver.disconnect();
-  }, [activeImageSrc]);
-
   // Forward scroll from floating image to drawer content (desktop)
   const handleImageScroll = useCallback((e: React.WheelEvent) => {
     scrollContainerRef.current?.scrollBy({ top: e.deltaY, behavior: "auto" });
   }, []);
-
-  // Calculate actual displayed image rect for object-contain
-  const getContainedImageRect = () => {
-    if (!naturalSize || !containerSize) return null;
-    const containerAspect = containerSize.width / containerSize.height;
-    const imageAspect = naturalSize.width / naturalSize.height;
-    let width, height, left, top;
-    if (imageAspect > containerAspect) {
-      width = containerSize.width;
-      height = width / imageAspect;
-      left = 0;
-      top = (containerSize.height - height) / 2;
-    } else {
-      height = containerSize.height;
-      width = height * imageAspect;
-      top = 0;
-      left = (containerSize.width - width) / 2;
-    }
-    return { width, height, left, top };
-  };
 
   // Render drawer content based on data state
   const renderContent = () => {
@@ -212,7 +211,7 @@ export function ImageDetailModal({ imageId }: Props) {
       );
     }
 
-    // Non-magazine posts: use same ImageDetailContent as full page (with isModal + hideImage)
+    // Non-magazine posts
     return (
       <ImageDetailContent
         image={image}
@@ -220,9 +219,9 @@ export function ImageDetailModal({ imageId }: Props) {
         relatedEditorials={[]}
         isModal
         hideImage
-        scrollContainerRef={
-          scrollContainerRef as React.RefObject<HTMLElement>
-        }
+        scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
+        activeIndex={activeIndex}
+        onActiveIndexChange={setActiveIndex}
       />
     );
   };
@@ -252,6 +251,7 @@ export function ImageDetailModal({ imageId }: Props) {
           style={{ opacity: 0 }}
           onWheel={handleImageScroll}
         >
+          {/* Blur backdrop */}
           <div
             className="absolute inset-0 -z-10"
             style={{
@@ -262,51 +262,30 @@ export function ImageDetailModal({ imageId }: Props) {
               transform: "scale(1.08)",
             }}
           />
-          <img
-            data-testid="image-detail-image"
-            ref={floatingImageRef}
-            src={activeImageSrc}
-            alt="Post image"
-            className="w-full h-full object-contain pointer-events-none"
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              setNaturalSize({
-                width: img.naturalWidth,
-                height: img.naturalHeight,
-              });
-            }}
-          />
-          {image?.items && image.items.length > 0 && (() => {
-            const imageRect = getContainedImageRect();
-            if (!imageRect) return null;
-            // D-08: Always use brand color — per-post design_spec.accent_color override removed
-            const accentColor = "var(--mag-accent)";
-            return (
-              <div className="absolute inset-0 pointer-events-none z-20">
-                {image.items.map((item, idx) => {
-                  const center = Array.isArray(item.center) ? item.center : null;
-                  if (!center || center.length < 2) return null;
-                  const fracX = typeof center[0] === "number" ? center[0] : parseFloat(String(center[0])) || 0;
-                  const fracY = typeof center[1] === "number" ? center[1] : parseFloat(String(center[1])) || 0;
-                  const pixelLeft = imageRect.left + imageRect.width * (fracX > 1 ? fracX / 100 : fracX);
-                  const pixelTop = imageRect.top + imageRect.height * (fracY > 1 ? fracY / 100 : fracY);
-                  const meta = item.metadata as unknown as Record<string, unknown> | undefined;
-                  return (
-                    <SpotDot
-                      key={item.id ?? idx}
-                      mode="pixel"
-                      leftPx={pixelLeft}
-                      topPx={pixelTop}
-                      label={item.product_name ?? ""}
-                      brand={meta?.brand as string | undefined}
-                      category={meta?.sub_category as string | undefined}
-                      accentColor={accentColor}
-                    />
-                  );
-                })}
-              </div>
-            );
-          })()}
+          {/* ImageCanvas with contain mode for scroll-spot sync */}
+          {image && hasItemsWithCoordinates ? (
+            <ImageCanvas
+              image={image}
+              items={normalizedItems}
+              activeIndex={activeIndex}
+              objectFit="contain"
+            />
+          ) : (
+            <img
+              data-testid="image-detail-image"
+              ref={floatingImageRef}
+              src={activeImageSrc}
+              alt="Post image"
+              className="w-full h-full object-contain pointer-events-none"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                setNaturalSize({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                });
+              }}
+            />
+          )}
         </div>
       )}
 
