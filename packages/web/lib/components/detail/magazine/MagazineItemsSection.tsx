@@ -210,19 +210,28 @@ export function MagazineItemsSection({
                         {(i + 1).toString().padStart(2, "0")}
                       </span>
                       {item.brand && (
-                        <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
-                          {item.brand}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
+                            {item.brand}
+                          </span>
+                        </>
                       )}
                       {meta?.sub_category && (
-                        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
-                          {meta.sub_category}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
+                            {meta.sub_category}
+                          </span>
+                        </>
                       )}
                       {meta?.material && meta.material.length > 0 && (
-                        <span className="text-[10px] italic text-muted-foreground/40">
-                          {meta.material.join(" · ")}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="text-[10px] italic text-muted-foreground/40">
+                            {meta.material.join(" · ")}
+                          </span>
+                        </>
                       )}
                     </div>
                   )}
