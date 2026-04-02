@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: Phase complete — ready for verification
-stopped_at: Completed 56-01-PLAN.md
-last_updated: "2026-04-02T03:08:18.097Z"
+stopped_at: Completed 56-03-PLAN.md
+last_updated: "2026-04-02T03:09:31.249Z"
 progress:
-  total_phases: 59
+  total_phases: 58
   completed_phases: 55
   total_plans: 121
-  completed_plans: 122
+  completed_plans: 121
 ---
 
 # Project State
@@ -119,7 +119,8 @@ v9.0 key constraints (from research):
 - [Phase 50-01]: Native IntersectionObserver used for infinite scroll sentinel — react-intersection-observer not installed
 - [Phase 54-card-enrichment]: Use @vitest-environment jsdom docblock (not environmentMatchGlobs config) — TypeScript doesn't recognize environmentMatchGlobs in vitest v4.1.1
 - [Phase 54-card-enrichment]: spotCount in ExploreClient uses conditional spread item.spotCount > 0 only — undefined = no badge, cleaner than checking > 0 in two places
-- [Phase 56-01]: Keep rgba() for connector borderTop and drop-shadow filter — CSS var unreliable in inline JS filter strings; borderColor hover uses var(--mag-accent) directly
+- [Phase 56-03]: accentColor always var(--mag-accent) — per-post design_spec.accent_color override removed from all detail components
+- [Phase 56-03]: opacity: 0.3 approach for accent line alpha — hex+alpha concat breaks on CSS variable strings
 
 ### Blockers/Concerns
 
@@ -136,8 +137,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-04-02T03:08:18.093Z
-Stopped at: Completed 56-01-PLAN.md
+Last session: 2026-04-02T03:09:31.245Z
+Stopped at: Completed 56-03-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md
