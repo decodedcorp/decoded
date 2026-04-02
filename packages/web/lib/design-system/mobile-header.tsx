@@ -51,7 +51,7 @@ export function MobileHeader({
       <div className="w-full px-2 h-full flex items-center justify-center">
         <Link
           href="/"
-          className="relative w-48 h-14 flex items-center justify-center hover:opacity-80 transition-opacity"
+          className="relative w-48 h-14 flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity"
           aria-label="Go to home"
         >
           <DecodedLogo

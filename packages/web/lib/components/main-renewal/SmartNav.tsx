@@ -97,7 +97,7 @@ export function SmartNav({ className }: SmartNavProps) {
       {/* Left: Logo */}
       <Link
         href="/"
-        className="relative w-48 h-16 flex items-center justify-center hover:opacity-80 transition-opacity"
+        className="relative w-48 h-16 flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity"
         aria-label="Go to home"
       >
         <DecodedLogo
