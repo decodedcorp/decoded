@@ -75,7 +75,11 @@ export function ItemImage({
 
   return (
     <div
-      className={cn("relative w-full overflow-hidden", config.blur ? "bg-black" : "bg-muted", className)}
+      className={cn(
+        "relative w-full overflow-hidden",
+        config.blur ? "bg-black" : "bg-muted",
+        className
+      )}
       style={{ aspectRatio: config.aspectRatio }}
     >
       {/* Blur background for card/detail/hero */}

@@ -39,23 +39,26 @@ export function MagazineItemsSection({
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(([entry]) => setSectionWidth(entry.contentRect.width));
+    const obs = new ResizeObserver(([entry]) =>
+      setSectionWidth(entry.contentRect.width)
+    );
     obs.observe(el);
     setSectionWidth(el.getBoundingClientRect().width);
     return () => obs.disconnect();
   }, []);
 
   // Estimate text container width beside the image (md:w-60 lg:w-64 + gap-10 + section px-8*2)
-  const titleContainerWidth = sectionWidth >= 768
-    ? Math.max(sectionWidth - 256 - 40 - 64, 0)  // desktop: section - image - gap - section padding
-    : Math.max(sectionWidth - 32, 0);              // mobile: section - px-4*2
+  const titleContainerWidth =
+    sectionWidth >= 768
+      ? Math.max(sectionWidth - 256 - 40 - 64, 0) // desktop: section - image - gap - section padding
+      : Math.max(sectionWidth - 32, 0); // mobile: section - px-4*2
 
   const titleLayouts = useBatchTextLayout({
     items: items.map((item) => ({
       key: item.spot_id,
       text: item.title,
     })),
-    font: '700 20px system-ui, -apple-system, sans-serif',
+    font: "700 20px system-ui, -apple-system, sans-serif",
     lineHeight: 28,
     containerWidth: titleContainerWidth,
   });
@@ -74,81 +77,84 @@ export function MagazineItemsSection({
   // Track active index ref for stale closure prevention
   const activeIndexRef = useRef<number | null>(null);
 
-  useGSAP(() => {
-    if (!sectionRef.current) return;
+  useGSAP(
+    () => {
+      if (!sectionRef.current) return;
 
-    const cards = gsap.utils.toArray<HTMLElement>(
-      sectionRef.current.querySelectorAll("[data-item-index]")
-    );
+      const cards = gsap.utils.toArray<HTMLElement>(
+        sectionRef.current.querySelectorAll("[data-item-index]")
+      );
 
-    if (!isModal) {
-      // Full page: entry animation
-      cards.forEach((card, i) => {
-        gsap.fromTo(
-          card,
-          { y: 50, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.7,
-            delay: i * 0.15,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 85%",
-              toggleActions: "play none none none",
-            },
-          }
-        );
-      });
-    }
-
-    // Modal: ScrollTrigger for scroll-spot sync
-    if (isModal && onActiveIndexChange && cards.length > 0) {
-      const scroller = scrollContainerRef?.current || window;
-
-      cards.forEach((card, index) => {
-        ScrollTrigger.create({
-          scroller,
-          trigger: card,
-          start: "top center",
-          end: "bottom center",
-          invalidateOnRefresh: true,
-          onEnter: () => {
-            activeIndexRef.current = index;
-            onActiveIndexChange(index);
-          },
-          onEnterBack: () => {
-            activeIndexRef.current = index;
-            onActiveIndexChange(index);
-          },
-          onLeave: () => {
-            if (activeIndexRef.current === index) {
-              onActiveIndexChange(null);
+      if (!isModal) {
+        // Full page: entry animation
+        cards.forEach((card, i) => {
+          gsap.fromTo(
+            card,
+            { y: 50, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.7,
+              delay: i * 0.15,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: card,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
             }
-          },
-          onLeaveBack: () => {
-            if (activeIndexRef.current === index) {
-              onActiveIndexChange(null);
-            }
-          },
+          );
         });
-      });
-
-      // Refresh after layout stabilizes
-      if (scrollContainerRef?.current) {
-        const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
-        return () => {
-          clearTimeout(timer);
-          ScrollTrigger.getAll().forEach((trigger) => {
-            if (cards.includes(trigger.vars.trigger as HTMLElement)) {
-              trigger.kill();
-            }
-          });
-        };
       }
-    }
-  }, { scope: sectionRef, dependencies: [items.length, isModal] });
+
+      // Modal: ScrollTrigger for scroll-spot sync
+      if (isModal && onActiveIndexChange && cards.length > 0) {
+        const scroller = scrollContainerRef?.current || window;
+
+        cards.forEach((card, index) => {
+          ScrollTrigger.create({
+            scroller,
+            trigger: card,
+            start: "top center",
+            end: "bottom center",
+            invalidateOnRefresh: true,
+            onEnter: () => {
+              activeIndexRef.current = index;
+              onActiveIndexChange(index);
+            },
+            onEnterBack: () => {
+              activeIndexRef.current = index;
+              onActiveIndexChange(index);
+            },
+            onLeave: () => {
+              if (activeIndexRef.current === index) {
+                onActiveIndexChange(null);
+              }
+            },
+            onLeaveBack: () => {
+              if (activeIndexRef.current === index) {
+                onActiveIndexChange(null);
+              }
+            },
+          });
+        });
+
+        // Refresh after layout stabilizes
+        if (scrollContainerRef?.current) {
+          const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+          return () => {
+            clearTimeout(timer);
+            ScrollTrigger.getAll().forEach((trigger) => {
+              if (cards.includes(trigger.vars.trigger as HTMLElement)) {
+                trigger.kill();
+              }
+            });
+          };
+        }
+      }
+    },
+    { scope: sectionRef, dependencies: [items.length, isModal] }
+  );
 
   if (items.length === 0) return null;
 
@@ -231,7 +237,9 @@ export function MagazineItemsSection({
                   )}
                   <h3
                     className="typography-h4 mb-2"
-                    style={titleHeight > 0 ? { minHeight: titleHeight } : undefined}
+                    style={
+                      titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                    }
                   >
                     {item.title}
                   </h3>

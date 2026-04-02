@@ -127,7 +127,12 @@ export default function DecodeShowcase({
           tl.fromTo(
             mobileCard,
             { opacity: 0, scale: 0.8 },
-            { opacity: 1, scale: 1, ease: "back.out(1.5)", duration: dur * 0.6 },
+            {
+              opacity: 1,
+              scale: 1,
+              ease: "back.out(1.5)",
+              duration: dur * 0.6,
+            },
             offset + dur * 0.5
           );
         }
