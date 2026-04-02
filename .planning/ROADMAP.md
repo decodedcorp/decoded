@@ -556,6 +556,11 @@ Plans:
 1. Explore에 아티스트 프로필 카드가 표시된다
 2. 트렌딩 아티스트 섹션이 추가된다
 
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 58-01-PLAN.md — Trending artists hook, card, section + ExploreClient integration
 ## Progress
 
 **Execution Order:**
