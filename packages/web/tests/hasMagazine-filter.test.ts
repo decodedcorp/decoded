@@ -4,7 +4,7 @@ import { describe, test, expect, vi, beforeEach } from "vitest";
  * Tests for hasMagazine filter in useInfinitePosts.
  *
  * Strategy: Mock supabaseBrowserClient with a chainable builder that records
- * method calls, then verify `.not("post_magazine_title", "is", null)` is called
+ * method calls, then verify `.not("post_magazine_id", "is", null)` is called
  * only when hasMagazine=true.
  */
 
@@ -70,39 +70,39 @@ describe("useInfinitePosts hasMagazine filter", () => {
     capturedQueryFn = null;
   });
 
-  test("hasMagazine=true adds .not(post_magazine_title, is, null) to query", async () => {
+  test("hasMagazine=true adds .not(post_magazine_id, is, null) to query", async () => {
     useInfinitePosts({ hasMagazine: true });
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
 
     const magazineNotCalls = recordedCalls.filter(
-      (c) => c.method === "not" && c.args[0] === "post_magazine_title"
+      (c) => c.method === "not" && c.args[0] === "post_magazine_id"
     );
     expect(magazineNotCalls).toHaveLength(1);
-    expect(magazineNotCalls[0].args).toEqual(["post_magazine_title", "is", null]);
+    expect(magazineNotCalls[0].args).toEqual(["post_magazine_id", "is", null]);
   });
 
-  test("hasMagazine=false does NOT add post_magazine_title filter", async () => {
+  test("hasMagazine=false does NOT add post_magazine_id filter", async () => {
     useInfinitePosts({ hasMagazine: false });
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
 
     const magazineNotCalls = recordedCalls.filter(
-      (c) => c.method === "not" && c.args[0] === "post_magazine_title"
+      (c) => c.method === "not" && c.args[0] === "post_magazine_id"
     );
     expect(magazineNotCalls).toHaveLength(0);
   });
 
-  test("hasMagazine=undefined does NOT add post_magazine_title filter", async () => {
+  test("hasMagazine=undefined does NOT add post_magazine_id filter", async () => {
     useInfinitePosts({});
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
 
     const magazineNotCalls = recordedCalls.filter(
-      (c) => c.method === "not" && c.args[0] === "post_magazine_title"
+      (c) => c.method === "not" && c.args[0] === "post_magazine_id"
     );
     expect(magazineNotCalls).toHaveLength(0);
   });

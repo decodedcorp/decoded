@@ -210,7 +210,7 @@ export function useInfinitePosts(params: {
         query = query.ilike("group_name", `%${groupName}%`);
       }
       if (hasMagazine) {
-        query = query.not("post_magazine_title", "is", null);
+        query = query.not("post_magazine_id", "is", null);
       }
 
       // mediaName from hierarchical filter — matches group_name column
@@ -258,7 +258,7 @@ export function useInfinitePosts(params: {
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
         // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
-        // (Supabase 필터: .not("post_magazine_title", "is", null) 보장)
+        // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
         // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
         title: post.post_magazine_title ?? post.title ?? null,
       }));
