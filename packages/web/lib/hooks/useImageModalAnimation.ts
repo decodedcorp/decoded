@@ -187,57 +187,13 @@ export function useImageModalAnimation({
         },
       });
 
+      // Fade out all elements together for a clean, synchronized close
+      const targets = [backdropRef.current, drawerRef.current];
       if (isDesktop && leftImageContainerRef.current) {
-        tl.set(leftImageContainerRef.current, { opacity: 1 }, 0);
+        targets.push(leftImageContainerRef.current);
       }
 
-      tl.to(
-        [backdropRef.current, drawerRef.current],
-        { opacity: 0, duration: 0.3, ease: "power3.in" },
-        0
-      );
-
-      if (isDesktop && originRect && leftImageContainerRef.current) {
-        tl.to(
-          leftImageContainerRef.current,
-          {
-            top: originRect.top,
-            left: originRect.left,
-            width: originRect.width,
-            height: originRect.height,
-            borderRadius: "0.75rem",
-            boxShadow: "none",
-            scale: 1,
-            duration: 0.5,
-            ease: "power3.inOut",
-          },
-          0
-        )
-          .to(
-            leftImageContainerRef.current,
-            {
-              scale: 0.98,
-              duration: 0.25,
-              ease: "sine.inOut",
-              yoyo: true,
-              repeat: 1,
-            },
-            0
-          )
-          .to(
-            leftImageContainerRef.current,
-            {
-              opacity: 0,
-              duration: 0.1,
-              ease: "power2.in",
-              yoyo: true,
-              repeat: 1,
-            },
-            "-=0.05"
-          );
-      } else if (isDesktop && leftImageContainerRef.current) {
-        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
-      }
+      tl.to(targets, { opacity: 0, duration: 0.3, ease: "power3.in" }, 0);
     });
   }, [isClosing, isMaximizing, router, originRect, reset]);
 
