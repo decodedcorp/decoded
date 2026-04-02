@@ -82,7 +82,9 @@ export function useAuditDetail(
   return useQuery<AuditDetailResponse>({
     queryKey: ["admin", "audit", "detail", requestId],
     queryFn: ({ signal }: { signal?: AbortSignal }) =>
-      adminFetch<AuditDetailResponse>(`/api/v1/admin/audit/${requestId}`, { signal }),
+      adminFetch<AuditDetailResponse>(`/api/v1/admin/audit/${requestId}`, {
+        signal,
+      }),
     enabled: !!requestId,
     staleTime: 60_000,
   });

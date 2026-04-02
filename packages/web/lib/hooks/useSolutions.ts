@@ -95,7 +95,8 @@ export function useAllSolutionsForSpots(spotIds: string[]) {
   const spotSolutionsMap = new Map<string, GeneratedSolutionListItem[]>();
   spotIds.forEach((spotId, i) => {
     const data = results[i]?.data;
-    if (data?.length) spotSolutionsMap.set(spotId, data as GeneratedSolutionListItem[]);
+    if (data?.length)
+      spotSolutionsMap.set(spotId, data as GeneratedSolutionListItem[]);
   });
   const allSolutionsWithSpot = spotIds.flatMap((spotId) => {
     const sols = spotSolutionsMap.get(spotId) ?? [];

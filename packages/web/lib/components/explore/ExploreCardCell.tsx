@@ -14,7 +14,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(Flip);
 }
 
-export interface ExploreCardCellProps extends ItemConfig {}
+export type ExploreCardCellProps = ItemConfig;
 
 /**
  * ExploreCardCell Component

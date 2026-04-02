@@ -79,7 +79,10 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
   if (celebs.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16">
+    <section
+      ref={sectionRef}
+      className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16"
+    >
       <h2 className="typography-h3 mb-2 text-center">Style Archive</h2>
       <p className="mb-10 text-center text-sm text-muted-foreground">
         같은 아이템을 착용한 셀럽들

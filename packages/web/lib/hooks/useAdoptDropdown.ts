@@ -11,7 +11,10 @@ export interface UseAdoptDropdownReturn {
   adoptTargetId: string | null;
   setAdoptTargetId: React.Dispatch<React.SetStateAction<string | null>>;
   adoptDropdownRef: React.RefObject<HTMLDivElement | null>;
-  handleAdopt: (variables: AdoptSolutionVariables, onSuccess?: () => void) => void;
+  handleAdopt: (
+    variables: AdoptSolutionVariables,
+    onSuccess?: () => void
+  ) => void;
   handleUnadopt: (solutionId: string, spotId: string) => void;
   adoptMutation: ReturnType<typeof useAdoptSolution>;
   unadoptMutation: ReturnType<typeof useUnadoptSolution>;

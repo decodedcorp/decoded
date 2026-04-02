@@ -29,7 +29,8 @@ export const skeletonCardVariants = cva(
 );
 
 export interface SkeletonCardProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof skeletonCardVariants> {
   /** Show image placeholder area */
   showImage?: boolean;

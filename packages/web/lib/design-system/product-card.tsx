@@ -22,8 +22,10 @@ const badgeStyles = {
   SALE: "bg-destructive text-destructive-foreground",
 } as const;
 
-export interface ProductCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface ProductCardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   imageUrl?: string;
   brand: string;
   name: string;

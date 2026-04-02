@@ -70,7 +70,12 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
 
   constructor(props: ThiingsGridProps) {
     super(props);
-    this.state = { gridItems: [], isMoving: false, maxVisibleIndex: 0, isDragging: false };
+    this.state = {
+      gridItems: [],
+      isMoving: false,
+      maxVisibleIndex: 0,
+      isDragging: false,
+    };
     this.containerRef = React.createRef();
     this.contentRef = React.createRef();
     this.observerState = {
@@ -97,7 +102,9 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
     this.physicsEngine.start();
     this.updateGridItems();
 
-    this.intersectionObserver = initializeIntersectionObserver(this.observerState);
+    this.intersectionObserver = initializeIntersectionObserver(
+      this.observerState
+    );
     this.imageObserver = initializeImageObserver(this.imageObserverRef);
     this.imageObserverRef.current = this.imageObserver;
 
@@ -108,7 +115,9 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
     if (container) {
       // passive:false required so handlers can call preventDefault()
       container.addEventListener("wheel", this.handleWheel, { passive: false });
-      container.addEventListener("touchmove", this.handleTouchMove, { passive: false });
+      container.addEventListener("touchmove", this.handleTouchMove, {
+        passive: false,
+      });
     }
 
     // Recalculate grid when container resizes (e.g., TrendingArtistsSection loads and shifts layout)
@@ -122,8 +131,11 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
 
   componentDidUpdate(prevProps: ThiingsGridProps, prevState: State) {
     if (prevProps.onReachEnd !== this.props.onReachEnd) {
-      (this.physicsEngine as unknown as { callbacks: { onReachEnd?: () => void } })
-        .callbacks.onReachEnd = this.props.onReachEnd;
+      (
+        this.physicsEngine as unknown as {
+          callbacks: { onReachEnd?: () => void };
+        }
+      ).callbacks.onReachEnd = this.props.onReachEnd;
     }
     if (prevProps.items !== this.props.items) this.updateGridItems();
     if (
@@ -156,18 +168,25 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
 
   private getGridSize = () => {
     const { gridSize } = this.props;
-    return typeof gridSize === "number" ? { width: gridSize, height: gridSize } : gridSize;
+    return typeof gridSize === "number"
+      ? { width: gridSize, height: gridSize }
+      : gridSize;
   };
 
   private updateGridItems = () => {
-    if (!this.physicsEngine.isComponentMounted || !this.containerRef.current) return;
+    if (!this.physicsEngine.isComponentMounted || !this.containerRef.current)
+      return;
     const { width: gw, height: gh } = this.getGridSize();
-    const { items: allItems, maxVisibleIndex } = this.physicsEngine.calculateGridItems(
-      this.containerRef.current as HTMLElement,
-      gw, gh, VIEWPORT_BUFFER, MAX_RENDER_CELLS,
-      this.props.items?.length,
-      this.props.hasMore
-    );
+    const { items: allItems, maxVisibleIndex } =
+      this.physicsEngine.calculateGridItems(
+        this.containerRef.current as HTMLElement,
+        gw,
+        gh,
+        VIEWPORT_BUFFER,
+        MAX_RENDER_CELLS,
+        this.props.items?.length,
+        this.props.hasMore
+      );
     const needsUpdate =
       allItems.length !== this.state.gridItems.length ||
       maxVisibleIndex !== this.state.maxVisibleIndex ||
@@ -176,11 +195,17 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
       this.setState(
         {
           gridItems: allItems,
-          isMoving: Math.abs(this.physicsEngine.velocity.x) > 0.01 || Math.abs(this.physicsEngine.velocity.y) > 0.01,
+          isMoving:
+            Math.abs(this.physicsEngine.velocity.x) > 0.01 ||
+            Math.abs(this.physicsEngine.velocity.y) > 0.01,
           maxVisibleIndex,
           isDragging: this.physicsEngine.isDragging,
         },
-        () => observeImages(this.containerRef.current as HTMLElement | null, this.imageObserver)
+        () =>
+          observeImages(
+            this.containerRef.current as HTMLElement | null,
+            this.imageObserver
+          )
       );
     }
   };
@@ -226,7 +251,14 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
         ref={this.containerRef as React.RefObject<HTMLDivElement>}
         data-testid="thiings-grid"
         className={className}
-        style={{ position: "absolute", inset: 0, touchAction: "none", overflow: "hidden", cursor: this.physicsEngine?.isDragging ? "grabbing" : "grab", zIndex: 0 }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          touchAction: "none",
+          overflow: "hidden",
+          cursor: this.physicsEngine?.isDragging ? "grabbing" : "grab",
+          zIndex: 0,
+        }}
         onMouseDown={this.handleMouseDown}
         onMouseMove={this.handleMouseMove}
         onMouseUp={this.handleMouseUp}

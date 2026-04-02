@@ -282,6 +282,9 @@ pub struct PostListItem {
     /// 댓글 개수
     pub comment_count: i64,
 
+    /// 상태 (active, hidden, deleted)
+    pub status: String,
+
     /// 생성일시
     pub created_at: DateTime<Utc>,
 

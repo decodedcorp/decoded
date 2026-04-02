@@ -247,6 +247,7 @@ export function useInfinitePosts(params: {
       const totalPages = Math.ceil(totalItems / limit);
       const hasMore = page < totalPages;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: PostGridItem[] = (data ?? []).map((post: any) => ({
         id: post.id,
         imageUrl: post.image_url,
@@ -259,8 +260,7 @@ export function useInfinitePosts(params: {
         // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
         // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
         // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
-        title:
-          post.post_magazine_title ?? post.title ?? null,
+        title: post.post_magazine_title ?? post.title ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
@@ -367,6 +367,7 @@ export function usePostMagazine(magazineId: string | null | undefined) {
     queryFn: async () => {
       if (!magazineId) return null;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabaseBrowserClient as any)
         .from("post_magazines")
         .select("*")

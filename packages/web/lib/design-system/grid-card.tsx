@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
  * @see docs/design-system/decoded.pen
  */
 
-export interface GridCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface GridCardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   imageUrl?: string;
   aspectRatio?: "1/1" | "3/4" | "4/3" | "4/5" | "16/9";
   overlay?: React.ReactNode;

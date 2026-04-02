@@ -7,7 +7,12 @@ import { gsap } from "gsap";
 interface UseImageModalAnimationOptions {
   imageId: string;
   activeImageSrc: string | null | undefined;
-  originRect: { top: number; left: number; width: number; height: number } | null;
+  originRect: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null;
   reset: () => void;
   backdropRef: React.RefObject<HTMLDivElement | null>;
   drawerRef: React.RefObject<HTMLElement | null>;
@@ -88,7 +93,7 @@ export function useImageModalAnimation({
       document.documentElement.style.overflow = originalHtmlOverflow;
       ctxRef.current?.revert();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Floating Image Entry Animation (runs when image source becomes available, desktop only)
   useEffect(() => {
@@ -142,7 +147,13 @@ export function useImageModalAnimation({
       });
       tl.to(
         leftImageContainerRef.current,
-        { scale: 1.02, duration: 0.3, ease: "power1.out", yoyo: true, repeat: 1 },
+        {
+          scale: 1.02,
+          duration: 0.3,
+          ease: "power1.out",
+          yoyo: true,
+          repeat: 1,
+        },
         0
       );
     } else {
@@ -154,7 +165,7 @@ export function useImageModalAnimation({
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
       });
     }
-  }, [activeImageSrc, originRect]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeImageSrc, originRect]);
 
   const handleClose = useCallback(() => {
     if (isClosing || isMaximizing || !ctxRef.current) return;
@@ -204,19 +215,31 @@ export function useImageModalAnimation({
         )
           .to(
             leftImageContainerRef.current,
-            { scale: 0.98, duration: 0.25, ease: "sine.inOut", yoyo: true, repeat: 1 },
+            {
+              scale: 0.98,
+              duration: 0.25,
+              ease: "sine.inOut",
+              yoyo: true,
+              repeat: 1,
+            },
             0
           )
           .to(
             leftImageContainerRef.current,
-            { opacity: 0, duration: 0.1, ease: "power2.in", yoyo: true, repeat: 1 },
+            {
+              opacity: 0,
+              duration: 0.1,
+              ease: "power2.in",
+              yoyo: true,
+              repeat: 1,
+            },
             "-=0.05"
           );
       } else if (isDesktop && leftImageContainerRef.current) {
         tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
       }
     });
-  }, [isClosing, isMaximizing, router, originRect, reset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isClosing, isMaximizing, router, originRect, reset]);
 
   // Escape key handler
   useEffect(() => {
@@ -233,7 +256,10 @@ export function useImageModalAnimation({
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
     if (isDesktop) return;
 
-    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop > 0) {
+    if (
+      scrollContainerRef.current &&
+      scrollContainerRef.current.scrollTop > 0
+    ) {
       touchStartY.current = -1;
       return;
     }
@@ -301,14 +327,10 @@ export function useImageModalAnimation({
       // Fade out floating image on desktop
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
       if (isDesktop && leftImageContainerRef.current) {
-        tl.to(
-          leftImageContainerRef.current,
-          { opacity: 0, duration: 0.3 },
-          0
-        );
+        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
       }
     });
-  }, [isClosing, isMaximizing, imageId, router, reset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isClosing, isMaximizing, imageId, router, reset]);
 
   return {
     handleClose,

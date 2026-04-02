@@ -1,26 +1,30 @@
-import { describe, test, expect, vi, afterEach } from 'vitest';
-import { getDistance, debounce, throttle } from '@/lib/components/ThiingsGridPhysics';
+import { describe, test, expect, vi, afterEach } from "vitest";
+import {
+  getDistance,
+  debounce,
+  throttle,
+} from "@/lib/components/ThiingsGridPhysics";
 
 // ----------------------------------------------------------------------------
 // getDistance
 // ----------------------------------------------------------------------------
 
-describe('getDistance', () => {
-  test('returns 0 for identical points', () => {
+describe("getDistance", () => {
+  test("returns 0 for identical points", () => {
     expect(getDistance({ x: 0, y: 0 }, { x: 0, y: 0 })).toBe(0);
     expect(getDistance({ x: 5, y: 5 }, { x: 5, y: 5 })).toBe(0);
   });
 
-  test('returns correct Euclidean distance for 3-4-5 right triangle', () => {
+  test("returns correct Euclidean distance for 3-4-5 right triangle", () => {
     expect(getDistance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
   });
 
-  test('handles negative coordinates', () => {
+  test("handles negative coordinates", () => {
     expect(getDistance({ x: -3, y: -4 }, { x: 0, y: 0 })).toBe(5);
     expect(getDistance({ x: -3, y: 0 }, { x: 0, y: -4 })).toBe(5);
   });
 
-  test('is symmetric — order of points does not matter', () => {
+  test("is symmetric — order of points does not matter", () => {
     const d1 = getDistance({ x: 1, y: 2 }, { x: 4, y: 6 });
     const d2 = getDistance({ x: 4, y: 6 }, { x: 1, y: 2 });
     expect(d1).toBeCloseTo(d2);
@@ -31,12 +35,12 @@ describe('getDistance', () => {
 // debounce
 // ----------------------------------------------------------------------------
 
-describe('debounce', () => {
+describe("debounce", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  test('delays execution until delay elapses', () => {
+  test("delays execution until delay elapses", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debouncedFn = debounce(fn, 100);
@@ -48,7 +52,7 @@ describe('debounce', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  test('does not fire before the delay window', () => {
+  test("does not fire before the delay window", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debouncedFn = debounce(fn, 200);
@@ -61,7 +65,7 @@ describe('debounce', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  test('resets timer on repeated calls — only fires once', () => {
+  test("resets timer on repeated calls — only fires once", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debouncedFn = debounce(fn, 100);
@@ -78,7 +82,7 @@ describe('debounce', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  test('cancel prevents pending execution', () => {
+  test("cancel prevents pending execution", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debouncedFn = debounce(fn, 100);
@@ -94,12 +98,12 @@ describe('debounce', () => {
 // throttle
 // ----------------------------------------------------------------------------
 
-describe('throttle', () => {
+describe("throttle", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  test('fires immediately on first call when leading:true (default)', () => {
+  test("fires immediately on first call when leading:true (default)", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const throttledFn = throttle(fn, 100, { leading: true, trailing: false });
@@ -108,7 +112,7 @@ describe('throttle', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  test('suppresses subsequent calls within the limit window', () => {
+  test("suppresses subsequent calls within the limit window", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const throttledFn = throttle(fn, 100, { leading: true, trailing: false });
@@ -119,7 +123,7 @@ describe('throttle', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  test('allows another call after the limit window expires', () => {
+  test("allows another call after the limit window expires", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const throttledFn = throttle(fn, 100, { leading: true, trailing: false });
@@ -132,7 +136,7 @@ describe('throttle', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  test('fires trailing call when trailing:true (default) after limit elapses', () => {
+  test("fires trailing call when trailing:true (default) after limit elapses", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     // leading:true, trailing:true (defaults)
@@ -147,7 +151,7 @@ describe('throttle', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  test('does not fire if leading:false on first call', () => {
+  test("does not fire if leading:false on first call", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const throttledFn = throttle(fn, 100, { leading: false, trailing: true });

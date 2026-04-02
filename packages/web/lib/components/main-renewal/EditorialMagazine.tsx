@@ -43,7 +43,8 @@ export default function EditorialMagazine({
 
       // Total horizontal scroll distance: full track width minus the visible viewport width
       const getScrollDistance = () =>
-        track.scrollWidth - (sectionRef.current?.offsetWidth ?? window.innerWidth);
+        track.scrollWidth -
+        (sectionRef.current?.offsetWidth ?? window.innerWidth);
 
       // Main horizontal scroll tween, pinned
       const mainTween = gsap.to(track, {

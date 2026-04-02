@@ -7,8 +7,14 @@ use meilisearch_sdk::client::Client;
 use super::config::{IndexName, SearchError};
 
 const POSTS_SEARCHABLE: &[&str] = &["artist_name", "group_name", "title"];
-const POSTS_FILTERABLE: &[&str] = &["category_id", "context", "media_type", "status"];
-const POSTS_SORTABLE: &[&str] = &["created_at", "view_count"];
+const POSTS_FILTERABLE: &[&str] = &[
+    "category_codes",
+    "context",
+    "has_adopted_solution",
+    "media_type",
+    "status",
+];
+const POSTS_SORTABLE: &[&str] = &["created_at", "solution_count", "view_count"];
 
 const SOLUTIONS_SEARCHABLE: &[&str] = &["product_name", "brand"];
 const SOLUTIONS_FILTERABLE: &[&str] = &["match_type", "is_verified", "is_adopted", "spot_id"];
@@ -113,9 +119,18 @@ mod tests {
         assert_eq!(POSTS_SEARCHABLE, &["artist_name", "group_name", "title"]);
         assert_eq!(
             POSTS_FILTERABLE,
-            &["category_id", "context", "media_type", "status"]
+            &[
+                "category_codes",
+                "context",
+                "has_adopted_solution",
+                "media_type",
+                "status"
+            ]
         );
-        assert_eq!(POSTS_SORTABLE, &["created_at", "view_count"]);
+        assert_eq!(
+            POSTS_SORTABLE,
+            &["created_at", "solution_count", "view_count"]
+        );
         assert!(attrs_have_no_duplicates(POSTS_SEARCHABLE));
         assert!(attrs_have_no_duplicates(POSTS_FILTERABLE));
         assert!(attrs_have_no_duplicates(POSTS_SORTABLE));

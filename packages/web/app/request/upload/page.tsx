@@ -16,6 +16,7 @@ import {
   selectGroupName,
   selectContext,
   type DetectedSpot,
+  type SpotSolutionData,
 } from "@/lib/stores/requestStore";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
 import {
@@ -198,10 +199,13 @@ export default function RequestUploadPage() {
   }, []);
 
   // Solution save handler
-  const handleSaveSolution = useCallback((spotId: string, solution: any) => {
-    getRequestActions().setSpotSolution(spotId, solution);
-    getRequestActions().selectSpot(null); // Deselect after saving
-  }, []);
+  const handleSaveSolution = useCallback(
+    (spotId: string, solution: SpotSolutionData) => {
+      getRequestActions().setSpotSolution(spotId, solution);
+      getRequestActions().selectSpot(null); // Deselect after saving
+    },
+    []
+  );
 
   // Solution cancel handler
   const handleCancelSolution = useCallback(() => {

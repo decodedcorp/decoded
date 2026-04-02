@@ -101,7 +101,10 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
       <div
         ref={cardRef}
         className="absolute top-1/2 -translate-y-1/2 pointer-events-auto whitespace-nowrap"
-        style={{ [isLeft ? "right" : "left"]: "100%", [isLeft ? "marginRight" : "marginLeft"]: "12px" }}
+        style={{
+          [isLeft ? "right" : "left"]: "100%",
+          [isLeft ? "marginRight" : "marginLeft"]: "12px",
+        }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

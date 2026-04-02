@@ -10,7 +10,7 @@ interface CommunityLeaderboardProps {
 
 const RANK_COLORS = [
   "from-yellow-400 to-amber-500", // #1 Gold
-  "from-slate-300 to-slate-400",  // #2 Silver
+  "from-slate-300 to-slate-400", // #2 Silver
   "from-amber-600 to-orange-700", // #3 Bronze
 ];
 
@@ -38,8 +38,7 @@ export default function CommunityLeaderboard({
           Community
         </p>
         <h2 className="text-3xl md:text-5xl font-bold text-[var(--mag-text)]">
-          Style DNA &amp;{" "}
-          <span className="text-[var(--mag-accent)]">Rank</span>
+          Style DNA &amp; <span className="text-[var(--mag-accent)]">Rank</span>
         </h2>
       </div>
 
@@ -51,7 +50,11 @@ export default function CommunityLeaderboard({
               <div
                 key={user.id}
                 className={`relative rounded-2xl border ${RANK_BORDER[i]} bg-neutral-900/60 backdrop-blur-sm p-6 ${
-                  i === 0 ? "md:order-2 md:-mt-4" : i === 1 ? "md:order-1" : "md:order-3"
+                  i === 0
+                    ? "md:order-2 md:-mt-4"
+                    : i === 1
+                      ? "md:order-1"
+                      : "md:order-3"
                 }`}
               >
                 {/* Rank badge */}

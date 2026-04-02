@@ -68,7 +68,9 @@ export function StyleCard({
           id: s.id,
           x: parseFloat(s.position_left) || 0,
           y: parseFloat(s.position_top) || 0,
-          hasSolution: ((s as unknown as { solution_count?: number }).solution_count ?? 0) > 0,
+          hasSolution:
+            ((s as unknown as { solution_count?: number }).solution_count ??
+              0) > 0,
         }))
       : data.spots;
 

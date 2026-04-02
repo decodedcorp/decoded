@@ -153,7 +153,9 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < productImages.length; i++) {
       const stepStart = Date.now();
       if (process.env.NODE_ENV === "development") {
-        console.error(`[VTON] Processing item ${i + 1}/${productImages.length}...`);
+        console.error(
+          `[VTON] Processing item ${i + 1}/${productImages.length}...`
+        );
       }
       const result = await callVtonApi(
         accessToken,
@@ -189,7 +191,9 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const latencyMs = Date.now() - start;
     if (process.env.NODE_ENV === "development") {
-      console.error(`[VTON] ──── Error (${(latencyMs / 1000).toFixed(1)}s) ────`);
+      console.error(
+        `[VTON] ──── Error (${(latencyMs / 1000).toFixed(1)}s) ────`
+      );
       console.error(`[VTON]`, (err as Error).message);
     }
     return NextResponse.json(

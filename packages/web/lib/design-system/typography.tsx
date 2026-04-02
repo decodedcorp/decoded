@@ -32,7 +32,8 @@ export const headingVariants = cva(
 type HeadingElement = "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "span";
 
 export interface HeadingProps
-  extends React.HTMLAttributes<HTMLHeadingElement>,
+  extends
+    React.HTMLAttributes<HTMLHeadingElement>,
     VariantProps<typeof headingVariants> {
   as?: HeadingElement;
 }
@@ -113,7 +114,8 @@ export const textVariants = cva(
 type TextElement = "p" | "span" | "div" | "label";
 
 export interface TextProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, "color">,
+  extends
+    Omit<React.HTMLAttributes<HTMLElement>, "color">,
     VariantProps<typeof textVariants> {
   as?: TextElement;
 }
@@ -137,7 +139,7 @@ export const Text = forwardRef<HTMLElement, TextProps>(
   ) => {
     return (
       <Component
-        ref={ref as any}
+        ref={ref as React.Ref<never>}
         className={cn(textVariants({ variant, textColor }), className)}
         {...props}
       >

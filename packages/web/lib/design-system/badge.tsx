@@ -37,8 +37,10 @@ export const badgeVariants = cva(
   }
 );
 
-export interface BadgeProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface BadgeProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   /** Badge unique identifier */
   id: string;
   /** Badge display name */

@@ -17,7 +17,9 @@ export default defineConfig({
             "/api/v1/posts/analyze": ["post"],
           };
 
-          const paths = spec.paths as Record<string, Record<string, unknown>> | undefined;
+          const paths = spec.paths as
+            | Record<string, Record<string, unknown>>
+            | undefined;
           if (paths) {
             for (const [path, verbs] of Object.entries(pathsToRemoveVerb)) {
               if (paths[path]) {

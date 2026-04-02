@@ -108,11 +108,13 @@ export function MagazineItemsSection({
 
       <div className="space-y-12 md:space-y-16">
         {items.map((item, i) => {
-          const meta = item.metadata as {
-            price?: string;
-            sub_category?: string;
-            material?: string[];
-          } | undefined;
+          const meta = item.metadata as
+            | {
+                price?: string;
+                sub_category?: string;
+                material?: string[];
+              }
+            | undefined;
           const price = meta?.price;
           const spotRelated = relatedBySpot.get(item.spot_id) ?? [];
           const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;

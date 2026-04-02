@@ -46,44 +46,242 @@ const CARD_SLOTS: {
   { left: 45, top: 80, depth: "macro", baseRotate: -8, aspectRatio: "4 / 5" },
 
   // ── Foreground: 메인 인터랙티브 ──
-  { left: 8, top: 8, depth: "foreground", baseRotate: -3, aspectRatio: "3 / 4" },
-  { left: 55, top: 5, depth: "foreground", baseRotate: 3, aspectRatio: "3 / 4" },
-  { left: 30, top: 30, depth: "foreground", baseRotate: -2, aspectRatio: "3 / 4" },
-  { left: 70, top: 35, depth: "foreground", baseRotate: 4, aspectRatio: "3 / 4" },
-  { left: 15, top: 55, depth: "foreground", baseRotate: 2, aspectRatio: "3 / 4" },
-  { left: 60, top: 58, depth: "foreground", baseRotate: -5, aspectRatio: "3 / 4" },
-  { left: 42, top: 50, depth: "foreground", baseRotate: 3, aspectRatio: "3 / 4" },
-  { left: 80, top: 15, depth: "foreground", baseRotate: -4, aspectRatio: "3 / 4" },
+  {
+    left: 8,
+    top: 8,
+    depth: "foreground",
+    baseRotate: -3,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 55,
+    top: 5,
+    depth: "foreground",
+    baseRotate: 3,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 30,
+    top: 30,
+    depth: "foreground",
+    baseRotate: -2,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 70,
+    top: 35,
+    depth: "foreground",
+    baseRotate: 4,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 15,
+    top: 55,
+    depth: "foreground",
+    baseRotate: 2,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 60,
+    top: 58,
+    depth: "foreground",
+    baseRotate: -5,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 42,
+    top: 50,
+    depth: "foreground",
+    baseRotate: 3,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 80,
+    top: 15,
+    depth: "foreground",
+    baseRotate: -4,
+    aspectRatio: "3 / 4",
+  },
 
   // ── Midground: 중간 크기 ──
   { left: 5, top: 20, depth: "midground", baseRotate: 5, aspectRatio: "4 / 5" },
-  { left: 75, top: 15, depth: "midground", baseRotate: -6, aspectRatio: "4 / 5" },
-  { left: 40, top: 18, depth: "midground", baseRotate: 4, aspectRatio: "3 / 4" },
-  { left: 85, top: 42, depth: "midground", baseRotate: -8, aspectRatio: "4 / 5" },
-  { left: -2, top: 40, depth: "midground", baseRotate: 7, aspectRatio: "3 / 4" },
-  { left: 50, top: 45, depth: "midground", baseRotate: -3, aspectRatio: "4 / 5" },
-  { left: 25, top: 70, depth: "midground", baseRotate: 6, aspectRatio: "3 / 4" },
-  { left: 72, top: 72, depth: "midground", baseRotate: -4, aspectRatio: "4 / 5" },
-  { left: 18, top: 35, depth: "midground", baseRotate: 3, aspectRatio: "3 / 4" },
-  { left: 62, top: 22, depth: "midground", baseRotate: -5, aspectRatio: "4 / 5" },
-  { left: 45, top: 65, depth: "midground", baseRotate: 7, aspectRatio: "3 / 4" },
-  { left: 88, top: 70, depth: "midground", baseRotate: -6, aspectRatio: "4 / 5" },
+  {
+    left: 75,
+    top: 15,
+    depth: "midground",
+    baseRotate: -6,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 40,
+    top: 18,
+    depth: "midground",
+    baseRotate: 4,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 85,
+    top: 42,
+    depth: "midground",
+    baseRotate: -8,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: -2,
+    top: 40,
+    depth: "midground",
+    baseRotate: 7,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 50,
+    top: 45,
+    depth: "midground",
+    baseRotate: -3,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 25,
+    top: 70,
+    depth: "midground",
+    baseRotate: 6,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 72,
+    top: 72,
+    depth: "midground",
+    baseRotate: -4,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 18,
+    top: 35,
+    depth: "midground",
+    baseRotate: 3,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 62,
+    top: 22,
+    depth: "midground",
+    baseRotate: -5,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 45,
+    top: 65,
+    depth: "midground",
+    baseRotate: 7,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 88,
+    top: 70,
+    depth: "midground",
+    baseRotate: -6,
+    aspectRatio: "4 / 5",
+  },
 
   // ── Background: 작고 느림 ──
-  { left: 18, top: 5, depth: "background", baseRotate: 8, aspectRatio: "1 / 1" },
-  { left: 82, top: 8, depth: "background", baseRotate: -10, aspectRatio: "4 / 5" },
-  { left: 45, top: 12, depth: "background", baseRotate: -5, aspectRatio: "1 / 1" },
-  { left: 65, top: 25, depth: "background", baseRotate: 12, aspectRatio: "4 / 5" },
-  { left: 10, top: 45, depth: "background", baseRotate: -14, aspectRatio: "1 / 1" },
-  { left: 88, top: 30, depth: "background", baseRotate: 6, aspectRatio: "4 / 5" },
-  { left: 38, top: 60, depth: "background", baseRotate: -8, aspectRatio: "1 / 1" },
-  { left: 78, top: 55, depth: "background", baseRotate: 10, aspectRatio: "4 / 5" },
-  { left: 5, top: 75, depth: "background", baseRotate: -6, aspectRatio: "3 / 4" },
-  { left: 58, top: 78, depth: "background", baseRotate: 8, aspectRatio: "1 / 1" },
-  { left: 28, top: 10, depth: "background", baseRotate: -7, aspectRatio: "4 / 5" },
-  { left: 72, top: 48, depth: "background", baseRotate: 5, aspectRatio: "1 / 1" },
-  { left: 15, top: 82, depth: "background", baseRotate: -10, aspectRatio: "4 / 5" },
-  { left: 85, top: 85, depth: "background", baseRotate: 12, aspectRatio: "1 / 1" },
+  {
+    left: 18,
+    top: 5,
+    depth: "background",
+    baseRotate: 8,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 82,
+    top: 8,
+    depth: "background",
+    baseRotate: -10,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 45,
+    top: 12,
+    depth: "background",
+    baseRotate: -5,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 65,
+    top: 25,
+    depth: "background",
+    baseRotate: 12,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 10,
+    top: 45,
+    depth: "background",
+    baseRotate: -14,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 88,
+    top: 30,
+    depth: "background",
+    baseRotate: 6,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 38,
+    top: 60,
+    depth: "background",
+    baseRotate: -8,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 78,
+    top: 55,
+    depth: "background",
+    baseRotate: 10,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 5,
+    top: 75,
+    depth: "background",
+    baseRotate: -6,
+    aspectRatio: "3 / 4",
+  },
+  {
+    left: 58,
+    top: 78,
+    depth: "background",
+    baseRotate: 8,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 28,
+    top: 10,
+    depth: "background",
+    baseRotate: -7,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 72,
+    top: 48,
+    depth: "background",
+    baseRotate: 5,
+    aspectRatio: "1 / 1",
+  },
+  {
+    left: 15,
+    top: 82,
+    depth: "background",
+    baseRotate: -10,
+    aspectRatio: "4 / 5",
+  },
+  {
+    left: 85,
+    top: 85,
+    depth: "background",
+    baseRotate: 12,
+    aspectRatio: "1 / 1",
+  },
 
   // ── Micro: 별가루 수준 ──
   { left: 12, top: 15, depth: "micro", baseRotate: 15, aspectRatio: "1 / 1" },
@@ -105,15 +303,18 @@ const CARD_SLOTS: {
 ];
 
 /** Depth → visual properties */
-const DEPTH_CONFIG: Record<Depth, {
-  width: string;
-  zBase: number;
-  interactive: boolean;
-  cssFilter?: string;
-  opacity: number;
-  floatAmplitude: number;
-  floatSpeed: number;
-}> = {
+const DEPTH_CONFIG: Record<
+  Depth,
+  {
+    width: string;
+    zBase: number;
+    interactive: boolean;
+    cssFilter?: string;
+    opacity: number;
+    floatAmplitude: number;
+    floatSpeed: number;
+  }
+> = {
   macro: {
     width: "clamp(160px, 20vw, 300px)",
     zBase: 1,
@@ -170,7 +371,7 @@ export interface ScatterResult extends ScatterPosition {
 
 export function computeScatterPosition(
   id: string,
-  index: number,
+  index: number
 ): ScatterResult {
   const slotIdx = index % CARD_SLOTS.length;
   const wrap = Math.floor(index / CARD_SLOTS.length);
@@ -187,9 +388,11 @@ export function computeScatterPosition(
 
   // Map depth to legacy tier for backward compat
   const tier: "hero" | "medium" | "small" =
-    slot.depth === "foreground" ? "hero"
-    : slot.depth === "midground" ? "medium"
-    : "small";
+    slot.depth === "foreground"
+      ? "hero"
+      : slot.depth === "midground"
+        ? "medium"
+        : "small";
 
   return {
     top: `${top.toFixed(1)}%`,

@@ -38,7 +38,8 @@ export const actionButtonVariants = cva(
 );
 
 export interface ActionButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof actionButtonVariants> {
   /**
    * Icon to render inside the button.

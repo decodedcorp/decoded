@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { AlertCircle, X, Send } from "lucide-react";
+import { useSubmitReport } from "@/lib/hooks/useReport";
+import { toast } from "sonner";
 
 type Props = {
   postId?: string; // Made optional as per new usage in floating controls
@@ -11,7 +13,8 @@ type Props = {
 export function ReportErrorButton({ postId, size = "sm" }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [suggestion, setSuggestion] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitReport = useSubmitReport();
+  const isSubmitting = submitReport.isPending;
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Close modal when clicking outside
@@ -35,21 +38,36 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    // Simulate API call
-    console.log("Report Error Submitted:", {
-      postId: postId || "unknown-post",
-      suggest: suggestion,
-    });
-
-    // Reset and close after a short delay to simulate network request
-    setTimeout(() => {
+    if (!postId) {
+      toast.success("소중한 의견 감사합니다! 빠르게 확인해보겠습니다.");
       setSuggestion("");
-      setIsSubmitting(false);
       setIsOpen(false);
-      alert("소중한 의견 감사합니다! 빠르게 확인해보겠습니다.");
-    }, 500);
+      return;
+    }
+
+    submitReport.mutate(
+      {
+        target_type: "post",
+        target_id: postId,
+        reason: "incorrect",
+        details: suggestion,
+      },
+      {
+        onSuccess: () => {
+          toast.success("소중한 의견 감사합니다! 빠르게 확인해보겠습니다.");
+          setSuggestion("");
+          setIsOpen(false);
+        },
+        onError: (error) => {
+          toast.error(
+            error.message === "You have already reported this content"
+              ? "이미 신고한 콘텐츠입니다."
+              : "신고 전송에 실패했습니다. 다시 시도해주세요."
+          );
+        },
+      }
+    );
   };
 
   const buttonClasses =

@@ -80,11 +80,7 @@ describe("useInfinitePosts hasMagazine filter", () => {
       (c) => c.method === "not" && c.args[0] === "post_magazine_id"
     );
     expect(magazineNotCalls).toHaveLength(1);
-    expect(magazineNotCalls[0].args).toEqual([
-      "post_magazine_id",
-      "is",
-      null,
-    ]);
+    expect(magazineNotCalls[0].args).toEqual(["post_magazine_id", "is", null]);
   });
 
   test("hasMagazine=false does NOT add post_magazine_id filter", async () => {

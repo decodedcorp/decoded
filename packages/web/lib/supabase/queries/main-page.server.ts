@@ -167,7 +167,9 @@ export async function fetchWhatsNewPostsServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -215,7 +217,9 @@ export async function fetchDecodedPickServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -253,7 +257,9 @@ export async function fetchArtistSpotlightServer(
       (spot.solutions || []).map((sol) => ({
         id: sol.id,
         label: sol.title,
-        brand: (sol.metadata as any)?.brand || "Unknown",
+        brand:
+          ((sol.metadata as Record<string, unknown>)?.brand as string) ||
+          "Unknown",
         name: sol.title,
         imageUrl: sol.thumbnail_url || undefined,
       }))
@@ -502,7 +508,7 @@ export async function fetchWhatsNewItemsServer(
   interface SolutionRowResult {
     id: string;
     title: string | null;
-    metadata: any;
+    metadata: Record<string, unknown> | null;
     spot: {
       post: {
         image_url: string | null;
@@ -513,7 +519,7 @@ export async function fetchWhatsNewItemsServer(
   return ((data as unknown as SolutionRowResult[]) ?? []).map((row) => ({
     item: {
       id: row.id,
-      brand: row.metadata?.brand || "Unknown",
+      brand: (row.metadata?.brand as string) || "Unknown",
       product_name: row.title,
     },
     imageUrl: row.spot?.post?.image_url || null,
@@ -556,7 +562,7 @@ export async function fetchBestItemsServer(
   interface BestSolutionRowResult {
     id: string;
     title: string | null;
-    metadata: any; // Type as any for now to handle JSONB safely
+    metadata: Record<string, unknown> | null;
     click_count: number;
     spot: {
       post: {
@@ -568,7 +574,7 @@ export async function fetchBestItemsServer(
   return ((data as unknown as BestSolutionRowResult[]) ?? []).map((row) => ({
     item: {
       id: row.id,
-      brand: (row.metadata as any)?.brand || "Unknown",
+      brand: (row.metadata?.brand as string) || "Unknown",
       product_name: row.title,
     },
     imageUrl: row.spot?.post?.image_url || null,

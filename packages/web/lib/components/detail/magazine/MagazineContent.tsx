@@ -1,6 +1,9 @@
 "use client";
 
-import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/mutation-types";
+import type {
+  PostMagazineLayout,
+  RelatedEditorialItem,
+} from "@/lib/api/mutation-types";
 import { MagazineTitleSection } from "./MagazineTitleSection";
 import { MagazineEditorialSection } from "./MagazineEditorialSection";
 import { MagazineCelebSection } from "./MagazineCelebSection";
@@ -28,10 +31,7 @@ export function MagazineContent({ layout, relatedEditorials }: Props) {
       </div>
 
       {/* Section 1: Title */}
-      <MagazineTitleSection
-        title={layout.title}
-        subtitle={layout.subtitle}
-      />
+      <MagazineTitleSection title={layout.title} subtitle={layout.subtitle} />
 
       {/* Section 2: Editorial */}
       <MagazineEditorialSection

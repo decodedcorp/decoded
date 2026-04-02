@@ -349,7 +349,9 @@ export default async function Home({
   // Editorial feature: use a whatsNew style that won't overlap with DecodeShowcase
   // DecodeShowcase uses the first whatsNew with 2+ items, so editorial picks a different one
   const editorialStyle: StyleCardData | undefined =
-    whatsNewStyles.length > 1 ? whatsNewStyles[1] : whatsNewStyles[0] ?? undefined;
+    whatsNewStyles.length > 1
+      ? whatsNewStyles[1]
+      : (whatsNewStyles[0] ?? undefined);
 
   // --- Build new section data ---
 
@@ -402,7 +404,9 @@ export default async function Home({
             return {
               id: String(sol.id),
               label: sol.title,
-              brand: (sol.metadata as any)?.brand || undefined,
+              brand: (sol.metadata as Record<string, unknown>)?.brand as
+                | string
+                | undefined,
               imageUrl: sol.thumbnail_url
                 ? `/api/v1/image-proxy?url=${encodeURIComponent(sol.thumbnail_url)}`
                 : undefined,
@@ -541,10 +545,7 @@ export default async function Home({
       <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
         <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
           <EditorialSection style={editorialStyle} embedded />
-          <TrendingListSection
-            keywords={resolvedTrendingKeywords}
-            embedded
-          />
+          <TrendingListSection keywords={resolvedTrendingKeywords} embedded />
         </div>
       </section>
 
@@ -572,7 +573,9 @@ export default async function Home({
       {/* <CommunityLeaderboard data={leaderboardData} /> */}
 
       {/* ─── 9. Personalize Banner (VTON CTA) ─── */}
-      <DomeGallerySection images={domeImages.length > 0 ? domeImages : undefined} />
+      <DomeGallerySection
+        images={domeImages.length > 0 ? domeImages : undefined}
+      />
 
       {/* Footer */}
       <MainFooter />

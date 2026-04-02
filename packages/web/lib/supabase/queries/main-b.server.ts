@@ -139,7 +139,7 @@ export async function fetchMainBPostServer(): Promise<MainBData | null> {
   });
 
   // Step 4: Fetch related posts by the same artist (up to 3)
-  let relatedPosts: MainBData["relatedPosts"] = [];
+  const relatedPosts: MainBData["relatedPosts"] = [];
   if (postImageRow && artistName) {
     const { data: related } = await supabase
       .from("post")

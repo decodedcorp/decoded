@@ -103,7 +103,11 @@ function FlowingMenuItem({
       gsap
         .timeline({ defaults: animationDefaults })
         .set(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
-        .set(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0)
+        .set(
+          marqueeInnerRef.current,
+          { y: edge === "top" ? "101%" : "-101%" },
+          0
+        )
         .to([marqueeRef.current, marqueeInnerRef.current], { y: "0%" }, 0);
     }
   );
@@ -122,7 +126,11 @@ function FlowingMenuItem({
       gsap
         .timeline({ defaults: animationDefaults })
         .to(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
-        .to(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0);
+        .to(
+          marqueeInnerRef.current,
+          { y: edge === "top" ? "101%" : "-101%" },
+          0
+        );
     }
   );
 

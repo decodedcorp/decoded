@@ -4,8 +4,7 @@ import { cn } from "@/lib/utils";
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 
-export interface GuestButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface GuestButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /**
    * Loading state - shows spinner instead of text
    */

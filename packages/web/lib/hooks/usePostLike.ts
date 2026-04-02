@@ -1,8 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  createPostLike,
-  deletePostLike,
-} from "@/lib/api/postLikes";
+import { createPostLike, deletePostLike } from "@/lib/api/postLikes";
 
 const postDetailKey = (postId: string) =>
   ["posts", "detail", "image", postId] as const;

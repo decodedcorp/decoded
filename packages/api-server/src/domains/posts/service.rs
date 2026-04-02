@@ -179,14 +179,23 @@ pub async fn create_post_without_solutions(
     // solution_infos는 비어있을 것 (Solution 없이 생성)
 
     // Meilisearch에 색인 (비동기, 실패해도 Post 생성은 성공)
-    let spot_count = count_spots_by_post_id(&state.db, post.id)
-        .await
-        .unwrap_or(0);
+    let search_fields = match load_post_related_data(&state.db, post.id).await {
+        Ok(data) => compute_search_fields(&data),
+        Err(e) => {
+            tracing::warn!("Failed to load search fields for post {}: {}", post.id, e);
+            PostSearchFields {
+                category_codes: vec![],
+                has_adopted_solution: false,
+                solution_count: 0,
+                spot_count: 0,
+            }
+        }
+    };
     let search_result = index_post_to_meilisearch(
         &state.search_client,
         &post,
         &upload_response.image_url,
-        spot_count,
+        &search_fields,
     )
     .await;
 
@@ -259,14 +268,23 @@ pub async fn create_post_with_solutions(
     }
 
     // Meilisearch에 색인 (비동기, 실패해도 Post 생성은 성공)
-    let spot_count = count_spots_by_post_id(&state.db, post.id)
-        .await
-        .unwrap_or(0);
+    let search_fields = match load_post_related_data(&state.db, post.id).await {
+        Ok(data) => compute_search_fields(&data),
+        Err(e) => {
+            tracing::warn!("Failed to load search fields for post {}: {}", post.id, e);
+            PostSearchFields {
+                category_codes: vec![],
+                has_adopted_solution: false,
+                solution_count: 0,
+                spot_count: 0,
+            }
+        }
+    };
     let search_result = index_post_to_meilisearch(
         &state.search_client,
         &post,
         &upload_response.image_url,
-        spot_count,
+        &search_fields,
     )
     .await;
 
@@ -291,15 +309,58 @@ pub async fn get_post_by_id(db: &DatabaseConnection, post_id: Uuid) -> AppResult
 }
 
 /// 관련 데이터 구조체 (배치 로드 데이터)
-struct PostRelatedData {
-    spots: Vec<crate::entities::spots::Model>,
-    solutions: Vec<crate::entities::solutions::Model>,
-    subcategories: Vec<crate::entities::subcategories::Model>,
-    categories: Vec<crate::entities::categories::Model>,
+pub(crate) struct PostRelatedData {
+    pub spots: Vec<crate::entities::spots::Model>,
+    pub solutions: Vec<crate::entities::solutions::Model>,
+    pub subcategories: Vec<crate::entities::subcategories::Model>,
+    pub categories: Vec<crate::entities::categories::Model>,
+}
+
+/// Meilisearch 색인용 검색 필드
+pub(crate) struct PostSearchFields {
+    pub category_codes: Vec<String>,
+    pub has_adopted_solution: bool,
+    pub solution_count: i64,
+    pub spot_count: i32,
+}
+
+/// PostRelatedData로부터 검색 색인 필드를 계산하는 순수 함수
+pub(crate) fn compute_search_fields(data: &PostRelatedData) -> PostSearchFields {
+    use std::collections::HashSet;
+
+    // spots → subcategory_id → subcategories → category_id → categories.code (distinct)
+    let cat_ids: HashSet<Uuid> = data
+        .spots
+        .iter()
+        .filter_map(|s| s.subcategory_id)
+        .filter_map(|sid| data.subcategories.iter().find(|sc| sc.id == sid))
+        .map(|sc| sc.category_id)
+        .collect();
+
+    let category_codes: Vec<String> = data
+        .categories
+        .iter()
+        .filter(|c| cat_ids.contains(&c.id))
+        .map(|c| c.code.clone())
+        .filter(|code| !code.is_empty())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    let has_adopted_solution = data.solutions.iter().any(|s| s.is_adopted);
+    let solution_count = data.solutions.len() as i64;
+    let spot_count = data.spots.len() as i32;
+
+    PostSearchFields {
+        category_codes,
+        has_adopted_solution,
+        solution_count,
+        spot_count,
+    }
 }
 
 /// Post의 모든 관련 데이터를 배치 로드
-async fn load_post_related_data(
+pub(crate) async fn load_post_related_data(
     db: &DatabaseConnection,
     post_id: Uuid,
 ) -> AppResult<PostRelatedData> {
@@ -768,6 +829,7 @@ pub async fn list_posts(
                 spot_count,
                 view_count: post.view_count,
                 comment_count,
+                status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
             }
@@ -826,14 +888,23 @@ pub async fn update_post(
     let updated_response: PostResponse = updated_post.into();
 
     // Meilisearch 업데이트 (비동기, 실패해도 Post 업데이트는 성공)
-    let spot_count = count_spots_by_post_id(&state.db, post_id)
-        .await
-        .unwrap_or(0);
+    let search_fields = match load_post_related_data(&state.db, post_id).await {
+        Ok(data) => compute_search_fields(&data),
+        Err(e) => {
+            tracing::warn!("Failed to load search fields for post {}: {}", post_id, e);
+            PostSearchFields {
+                category_codes: vec![],
+                has_adopted_solution: false,
+                solution_count: 0,
+                spot_count: 0,
+            }
+        }
+    };
     let search_result = index_post_to_meilisearch(
         &state.search_client,
         &updated_response,
         &updated_response.image_url,
-        spot_count,
+        &search_fields,
     )
     .await;
 
@@ -1042,6 +1113,7 @@ pub async fn admin_list_posts(
                 spot_count,
                 view_count: post.view_count,
                 comment_count,
+                status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
             }
@@ -1053,6 +1125,7 @@ pub async fn admin_list_posts(
 
 /// Admin용 Post 상태 변경
 pub async fn admin_update_post_status(
+    search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     db: &DatabaseConnection,
     post_id: Uuid,
     status: &str,
@@ -1070,7 +1143,97 @@ pub async fn admin_update_post_status(
         .await
         .map_err(AppError::DatabaseError)?;
 
+    // Meilisearch 동기화 (비동기, 실패해도 상태 변경은 성공)
+    match status {
+        "hidden" | "deleted" => {
+            if let Err(e) = search_client.delete("posts", &post_id.to_string()).await {
+                tracing::warn!(
+                    "Failed to delete post {} from Meilisearch: {}",
+                    post_id,
+                    e
+                );
+            }
+        }
+        "active" => {
+            let doc = serde_json::json!({
+                "id": post_id.to_string(),
+                "status": "active"
+            });
+            if let Err(e) = search_client
+                .update_document("posts", &post_id.to_string(), doc)
+                .await
+            {
+                tracing::warn!(
+                    "Failed to update post {} in Meilisearch: {}",
+                    post_id,
+                    e
+                );
+            }
+        }
+        _ => {}
+    }
+
     Ok(updated_post.into())
+}
+
+/// Admin용 Post 메타데이터 수정 (소유권 검사 없음)
+pub async fn admin_update_post(
+    state: &AppState,
+    post_id: Uuid,
+    dto: UpdatePostDto,
+) -> AppResult<PostResponse> {
+    let post = get_post_by_id(&state.db, post_id).await?;
+
+    let mut active_post: ActiveModel = post.into();
+
+    if let Some(media_source) = dto.media_source {
+        active_post.media_type = Set(media_source.media_type().to_string());
+    }
+    if let Some(group_name) = dto.group_name {
+        active_post.group_name = Set(Some(group_name));
+    }
+    if let Some(artist_name) = dto.artist_name {
+        active_post.artist_name = Set(Some(artist_name));
+    }
+    if let Some(context) = dto.context {
+        active_post.context = Set(Some(context));
+    }
+    if let Some(status) = dto.status {
+        active_post.status = Set(status);
+    }
+
+    let updated_post = active_post
+        .update(&state.db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let updated_response: PostResponse = updated_post.into();
+
+    // Meilisearch 재인덱싱
+    let search_fields = match load_post_related_data(&state.db, post_id).await {
+        Ok(data) => compute_search_fields(&data),
+        Err(e) => {
+            tracing::warn!("Failed to load search fields for post {}: {}", post_id, e);
+            PostSearchFields {
+                category_codes: vec![],
+                has_adopted_solution: false,
+                solution_count: 0,
+                spot_count: 0,
+            }
+        }
+    };
+    if let Err(e) = index_post_to_meilisearch(
+        &state.search_client,
+        &updated_response,
+        &updated_response.image_url,
+        &search_fields,
+    )
+    .await
+    {
+        tracing::warn!("Failed to update post {} in Meilisearch: {}", post_id, e);
+    }
+
+    Ok(updated_response)
 }
 
 /// 조회수 증가
@@ -1162,26 +1325,13 @@ pub async fn analyze_image(
     Ok(ImageAnalyzeResponse { metadata })
 }
 
-/// Spot 개수 조회 (헬퍼 함수)
-async fn count_spots_by_post_id(db: &DatabaseConnection, post_id: Uuid) -> AppResult<i32> {
-    use crate::entities::spots::{Column as SpotColumn, Entity as Spots};
-
-    let count = Spots::find()
-        .filter(SpotColumn::PostId.eq(post_id))
-        .count(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
-
-    Ok(count as i32)
-}
-
 /// Post를 Meilisearch에 색인하는 헬퍼 함수
 #[allow(clippy::disallowed_methods)] // serde_json::json! 매크로 전개
-async fn index_post_to_meilisearch(
+pub(crate) async fn index_post_to_meilisearch(
     search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     post: &PostResponse,
     image_url: &str,
-    spot_count: i32,
+    search_fields: &PostSearchFields,
 ) -> AppResult<()> {
     let document = serde_json::json!({
         "id": post.id.to_string(),
@@ -1194,7 +1344,10 @@ async fn index_post_to_meilisearch(
         "created_at": post.created_at.timestamp(),
         "view_count": post.view_count,
         "image_url": image_url,
-        "spot_count": spot_count,
+        "spot_count": search_fields.spot_count,
+        "category_codes": search_fields.category_codes,
+        "has_adopted_solution": search_fields.has_adopted_solution,
+        "solution_count": search_fields.solution_count,
     });
 
     search_client
@@ -1489,8 +1642,29 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
         };
-        index_post_to_meilisearch(&client, &post, "https://img/x.png", 2)
+        let search_fields = PostSearchFields {
+            category_codes: vec!["fashion".to_string()],
+            has_adopted_solution: false,
+            solution_count: 0,
+            spot_count: 2,
+        };
+        index_post_to_meilisearch(&client, &post, "https://img/x.png", &search_fields)
             .await
             .expect("index ok");
+    }
+
+    #[test]
+    fn compute_search_fields_empty_data() {
+        let data = PostRelatedData {
+            spots: vec![],
+            solutions: vec![],
+            subcategories: vec![],
+            categories: vec![],
+        };
+        let fields = compute_search_fields(&data);
+        assert!(fields.category_codes.is_empty());
+        assert!(!fields.has_adopted_solution);
+        assert_eq!(fields.solution_count, 0);
+        assert_eq!(fields.spot_count, 0);
     }
 }

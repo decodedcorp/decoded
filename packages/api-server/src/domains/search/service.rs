@@ -44,7 +44,7 @@ impl SearchService {
         // 필터 구성
         let mut filters = Vec::new();
         if let Some(category) = &query.category {
-            filters.push(format!("category = \"{}\"", category));
+            filters.push(format!("category_codes = \"{}\"", category));
         }
         if let Some(media_type) = &query.media_type {
             filters.push(format!("media_type = \"{}\"", media_type));

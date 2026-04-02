@@ -57,8 +57,7 @@ export function TopSolutionCard({
   adoptMutation,
   unadoptMutation,
 }: TopSolutionCardProps) {
-  const linkUrl =
-    topSolution.affiliate_url ?? topSolution.original_url ?? null;
+  const linkUrl = topSolution.affiliate_url ?? topSolution.original_url ?? null;
 
   return (
     <div
@@ -144,9 +143,7 @@ export function TopSolutionCard({
               {topSolution.is_adopted ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    handleUnadopt(topSolution.id, spotId!)
-                  }
+                  onClick={() => handleUnadopt(topSolution.id, spotId!)}
                   disabled={unadoptMutation.isPending}
                   className="rounded border border-border/60 px-2 py-1 text-xs text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
                 >

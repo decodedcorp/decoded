@@ -68,7 +68,8 @@ export interface HotspotPosition {
 }
 
 export interface HotspotProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">,
     VariantProps<typeof hotspotVariants> {
   /** Position within parent container (percentages) */
   position: HotspotPosition;

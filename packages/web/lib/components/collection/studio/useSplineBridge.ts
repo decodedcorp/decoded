@@ -83,10 +83,17 @@ function tryTextureSwap(
     const obj = app.findObjectByName(objectName);
     if (!obj) return;
 
-    const mat = (obj as any).material;
+    const mat = (
+      obj as unknown as {
+        material?: { layers?: { image?: { data?: unknown; name?: string } }[] };
+      }
+    ).material;
     if (!mat?.layers) return;
 
-    const texLayer = mat.layers.find((layer: any) => layer.image !== undefined);
+    const texLayer = mat.layers.find(
+      (layer: { image?: { data?: unknown; name?: string } }) =>
+        layer.image !== undefined
+    );
     if (!texLayer) return;
 
     texLayer.image = { data: imageUrl, name: "cover" };

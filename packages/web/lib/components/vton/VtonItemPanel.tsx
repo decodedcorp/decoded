@@ -1,7 +1,11 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import { CATEGORIES, type ItemData, type Category } from "@/lib/hooks/useVtonItemFetch";
+import {
+  CATEGORIES,
+  type ItemData,
+  type Category,
+} from "@/lib/hooks/useVtonItemFetch";
 
 interface VtonItemPanelProps {
   isPostMode: boolean;
@@ -49,7 +53,10 @@ export function VtonItemPanel({
   const currentSelected = selectedItems[activeCategory];
 
   return (
-    <div data-testid="vton-item-panel" className="flex w-full flex-col border-t border-white/10 md:w-[340px] md:border-t-0 md:border-l">
+    <div
+      data-testid="vton-item-panel"
+      className="flex w-full flex-col border-t border-white/10 md:w-[340px] md:border-t-0 md:border-l"
+    >
       {/* Header */}
       <div className="border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">
@@ -147,7 +154,9 @@ export function VtonItemPanel({
                   />
                 </div>
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                  <p className="truncate text-[10px] text-white/80">{item.title}</p>
+                  <p className="truncate text-[10px] text-white/80">
+                    {item.title}
+                  </p>
                 </div>
                 {isSelected && (
                   <div className="absolute top-1 right-1 rounded-full bg-[#eafd67] p-0.5">

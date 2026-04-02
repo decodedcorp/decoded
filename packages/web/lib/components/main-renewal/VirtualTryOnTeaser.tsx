@@ -224,7 +224,12 @@ export default function VirtualTryOnTeaser({
               {/* After image — clipped from the right, revealed by slider */}
               <div
                 className="absolute inset-0"
-                style={{ clipPath: i === activePairIndex ? `inset(0 ${(1 - sliderPct) * 100}% 0 0)` : "inset(0 100% 0 0)" }}
+                style={{
+                  clipPath:
+                    i === activePairIndex
+                      ? `inset(0 ${(1 - sliderPct) * 100}% 0 0)`
+                      : "inset(0 100% 0 0)",
+                }}
               >
                 {pair.afterImageUrl ? (
                   <Image

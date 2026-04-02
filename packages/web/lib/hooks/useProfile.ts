@@ -20,8 +20,12 @@ import { useMyBadges as useMyBadgesGenerated } from "@/lib/api/generated/badges/
 import { useMyRankingDetail as useMyRankingDetailGenerated } from "@/lib/api/generated/rankings/rankings";
 import type { MyBadgesResponse } from "@/lib/api/generated/models";
 import type { MyRankingDetailResponse } from "@/lib/api/generated/models";
-import type { UserResponse, UserStatsResponse } from "@/lib/api/generated/models";
+import type {
+  UserResponse,
+  UserStatsResponse,
+} from "@/lib/api/generated/models";
 import type { UpdateUserDto } from "@/lib/api/generated/models";
+import type { UserActivityType } from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -95,13 +99,13 @@ export function useUserActivities(params?: UseUserActivitiesParams) {
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
       return getMyActivities({
-        type: params?.type as any,
+        type: params?.type as unknown as UserActivityType | undefined,
         page,
         per_page: params?.perPage ?? 20,
       });
     },
-    getNextPageParam: (lastPage: any) =>
-      lastPage.pagination?.current_page < lastPage.pagination?.total_pages
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.current_page < lastPage.pagination.total_pages
         ? lastPage.pagination.current_page + 1
         : undefined,
     initialPageParam: 1,
@@ -133,7 +137,10 @@ export function useUser(
 // ============================================================
 
 export function useMyBadges(
-  options?: Omit<UseQueryOptions<MyBadgesResponse, Error>, "queryKey" | "queryFn">
+  options?: Omit<
+    UseQueryOptions<MyBadgesResponse, Error>,
+    "queryKey" | "queryFn"
+  >
 ) {
   return useMyBadgesGenerated({
     query: {
@@ -149,7 +156,10 @@ export function useMyBadges(
 // ============================================================
 
 export function useMyRanking(
-  options?: Omit<UseQueryOptions<MyRankingDetailResponse, Error>, "queryKey" | "queryFn">
+  options?: Omit<
+    UseQueryOptions<MyRankingDetailResponse, Error>,
+    "queryKey" | "queryFn"
+  >
 ) {
   return useMyRankingDetailGenerated({
     query: {

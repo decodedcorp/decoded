@@ -44,7 +44,8 @@ export const desktopHeaderVariants = cva(
 );
 
 export interface DesktopHeaderProps
-  extends React.HTMLAttributes<HTMLElement>,
+  extends
+    React.HTMLAttributes<HTMLElement>,
     VariantProps<typeof desktopHeaderVariants> {
   onSearchClick?: () => void;
 }

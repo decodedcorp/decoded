@@ -7,12 +7,18 @@ use axum::Router;
 use crate::config::{AppConfig, AppState};
 
 use super::{
-    badges, categories, curations, dashboard, magazine_sessions, posts, solutions, spots, synonyms,
+    badges, categories, curations, dashboard, editorial_candidates, magazine_sessions, posts,
+    solutions, spots, synonyms,
 };
+use crate::domains::reports;
 
 /// Admin 라우터
 pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
     Router::new()
+        .nest(
+            "/editorial-candidates",
+            editorial_candidates::router(state.clone(), app_config.clone()),
+        )
         .nest("/posts", posts::router(app_config.clone()))
         .nest("/spots", spots::router(app_config.clone()))
         .nest("/solutions", solutions::router(app_config.clone()))
@@ -24,6 +30,10 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
             dashboard::router(state.clone(), app_config.clone()),
         )
         .nest("/badges", badges::router(app_config.clone()))
+        .nest(
+            "/reports",
+            reports::admin_router(app_config.clone()),
+        )
         .nest(
             "/magazine-sessions",
             magazine_sessions::router(state, app_config),

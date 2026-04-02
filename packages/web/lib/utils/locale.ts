@@ -52,9 +52,12 @@ export function extractKoreanPart(
  * Normalize input to string array for filtering.
  * Handles: string[], Record<string, unknown>, or other falsy values
  */
-function toTagArray(tags: string[] | Record<string, unknown> | null | undefined): string[] {
+function toTagArray(
+  tags: string[] | Record<string, unknown> | null | undefined
+): string[] {
   if (!tags) return [];
-  if (Array.isArray(tags)) return tags.filter((t): t is string => typeof t === "string");
+  if (Array.isArray(tags))
+    return tags.filter((t): t is string => typeof t === "string");
   if (typeof tags === "object" && tags !== null && !Array.isArray(tags)) {
     return Object.entries(tags)
       .filter(([, v]) => v != null && v !== "")
@@ -69,7 +72,9 @@ function toTagArray(tags: string[] | Record<string, unknown> | null | undefined)
  * Also handles multi-language strings by extracting the Korean part
  * Accepts string[] or Record<string, unknown> (metadata object)
  */
-export function filterKoreanTags(tags: string[] | Record<string, unknown> | null | undefined): string[] {
+export function filterKoreanTags(
+  tags: string[] | Record<string, unknown> | null | undefined
+): string[] {
   const arr = toTagArray(tags);
   if (arr.length === 0) return [];
 

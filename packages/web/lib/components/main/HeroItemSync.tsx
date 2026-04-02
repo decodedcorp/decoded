@@ -34,7 +34,7 @@ export interface HeroPostEntry {
  * Evenly spaces vertically, alternates x between 30% and 70%.
  */
 function autoDistributeSpots(
-  items: HeroPostEntry["items"],
+  items: HeroPostEntry["items"]
 ): HeroSpotAnnotation[] {
   // Limit to 4 spots max to avoid clutter
   const limited = items.slice(0, 4);
@@ -46,7 +46,7 @@ function autoDistributeSpots(
     const x = item.x ?? (isLeftSide ? 20 : 80);
     // Spread vertically: each spot gets its own vertical zone
     const zoneSize = 80 / Math.max(count, 1);
-    const y = item.y ?? (10 + zoneSize * i + zoneSize / 2);
+    const y = item.y ?? 10 + zoneSize * i + zoneSize / 2;
     return {
       id: item.id,
       x,
@@ -73,8 +73,7 @@ export function HeroItemSync({ posts }: HeroItemSyncProps) {
     imageUrl: post.heroData.heroImageUrl,
     label: post.galleryLabel,
     link: post.heroData.ctaLink,
-    spots:
-      post.items.length > 0 ? autoDistributeSpots(post.items) : undefined,
+    spots: post.items.length > 0 ? autoDistributeSpots(post.items) : undefined,
   }));
 
   return <MainHero images={images} />;

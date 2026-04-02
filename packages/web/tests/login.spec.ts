@@ -19,9 +19,7 @@ test.describe("Login page", () => {
 
     // Google OAuth button must be present (primary CTA)
     // OAuthButton renders a button — match by accessible role + provider label text
-    await expect(
-      page.getByRole("button", { name: /google/i })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /google/i })).toBeVisible();
 
     // Guest login button must also be present
     await expect(

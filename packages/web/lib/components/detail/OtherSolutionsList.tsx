@@ -78,8 +78,7 @@ export function OtherSolutionsList({
         <ChevronRight
           className={`w-3 h-3 transition-transform ${othersExpanded ? "rotate-90" : ""}`}
         />
-        다른 {otherSolutions.length}개 솔루션{" "}
-        {othersExpanded ? "접기" : "보기"}
+        다른 {otherSolutions.length}개 솔루션 {othersExpanded ? "접기" : "보기"}
       </button>
       {othersExpanded && (
         <div className="flex flex-col gap-2 pl-1">
@@ -128,7 +127,10 @@ export function OtherSolutionsList({
                       >
                         {(() => {
                           try {
-                            return new URL(linkUrl).hostname.replace("www.", "");
+                            return new URL(linkUrl).hostname.replace(
+                              "www.",
+                              ""
+                            );
                           } catch {
                             return "링크";
                           }

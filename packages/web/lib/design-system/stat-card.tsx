@@ -21,8 +21,10 @@ import { formatStatValue } from "@/lib/utils/format";
  * @see docs/design-system/decoded.pen
  */
 
-export interface StatCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface StatCardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   /** Display label for the statistic */
   label: string;
   /** Numeric value to display */

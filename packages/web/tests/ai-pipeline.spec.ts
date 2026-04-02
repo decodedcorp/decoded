@@ -61,9 +61,9 @@ test.describe("AI upload pipeline", () => {
 
     // After file selection, the app should ask if the user knows the items
     // Korean: "이 사진 속 아이템을 알고 계신가요?"
-    await expect(
-      page.getByText(/아이템을 알고 계신가요/i)
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/아이템을 알고 계신가요/i)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("upload image → choose not knowing items → can see spots panel", async ({
@@ -77,9 +77,9 @@ test.describe("AI upload pipeline", () => {
     await fileInput.setInputFiles(FIXTURE_IMAGE);
 
     // Wait for user-type selection UI
-    await expect(
-      page.getByText(/아이템을 알고 계신가요/i)
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/아이템을 알고 계신가요/i)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Select "I don't know" option — triggers the spot-marking flow
     await page.getByRole("button", { name: /아니요, 궁금해요/i }).click();

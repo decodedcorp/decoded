@@ -96,10 +96,13 @@ export default function DecodeShowcase({
           );
         }
         if (progressLabelRef.current) {
-          tl.add(() => {
-            if (progressLabelRef.current)
-              progressLabelRef.current.textContent = `Detecting ${i + 1}/${detectedItems.length}`;
-          }, offset + dur * 0.5);
+          tl.add(
+            () => {
+              if (progressLabelRef.current)
+                progressLabelRef.current.textContent = `Detecting ${i + 1}/${detectedItems.length}`;
+            },
+            offset + dur * 0.5
+          );
         }
         if (progressFillRef.current) {
           tl.to(

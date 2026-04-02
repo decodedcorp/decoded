@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, RotateCcw, Download, Share2, BookmarkPlus } from "lucide-react";
+import {
+  Upload,
+  RotateCcw,
+  Download,
+  Share2,
+  BookmarkPlus,
+} from "lucide-react";
 import { VtonLoadingAnimation } from "./VtonLoadingAnimation";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 
@@ -35,10 +41,14 @@ export function VtonPhotoArea({
   onReset,
 }: VtonPhotoAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const showResult = displayResultImage && displayPersonPreview && !isProcessing;
+  const showResult =
+    displayResultImage && displayPersonPreview && !isProcessing;
 
   return (
-    <div data-testid="vton-photo-area" className="relative flex flex-1 items-center justify-center bg-[#050505] md:flex-[3]">
+    <div
+      data-testid="vton-photo-area"
+      className="relative flex flex-1 items-center justify-center bg-[#050505] md:flex-[3]"
+    >
       {isProcessing && <VtonLoadingAnimation stage={loadingStage} />}
 
       {showResult ? (
@@ -103,7 +113,9 @@ export function VtonPhotoArea({
               <p className="text-sm font-medium text-white/60">
                 Upload a full-body photo
               </p>
-              <p className="text-xs text-white/30">Best results with standing pose</p>
+              <p className="text-xs text-white/30">
+                Best results with standing pose
+              </p>
             </div>
           )}
         </div>

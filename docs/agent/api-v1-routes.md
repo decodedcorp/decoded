@@ -69,6 +69,12 @@
 | `/api/v1/admin/audit/[requestId]`     | GET     | Single audit entry       |
 | `/api/v1/admin/pipeline`              | GET     | Pipeline status          |
 | `/api/v1/admin/pipeline/[pipelineId]` | GET     | Single pipeline          |
+| `/api/v1/reports`                     | POST    | Submit content report (proxy → Rust) |
+| `/api/v1/admin/posts`                 | GET     | Admin post list (proxy → Rust) |
+| `/api/v1/admin/posts/[postId]`        | PATCH   | Admin post metadata edit (proxy → Rust) |
+| `/api/v1/admin/posts/[postId]/status` | PATCH   | Update post status (proxy → Rust) |
+| `/api/v1/admin/reports`               | GET     | Admin report list (proxy → Rust) |
+| `/api/v1/admin/reports/[reportId]`    | PATCH   | Update report status (proxy → Rust) |
 | `/api/v1/admin/server-logs`           | GET     | Server logs              |
 | `/api/v1/admin/server-logs/stream`    | GET     | Server logs (SSE stream) |
 

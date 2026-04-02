@@ -82,6 +82,35 @@ pub async fn start_scheduler(state: Arc<AppState>) -> Result<(), Box<dyn std::er
         })?)
         .await?;
 
+    // 검색 인덱스 재색인 — 매일 04:00
+    let reindex_state = state.clone();
+    sched
+        .add(Job::new_async("0 0 4 * * *", move |_uuid, _l| {
+            let state = reindex_state.clone();
+            Box::pin(async move {
+                if let Err(e) = batch::run_search_reindex(state).await {
+                    error!("Search reindex batch job failed: {}", e);
+                }
+            })
+        })?)
+        .await?;
+
+    // 검색 인덱스 재색인 — 서버 시작 직후 1회 실행 (10초 후)
+    let reindex_once_state = state.clone();
+    sched
+        .add(Job::new_one_shot_async(
+            std::time::Duration::from_secs(10),
+            move |_uuid, _l| {
+                let state = reindex_once_state.clone();
+                Box::pin(async move {
+                    if let Err(e) = batch::run_search_reindex(state).await {
+                        error!("Initial search reindex failed: {}", e);
+                    }
+                })
+            },
+        )?)
+        .await?;
+
     info!("Batch scheduler started successfully (including retry job)");
 
     // 스케줄러 시작
