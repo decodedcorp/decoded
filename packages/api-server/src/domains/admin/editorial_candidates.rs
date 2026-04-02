@@ -149,15 +149,16 @@ pub async fn list_candidates(
     }))
 }
 
-pub fn router(app_config: AppConfig) -> Router<AppState> {
+pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .route("/", get(list_candidates))
         .layer(axum::middleware::from_fn_with_state(
-            app_config.clone(),
-            crate::middleware::auth_middleware,
+            state,
+            crate::middleware::admin_db_middleware,
         ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
+        .layer(axum::middleware::from_fn_with_state(
+            app_config,
+            crate::middleware::auth_middleware,
         ))
 }
 

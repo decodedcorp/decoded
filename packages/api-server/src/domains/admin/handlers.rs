@@ -16,7 +16,7 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .nest(
             "/editorial-candidates",
-            editorial_candidates::router(app_config.clone()),
+            editorial_candidates::router(state.clone(), app_config.clone()),
         )
         .nest("/posts", posts::router(app_config.clone()))
         .nest("/spots", spots::router(app_config.clone()))
