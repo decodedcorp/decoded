@@ -14,7 +14,7 @@
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
 - [x] **v10.0 Profile Page Completion** — Phases 44-50 (shipped 2026-03-26)
-- [ ] **v11.0 Explore & Editorial Data Integration** — Phases 51-55
+- [ ] **v11.0 Explore & Editorial Data Integration** — Phases 51-58
 
 ## Phases
 
@@ -128,9 +128,12 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 
 - [x] **Phase 51: Data Validation Gate** - DB에서 editorial post 존재 확인 (magazine_id 있는 post) (completed 2026-04-01)
 - [x] **Phase 52: Editorial Filter Fix** - hasMagazine 필터 실제 동작 + OpenAPI has_magazine 파라미터 추가 (completed 2026-04-01)
-- [ ] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation
-- [ ] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이
-- [ ] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증
+- [x] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation (completed 2026-04-02)
+- [x] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이 (completed 2026-04-02)
+- [x] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증 (completed 2026-04-02)
+- [ ] **Phase 56: Explore UI Enhancement** - 카테고리 필터 Editorial 탭 + 카드 호버 아이템 프리뷰
+- [ ] **Phase 57: Editorial Layout & Detail View** - Editorial 전용 매거진 스타일 레이아웃 + 에디토리얼 상세 뷰
+- [ ] **Phase 58: Artist Discovery** - 아티스트 프로필 카드 + 트렌딩 아티스트 섹션
 
 ## Phase Details
 
@@ -515,13 +518,46 @@ Plans:
 Plans:
 - [ ] 55-01: 수동 E2E 스모크 테스트 체크리스트 실행 + `bun run build` 검증
 
+### Phase 56: Explore UI Enhancement
+
+**Goal**: Explore 페이지의 Spot 컴포넌트 통일 + 필터 동작 수정 + editorial 콘텐츠만 노출 + 상세페이지 브랜드 컬러 통일
+**Depends on**: Phase 55
+**UI hint**: yes
+**Canonical refs**: `docs/agent/design-system-llm.md`, `docs/agent/web-routes-and-features.md`
+**Success Criteria** (what must be TRUE):
+1. Spot 컴포넌트가 main page와 explore에서 동일한 브랜드 컬러(네온 옐로우) 스타일로 통일된다
+2. Explore 페이지 카테고리 필터가 실제로 동작한다
+3. Explore에 editorial이 생성된 콘텐츠만 노출된다 (hasMagazine 필터 적용)
+4. 상세페이지에 Pretext 라이브러리 매거진 레이아웃이 적용된다
+5. 상세페이지 왼쪽 상단 뱃지가 모두 제거된다
+6. 상세페이지 컬러가 브랜드 컬러로 통일된다
+**Plans**: TBD
+
+### Phase 57: Editorial Layout & Detail View
+
+**Goal**: Editorial 전용 매거진 스타일 레이아웃 + 에디토리얼 상세 뷰 (spot+solution 풀 디스플레이)
+**Depends on**: Phase 56
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+1. Editorial 페이지가 masonry가 아닌 매거진 스타일 레이아웃으로 렌더링된다
+2. Editorial 카드 클릭 시 spot+solution 정보가 풀 디스플레이로 표시된다
+
+### Phase 58: Artist Discovery
+
+**Goal**: 아티스트 프로필 카드 + 트렌딩 아티스트 섹션 추가
+**Depends on**: Phase 56
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+1. Explore에 아티스트 프로필 카드가 표시된다
+2. 트렌딩 아티스트 섹션이 추가된다
+
 ## Progress
 
 **Execution Order:**
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
 v9.0: 39 → 40 → 41 → 42 → 43
 v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
-v11.0: 51 → 52 → 53, 54 (parallel) → 55
+v11.0: 51 → 52 → 53, 54 (parallel) → 55 → 56 → 57, 58 (parallel)
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
