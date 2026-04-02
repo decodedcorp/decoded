@@ -206,6 +206,8 @@ export function ImageDetailModal({ imageId }: Props) {
           scrollContainerRef={
             scrollContainerRef as React.RefObject<HTMLElement>
           }
+          activeIndex={activeIndex}
+          onActiveIndexChange={setActiveIndex}
         />
       );
     }

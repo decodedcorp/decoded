@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, RefObject } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -21,6 +21,8 @@ type Props = {
   relatedItems?: PostMagazineRelatedItem[];
   accentColor?: string;
   isModal?: boolean;
+  scrollContainerRef?: RefObject<HTMLElement>;
+  onActiveIndexChange?: (index: number | null) => void;
 };
 
 export function MagazineItemsSection({
@@ -28,6 +30,8 @@ export function MagazineItemsSection({
   relatedItems = [],
   accentColor,
   isModal,
+  scrollContainerRef,
+  onActiveIndexChange,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [sectionWidth, setSectionWidth] = useState(0);
@@ -67,32 +71,84 @@ export function MagazineItemsSection({
     return map;
   }, [relatedItems]);
 
+  // Track active index ref for stale closure prevention
+  const activeIndexRef = useRef<number | null>(null);
+
   useGSAP(() => {
-    if (!sectionRef.current || isModal) return;
+    if (!sectionRef.current) return;
 
     const cards = gsap.utils.toArray<HTMLElement>(
-      sectionRef.current.querySelectorAll(".item-card")
+      sectionRef.current.querySelectorAll("[data-item-index]")
     );
 
-    cards.forEach((card, i) => {
-      gsap.fromTo(
-        card,
-        { y: 50, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.7,
-          delay: i * 0.15,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: card,
-            start: "top 85%",
-            toggleActions: "play none none none",
+    if (!isModal) {
+      // Full page: entry animation
+      cards.forEach((card, i) => {
+        gsap.fromTo(
+          card,
+          { y: 50, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.7,
+            delay: i * 0.15,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 85%",
+              toggleActions: "play none none none",
+            },
+          }
+        );
+      });
+    }
+
+    // Modal: ScrollTrigger for scroll-spot sync
+    if (isModal && onActiveIndexChange && cards.length > 0) {
+      const scroller = scrollContainerRef?.current || window;
+
+      cards.forEach((card, index) => {
+        ScrollTrigger.create({
+          scroller,
+          trigger: card,
+          start: "top center",
+          end: "bottom center",
+          invalidateOnRefresh: true,
+          onEnter: () => {
+            activeIndexRef.current = index;
+            onActiveIndexChange(index);
           },
-        }
-      );
-    });
-  });
+          onEnterBack: () => {
+            activeIndexRef.current = index;
+            onActiveIndexChange(index);
+          },
+          onLeave: () => {
+            if (activeIndexRef.current === index) {
+              onActiveIndexChange(null);
+            }
+          },
+          onLeaveBack: () => {
+            if (activeIndexRef.current === index) {
+              onActiveIndexChange(null);
+            }
+          },
+        });
+      });
+
+      // Refresh after layout stabilizes
+      if (scrollContainerRef?.current) {
+        const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+        return () => {
+          clearTimeout(timer);
+          ScrollTrigger.getAll().forEach((trigger) => {
+            if (cards.includes(trigger.vars.trigger as HTMLElement)) {
+              trigger.kill();
+            }
+          });
+        };
+      }
+    }
+  }, { scope: sectionRef, dependencies: [items.length, isModal] });
 
   if (items.length === 0) return null;
 
@@ -120,7 +176,7 @@ export function MagazineItemsSection({
           const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;
 
           return (
-            <div key={item.spot_id} className="item-card">
+            <div key={item.spot_id} className="item-card" data-item-index={i}>
               <div
                 className={`flex flex-col gap-6 md:flex-row md:gap-10 ${
                   i % 2 === 1 ? "md:flex-row-reverse" : ""

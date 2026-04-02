@@ -353,6 +353,8 @@ export function ImageDetailContent({
               relatedItems={magazineLayout.related_items}
               accentColor={accentColor}
               isModal={isModal}
+              scrollContainerRef={scrollContainerRef}
+              onActiveIndexChange={onActiveIndexChange}
             />
           </>
         ) : (
