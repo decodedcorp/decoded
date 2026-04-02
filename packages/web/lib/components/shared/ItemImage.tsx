@@ -75,7 +75,7 @@ export function ItemImage({
 
   return (
     <div
-      className={cn("relative w-full overflow-hidden bg-muted", className)}
+      className={cn("relative w-full overflow-hidden", config.blur ? "bg-black" : "bg-muted", className)}
       style={{ aspectRatio: config.aspectRatio }}
     >
       {/* Blur background for card/detail/hero */}
@@ -103,6 +103,7 @@ export function ItemImage({
         )}
         sizes={config.sizes}
         loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
         priority={priority}
         onLoad={handleLoad}
         onError={handleError}
