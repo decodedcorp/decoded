@@ -60,6 +60,68 @@ export interface TrendingKeyword {
 }
 
 /**
+ * Magazine post data — post with a published editorial magazine
+ */
+export interface MagazinePostData {
+  id: string;
+  imageUrl: string | null;
+  artistName: string | null;
+  groupName: string | null;
+  context: string | null;
+  magazineTitle: string;
+  magazineKeyword: string | null;
+}
+
+/**
+ * Fetches posts that have a published post_magazine (server-side)
+ */
+export async function fetchMagazinePostsServer(
+  limit = 8
+): Promise<MagazinePostData[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("status", "active")
+    .not("image_url", "is", null)
+    .not("post_magazine_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !posts || posts.length === 0) {
+    if (error) console.error("[fetchMagazinePostsServer] Error:", error);
+    return [];
+  }
+
+  const magazineIds = posts.map((p) => p.post_magazine_id!);
+  const { data: magazines } = await supabase
+    .from("post_magazines")
+    .select("id, title, keyword, status")
+    .in("id", magazineIds)
+    .eq("status", "published");
+
+  const magazineMap = new Map(
+    (magazines ?? []).map((m) => [m.id, { title: m.title, keyword: m.keyword }])
+  );
+
+  return posts
+    .filter((p) => magazineMap.has(p.post_magazine_id!))
+    .map((row) => {
+      const mag = magazineMap.get(row.post_magazine_id!)!;
+      return {
+        id: row.id,
+        imageUrl: row.image_url,
+        artistName: row.artist_name,
+        groupName: row.group_name,
+        context: row.context,
+        magazineTitle: mag.title || row.context || "Editorial",
+        magazineKeyword: mag.keyword,
+      };
+    });
+}
+
+/**
  * Transforms a raw post row to PostData
  */
 function toPostData(row: PostRow): PostData {

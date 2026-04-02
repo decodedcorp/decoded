@@ -62,6 +62,8 @@ export type Database = {
           created_at: string;
           updated_at: string;
           trending_score: number | null;
+          post_magazine_id: string | null;
+          ai_summary: string | null;
         };
         Insert: {
           id?: string;
@@ -78,6 +80,8 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           trending_score?: number | null;
+          post_magazine_id?: string | null;
+          ai_summary?: string | null;
         };
         Update: {
           id?: string;
@@ -94,6 +98,8 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           trending_score?: number | null;
+          post_magazine_id?: string | null;
+          ai_summary?: string | null;
         };
         Relationships: [
           {
@@ -102,7 +108,60 @@ export type Database = {
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "fk_posts_post_magazine_id";
+            columns: ["post_magazine_id"];
+            referencedRelation: "post_magazines";
+            referencedColumns: ["id"];
+          },
         ];
+      };
+
+      /**
+       * Post Magazines - Editorial magazine content
+       */
+      post_magazines: {
+        Row: {
+          id: string;
+          title: string;
+          subtitle: string | null;
+          keyword: string | null;
+          layout_json: Json | null;
+          status: string;
+          review_summary: string | null;
+          thread_id: string | null;
+          error_log: Json | null;
+          created_at: string;
+          updated_at: string;
+          published_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          subtitle?: string | null;
+          keyword?: string | null;
+          layout_json?: Json | null;
+          status?: string;
+          review_summary?: string | null;
+          thread_id?: string | null;
+          error_log?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+          published_at?: string | null;
+        };
+        Update: {
+          title?: string;
+          subtitle?: string | null;
+          keyword?: string | null;
+          layout_json?: Json | null;
+          status?: string;
+          review_summary?: string | null;
+          thread_id?: string | null;
+          error_log?: Json | null;
+          updated_at?: string;
+          published_at?: string | null;
+        };
+        Relationships: [];
       };
 
       /**
@@ -710,6 +769,9 @@ export type UserEventInsert =
 // Try-on history
 export type UserTryonHistoryRow =
   Database["public"]["Tables"]["user_tryon_history"]["Row"];
+
+// Post Magazines
+export type PostMagazineRow = Database["public"]["Tables"]["post_magazines"]["Row"];
 
 // Spots & Solutions
 export type SpotRow = Database["public"]["Tables"]["spots"]["Row"];

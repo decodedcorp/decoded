@@ -1,22 +1,16 @@
 import {
   MasonryGrid,
-  DecodeShowcase,
-  VirtualTryOnTeaser,
-  CommunityLeaderboard,
   EditorialMagazine,
 } from "@/lib/components/main-renewal";
 import type {
   MainHeroData,
   GridItemData,
   HeroSpotAnnotation,
-  DecodeShowcaseData,
-  VTONTeaserData,
   CommunityLeaderboardData,
   EditorialMagazineData,
 } from "@/lib/components/main-renewal";
 import {
   DomeGallerySection,
-  MainFooter,
   HeroItemSync,
   EditorialSection,
   TrendingListSection,
@@ -30,8 +24,8 @@ import {
   fetchWhatsNewPostsServer,
   fetchDecodedPickServer,
   fetchArtistSpotlightServer,
-  fetchBestItemsServer,
   fetchTrendingKeywordsServer,
+  fetchMagazinePostsServer,
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
@@ -76,8 +70,8 @@ export default async function Home({
     whatsNewData,
     decodedPick,
     artistSpotlight,
-    bestItems,
     trendingKeywords,
+    magazinePosts,
     forYouPosts,
     trendingPosts,
     rankingUsersResult,
@@ -88,8 +82,8 @@ export default async function Home({
     fetchWhatsNewPostsServer(30),
     fetchDecodedPickServer(),
     fetchArtistSpotlightServer(30),
-    fetchBestItemsServer(6),
     fetchTrendingKeywordsServer(8),
+    fetchMagazinePostsServer(8),
     userId ? fetchForYouPosts(userId, 9) : fetchTrendingPosts(9),
     fetchTrendingPosts(9),
     supabase
@@ -196,7 +190,6 @@ export default async function Home({
   });
 
   // --- Build HeroPostEntry[] for HeroItemSync ---
-  // Each entry = a post that can become the hero, with its items
 
   /** Helper: build MainHeroData from a post */
   function buildHeroData(
@@ -238,7 +231,6 @@ export default async function Home({
       imageUrl?: string | null;
     }[]
   ): HeroSpotAnnotation[] {
-    // Positions at image edges — avoid center "DECODED" text
     const positions = [
       { x: 25, y: 22, side: "left" as const },
       { x: 75, y: 18, side: "right" as const },
@@ -346,8 +338,6 @@ export default async function Home({
   const forYouStyles = forYouPosts.map(toStyleCard);
   const trendingStyles = trendingPosts.map(toStyleCard);
 
-  // Editorial feature: use a whatsNew style that won't overlap with DecodeShowcase
-  // DecodeShowcase uses the first whatsNew with 2+ items, so editorial picks a different one
   const editorialStyle: StyleCardData | undefined =
     whatsNewStyles.length > 1
       ? whatsNewStyles[1]
@@ -378,120 +368,26 @@ export default async function Home({
           ).values(),
         ].slice(0, 8);
 
-  // Section 2: DecodeShowcase — prefer artistSpotlight (different from whatsNew used elsewhere)
-  // Filter by spot count (not items) — each spot is a unique position on the image
-  const showcaseSource =
-    artistSpotlight.find(
-      (s) => s.post.imageUrl && (s.spots ?? []).length >= 2
-    ) ||
-    whatsNewData.find((w) => w.post.imageUrl && (w.spots ?? []).length >= 2);
-  const decodeShowcaseData: DecodeShowcaseData = showcaseSource
-    ? {
-        sourceImageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(showcaseSource.post.imageUrl!)}`,
-        artistName:
-          showcaseSource.post.artistName ||
-          showcaseSource.post.groupName ||
-          "DECODED",
-        tagline: "See how it's Decoded",
-        // One item per spot (first solution) — ensures unique positions
-        detectedItems: (showcaseSource.spots ?? [])
-          .filter((spot) => (spot.solutions ?? []).length > 0)
-          .slice(0, 4)
-          .map((spot) => {
-            const sol = spot.solutions[0];
-            const cx = parseFloat(spot.position_left || "50");
-            const cy = parseFloat(spot.position_top || "50");
-            return {
-              id: String(sol.id),
-              label: sol.title,
-              brand: (sol.metadata as Record<string, unknown>)?.brand as
-                | string
-                | undefined,
-              imageUrl: sol.thumbnail_url
-                ? `/api/v1/image-proxy?url=${encodeURIComponent(sol.thumbnail_url)}`
-                : undefined,
-              // bbox x/y = spot center point, width/height minimal (dot rendering)
-              bbox: { x: cx, y: cy, width: 0, height: 0 },
-            };
-          }),
-      }
-    : {
-        sourceImageUrl: "",
-        artistName: "DECODED",
-        tagline: "See how it's Decoded",
-        detectedItems: [],
-      };
-
-  // Section 4: EditorialMagazine — blend 3 sources, skip posts already used elsewhere
-  const usedPostIds = new Set<string | number>();
-  if (showcaseSource) usedPostIds.add(showcaseSource.post.id);
-  if (editorialStyle) usedPostIds.add(editorialStyle.id);
-  // Also skip posts from hero decodedPick
-  if (decodedPick) usedPostIds.add(decodedPick.post.id);
-
-  // Collect unique cards from 3 different pools
-  const magazinePool: { style: StyleCardData; category: string }[] = [];
-  for (const s of spotlightStyles) {
-    if (!usedPostIds.has(s.id) && s.imageUrl) {
-      magazinePool.push({ style: s, category: "Spotlight" });
-      usedPostIds.add(s.id);
-    }
-  }
-  for (const s of whatsNewStyles) {
-    if (!usedPostIds.has(s.id) && s.imageUrl) {
-      magazinePool.push({ style: s, category: "What's New" });
-      usedPostIds.add(s.id);
-    }
-  }
-  // Add weeklyBest posts for extra variety
-  for (const p of weeklyBestPosts) {
-    if (!usedPostIds.has(p.id) && p.imageUrl) {
-      magazinePool.push({
-        style: {
-          id: p.id,
-          title: p.artistName || p.groupName || "Style",
-          description: p.context || p.mediaTitle || "",
-          artistName: p.artistName || p.groupName || "Unknown",
-          imageUrl: p.imageUrl,
-          link: `/posts/${p.id}`,
-        },
-        category: "Weekly Best",
-      });
-      usedPostIds.add(p.id);
-    }
-  }
-
+  // EditorialMagazine — use posts with published post_magazines
   const editorialMagazineData: EditorialMagazineData = {
-    cards: magazinePool.slice(0, 8).map((entry) => ({
-      id: `mag-${entry.style.id}`,
-      imageUrl: entry.style.imageUrl
-        ? `/api/v1/image-proxy?url=${encodeURIComponent(entry.style.imageUrl)}`
-        : "",
-      title: entry.style.title,
-      subtitle: entry.style.description,
-      artistName: entry.style.artistName,
-      category: entry.category,
-      link: entry.style.link,
-    })),
+    cards: magazinePosts
+      .filter((mp) => mp.imageUrl)
+      .slice(0, 8)
+      .map((mp) => {
+        const { displayName } = enrichArtistName(mp.artistName || mp.groupName);
+        return {
+          id: `mag-${mp.id}`,
+          imageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(mp.imageUrl!)}`,
+          title: mp.magazineTitle,
+          subtitle: mp.context || "",
+          artistName: displayName || "Unknown",
+          category: mp.magazineKeyword || "Editorial",
+          link: `/posts/${mp.id}`,
+        };
+      }),
   };
 
-  // Section 5: VirtualTryOnTeaser — bestItems with image proxy
-  const vtonTeaserData: VTONTeaserData = {
-    pairs: bestItems.slice(0, 3).map((bi) => ({
-      id: String(bi.item.id),
-      beforeImageUrl: bi.imageUrl
-        ? `/api/v1/image-proxy?url=${encodeURIComponent(bi.imageUrl)}`
-        : "",
-      afterImageUrl: bi.imageUrl
-        ? `/api/v1/image-proxy?url=${encodeURIComponent(bi.imageUrl)}`
-        : "",
-      itemName: bi.item.product_name || "Product",
-      itemBrand: bi.item.brand || undefined,
-    })),
-    ctaLabel: "나의 스타일 DNA에 입혀보기",
-  };
-
-  // Section 8: CommunityLeaderboard — top users by total_points + trending tags
+  // CommunityLeaderboard data (kept for future use)
   const rankingUsers = rankingUsersResult.data ?? [];
   const leaderboardData: CommunityLeaderboardData = {
     trendingUsers: rankingUsers
@@ -516,7 +412,7 @@ export default async function Home({
     ),
   };
 
-  // DomeGallery images — use trendingPosts + later weeklyBest to avoid Hero overlap
+  // DomeGallery images
   const domeImages = [
     ...trendingPosts
       .filter((p) => p.imageUrl)
@@ -538,10 +434,7 @@ export default async function Home({
       {/* ─── 1. Hero Collage ─── */}
       <HeroItemSync posts={heroPosts} />
 
-      {/* ─── 2. The Magic: AI Detection Showcase ─── */}
-      <DecodeShowcase data={decodeShowcaseData} />
-
-      {/* ─── 3. Editorial + Trending (combo row) ─── */}
+      {/* ─── 2. Editorial + Trending (combo row) ─── */}
       <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
         <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
           <EditorialSection style={editorialStyle} embedded />
@@ -549,18 +442,15 @@ export default async function Home({
         </div>
       </section>
 
-      {/* ─── 4. Editorial Magazine (Horizontal Scroll) ─── */}
+      {/* ─── 3. Editorial Magazine (Horizontal Scroll) ─── */}
       <EditorialMagazine data={editorialMagazineData} />
 
-      {/* ─── 5. VTON Teaser: Before/After ─── */}
-      <VirtualTryOnTeaser data={vtonTeaserData} />
-
-      {/* ─── 6. Discovery Grid: DECODED PICKS ─── */}
+      {/* ─── 4. Discovery Grid: DECODED PICKS ─── */}
       <section className="relative">
         <MasonryGrid items={gridItems as GridItemData[]} />
       </section>
 
-      {/* ─── 7. For You (logged-in only) ─── */}
+      {/* ─── 5. For You (logged-in only) ─── */}
       {userId && (
         <ForYouSection
           forYouPosts={forYouStyles}
@@ -569,16 +459,13 @@ export default async function Home({
         />
       )}
 
-      {/* ─── 8. Style DNA & Community Rank ─── */}
+      {/* ─── 6. Style DNA & Community Rank ─── */}
       {/* <CommunityLeaderboard data={leaderboardData} /> */}
 
-      {/* ─── 9. Personalize Banner (VTON CTA) ─── */}
+      {/* ─── 7. VTON Dome Gallery ─── */}
       <DomeGallerySection
         images={domeImages.length > 0 ? domeImages : undefined}
       />
-
-      {/* Footer */}
-      <MainFooter />
     </div>
   );
 }
