@@ -3,26 +3,17 @@
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import Link from "next/link";
-import {
-  Search,
-  Bell,
-  User,
-  Settings,
-  Activity,
-  LogOut,
-  Shield,
-  Sparkles,
-} from "lucide-react";
-import { useVtonStore } from "@/lib/stores/vtonStore";
+import { Search } from "lucide-react";
 import DecodedLogo from "@/lib/components/DecodedLogo";
-import { useAuthStore, selectIsAdmin } from "@/lib/stores/authStore";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
-  { href: "/request/upload", label: "Upload", isUpload: true },
-  { href: "/lab", label: "Lab" },
+  // 1st release: Upload hidden (GH #35)
+  // { href: "/request/upload", label: "Upload", isUpload: true },
+  // 1st release: Lab hidden (GH #35)
+  // { href: "/lab", label: "Lab" },
 ] as const;
 
 interface SmartNavProps {
@@ -44,35 +35,6 @@ export function SmartNav({ className }: SmartNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
 
   const pathname = usePathname();
-  const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const isAdmin = useAuthStore(selectIsAdmin);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click or Escape key
-  useEffect(() => {
-    if (!dropdownOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDropdownOpen(false);
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [dropdownOpen]);
 
   // Scroll-responsive hide/show
   useEffect(() => {
@@ -111,16 +73,6 @@ export function SmartNav({ className }: SmartNavProps) {
 
   const isHome = pathname === "/";
 
-  const openVton = useVtonStore((s) => s.open);
-
-  const handleUploadClick = () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    router.push("/request/upload");
-  };
-
   // On home: transparent at top, blurred on scroll
   // On other pages: always solid dark bg
   const bgClass = isHome
@@ -158,7 +110,7 @@ export function SmartNav({ className }: SmartNavProps) {
         />
       </Link>
 
-      {/* Right: Nav links + Search + Auth */}
+      {/* Right: Nav links + Search */}
       <div className="flex items-center gap-6">
         {NAV_ITEMS.map((item) => {
           const isActive =
@@ -170,18 +122,6 @@ export function SmartNav({ className }: SmartNavProps) {
             isActive ? "text-white" : "text-white/60 hover:text-white",
           ].join(" ");
 
-          if ("isUpload" in item && item.isUpload) {
-            return (
-              <button
-                key={item.href}
-                type="button"
-                onClick={handleUploadClick}
-                className={linkClass}
-              >
-                {item.label}
-              </button>
-            );
-          }
           return (
             <Link key={item.href} href={item.href} className={linkClass}>
               {item.label}
@@ -189,18 +129,7 @@ export function SmartNav({ className }: SmartNavProps) {
           );
         })}
 
-        {/* Try On */}
-        <button
-          type="button"
-          onClick={openVton}
-          className="flex items-center gap-1.5 rounded-lg bg-[#eafd67]/10 px-3 py-1.5 text-xs tracking-[0.1em] uppercase text-[#eafd67] transition-colors hover:bg-[#eafd67]/20"
-        >
-          <Sparkles className="h-3 w-3" />
-          Try On
-        </button>
-
-        {/* Divider */}
-        <div className="h-4 w-px bg-white/15" />
+        {/* 1st release: Try On hidden (GH #35) */}
 
         {/* Search */}
         <button
@@ -210,104 +139,7 @@ export function SmartNav({ className }: SmartNavProps) {
           <Search className="h-4 w-4 text-white/60" />
         </button>
 
-        {/* Admin link */}
-        {user && isAdmin && (
-          <Link
-            href="/admin"
-            className="p-1.5 rounded-md opacity-60 hover:opacity-100 transition-opacity"
-            aria-label="Admin Panel"
-          >
-            <Shield className="h-4 w-4 text-white/60" />
-          </Link>
-        )}
-
-        {/* Auth UI */}
-        {user ? (
-          <>
-            <button
-              className="relative p-1.5 rounded-md hover:bg-white/10 transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4 text-white/60" />
-              <span
-                className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-red-500"
-                aria-hidden="true"
-              />
-            </button>
-
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-                aria-label="User menu"
-                aria-expanded={dropdownOpen}
-                aria-haspopup="menu"
-              >
-                <span className="text-xs font-medium text-white">
-                  {user.name.charAt(0).toUpperCase()}
-                </span>
-              </button>
-
-              {dropdownOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-white/10 bg-[#1a1a1a] shadow-lg py-1 z-50"
-                >
-                  <div className="px-3 py-2 border-b border-white/10">
-                    <p className="text-sm font-medium text-white truncate">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-white/50 truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  <Link
-                    href="/profile"
-                    role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <User className="h-4 w-4" /> Profile
-                  </Link>
-                  <Link
-                    href="/profile?tab=activity"
-                    role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <Activity className="h-4 w-4" /> Activity
-                  </Link>
-                  <Link
-                    href="/profile?tab=settings"
-                    role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <Settings className="h-4 w-4" /> Settings
-                  </Link>
-                  <div className="border-t border-white/10 my-1" />
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      useAuthStore.getState().logout();
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left text-red-400 hover:bg-white/10 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" /> Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <Link
-            href="/login"
-            className="text-xs tracking-[0.2em] uppercase text-white/60 hover:text-white transition-colors"
-          >
-            Login
-          </Link>
-        )}
+        {/* 1st release: Admin, Notice, Profile, Login hidden (GH #35) */}
       </div>
     </header>
   );
