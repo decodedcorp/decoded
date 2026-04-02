@@ -67,7 +67,7 @@ export function ItemImage({
   if (hasError || !src) {
     return (
       <div
-        className={cn("w-full overflow-hidden bg-muted", className)}
+        className={cn("w-full overflow-hidden border border-border/20 bg-muted", className)}
         style={{ aspectRatio: config.aspectRatio }}
       />
     );
@@ -76,7 +76,7 @@ export function ItemImage({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden",
+        "relative w-full overflow-hidden border border-border/20",
         config.blur ? "bg-black" : "bg-muted",
         className
       )}
