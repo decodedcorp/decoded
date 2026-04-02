@@ -10,7 +10,6 @@ import { normalizeItem } from "./types";
 import type { UiItem } from "./types";
 import type { Json } from "@/lib/supabase/types";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
-import { ReportErrorButton } from "./ReportErrorButton";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
 import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
@@ -309,7 +308,6 @@ export function ImageDetailModal({ imageId }: Props) {
           {renderContent()}
         </div>
         <div className="absolute top-4 right-4 md:top-auto md:right-auto md:bottom-6 md:left-6 z-20 flex gap-3">
-          <ReportErrorButton postId={image?.id} size="md" />
           <button
             onClick={handleMaximize}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white backdrop-blur-sm transition-transform hover:scale-105 hover:bg-black active:scale-95 dark:bg-white/80 dark:text-black dark:hover:bg-white"
