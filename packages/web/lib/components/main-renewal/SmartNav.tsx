@@ -3,7 +3,6 @@
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import Link from "next/link";
-import { Search } from "lucide-react";
 import DecodedLogo from "@/lib/components/DecodedLogo";
 import { usePathname } from "next/navigation";
 
@@ -131,13 +130,7 @@ export function SmartNav({ className }: SmartNavProps) {
 
         {/* 1st release: Try On hidden (GH #35) */}
 
-        {/* Search */}
-        <button
-          className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-          aria-label="Search"
-        >
-          <Search className="h-4 w-4 text-white/60" />
-        </button>
+        {/* 1st release: Search hidden (GH #35) */}
 
         {/* 1st release: Admin, Notice, Profile, Login hidden (GH #35) */}
       </div>
