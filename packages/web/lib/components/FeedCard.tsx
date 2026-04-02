@@ -13,6 +13,8 @@ import { FollowButton } from "@/lib/components/shared/FollowButton";
 import { useSpots } from "@/lib/hooks/useSpots";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import { useTrackDwellTime } from "@/lib/hooks/useTrackDwellTime";
+import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
+import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
 
 // Register GSAP Flip plugin
 if (typeof window !== "undefined") {
@@ -96,6 +98,9 @@ export const FeedCard = memo(
     });
 
     const { id, imageUrl, hasItems } = item;
+
+    const { width: imgW, height: imgH } = useImageDimensions(imageUrl);
+    const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.FeedCard;
 
     // Fetch spots for cards with items
     const { data: spotsData } = useSpots(item.postId!, {
@@ -215,8 +220,13 @@ export const FeedCard = memo(
             </div>
           )}
 
-          {/* Image container - 4:5 aspect ratio like Instagram */}
-          <div className="relative aspect-[4/5] bg-muted">
+          {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
+          <div
+            className={cn(
+              "relative",
+              useDynamicRatio ? "bg-black" : "aspect-[4/5] bg-muted"
+            )}
+          >
             {imageUrl && !imageError ? (
               <img
                 src={imageUrl}
@@ -224,14 +234,27 @@ export const FeedCard = memo(
                 decoding="async"
                 fetchPriority={priority ? "high" : "auto"}
                 alt={`Image ${id}`}
-                className={`h-full w-full object-cover object-top transition-opacity duration-200 ease-out ${
-                  isLoaded ? "opacity-100" : "opacity-0"
-                }`}
+                {...(useDynamicRatio && imgW && imgH
+                  ? { width: imgW, height: imgH }
+                  : {})}
+                className={cn(
+                  "transition-opacity duration-200 ease-out",
+                  isLoaded ? "opacity-100" : "opacity-0",
+                  useDynamicRatio
+                    ? "w-full object-contain max-h-[80vh]"
+                    : "h-full w-full object-cover object-top"
+                )}
                 onError={() => setImageError(true)}
                 onLoad={() => setIsLoaded(true)}
               />
             ) : (
-              <div className="h-full w-full bg-muted" />
+              <div
+                className={cn(
+                  useDynamicRatio
+                    ? "aspect-[3/4] bg-neutral-900"
+                    : "h-full w-full bg-muted"
+                )}
+              />
             )}
 
             {/* Subtle spot indicators */}

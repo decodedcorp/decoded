@@ -7,6 +7,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 
 import type { GridItemData, GridItemSpot } from "./types";
+import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
+import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,6 +31,14 @@ const HEIGHT_VARIANTS = [
 function clampHeight(aspectRatio: number, index: number): number {
   const v = HEIGHT_VARIANTS[index % HEIGHT_VARIANTS.length];
   return Math.min(v.max, Math.max(v.min, Math.round(v.base * aspectRatio)));
+}
+
+/** Calculate card height from real image dimensions, clamped to 200-500px range */
+function realHeight(imgW: number | undefined, imgH: number | undefined, columnWidth: number): number {
+  if (!imgW || !imgH) return 320; // fallback
+  const ratio = imgH / imgW;
+  const height = Math.round(columnWidth * ratio);
+  return Math.min(500, Math.max(200, height));
 }
 
 /* ------------------------------------------------------------------ */
@@ -77,7 +87,11 @@ export default function MasonryGridItem({
   const spotsRef = useRef<HTMLDivElement>(null);
 
   const aspectRatio = item.aspectRatio ?? 1;
-  const height = clampHeight(aspectRatio, index);
+  const { width: imgW, height: imgH } = useImageDimensions(item.imageUrl);
+  const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.MasonryGridItem;
+  const height = useDynamicRatio
+    ? realHeight(imgW, imgH, 280)
+    : clampHeight(aspectRatio, index);
   const hasSpots = item.spots && item.spots.length > 0;
 
   /* ---- GSAP: parallax + entry animation ---- */
@@ -159,13 +173,24 @@ export default function MasonryGridItem({
       onMouseLeave={handleMouseLeave}
     >
       {/* Background image */}
-      <Image
-        src={item.imageUrl}
-        alt={item.title}
-        fill
-        className="object-cover transition-transform duration-500 group-hover:scale-105"
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-      />
+      {useDynamicRatio ? (
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          width={imgW}
+          height={imgH}
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+      ) : (
+        <Image
+          src={item.imageUrl}
+          alt={item.title}
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+        />
+      )}
 
       {/* Spot overlay markers */}
       {hasSpots && (
