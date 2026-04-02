@@ -42,6 +42,12 @@ pub struct UserResponse {
 
     /// 관리자 여부
     pub is_admin: bool,
+
+    /// 팔로워 수
+    pub followers_count: i64,
+
+    /// 팔로잉 수
+    pub following_count: i64,
 }
 
 impl From<UserModel> for UserResponse {
@@ -56,6 +62,8 @@ impl From<UserModel> for UserResponse {
             rank: user.rank,
             total_points: user.total_points,
             is_admin: user.is_admin,
+            followers_count: 0,
+            following_count: 0,
         }
     }
 }
@@ -99,6 +107,26 @@ pub struct UserStatsResponse {
 
     /// 사용자 등급
     pub rank: String,
+}
+
+/// VTON 히스토리 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryItem {
+    pub id: Uuid,
+    pub image_url: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 저장된 포스트 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SavedItem {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_thumbnail_url: Option<String>,
+    pub saved_at: DateTime<Utc>,
 }
 
 /// 사용자 활동 타입
@@ -227,6 +255,8 @@ mod tests {
             rank: "Gold".to_string(),
             total_points: 42,
             is_admin: true,
+            followers_count: 0,
+            following_count: 0,
         };
 
         let v: serde_json::Value = serde_json::to_value(&original).unwrap();
@@ -242,6 +272,51 @@ mod tests {
         assert_eq!(parsed.rank, "Gold");
         assert_eq!(parsed.total_points, 42);
         assert!(parsed.is_admin);
+    }
+
+    #[test]
+    fn user_response_includes_follow_counts_in_json() {
+        let resp = UserResponse {
+            id: sample_uuid(),
+            email: "a@b.co".to_string(),
+            username: "u".to_string(),
+            display_name: None,
+            avatar_url: None,
+            bio: None,
+            rank: "Gold".to_string(),
+            total_points: 0,
+            is_admin: false,
+            followers_count: 42,
+            following_count: 7,
+        };
+        let v: serde_json::Value = serde_json::to_value(&resp).unwrap();
+        assert_eq!(v["followers_count"], 42);
+        assert_eq!(v["following_count"], 7);
+
+        let parsed: UserResponse = serde_json::from_value(v).unwrap();
+        assert_eq!(parsed.followers_count, 42);
+        assert_eq!(parsed.following_count, 7);
+    }
+
+    #[test]
+    fn user_response_from_model_defaults_follow_counts_to_zero() {
+        let now = Utc::now().into();
+        let model = UserModel {
+            id: sample_uuid(),
+            email: "t@e.co".to_string(),
+            username: "t".to_string(),
+            display_name: None,
+            avatar_url: None,
+            bio: None,
+            rank: "Member".to_string(),
+            total_points: 0,
+            is_admin: false,
+            created_at: now,
+            updated_at: now,
+        };
+        let resp: UserResponse = model.into();
+        assert_eq!(resp.followers_count, 0);
+        assert_eq!(resp.following_count, 0);
     }
 
     #[test]

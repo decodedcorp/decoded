@@ -25,8 +25,8 @@ export type { ServerLogEntry };
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Admin API error: ${res.status}`);
   }
@@ -57,7 +57,7 @@ export function useServerLogs(
 
   return useQuery<ServerLogListResponse>({
     queryKey: ["admin", "server-logs", "list", level, search, from, page],
-    queryFn: () => {
+    queryFn: ({ signal }: { signal?: AbortSignal }) => {
       const searchParams = new URLSearchParams({
         page: String(page),
         pageSize: String(pageSize),
@@ -67,7 +67,8 @@ export function useServerLogs(
       if (from) searchParams.set("from", from);
       if (to) searchParams.set("to", to);
       return adminFetch<ServerLogListResponse>(
-        `/api/v1/admin/server-logs?${searchParams.toString()}`
+        `/api/v1/admin/server-logs?${searchParams.toString()}`,
+        { signal }
       );
     },
     staleTime: 30_000,
@@ -126,6 +127,7 @@ export function useLogStream(): UseLogStreamReturn {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Keep latestIdRef in sync with state so polling closure always has current value
   useEffect(() => {
@@ -137,16 +139,23 @@ export function useLogStream(): UseLogStreamReturn {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    abortRef.current?.abort();
+    abortRef.current = null;
   }, []);
 
   const poll = useCallback(async () => {
     try {
+      // Abort any in-flight poll, create a fresh controller for this poll
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+
       const params = new URLSearchParams();
       if (latestIdRef.current) {
         params.set("since_id", latestIdRef.current);
       }
       const data = await adminFetch<StreamResponse>(
-        `/api/v1/admin/server-logs/stream?${params.toString()}`
+        `/api/v1/admin/server-logs/stream?${params.toString()}`,
+        { signal: abortRef.current.signal }
       );
 
       if (data.entries.length > 0) {
@@ -161,8 +170,9 @@ export function useLogStream(): UseLogStreamReturn {
           setLatestId(data.latestId);
         }
       }
-    } catch {
-      // Silently ignore fetch errors during streaming (network blip, etc.)
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      // Silently ignore other fetch errors during streaming (network blip, etc.)
     }
   }, []);
 

@@ -1,24 +1,34 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardFooter } from "@/lib/components/ui/card";
 import { OAuthButton } from "./OAuthButton";
 import { useAuthStore, type OAuthProvider } from "@/lib/stores/authStore";
 
+// Prevent open redirect: only allow same-origin relative paths
+function getSafeRedirect(url: string | null): string {
+  if (!url) return "/";
+  return url.startsWith("/") && !url.startsWith("//") ? url : "/";
+}
+
 export function LoginCard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = getSafeRedirect(searchParams.get("redirect"));
   const { signInWithOAuth, guestLogin, loadingProvider, isLoading, error } =
     useAuthStore();
 
   const handleLogin = async (provider: OAuthProvider) => {
+    // Store redirect destination before OAuth round-trip (browser loses query params)
+    if (redirectTo !== "/") {
+      sessionStorage.setItem("post_login_redirect", redirectTo);
+    }
     await signInWithOAuth(provider);
-    // OAuth는 리다이렉트 방식이므로 여기서 router.push 하지 않음
-    // 로그인 성공 후 redirectTo에서 설정한 URL로 이동
   };
 
   const handleGuestLogin = () => {
     guestLogin();
-    router.push("/");
+    router.push(redirectTo);
   };
 
   return (

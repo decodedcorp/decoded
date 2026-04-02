@@ -14,8 +14,8 @@ import type { AiCostKPI, AiCostChartResponse } from "@/lib/api/admin/ai-cost";
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Admin API error: ${res.status}`);
   }
@@ -33,8 +33,10 @@ async function adminFetch<T>(url: string): Promise<T> {
 export function useAiCostKPI(days: number = 30): UseQueryResult<AiCostKPI> {
   return useQuery<AiCostKPI>({
     queryKey: ["admin", "ai-cost", "kpi", days],
-    queryFn: () =>
-      adminFetch<AiCostKPI>(`/api/v1/admin/ai-cost/kpi?days=${days}`),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<AiCostKPI>(`/api/v1/admin/ai-cost/kpi?days=${days}`, {
+        signal,
+      }),
     staleTime: 60_000,
   });
 }
@@ -50,9 +52,10 @@ export function useAiCostChart(
 ): UseQueryResult<AiCostChartResponse> {
   return useQuery<AiCostChartResponse>({
     queryKey: ["admin", "ai-cost", "chart", days],
-    queryFn: () =>
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
       adminFetch<AiCostChartResponse>(
-        `/api/v1/admin/ai-cost/chart?days=${days}`
+        `/api/v1/admin/ai-cost/chart?days=${days}`,
+        { signal }
       ),
     staleTime: 60_000,
   });

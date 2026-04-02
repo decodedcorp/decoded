@@ -21,8 +21,8 @@ import type {
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Admin API error: ${res.status}`);
   }
@@ -51,7 +51,7 @@ export function useAuditList(
 
   return useQuery<AuditListResponse>({
     queryKey: ["admin", "audit", "list", page, perPage, status],
-    queryFn: () => {
+    queryFn: ({ signal }: { signal?: AbortSignal }) => {
       const searchParams = new URLSearchParams({
         page: String(page),
         perPage: String(perPage),
@@ -61,7 +61,8 @@ export function useAuditList(
         searchParams.set("status", status);
       }
       return adminFetch<AuditListResponse>(
-        `/api/v1/admin/audit?${searchParams.toString()}`
+        `/api/v1/admin/audit?${searchParams.toString()}`,
+        { signal }
       );
     },
     staleTime: 30_000,
@@ -80,8 +81,10 @@ export function useAuditDetail(
 ): UseQueryResult<AuditDetailResponse> {
   return useQuery<AuditDetailResponse>({
     queryKey: ["admin", "audit", "detail", requestId],
-    queryFn: () =>
-      adminFetch<AuditDetailResponse>(`/api/v1/admin/audit/${requestId}`),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<AuditDetailResponse>(`/api/v1/admin/audit/${requestId}`, {
+        signal,
+      }),
     enabled: !!requestId,
     staleTime: 60_000,
   });

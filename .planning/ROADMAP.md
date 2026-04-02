@@ -13,6 +13,7 @@
 - [ ] **v7.0 Sticker Canvas** — m9-Phases 01-03 (paused)
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
+- [ ] **v10.0 Profile Page Completion** — Phases 44-50
 
 ## Phases
 
@@ -291,11 +292,128 @@ Plans:
 **Plans**: 3 plans
 
 
+### v10.0 Profile Page Completion
+
+**Milestone Goal:** 프로필 페이지의 미구현 기능을 모두 완성 — Auth guard, 공개 프로필, 팔로우 시스템(read), Tries/Saved 탭을 실제 데이터로 연결
+
+### Phase 44: Auth Guard
+
+**Goal**: 미로그인 유저가 `/profile` 접근 시 로그인 페이지로 리다이렉트되고, 로그인 후 원래 URL로 복귀한다
+**Depends on**: Nothing (first phase of v10.0)
+**Requirements**: AUTH-01, AUTH-02
+**Success Criteria**:
+
+1. 미로그인 유저가 `/profile` 접근 시 `/login?redirect=/profile`로 리다이렉트된다
+2. `ProfileClient.tsx`에서 401 에러 시 에러 UI 대신 로그인 페이지로 리다이렉트된다
+3. 로그인 완료 후 `redirect` 파라미터의 URL로 복귀된다
+4. 이미 로그인된 유저는 기존과 동일하게 프로필 페이지 접근 가능
+
+Plans:
+
+- [ ] 44-01-PLAN.md — proxy.ts matcher 확장 + ProfileClient 401 핸들링 리다이렉트
+
+### Phase 45: Public User Profile Route
+
+**Goal**: `/profile/[userId]`에서 다른 유저의 공개 프로필을 조회할 수 있고, 비공개 항목은 숨김 처리된다
+**Depends on**: Phase 44
+**Requirements**: ROUTE-01, ROUTE-02
+**Success Criteria**:
+
+1. `/profile/[userId]`에서 해당 유저의 프로필(아바타, 닉네임, 바이오, 통계)이 표시된다
+2. 자신의 프로필에는 수정 버튼, 타인 프로필에는 수정 버튼 숨김
+3. 비공개 항목(Saved 탭, Ink 크레딧, 프로필 수정)이 타인 프로필에서 숨겨진다
+4. 존재하지 않는 userId 접근 시 404 또는 에러 UI가 표시된다
+
+Plans:
+
+- [ ] 45-01-PLAN.md — app/profile/[userId]/page.tsx + PublicProfileClient + 비공개 항목 분기
+
+### Phase 46: Follow System Backend
+
+**Goal**: `user_follows` 테이블과 Follow count API가 구현되어 팔로워/팔로잉 수를 조회할 수 있다
+**Depends on**: Nothing (independent backend work)
+**Requirements**: FLLW-01, FLLW-02, FLLW-03
+**Success Criteria**:
+
+1. Supabase `user_follows` 테이블이 마이그레이션으로 생성된다 (follower_id, following_id, created_at)
+2. `GET /api/v1/users/{userId}/followers/count`와 `GET /api/v1/users/{userId}/following/count`가 정확한 수를 반환한다
+3. `UserResponse`에 `followers_count`, `following_count` 필드가 포함된다
+4. RLS 정책이 적용되어 모든 유저가 count를 조회할 수 있다
+
+Plans:
+
+- [ ] 46-01-PLAN.md — Supabase 마이그레이션 + Rust 핸들러 + UserResponse 확장
+
+### Phase 47: Follow System Frontend
+
+**Goal**: 프론트엔드에서 실제 팔로워/팔로잉 수가 표시되고 하드코딩이 제거된다
+**Depends on**: Phase 46
+**Requirements**: FLLW-04, FLLW-05
+**Success Criteria**:
+
+1. OpenAPI spec 업데이트 + Orval 재생성으로 follow 관련 hook이 자동 생성된다
+2. `FollowStats.tsx`의 하드코딩 값(`1234`/`567`)이 제거되고 실제 API 데이터가 표시된다
+3. 공개 프로필에서도 해당 유저의 팔로워/팔로잉 수가 표시된다
+
+Plans:
+
+- [ ] 47-01-PLAN.md — OpenAPI spec 반영 + Orval 재생성 + FollowStats 실데이터 연결
+
+### Phase 48: Tries & Saved Backend
+
+**Goal**: Tries/Saved list API 엔드포인트가 구현되어 프론트엔드에서 페이지네이션 데이터를 조회할 수 있다
+**Depends on**: Phase 44
+**Requirements**: TRIES-01, TRIES-02, SAVED-01, SAVED-02
+**Success Criteria**:
+
+1. `GET /api/v1/users/me/tries`가 `user_tryon_history` 기반 페이지네이션 응답을 반환한다
+2. `GET /api/v1/users/me/saved`가 `saved_posts` 기반 페이지네이션 응답을 반환한다
+3. OpenAPI spec 반영 + Orval 재생성으로 `useGetMyTries`, `useGetMySaved` hook이 생성된다
+4. 두 엔드포인트 모두 `page`, `per_page` 쿼리 파라미터를 지원한다
+
+Plans:
+
+- [ ] 48-01-PLAN.md — Rust tries/saved 핸들러 + DTOs + service + openapi.rs (TRIES-01, SAVED-01)
+- [ ] 48-02-PLAN.md — OpenAPI spec 업데이트 + Orval 재생성 (TRIES-02, SAVED-02)
+
+### Phase 49: Tries Tab Frontend
+
+**Goal**: Tries 탭이 실제 VTON 히스토리를 무한스크롤로 표시하고 스텁 코드가 완전 제거된다
+**Depends on**: Phase 48
+**Requirements**: TRIES-03, TRIES-04, TRIES-05
+**Success Criteria**:
+
+1. `TriesGrid.tsx` 타입이 실제 테이블 스키마와 일치한다 (`image_url`, `item_count` 제거)
+2. 생성된 hook 기반 무한스크롤로 실제 데이터가 표시된다
+3. 스텁 코드(`fetchMyTries → []`)가 완전히 제거된다
+4. 빈 상태/로딩/에러 상태가 올바르게 처리된다
+
+Plans:
+
+- [ ] 49-01-PLAN.md — TriesGrid 리라이트 + useInfiniteQuery + 스텁 제거
+
+### Phase 50: Saved Tab Frontend
+
+**Goal**: Saved 탭이 실제 저장된 포스트를 무한스크롤로 표시하고 모든 mock 데이터가 제거된다
+**Depends on**: Phase 48
+**Requirements**: SAVED-03, SAVED-04, SAVED-05
+**Success Criteria**:
+
+1. `SavedGrid.tsx`가 생성된 hook 기반으로 재구현된다
+2. `collectionStore.ts`의 MOCK_PINS/MOCK_BOARDS가 완전히 제거된다
+3. 무한스크롤로 다음 페이지가 자동 로드된다
+4. 빈 상태에서 "저장한 포스트가 없습니다" 안내가 표시된다
+
+Plans:
+
+- [ ] 50-01-PLAN.md — SavedGrid 리라이트 + collectionStore mock 제거 + useInfiniteQuery
+
 ## Progress
 
 **Execution Order:**
 v8.0: m10-01 → m10-02 → m10-03 → m10-04
 v9.0: 39 → 40 → 41 → 42 → 43
+v10.0: 44 → 45 → 46 → 47 (parallel: 48) → 49, 50
 
 | Phase                                         | Milestone | Plans Complete | Status        | Completed  |
 | --------------------------------------------- | --------- | -------------- | ------------- | ---------- |
@@ -314,6 +432,13 @@ v9.0: 39 → 40 → 41 → 42 → 43
 | 41: Read Hook Migration                       | v9.0      | 4/4            | Complete      | 2026-03-23 |
 | 42: Mutation Migration and Cache Wiring       | v9.0      | 3/3            | Complete      | 2026-03-23 |
 | 43: CI Hardening and Tooling                  | v9.0      | 3/3            | Complete      | 2026-03-24 |
+| 44: Auth Guard                                | v10.0     | 0/1            | Not started   | -          |
+| 45: Public User Profile Route                 | v10.0     | 0/1            | Not started   | -          |
+| 46: Follow System Backend                     | v10.0     | 0/1            | Not started   | -          |
+| 47: Follow System Frontend                    | v10.0     | 0/1            | Not started   | -          |
+| 48: Tries & Saved Backend                     | v10.0     | 0/2            | Not started   | -          |
+| 49: Tries Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
+| 50: Saved Tab Frontend                        | v10.0     | 0/1            | Not started   | -          |
 
 ---
 

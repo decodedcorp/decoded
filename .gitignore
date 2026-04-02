@@ -47,6 +47,8 @@ yarn-error.log*
 # Testing
 coverage/
 test-results/
+# Playwright auth storageState — contains real auth tokens, never commit
+packages/web/.playwright/
 
 # Local dev log files (optional tail -f workflows)
 .logs/
@@ -54,3 +56,12 @@ test-results/
 # Orval generated API client (regenerated from OpenAPI spec)
 packages/web/lib/api/generated/
 !packages/web/lib/api/generated/.gitkeep
+supabase/.temp/
+packages/backend/target/
+
+# gstack build artifacts (built locally by ./setup)
+.claude/skills/gstack/node_modules/
+.claude/skills/gstack/browse/dist/
+.claude/skills/gstack/bin/gstack-global-discover
+.agents/skills/gstack*/node_modules/
+.dmux/

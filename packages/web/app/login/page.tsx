@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { LoginCard } from "@/lib/components/auth/LoginCard";
 import { LoginBackground } from "./LoginBackground";
 
@@ -17,7 +18,10 @@ export default function LoginPage() {
 
       {/* Content */}
       <div className="relative z-20 flex min-h-screen flex-col items-center justify-center px-4">
-        <LoginCard />
+        {/* Suspense required because LoginCard uses useSearchParams() */}
+        <Suspense fallback={null}>
+          <LoginCard />
+        </Suspense>
       </div>
     </main>
   );

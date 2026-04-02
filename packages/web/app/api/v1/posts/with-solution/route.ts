@@ -7,23 +7,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL = process.env.API_BASE_URL;
+import { API_BASE_URL } from "@/lib/server-env";
 
 /**
  * POST /api/v1/posts/with-solution
  * Create a new post with solutions (requires authentication)
  */
 export async function POST(request: NextRequest) {
-  // Validate server configuration
-  if (!API_BASE_URL) {
-    console.error("API_BASE_URL environment variable is not configured");
-    return NextResponse.json(
-      { message: "Server configuration error" },
-      { status: 500 }
-    );
-  }
-
   // Validate authentication
   const authHeader = request.headers.get("Authorization");
   if (!authHeader) {
@@ -61,13 +51,12 @@ export async function POST(request: NextRequest) {
     // Return the response with the same status code
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Posts with solution POST proxy error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Posts with solution POST proxy error:", error);
+    }
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? `Proxy error: ${error.message}`
-            : "Failed to create post with solution",
+        message: error instanceof Error ? error.message : "Proxy error",
       },
       { status: 502 }
     );

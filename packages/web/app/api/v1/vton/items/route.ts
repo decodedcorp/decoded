@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await dbQuery;
 
     if (error) {
-      console.error("Error fetching vton items:", JSON.stringify(error));
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error fetching vton items:", JSON.stringify(error));
+      }
       return NextResponse.json(
         { items: [], error: error.message },
         { status: 500 }
@@ -59,7 +61,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items });
   } catch (err) {
-    console.error("VTON items error:", err);
-    return NextResponse.json({ items: [] }, { status: 500 });
+    if (process.env.NODE_ENV === "development") {
+      console.error("VTON items error:", err);
+    }
+    return NextResponse.json(
+      { items: [], error: err instanceof Error ? err.message : "Proxy error" },
+      { status: 502 }
+    );
   }
 }

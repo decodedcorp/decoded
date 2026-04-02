@@ -3,28 +3,28 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Behavioral Intelligence & Dynamic UI
 status: unknown
-stopped_at: Completed 43-03-PLAN.md
-last_updated: "2026-03-23T15:56:16.556Z"
+stopped_at: Completed 50-01-PLAN.md
+last_updated: "2026-03-26T15:46:56.223Z"
 progress:
-  total_phases: 41
-  completed_phases: 39
-  total_plans: 94
-  completed_plans: 93
+  total_phases: 48
+  completed_phases: 46
+  total_plans: 102
+  completed_plans: 101
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-23)
+See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** 완전한 사용자 경험 — 일관된 디자인 시스템과 실제 데이터
-**Current focus:** Phase 43 — ci-hardening-and-tooling
+**Current focus:** Phase 50 — saved-tab-frontend
 
 ## Current Position
 
-Phase: 43 (ci-hardening-and-tooling) — EXECUTING
-Plan: 1 of 3
+Phase: 50 (saved-tab-frontend) — EXECUTING
+Plan: 1 of 1
 
 ## Milestone Summary
 
@@ -40,7 +40,8 @@ Plan: 1 of 3
 | v6.0 Behavioral Intelligence | 3      | 10    | Paused     | -          |
 | v7.0 Sticker Canvas          | 3      | 8     | Paused     | -          |
 | v8.0 Monorepo & Bun          | 4      | 3     | Shipped    | 2026-03-23 |
-| **v9.0 API Generation**      | **5**  | **-** | **Active** | -          |
+| v9.0 API Generation          | 5      | -     | Shipped    | 2026-03-23 |
+| **v10.0 Profile Completion** | **-**  | **-** | **Active** | -          |
 
 ## Accumulated Context
 
@@ -97,6 +98,25 @@ v9.0 key constraints (from research):
 - [Phase 43]: Rollback strategy: revert openapi.json + re-run generate:api — generated files are gitignored so they are never committed and never need to be reverted
 - [Phase 43-03]: vitest environment: node for Zod schema tests (no DOM dependency)
 - [Phase 43-03]: HealthCheckResponse has top-level status field — plan interface snippet omitted it; fixture corrected by reading actual schema
+- [Phase 44]: sessionStorage for OAuth round-trip (Supabase allowlists fixed redirectTo origin/)
+- [Phase 44]: window.location.replace in authStore (not router.push) to avoid login page in browser history
+- [Phase 44]: req.nextUrl.pathname used for redirect param to prevent open redirect vulnerability
+- [Phase 45-01]: PublicProfileClient is standalone (not extending ProfileClient) — prevents Zustand profileStore being polluted with another user's data
+- [Phase 45-01]: ProfileHeaderCard (design-system explicit props) used instead of ProfileHeader (reads profileStore) for public profile view
+- [Phase 45-01]: BadgeGrid and RankingList replaced with inline placeholders in public profile — both read profileStore and would show wrong user data
+- [Phase 46]: ConnectionTrait must be imported explicitly for query_one on DatabaseConnection
+- [Phase 46]: struct update syntax (..UserResponse::from(user)) cleanly sets non-count fields in get_user_with_follow_counts
+- [Phase 46]: PATCH /me re-fetches follow counts after update for accurate response
+- [Phase 47]: openapi.json edit via python3 json.load/dump for minified JSON safety
+- [Phase 47]: Orval preserves snake_case: UserResponse fields are followers_count/following_count (not camelCase)
+- [Phase 47]: ProfileClient uses optional chaining (userData?.followers_count ?? 0) — PublicProfileClient uses direct access (non-null guard at line 189)
+- [Phase 48]: list_my_tries uses SeaORM entity query (no JOIN needed); list_my_saved uses raw SQL JOIN for post title/thumbnail
+- [Phase 48]: per_page capped at 50 in service layer for tries/saved endpoints (not in Pagination struct)
+- [Phase 48]: openapi.json edited via python3 json.load/dump for minified JSON safety; TryItem and SavedItem schemas added; Orval regenerated useGetMyTries/useGetMySaved hooks
+- [Phase 49]: getMyTries raw function used (not useGetMyTries hook) for infinite pagination — Orval hooks are regular useQuery, same approach as useUserActivities in Phase 41
+- [Phase 49]: Native IntersectionObserver used for infinite scroll sentinel — react-intersection-observer not installed in project
+- [Phase 50-01]: getMySaved raw function used (not useGetMySaved hook) for infinite pagination — same pattern as Phase 49 TriesGrid
+- [Phase 50-01]: Native IntersectionObserver used for infinite scroll sentinel — react-intersection-observer not installed
 
 ### Blockers/Concerns
 
@@ -113,8 +133,8 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last session: 2026-03-23T15:31:05.775Z
-Stopped at: Completed 43-03-PLAN.md
+Last session: 2026-03-26T15:46:15.272Z
+Stopped at: Completed 50-01-PLAN.md
 Resume file: None
 
 Next step: Execute 42-03-PLAN.md

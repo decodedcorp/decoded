@@ -4,17 +4,16 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
 import { checkIsAdmin } from "@/lib/supabase/admin";
 
 /**
- * Admin route protection proxy (Next.js 16).
+ * Route protection proxy (Next.js 16).
  *
- * Protects all /admin/* routes server-side by verifying:
- * 1. User has an active Supabase session (authenticated)
- * 2. User record has is_admin === true in the users table
+ * Protects:
+ * - /profile: requires active session — unauthenticated users are redirected
+ *   to /login?redirect=/profile so they can return after login (AUTH-01, AUTH-02).
+ * - /admin/*: requires session + is_admin role — unauthenticated/non-admin users
+ *   are silently redirected to home (AAUTH-01, AAUTH-02).
  *
- * Non-admin and unauthenticated users are silently redirected to home (/)
- * with no indication that an admin panel exists (AAUTH-01, AAUTH-02).
- *
- * The middleware client also propagates refreshed session cookies on every
- * request, keeping auth state consistent.
+ * The middleware client propagates refreshed session cookies on every request,
+ * keeping auth state consistent.
  */
 export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
@@ -24,12 +23,23 @@ export async function proxy(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // No session — silently redirect to home
+  const pathname = req.nextUrl.pathname;
+
+  // Profile: require session, redirect to login with return URL
+  if (pathname === "/profile" || pathname.startsWith("/profile/")) {
+    if (!session) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return res;
+  }
+
+  // Admin: require session + admin role — silently redirect to home on failure
   if (!session) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Session exists — verify admin status
   const isAdmin = await checkIsAdmin(supabase, session.user.id);
 
   if (!isAdmin) {
@@ -41,5 +51,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/profile"],
 };

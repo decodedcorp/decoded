@@ -16,8 +16,8 @@ import type {
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Admin API error: ${res.status}`);
   }
@@ -46,9 +46,10 @@ export function usePipelines(
 
   return useQuery<PipelineListResponse>({
     queryKey: ["admin", "pipeline", "list", status, page, pageSize],
-    queryFn: () =>
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
       adminFetch<PipelineListResponse>(
-        `/api/v1/admin/pipeline?${params.toString()}`
+        `/api/v1/admin/pipeline?${params.toString()}`,
+        { signal }
       ),
     staleTime: 60_000,
   });
@@ -64,8 +65,8 @@ export function usePipelineDetail(
 ): UseQueryResult<PipelineExecution> {
   return useQuery<PipelineExecution>({
     queryKey: ["admin", "pipeline", "detail", id],
-    queryFn: () =>
-      adminFetch<PipelineExecution>(`/api/v1/admin/pipeline/${id}`),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<PipelineExecution>(`/api/v1/admin/pipeline/${id}`, { signal }),
     enabled: !!id,
     staleTime: 60_000,
   });

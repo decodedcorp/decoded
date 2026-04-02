@@ -19,8 +19,8 @@ import type {
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Admin API error: ${res.status}`);
   }
@@ -36,7 +36,8 @@ async function adminFetch<T>(url: string): Promise<T> {
 export function useDashboardStats(): UseQueryResult<KPIStats> {
   return useQuery<KPIStats>({
     queryKey: ["admin", "dashboard", "stats"],
-    queryFn: () => adminFetch<KPIStats>("/api/v1/admin/dashboard/stats"),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<KPIStats>("/api/v1/admin/dashboard/stats", { signal }),
     staleTime: 60_000,
     refetchInterval: 300_000,
   });
@@ -52,8 +53,10 @@ export function useDashboardStats(): UseQueryResult<KPIStats> {
 export function useChartData(days: number = 30): UseQueryResult<DailyMetric[]> {
   return useQuery<DailyMetric[]>({
     queryKey: ["admin", "dashboard", "chart", days],
-    queryFn: () =>
-      adminFetch<DailyMetric[]>(`/api/v1/admin/dashboard/chart?days=${days}`),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<DailyMetric[]>(`/api/v1/admin/dashboard/chart?days=${days}`, {
+        signal,
+      }),
     staleTime: 60_000,
   });
 }
@@ -65,7 +68,8 @@ export function useChartData(days: number = 30): UseQueryResult<DailyMetric[]> {
 export function useTodaySummary(): UseQueryResult<TodaySummary> {
   return useQuery<TodaySummary>({
     queryKey: ["admin", "dashboard", "today"],
-    queryFn: () => adminFetch<TodaySummary>("/api/v1/admin/dashboard/today"),
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      adminFetch<TodaySummary>("/api/v1/admin/dashboard/today", { signal }),
     staleTime: 30_000,
     refetchInterval: 120_000,
   });

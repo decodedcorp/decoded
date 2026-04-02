@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  checkRateLimit,
+  getClientKey,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 /**
  * Image proxy for WebGL textures.
@@ -8,6 +13,11 @@ import { NextRequest, NextResponse } from "next/server";
  * Usage: /api/v1/image-proxy?url=<encoded-image-url>
  */
 export async function GET(request: NextRequest) {
+  const clientKey = getClientKey(request);
+  if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
+    return rateLimitResponse(60);
+  }
+
   const url = request.nextUrl.searchParams.get("url");
 
   if (!url) {

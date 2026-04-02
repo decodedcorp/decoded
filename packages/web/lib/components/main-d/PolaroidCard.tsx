@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
 import { Draggable } from "gsap/Draggable";
+import { useGSAP } from "@gsap/react";
 import type { ScatterPosition } from "./types";
 
 gsap.registerPlugin(Draggable);
@@ -33,33 +34,38 @@ export function PolaroidCard({
   const isHero = position.tier === "hero";
   const isSmall = position.tier === "small";
 
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
+  // Draggable.create() runs inside useGSAP so all gsap calls within its
+  // callbacks are inside the GSAP context and are auto-cleaned on unmount.
+  useGSAP(
+    () => {
+      const el = cardRef.current;
+      if (!el) return;
 
-    const [inst] = Draggable.create(el, {
-      type: "x,y",
-      inertia: false,
-      allowEventDefault: false,
-      onPress() {
-        gsap.set(el, { zIndex: 50 });
-      },
-      onDrag(this: Draggable) {
-        const rot = gsap.utils.clamp(-25, 25, this.deltaX * 0.4);
-        gsap.to(el, { rotation: rot, duration: 0.1, ease: "power1.out" });
-      },
-      onDragEnd() {
-        gsap.to(el, { rotation: 0, duration: 0.5, ease: "elastic.out(1,0.5)" });
-      },
-      onRelease() {
-        gsap.to(el, { zIndex: position.zIndex, delay: 0.3 });
-      },
-    });
-
-    return () => {
-      inst.kill();
-    };
-  }, [position.zIndex]);
+      Draggable.create(el, {
+        type: "x,y",
+        inertia: false,
+        allowEventDefault: false,
+        onPress() {
+          gsap.set(el, { zIndex: 50 });
+        },
+        onDrag(this: Draggable) {
+          const rot = gsap.utils.clamp(-25, 25, this.deltaX * 0.4);
+          gsap.to(el, { rotation: rot, duration: 0.1, ease: "power1.out" });
+        },
+        onDragEnd() {
+          gsap.to(el, {
+            rotation: 0,
+            duration: 0.5,
+            ease: "elastic.out(1,0.5)",
+          });
+        },
+        onRelease() {
+          gsap.to(el, { zIndex: position.zIndex, delay: 0.3 });
+        },
+      });
+    },
+    { scope: cardRef, dependencies: [position.zIndex] }
+  );
 
   const framePad = isHero
     ? "6px 6px 28px 6px"

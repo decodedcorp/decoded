@@ -114,6 +114,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isGuest: false,
         });
         await get().fetchProfile();
+
+        // Post-login redirect: handle return URL stored before OAuth round-trip
+        if (typeof window !== "undefined") {
+          const savedRedirect = sessionStorage.getItem("post_login_redirect");
+          if (savedRedirect) {
+            sessionStorage.removeItem("post_login_redirect");
+            // Use window.location.replace so login page is not in browser history
+            window.location.replace(savedRedirect);
+          }
+        }
       } else {
         set({ isInitialized: true, user: null, isAdmin: false });
       }
