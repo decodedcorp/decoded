@@ -272,7 +272,8 @@ export function ImageDetailContent({
         )}
 
         {/* Section 2: Interactive Showcase (non-magazine) or static post image with spot dots (magazine) */}
-        {Boolean(hasMagazine && imageUrl) && (
+        {/* In modal mode, the floating left panel already shows this image — skip duplicate */}
+        {Boolean(hasMagazine && imageUrl && !isModal) && (
           <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
             <div className="relative overflow-hidden rounded-xl">
               <Image
