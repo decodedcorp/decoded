@@ -246,7 +246,7 @@ export default function DecodeShowcase({
 
           {/* SVG lines — desktop (long, outside image) */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-[5] hidden md:block"
+            className="absolute inset-0 w-full h-full pointer-events-none z-[15] hidden md:block"
             style={{ overflow: "visible" }}
             aria-hidden
           >
@@ -274,7 +274,7 @@ export default function DecodeShowcase({
 
           {/* SVG lines — mobile (short, to edge of image) */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-[5] md:hidden"
+            className="absolute inset-0 w-full h-full pointer-events-none z-[15] md:hidden"
             aria-hidden
           >
             {itemMeta.map((meta) => {
@@ -318,17 +318,17 @@ export default function DecodeShowcase({
                 }}
               >
                 {item.imageUrl ? (
-                  <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-neutral-900 border border-[var(--mag-accent)]/40 shadow-[0_0_8px_rgba(var(--mag-accent-rgb,200,170,100),0.3)]">
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-neutral-900 border border-[var(--mag-accent)]/40 shadow-[0_0_8px_rgba(var(--mag-accent-rgb,200,170,100),0.3)]">
                     <Image
                       src={item.imageUrl}
                       alt={item.label}
                       fill
                       className="object-cover"
-                      sizes="40px"
+                      sizes="56px"
                     />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-lg bg-neutral-800 border border-[var(--mag-accent)]/40 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-lg bg-neutral-800 border border-[var(--mag-accent)]/40 flex items-center justify-center">
                     <span className="text-[8px] text-neutral-500">IMG</span>
                   </div>
                 )}

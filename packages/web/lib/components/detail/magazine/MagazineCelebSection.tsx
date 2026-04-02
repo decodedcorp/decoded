@@ -33,10 +33,10 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
     return () => obs.disconnect();
   }, []);
 
-  // Estimate columns based on width (breakpoints: lg=1024 → 4col, md=768 → 3col, else 2col)
-  const cols = gridWidth >= 1024 ? 4 : gridWidth >= 768 ? 3 : 2;
+  // Card width based on container (45% mobile, 30% md, 23% lg)
+  const cardRatio = gridWidth >= 1024 ? 0.23 : gridWidth >= 768 ? 0.30 : 0.45;
   const cardTextWidth = gridWidth > 0
-    ? (gridWidth - (cols - 1) * 16) / cols - 24  // subtract p-3 padding (12*2)
+    ? gridWidth * cardRatio - 24  // subtract p-3 padding (12*2)
     : 0;
 
   const nameLayouts = useBatchTextLayout({
@@ -88,14 +88,18 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
         같은 아이템을 착용한 셀럽들
       </p>
 
-      <div ref={gridRef} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {celebs.map((celeb, i) => {
+      <div
+        ref={gridRef}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-4 snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {celebs.slice(0, 4).map((celeb, i) => {
           const nameHeight = nameLayouts[`${celeb.celeb_name}-${i}`]?.height ?? 0;
           return (
             <Link
               key={`${celeb.celeb_name}-${i}`}
               href={`/posts/${celeb.post_id}`}
-              className="celeb-card group relative overflow-hidden rounded-xl border border-border/50 bg-card transition-all hover:border-border hover:shadow-lg"
+              className="celeb-card group relative flex-shrink-0 snap-start overflow-hidden rounded-xl border border-border/50 bg-card transition-all hover:border-border hover:shadow-lg w-[45%] md:w-[30%] lg:w-[23%]"
             >
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
                 {celeb.celeb_image_url ? (

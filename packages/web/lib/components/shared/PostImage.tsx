@@ -99,7 +99,7 @@ export function PostImage({
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
         className={cn(
-          "relative z-10 w-full object-contain transition-opacity duration-200 ease-out",
+          "relative z-10 h-full w-full object-contain transition-opacity duration-200 ease-out",
           isLoaded ? "opacity-100" : "opacity-0",
           imgClassName
         )}
