@@ -17,8 +17,7 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { fetchPostMagazine } from "@/lib/api/posts";
-import { listPosts, getPost } from "@/lib/api/generated/posts/posts";
+import { getPost } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
 import type {
   CategoryFilter,
@@ -28,9 +27,7 @@ import type {
   ImageRow,
 } from "@decoded/shared/supabase/queries/images";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
-import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
-import type { ItemRow } from "@/lib/components/detail/types";
-import type { Post, PostsListParams, PostMagazineResponse } from "@/lib/api/mutation-types";
+import type { PostMagazineResponse } from "@/lib/api/mutation-types";
 
 /**
  * @deprecated Use useInfiniteFilteredImages with unified adapter instead.
@@ -254,9 +251,11 @@ export function useInfinitePosts(params: {
         postSource: "post" as const,
         postAccount: post.artist_name ?? post.group_name ?? "",
         postCreatedAt: post.created_at,
-        spotCount: 0,
+        spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
-        // editorial 오버레이: 매거진 타이틀 우선, 없으면 post.title
+        // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
+        // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
+        // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
         title:
           post.post_magazine_title ?? post.title ?? null,
       }));
@@ -271,111 +270,19 @@ export function useInfinitePosts(params: {
   });
 }
 
-function parsePosition(val: string): number {
-  const num = parseFloat(val.replace("%", ""));
-  return num > 1 ? num / 100 : num;
-}
-
 /**
- * Fetch post detail via Supabase and convert to ImageDetail for ImageDetailContent
+ * Fetch post detail via REST API and convert to ImageDetail for ImageDetailContent
  */
 export function usePostDetailForImage(postId: string) {
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
-      const result = await fetchPostWithSpotsAndSolutions(postId);
-      if (!result) return null;
-
-      const { post, spots, solutions } = result;
-
-      const items: ItemRow[] = spots.map((spot, idx) => {
-        const sol = solutions.find((s) => s.spot_id === spot.id);
-        const citationUrl = sol?.affiliate_url ?? sol?.original_url ?? null;
-        const citations = citationUrl ? [citationUrl] : null;
-        return {
-          id: idx + 1,
-          image_id: post.id,
-          spot_id: spot.id,
-          spot_index: idx + 1,
-          brand: null,
-          product_name: sol?.title ?? null,
-          cropped_image_path: sol?.thumbnail_url ?? null,
-          price: (() => {
-            const m = sol?.metadata as
-              | { price?: string | { amount?: string } }
-              | undefined;
-            if (!m?.price) return null;
-            return typeof m.price === "string"
-              ? m.price
-              : (m.price?.amount ?? null);
-          })(),
-          description: null,
-          status: spot.status ?? null,
-          created_at: spot.created_at ?? null,
-          bboxes: null,
-          center: [
-            parsePosition(spot.position_left),
-            parsePosition(spot.position_top),
-          ] as [number, number],
-          scores: null,
-          ambiguity: null,
-          citations,
-          metadata: null,
-          sam_prompt: null,
-        };
-      });
-
-      return {
-        id: postId,
-        image_hash: "",
-        image_url: post.image_url,
-        post_owner_id: post.user_id ?? null,
-        post_magazine_id: (post as Record<string, unknown>).post_magazine_id as string | null ?? null,
-        artist_name: post.artist_name ?? null,
-        group_name: post.group_name ?? null,
-        ai_summary: (post as Record<string, unknown>).ai_summary as string | null ?? null,
-        status: post.status as
-          | "pending"
-          | "extracted"
-          | "skipped"
-          | "extracted_metadata",
-        with_items: items.length > 0,
-        created_at: post.created_at,
-        items,
-        posts: [
-          {
-            id: post.id,
-            account: post.artist_name ?? post.group_name ?? "",
-            article: post.context ?? null,
-            created_at: post.created_at,
-            item_ids: null,
-            metadata: [],
-            ts: post.created_at,
-          } as any,
-        ],
-        postImages: [
-          {
-            post: {
-              id: post.id,
-              account: post.artist_name ?? post.group_name ?? "",
-              article: post.context ?? null,
-              created_at: post.created_at,
-              item_ids: null,
-              metadata: [],
-              ts: post.created_at,
-            } as any,
-            created_at: post.created_at,
-            item_locations: spots.map((s, idx) => ({
-              item_id: idx + 1,
-              center: [
-                parsePosition(s.position_left),
-                parsePosition(s.position_top),
-              ],
-            })),
-            item_locations_updated_at: post.updated_at,
-          } as any,
-        ],
-      };
+      try {
+        const response = await getPost(postId);
+        return postDetailToImageDetail(response, postId);
+      } catch {
+        return null;
+      }
     },
     enabled: !!postId,
     staleTime: 1000 * 60,

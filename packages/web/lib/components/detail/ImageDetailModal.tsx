@@ -244,6 +244,7 @@ export function ImageDetailModal({ imageId }: Props) {
                       brand={meta?.brand as string | undefined}
                       category={meta?.sub_category as string | undefined}
                       accentColor={accentColor}
+                      thumbnailUrl={item.cropped_image_path}
                     />
                   );
                 })}
