@@ -17,8 +17,7 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { fetchPostMagazine } from "@/lib/api/posts";
-import { listPosts, getPost } from "@/lib/api/generated/posts/posts";
+import { getPost } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
 import type {
   CategoryFilter,
@@ -26,16 +25,9 @@ import type {
   ImagePageWithPostId,
   ImageDetail,
   ImageRow,
-  PostImageRow,
 } from "@decoded/shared/supabase/queries/images";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
-import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
-import type { ItemRow } from "@/lib/components/detail/types";
-import type {
-  Post,
-  PostsListParams,
-  PostMagazineResponse,
-} from "@/lib/api/mutation-types";
+import type { PostMagazineResponse } from "@/lib/api/mutation-types";
 
 /**
  * @deprecated Use useInfiniteFilteredImages with unified adapter instead.
@@ -206,7 +198,9 @@ export function useInfinitePosts(params: {
       if (groupName) {
         query = query.ilike("group_name", `%${groupName}%`);
       }
-      // Note: hasMagazine filter not yet supported via Supabase query
+      if (hasMagazine) {
+        query = query.not("post_magazine_id", "is", null);
+      }
 
       // Sort
       if (sort === "popular") {
@@ -229,20 +223,20 @@ export function useInfinitePosts(params: {
       const totalPages = Math.ceil(totalItems / limit);
       const hasMore = page < totalPages;
 
-      const items: PostGridItem[] = (
-        (data ?? []) as unknown as Array<Record<string, unknown>>
-      ).map((post) => ({
-        id: post.id as string,
-        imageUrl: post.image_url as string,
-        postId: post.id as string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items: PostGridItem[] = (data ?? []).map((post: any) => ({
+        id: post.id,
+        imageUrl: post.image_url,
+        postId: post.id,
         postSource: "post" as const,
-        postAccount: (post.artist_name ?? post.group_name ?? "") as string,
-        postCreatedAt: post.created_at as string,
-        spotCount: 0,
-        viewCount: post.view_count as number,
-        title: (post.post_magazine_title ?? post.title ?? null) as
-          | string
-          | null,
+        postAccount: post.artist_name ?? post.group_name ?? "",
+        postCreatedAt: post.created_at,
+        spotCount: post.spot_count ?? 0,
+        viewCount: post.view_count,
+        // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
+        // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
+        // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
+        title: post.post_magazine_title ?? post.title ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
@@ -255,106 +249,19 @@ export function useInfinitePosts(params: {
   });
 }
 
-function parsePosition(val: string): number {
-  const num = parseFloat(val.replace("%", ""));
-  return num > 1 ? num / 100 : num;
-}
-
 /**
- * Fetch post detail via Supabase and convert to ImageDetail for ImageDetailContent
+ * Fetch post detail via REST API and convert to ImageDetail for ImageDetailContent
  */
 export function usePostDetailForImage(postId: string) {
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
-      const result = await fetchPostWithSpotsAndSolutions(postId);
-      if (!result) return null;
-
-      const { post, spots, solutions } = result;
-
-      const items: ItemRow[] = spots.map((spot, idx) => {
-        const sol = solutions.find((s) => s.spot_id === spot.id);
-        const citationUrl = sol?.affiliate_url ?? sol?.original_url ?? null;
-        const citations = citationUrl ? [citationUrl] : null;
-        return {
-          id: idx + 1,
-          image_id: post.id,
-          spot_id: spot.id,
-          spot_index: idx + 1,
-          brand: null,
-          product_name: sol?.title ?? null,
-          cropped_image_path: sol?.thumbnail_url ?? null,
-          price: (() => {
-            const m = sol?.metadata as
-              | { price?: string | { amount?: string } }
-              | undefined;
-            if (!m?.price) return null;
-            return typeof m.price === "string"
-              ? m.price
-              : (m.price?.amount ?? null);
-          })(),
-          description: null,
-          status: spot.status ?? null,
-          created_at: spot.created_at ?? null,
-          bboxes: null,
-          center: [
-            parsePosition(spot.position_left),
-            parsePosition(spot.position_top),
-          ] as [number, number],
-          scores: null,
-          ambiguity: null,
-          citations,
-          metadata: null,
-          sam_prompt: null,
-        };
-      });
-
-      return {
-        id: postId,
-        image_hash: "",
-        image_url: post.image_url,
-        status: post.status as
-          | "pending"
-          | "extracted"
-          | "skipped"
-          | "extracted_metadata",
-        with_items: items.length > 0,
-        created_at: post.created_at,
-        items,
-        posts: [
-          {
-            id: post.id,
-            account: post.artist_name ?? post.group_name ?? "",
-            article: post.context ?? null,
-            created_at: post.created_at,
-            item_ids: null,
-            metadata: [],
-            ts: post.created_at,
-          } as unknown as PostImageRow["post"],
-        ],
-        postImages: [
-          {
-            post: {
-              id: post.id,
-              account: post.artist_name ?? post.group_name ?? "",
-              article: post.context ?? null,
-              created_at: post.created_at,
-              item_ids: null,
-              metadata: [],
-              ts: post.created_at,
-            } as unknown as PostImageRow["post"],
-            created_at: post.created_at,
-            item_locations: spots.map((s, idx) => ({
-              item_id: idx + 1,
-              center: [
-                parsePosition(s.position_left),
-                parsePosition(s.position_top),
-              ],
-            })),
-            item_locations_updated_at: post.updated_at,
-          } as unknown as PostImageRow,
-        ],
-      };
+      try {
+        const response = await getPost(postId);
+        return postDetailToImageDetail(response, postId);
+      } catch {
+        return null;
+      }
     },
     enabled: !!postId,
     staleTime: 1000 * 60,
@@ -371,7 +278,22 @@ export function usePostMagazine(magazineId: string | null | undefined) {
     queryKey: ["post-magazines", magazineId],
     queryFn: async () => {
       if (!magazineId) return null;
-      return fetchPostMagazine(magazineId);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabaseBrowserClient as any)
+        .from("post_magazines")
+        .select("*")
+        .eq("id", magazineId)
+        .single();
+
+      if (error || !data) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[usePostMagazine] Error:", error);
+        }
+        return null;
+      }
+
+      return data as unknown as PostMagazineResponse;
     },
     enabled: !!magazineId,
     staleTime: 1000 * 60 * 5,

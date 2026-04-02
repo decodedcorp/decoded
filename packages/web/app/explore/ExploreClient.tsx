@@ -88,7 +88,10 @@ export function ExploreClient({
         postSource: item.postSource,
         postAccount: item.postAccount,
         postCreatedAt: item.postCreatedAt,
-        ...(hasMagazine && item.title && { editorialTitle: item.title }),
+        ...(hasMagazine &&
+          item.title != null && { editorialTitle: item.title }),
+        ...(item.spotCount != null &&
+          item.spotCount > 0 && { spotCount: item.spotCount }),
       }));
   }, [items, hasMagazine]);
 

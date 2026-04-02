@@ -98,6 +98,17 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             onError={() => setImageError(true)}
             onLoad={() => setIsLoaded(true)}
           />
+          {/* spotCount badge pill — top-right, only when spotCount > 0 */}
+          {item?.spotCount != null && item.spotCount > 0 && (
+            <div className="absolute top-2 right-2 z-10">
+              <span
+                className="inline-flex items-center rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums backdrop-blur-sm"
+                aria-label={`${item.spotCount} spots`}
+              >
+                {item.spotCount}
+              </span>
+            </div>
+          )}
           {/* Editorial 타이틀 오버레이 - 검은 스킴 + 텍스트 아웃라인으로 어떤 배경에서도 선명하게 */}
           {item?.editorialTitle && (
             <div className="absolute inset-x-0 bottom-0">

@@ -29,6 +29,7 @@ export interface UseImageModalAnimationReturn {
   handleTouchEnd: () => void;
   handleMaximize: () => void;
   isClosing: boolean;
+  isMaximizing: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export function useImageModalAnimation({
   router,
 }: UseImageModalAnimationOptions): UseImageModalAnimationReturn {
   const [isClosing, setIsClosing] = useState(false);
+  const [isMaximizing, setIsMaximizing] = useState(false);
   const ctxRef = useRef<gsap.Context>(null);
 
   // Swipe gesture state
@@ -166,7 +168,7 @@ export function useImageModalAnimation({
   }, [activeImageSrc, originRect]);
 
   const handleClose = useCallback(() => {
-    if (isClosing || !ctxRef.current) return;
+    if (isClosing || isMaximizing || !ctxRef.current) return;
     setIsClosing(true);
 
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
@@ -237,7 +239,7 @@ export function useImageModalAnimation({
         tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
       }
     });
-  }, [isClosing, router, originRect, reset]);
+  }, [isClosing, isMaximizing, router, originRect, reset]);
 
   // Escape key handler
   useEffect(() => {
@@ -302,8 +304,33 @@ export function useImageModalAnimation({
   };
 
   const handleMaximize = useCallback(() => {
-    window.location.href = `/posts/${imageId}`;
-  }, [imageId]);
+    if (isClosing || isMaximizing || !ctxRef.current) return;
+    setIsMaximizing(true);
+
+    ctxRef.current.add(() => {
+      const tl = gsap.timeline({
+        onComplete: () => {
+          gsap.delayedCall(0.05, () => {
+            reset();
+            router.push(`/posts/${imageId}`);
+          });
+        },
+      });
+
+      // Fade out backdrop and drawer (same as handleClose)
+      tl.to(
+        [backdropRef.current, drawerRef.current],
+        { opacity: 0, duration: 0.3, ease: "power3.in" },
+        0
+      );
+
+      // Fade out floating image on desktop
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      if (isDesktop && leftImageContainerRef.current) {
+        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
+      }
+    });
+  }, [isClosing, isMaximizing, imageId, router, reset]);
 
   return {
     handleClose,
@@ -312,5 +339,6 @@ export function useImageModalAnimation({
     handleTouchEnd,
     handleMaximize,
     isClosing,
+    isMaximizing,
   };
 }

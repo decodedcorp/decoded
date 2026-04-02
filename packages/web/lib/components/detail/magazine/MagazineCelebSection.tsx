@@ -15,13 +15,14 @@ if (typeof window !== "undefined") {
 type Props = {
   celebs: PostMagazineCelebWithItem[];
   accentColor?: string;
+  isModal?: boolean;
 };
 
-export function MagazineCelebSection({ celebs, accentColor }: Props) {
+export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!sectionRef.current) return;
+    if (!sectionRef.current || isModal) return;
 
     const cards = gsap.utils.toArray<HTMLElement>(
       sectionRef.current.querySelectorAll(".celeb-card")

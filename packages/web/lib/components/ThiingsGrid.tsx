@@ -28,6 +28,7 @@ export type GridItem = {
   postAccount: string;
   postCreatedAt: string;
   editorialTitle?: string | null;
+  spotCount?: number;
 };
 
 type GridItemInternal = { position: Position; gridIndex: number };

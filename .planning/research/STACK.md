@@ -1,204 +1,260 @@
-# Stack Research
+# Stack Research: v11.0 Explore & Editorial Data Integration
 
-**Domain:** Profile Page Completion — Follow system, Auth guard, Infinite scroll tabs, Public user profile routing
-**Researched:** 2026-03-26
-**Confidence:** HIGH (codebase direct inspection + OpenAPI spec analysis)
-
----
-
-## Context: Existing Stack — Do Not Re-Research
-
-Validated from codebase inspection. Already installed, zero changes needed:
-
-| Package | Version | Status |
-|---------|---------|--------|
-| Next.js | 16.0.7 | Stays |
-| React | 18.3.1 (PROJECT.md says 18) | Stays |
-| TypeScript | 5.9.3 | Stays |
-| @tanstack/react-query | 5.90.11 | Stays — `useInfiniteQuery` already in use |
-| Zustand | 4.5.7 | Stays |
-| @supabase/supabase-js | 2.86.0 | Stays |
-| @supabase/auth-helpers-nextjs | 0.15.0 | Stays |
-| Orval-generated API client | (regenerated) | Stays — `useGetUserProfile`, `getMyActivities` already generated |
-| axios | (in use via Orval mutator) | Stays |
-| Tailwind CSS | 3.4.18 | Stays |
-| bun | 1.3.10+ | Stays |
-
-**Critical discovery from OpenAPI spec inspection:**
-The Rust backend exposes exactly 5 user endpoints: `GET/PATCH /api/v1/users/me`, `GET /api/v1/users/me/activities`, `GET /api/v1/users/me/stats`, `GET /api/v1/users/{user_id}`. **There are no follow system endpoints** (`/follow`, `/followers`, `/following`) in the current backend spec. The follow system UI is mock data only.
+**Domain:** Incremental data integration — connecting Explore/Editorial UI to REST API with detail page flow
+**Researched:** 2026-04-01
+**Confidence:** HIGH (all findings from live codebase + OpenAPI spec + Rust source)
 
 ---
 
-## New Stack: What to Add
+## Summary
 
-### Core Technologies
-
-No new core framework or library additions required. All four milestone features
-are achievable with the existing stack.
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| None | — | — | The existing stack covers all four features. See supporting libraries below for the one optional addition. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `next/navigation` (already in stack) | Next.js 16 built-in | `useRouter`, `usePathname`, `redirect()` for auth guard client and server redirects | Use `redirect()` (server) in `page.tsx` server component for auth guard; `useRouter().push('/login')` (client) as fallback in ProfileClient |
-| `@supabase/auth-helpers-nextjs` (already in stack) | 0.15.0 | `createSupabaseMiddlewareClient` for session check in `proxy.ts` | Already powers admin auth guard in `proxy.ts` — extend same pattern to `/profile` route |
-| `useIntersectionObserver` (implement inline, no package) | N/A | Trigger `fetchNextPage()` when sentinel element enters viewport | Build a ~15-line custom hook using native `IntersectionObserver` API; no third-party dependency needed given existing pattern in `useUserActivities` |
-
-**No new npm packages are needed.** The one judgment call is `IntersectionObserver` for
-infinite scroll — do not install `react-intersection-observer` package; the existing
-codebase implements this pattern inline and native browser API is sufficient for this
-feature's scroll trigger use case.
-
-### Development Tools
-
-No new tools needed. Orval will regenerate the API client when backend adds follow
-endpoints. The current `bun run generate:api` workflow handles that automatically.
+v11.0 requires NO new library installations. The entire milestone is achievable using the existing stack. The work is a data-layer fix: migrating `useInfinitePosts` from a direct Supabase query to the generated REST API client, exposing `has_magazine` as a proper filter parameter in the OpenAPI spec, and wiring the Explore card → side drawer → full page detail flow end-to-end. All integration points are already in place.
 
 ---
 
-## Feature-by-Feature Stack Analysis
+## What Is Already in Place (Do NOT Re-Introduce)
 
-### Feature 1: Auth Guard — Unauthenticated redirect
+Every technology listed here is installed and working. These are integration points, not additions.
 
-**Stack needed:** `proxy.ts` extension (server-side) + optional client-side fallback
+### Data Fetching
 
-**Pattern:**
-- Extend the existing `proxy.ts` `config.matcher` to include `/profile/:path*`
-- The `proxy()` function already does session check via `createSupabaseMiddlewareClient`
-- For `/profile`, redirect to `/login` (not `/` like admin — user should be told why)
-- Client-side fallback: `useAuthStore` already exposes session state; `ProfileClient` can early-return a redirect if session missing
+| Layer | Technology | Version | Relevant to v11.0 |
+|-------|------------|---------|-------------------|
+| Server state | TanStack React Query | 5.90.11 | `useInfinitePosts` uses `useInfiniteQuery` — continue this pattern |
+| Generated hooks | Orval 8.5.3 | — | `listPosts()` in `lib/api/generated/posts/posts.ts` — the correct fetch function to switch to |
+| HTTP proxy | Next.js API route | — | `GET /api/v1/posts` proxy at `app/api/v1/posts/route.ts` already forwards all query params verbatim |
+| Magazine fetch | `fetchPostMagazine()` | — | `lib/api/posts.ts` — fetches `post-magazines/{id}` — already implemented and working |
+| React Query hook | `usePostMagazine()` | — | `lib/hooks/useImages.ts` — already wired in `ImageDetailModal` |
+| Detail adapter | `postDetailToImageDetail()` | — | `lib/api/adapters/postDetailToImageDetail.ts` — maps `PostDetailResponse` → `ImageDetail` |
 
-**Why no new packages:** `proxy.ts` already imports `createSupabaseMiddlewareClient` and
-`NextResponse.redirect`. Adding `/profile` to the matcher is a one-line config change.
+### Detail Page Connection (Explore → Modal → Full Page)
 
-**Constraint:** Next.js 16 uses `proxy.ts` (not `middleware.ts`) per project convention.
-The `config.matcher` must include both `/admin/:path*` and `/profile/:path*`.
+| Pattern | File | Status |
+|---------|------|--------|
+| Intercepting route (modal) | `app/@modal/(.)posts/[id]/page.tsx` | Working — renders `ImageDetailModal` when navigating from grid |
+| Side drawer component | `lib/components/detail/ImageDetailModal.tsx` | Working — GSAP FLIP animation + touch swipe dismiss |
+| Full page route | `app/posts/[id]/page.tsx` | Working — renders `ImageDetailPage` |
+| FLIP transition store | `lib/stores/transitionStore.ts` | Working — `setTransition()` captures origin rect before navigation |
+| Card-to-detail link | `lib/components/explore/ExploreCardCell.tsx` | Working — `href=/posts/${imageId}` with `scroll={false}` |
+| Maximize to full page | `ImageDetailModal` → `handleMaximize()` | Working — `router.replace(`/posts/${imageId}`)` |
 
----
+### Editorial Data Types
 
-### Feature 2: Follow System — Followers/Following real data
+All types needed for v11.0 are already defined:
 
-**Stack needed:** None yet. Backend has no follow endpoints.
-
-**Critical finding:** OpenAPI spec (inspected at `packages/api-server/openapi.json`) has
-zero follow-related endpoints. `UserResponse` schema has no `followers_count` or
-`following_count` fields. `UserStatsResponse` has no follow fields.
-
-**Current state:** `FollowStats.tsx` renders hardcoded `followers={1234}` and `following={567}`.
-`UserResponse` from the API contains only: `id`, `avatar_url`, `bio`, `display_name`,
-`email`, `is_admin`, `rank`, `total_points`, `username`.
-
-**What to do now (without backend):**
-- Wire `followers` and `following` props from `useUserStats()` if/when the backend adds
-  those fields to `UserStatsResponse`
-- For this milestone: display `0` counts from real data rather than hardcoded placeholders
-- `FollowStats.tsx` needs to accept `undefined` counts gracefully (show `—` or `0`)
-
-**When backend adds follow endpoints:** Orval will generate `useFollowUser`,
-`useUnfollowUser`, `useGetFollowers`, `useGetFollowing` hooks after `bun run generate:api`.
-No new packages needed at that point — hooks drop into the existing React Query setup.
-
-**Stack decision:** Do NOT build a custom Supabase follow table or Shadow API route for
-follow counts. Follow the "API-first" constraint from `PROJECT.md`. Mock or omit until
-backend is ready.
+| Type/Interface | File | Notes |
+|----------------|------|-------|
+| `PostMagazineResponse` | `lib/api/mutation-types.ts` | Complete — `id`, `layout_json`, `status`, `related_editorials` |
+| `PostMagazineLayout` | `lib/api/mutation-types.ts` | Complete — `editorial`, `celeb_list`, `items`, `related_items`, `design_spec` |
+| `post_magazine_title` | Generated `PostListItem` model | Already returned in `GET /api/v1/posts` list response |
+| `post_magazine_id` | Generated `PostDetailResponse` model | Already returned in `GET /api/v1/posts/{id}` detail response |
+| `ImageDetailWithPostOwner` | `lib/api/adapters/postDetailToImageDetail.ts` | Includes `post_magazine_id` field — wired to `usePostMagazine()` in modal |
 
 ---
 
-### Feature 3: Tries/Saved tabs — API connection + infinite scroll
+## The One Gap to Fix: `has_magazine` Filter Not in OpenAPI Spec
 
-**Stack needed:** No new packages. Pattern already established.
+### Problem
 
-**Tries tab — current state:**
-- `TriesGrid.tsx` has a stub `fetchMyTries()` returning `[]`
-- Comment says: `Will be: GET /api/v1/users/me/tries`
-- That endpoint does NOT exist in the OpenAPI spec
-- `useTries.ts` in `lib/hooks/` is also a stub returning `{ tries: [], total: 0 }`
+**Backend service DOES implement the filter** (`packages/api-server/src/domains/posts/service.rs`, line 562-563):
+```rust
+// has_magazine 필터: true = post_magazine_id가 있는 post만 (editorial 탭용)
+if query.has_magazine == Some(true) {
+```
 
-**Saved tab — current state:**
-- `SavedGrid.tsx` uses `collectionStore` (Zustand), which manages `pins`, `boards`, `collage`
-- This is NOT API-driven — it's a local Zustand store with a `loadCollection()` action
-- No backend endpoint for saved items in the spec
+**Backend DTO DOES have the field** (`packages/api-server/src/domains/posts/dto.rs`, line 178-180):
+```rust
+/// 매거진(editorial) 보유 여부. true = post_magazine_id가 있는 post만
+pub has_magazine: Option<bool>,
+```
 
-**What the milestone should do:**
-- **Tries tab:** Keep stub but add proper loading/empty states with real data shape; wire
-  to real API when backend exposes the endpoint. Use `useInfiniteQuery` pattern from
-  `useUserActivities` as the template.
-- **Saved tab:** The `collectionStore.loadCollection()` needs to fetch from real data
-  source — determine if this is Supabase direct query (like `useProfileExtras`) or backend
-  API. Current Supabase schema inspection needed but that's phase-specific research.
+**But the OpenAPI spec does NOT expose it** (`packages/api-server/openapi.json` — `GET /api/v1/posts` parameters):
 
-**Infinite scroll pattern (already established):**
+Confirmed parameters in spec: `artist_name`, `group_name`, `context`, `category`, `user_id`, `sort`, `page`, `per_page`. `has_magazine` is absent.
+
+**Consequence chain:**
+1. Generated `ListPostsParams` (`lib/api/generated/models/listPostsParams.ts`) lacks `has_magazine`
+2. `useInfinitePosts` cannot use `listPosts()` for editorial filtering
+3. `useInfinitePosts` falls back to direct Supabase query with comment: `// Note: hasMagazine filter not yet supported via Supabase query`
+4. Editorial page (`/editorial`) calls `ExploreClient hasMagazine` but filtering is silently ignored
+
+### Fix: Update OpenAPI Spec + Regenerate (RECOMMENDED)
+
+**Step 1** — Add `has_magazine` parameter to `openapi.json` under `GET /api/v1/posts`:
+```json
+{
+  "name": "has_magazine",
+  "in": "query",
+  "description": "매거진(editorial) 보유 여부. true = post_magazine_id가 있는 post만",
+  "required": false,
+  "schema": {
+    "type": "boolean"
+  }
+}
+```
+
+**Step 2** — Regenerate types:
+```bash
+cd packages/web && bun run generate:api
+```
+
+**Step 3** — `ListPostsParams` automatically gets `has_magazine?: boolean`
+
+**Step 4** — Migrate `useInfinitePosts` to call `listPosts({ has_magazine: hasMagazine || undefined, ... })`
+
+Do NOT use the alternative of manually casting `has_magazine` as an untyped query param — that creates type debt and diverges from the Orval pipeline that is the established SSOT for API types in this project.
+
+---
+
+## Migration: `useInfinitePosts` Supabase Direct → REST API
+
+### Current state (problem)
+
+`useInfinitePosts` in `lib/hooks/useImages.ts` queries Supabase directly, bypassing the REST API:
 ```typescript
-// Pattern already in useUserActivities — replicate for tries/saved
-const { fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-  queryKey: [...],
-  queryFn: async ({ pageParam = 1 }) => fetchEndpoint({ page: pageParam }),
-  getNextPageParam: (lastPage) =>
-    lastPage.pagination.current_page < lastPage.pagination.total_pages
-      ? lastPage.pagination.current_page + 1
-      : undefined,
-  initialPageParam: 1,
+let query = supabaseBrowserClient
+  .from("posts")
+  .select("*", { count: "exact" })
+  .eq("status", "active")
+  .not("image_url", "is", null);
+// Note: hasMagazine filter not yet supported via Supabase query
+```
+
+This violates the v9.0 migration principle and means editorial filtering silently does nothing.
+
+### Target state
+
+Switch to the generated `listPosts()` function (via BFF proxy → Rust/Axum):
+```typescript
+const response = await listPosts({
+  context: category !== "all" ? category : undefined,
+  sort,
+  page,
+  per_page: limit,
+  has_magazine: hasMagazine ? true : undefined,
 });
 ```
 
-The scroll trigger uses an `IntersectionObserver` sentinel div — implement as a reusable
-`useInfiniteScrollTrigger` hook inline in the profile hooks file. 15-20 lines, no package.
+### Data shape mapping (Supabase row → REST API `PostListItem`)
+
+| `PostGridItem` field | Supabase direct | REST `PostListItem` |
+|----------------------|-----------------|---------------------|
+| `id` | `post.id` | `item.id` |
+| `imageUrl` | `post.image_url` | `item.image_url` |
+| `postAccount` | `post.artist_name ?? post.group_name ?? ""` | `item.artist_name` (separate field) |
+| `title` (editorial) | `post.post_magazine_title ?? post.title` | `item.post_magazine_title ?? item.title` |
+| `spotCount` | hardcoded `0` | `item.spot_count` (real count from DB) |
+| `viewCount` | `post.view_count` | `item.view_count` |
+| Pagination cursor | Supabase `range()` offset | `pagination.total_pages` + page number |
+
+The REST API response is strictly better: `spot_count` is real, pagination is standardized, and `has_magazine` filtering works server-side.
 
 ---
 
-### Feature 4: Public user profile — `/profile/[userId]`
+## Spot/Solution Data in Cards
 
-**Stack needed:** No new packages. Next.js dynamic routes + existing generated hook.
+### What v11.0 requires
 
-**Current state:**
-- `GET /api/v1/users/{user_id}` backend endpoint exists
-- `app/api/v1/users/[userId]/route.ts` proxy route exists (no auth required)
-- `useGetUserProfile(userId)` generated hook already wraps this endpoint (seen in `useProfile.ts`)
-- `useUser(userId)` wrapper hook already exists in `lib/hooks/useProfile.ts`
-- **Missing:** `app/profile/[userId]/page.tsx` and `app/profile/[userId]/ProfilePublicClient.tsx`
+Show `spot_count` and/or solution info on Explore/Editorial cards.
 
-**Pattern:** Mirror `app/profile/page.tsx` (private) but:
-- Use `useUser(userId)` instead of `useMe()`
-- Show follow button instead of edit button
-- No edit modal
-- Read-only activity tabs (posts/spots/solutions only — no tries/saved for other users)
-- No auth guard needed (public profile is accessible without login)
+### Recommendation
 
-**Routing:** Next.js App Router dynamic segment. Path: `app/profile/[userId]/page.tsx`.
-Conflicts to check: current `/profile` maps to `/profile/page.tsx`; adding
-`/profile/[userId]` is additive, no conflict.
+**Use `spot_count` from the list response for grid overlay.** Do NOT fetch full detail per card — that triggers N+1 requests for a grid of 40 items.
+
+- `PostListItem.spot_count` (integer) is already returned in list response
+- `PostGridItem` type already has `spotCount` field (mapped from REST API in `useInfinitePosts`)
+- `ExploreCardCell` can render a spot count badge without any additional data fetching
+- Full spot/solution detail (brand, category, thumbnail) is available when the user opens the side drawer
 
 ---
 
-## Proxy Routes Needed
+## Supporting Libraries: Existing Patterns to Leverage
 
-New backend proxy routes that do not exist yet:
+All patterns are established. No new patterns needed.
 
-| Route | Status | Notes |
-|-------|--------|-------|
-| `GET /api/v1/users/me/tries` | NOT in backend spec | Build stub proxy; real endpoint pending backend |
-| `POST /api/v1/users/{userId}/follow` | NOT in backend spec | Do not build — follow system is backend-blocked |
-| `DELETE /api/v1/users/{userId}/follow` | NOT in backend spec | Do not build — follow system is backend-blocked |
-| `GET /api/v1/users/{userId}/followers` | NOT in backend spec | Do not build — backend-blocked |
-| `GET /api/v1/users/{userId}/following` | NOT in backend spec | Do not build — backend-blocked |
+### Animation (detail page connection)
+- **GSAP Flip** — already used in `ExploreCardCell.tsx` for card-to-modal FLIP animation. Register pattern: `Flip.getState(target)` → `setTransition()` → modal replays from origin
+- **Motion `AnimatePresence`** — already used in `ExploreClient.tsx` for filter transition
+- **No new animation libraries needed**
 
-Existing proxy routes that are sufficient:
-- `GET /api/v1/users/[userId]/route.ts` — already handles public profile
-- `GET /api/v1/users/me/activities/route.ts` — already handles activities pagination
+### State management
+- **`transitionStore`** — already captures FLIP origin rect + image source in `ExploreCardCell.onClick`
+- **TanStack Query** — `staleTime: 1 min`, `gcTime: 5 min` already configured in `useInfinitePosts`
+- **`filterStore`** — `activeFilter` already wired to `ExploreClient` and `useInfinitePosts`
+- **No new stores needed**
+
+### UI components (existing, already imported)
+- `Card`, `LoadingSpinner`, `SkeletonCard` from design system — used in `ExploreClient`
+- `SpotDot` — already implemented in `ImageDetailModal` for spot overlays on floating image
+- `ImageDetailPreview` — already implemented as the side drawer content
+- `MagazineEditorialSection`, `MagazineCelebSection`, etc. — already used in `ImageDetailContent`
+
+---
+
+## Generated API: Files to Touch vs. Files to Leave Alone
+
+### NEVER manually edit
+
+| File | Why |
+|------|-----|
+| `lib/api/generated/**` | Auto-generated by Orval — edit `openapi.json`, then run `bun run generate:api` |
+| `lib/api/generated/zod/decodedApi.zod.ts` | Auto-generated Zod schemas |
+
+### Edit as part of v11.0
+
+| File | Change |
+|------|--------|
+| `packages/api-server/openapi.json` | Add `has_magazine` boolean query param to `GET /api/v1/posts` |
+| `lib/hooks/useImages.ts` — `useInfinitePosts` | Migrate from Supabase direct to `listPosts()` generated function |
+| `lib/components/explore/ExploreCardCell.tsx` | Add spot count badge overlay (optional, design-dependent) |
+
+### Already correct, no changes needed
+
+| File | Status |
+|------|--------|
+| `lib/api/mutation-types.ts` — `PostsListParams` | `has_magazine?: boolean` already defined |
+| `lib/api/posts.ts` — `buildPostsQueryString` | Already handles `has_magazine` param |
+| `app/api/v1/posts/route.ts` | Already forwards all query params to backend |
+| `app/@modal/(.)posts/[id]/page.tsx` | Intercepting route already works for `/posts/[id]` |
+| `lib/components/detail/ImageDetailModal.tsx` | Side drawer + FLIP + magazine data already wired |
+| `lib/api/adapters/postDetailToImageDetail.ts` | Maps `post_magazine_id` correctly |
+
+---
+
+## What NOT to Add
+
+| Do Not Add | Why | What to Use Instead |
+|------------|-----|---------------------|
+| SWR | React Query 5 handles all caching needs | `@tanstack/react-query` 5.90.11 |
+| Apollo / GraphQL | Backend is REST + Supabase, no GraphQL layer | Orval-generated hooks + `customInstance` |
+| React-window / react-virtual | `ThiingsGrid` already handles viewport-based rendering | `ThiingsGrid` (existing) |
+| New Zustand `editorialStore` | No new state shape needed — filter is a query param, magazine data cached by React Query | Existing `filterStore` + React Query |
+| Direct Supabase queries for new editorial data | Violates v9.0 migration pattern | `listPosts()` generated hook via BFF proxy |
+| New proxy routes for editorial | `app/api/v1/posts/route.ts` already proxies all query params including `has_magazine` | Existing proxy |
+| Manually casting `has_magazine` as untyped param | Creates type debt, diverges from Orval SSOT | Update `openapi.json` + regenerate |
+
+---
+
+## Version Compatibility
+
+No upgrades or changes needed. All packages are compatible.
+
+| Package | Current Version | Notes |
+|---------|----------------|-------|
+| @tanstack/react-query | 5.90.11 | `useInfiniteQuery` v5 API in use — `initialPageParam`, typed `InfiniteData<T>` |
+| Orval | 8.5.3 | Config at `packages/web/orval.config.ts` — no config changes needed |
+| @supabase/supabase-js | 2.86.0 | Keep for auth and non-posts Supabase queries |
+| Zod | 3.25 | Generated schemas auto-updated when running `bun run generate:api` |
+| GSAP | 3.13.0 | `Flip` plugin already registered in `ExploreCardCell` |
 
 ---
 
 ## Installation
 
-No new packages to install. The milestone is zero-dependency.
+No new packages. This milestone is a data-wiring exercise.
 
 ```bash
-# Nothing to install — all required stack is already present
-# Verify generated API exists (needs regeneration in fresh worktree):
+# After updating openapi.json with has_magazine parameter:
 cd packages/web && bun run generate:api
 ```
 
@@ -208,69 +264,27 @@ cd packages/web && bun run generate:api
 
 | Recommended | Alternative | Why Not |
 |-------------|-------------|---------|
-| Inline `useInfiniteScrollTrigger` hook (~15 lines) | `react-intersection-observer` npm package | Package adds 3KB for a trivial observer wrapper; existing codebase doesn't use it; native API sufficient |
-| Extend existing `proxy.ts` matcher for auth guard | New `middleware.ts` file | Project explicitly uses `proxy.ts` (not `middleware.ts`) per Next.js 16 convention documented in `CLAUDE.md` |
-| Mock follow counts as `0` from real user data | Build Supabase `follows` table directly | Violates "API-first" constraint; creates a second data source that would conflict when backend adds follow endpoints |
-| `redirect()` from server page for auth guard | Client-side only `useEffect` redirect | Server redirect prevents flash of unauthenticated content; `proxy.ts` middleware redirect is the most reliable approach |
-
----
-
-## What NOT to Add
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `react-intersection-observer` | Unnecessary package for a ~15-line observer pattern | Inline `useInfiniteScrollTrigger` hook using native `IntersectionObserver` |
-| Supabase `follows` table / direct query | Backend will own follow relationships; building a shadow Supabase table creates conflicting data sources | Wait for `POST /api/v1/users/{userId}/follow` endpoint from backend |
-| Custom `middleware.ts` file | Conflicts with existing `proxy.ts` convention in Next.js 16 | Extend `proxy.ts` config.matcher |
-| `swr` or any second data-fetching library | Project already standardized on TanStack Query | Use existing `useInfiniteQuery` from `@tanstack/react-query` |
-| Follow count data from `profileStore` Zustand | `profileStore` is for UI state, not server data | Follow data belongs in React Query cache when backend is ready |
-| New Orval config entry for follow endpoints | There are no follow endpoints to generate | Add follow endpoints to Orval config after backend ships them |
-
----
-
-## Stack Patterns by Variant
-
-**If backend adds follow endpoints (future):**
-- Run `bun run generate:api` — Orval generates `useFollowUser`, `useUnfollowUser`, `useGetFollowers`, `useGetFollowing`
-- Add proxy routes in `app/api/v1/users/[userId]/follow/route.ts`
-- Wire into `FollowStats` component
-- No new packages
-
-**If tries endpoint ships (future):**
-- Add `GET /api/v1/users/me/tries` to backend
-- Add proxy route `app/api/v1/users/me/tries/route.ts`
-- Replace `TriesGrid` stub with `useInfiniteQuery` using the same pattern as `useUserActivities`
-- No new packages
-
-**If saved items move to backend API (future):**
-- Determine if `collectionStore.loadCollection()` targets Supabase or REST API
-- If REST: add to OpenAPI spec, regenerate with Orval
-- If Supabase direct: keep `useQuery` pattern from `useProfileExtras`
-
----
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| @supabase/auth-helpers-nextjs@0.15.0 | Next.js 16 | `createSupabaseMiddlewareClient` works with `proxy.ts` pattern; verified in existing admin auth guard |
-| @tanstack/react-query@5.90.11 | `useInfiniteQuery` (v5 API) | v5 uses `initialPageParam` and returns typed `InfiniteData<T>` — existing `useUserActivities` demonstrates the correct v5 pattern |
-| next/navigation `redirect()` | Next.js 16 App Router server components | Use in `page.tsx` (server component); not in `"use client"` components |
+| Update `openapi.json` + regenerate for `has_magazine` | Manually pass as untyped query param | Creates type debt; diverges from Orval SSOT established in v9.0 |
+| Migrate `useInfinitePosts` to `listPosts()` (REST API) | Keep Supabase direct + add has_magazine filter | Supabase filter requires knowing the DB schema; REST API filter is already implemented in Rust service |
+| `spot_count` badge from list response | Fetch spot detail per card in grid | N+1 request pattern — 40 cards = 40 extra API calls on grid render |
+| Reuse existing `ImageDetailModal` for editorial | Build separate `EditorialDetailModal` | Same component already handles `post_magazine_id` and conditionally renders `MagazineEditorialSection` |
 
 ---
 
 ## Sources
 
-- `packages/api-server/openapi.json` — Direct inspection of all 67 backend endpoints; confirmed absence of follow, tries, saved endpoints (HIGH confidence — primary source)
-- `packages/web/app/api/v1/users/` — Direct inspection of existing proxy routes (HIGH confidence — codebase)
-- `packages/web/lib/hooks/useProfile.ts` — Confirmed `useUser(userId)` and `useUserActivities` hooks already exist (HIGH confidence — codebase)
-- `packages/web/proxy.ts` — Confirmed auth guard pattern using `createSupabaseMiddlewareClient` + `config.matcher` (HIGH confidence — codebase)
-- `packages/web/lib/components/profile/FollowStats.tsx` — Confirmed hardcoded mock data (HIGH confidence — codebase)
-- `packages/web/lib/components/profile/TriesGrid.tsx` — Confirmed stub `fetchMyTries()` returning `[]` (HIGH confidence — codebase)
-- `packages/web/lib/components/profile/SavedGrid.tsx` — Confirmed uses `collectionStore` Zustand, not API (HIGH confidence — codebase)
-- `packages/web/app/profile/` — Confirmed no `[userId]` subdirectory exists (HIGH confidence — codebase)
+- `packages/web/lib/hooks/useImages.ts` — `useInfinitePosts` Supabase direct implementation with `// Note: hasMagazine filter not yet supported` comment (HIGH confidence — live code)
+- `packages/web/lib/api/generated/models/listPostsParams.ts` — confirms `has_magazine` absent from generated types (HIGH confidence — generated from spec)
+- `packages/api-server/openapi.json` — direct inspection confirms `has_magazine` absent from `GET /api/v1/posts` params section (HIGH confidence — source of truth)
+- `packages/api-server/src/domains/posts/service.rs` (line 562-563) — confirms `has_magazine` implemented in Rust service (HIGH confidence — Rust source)
+- `packages/api-server/src/domains/posts/dto.rs` (line 178-180) — confirms `has_magazine` field in DTO (HIGH confidence — Rust source)
+- `packages/web/lib/components/explore/ExploreCardCell.tsx` — GSAP FLIP + `href=/posts/${imageId}` already working (HIGH confidence — live code)
+- `packages/web/app/@modal/(.)posts/[id]/page.tsx` — intercepting route renders `ImageDetailModal` (HIGH confidence — live code)
+- `packages/web/lib/components/detail/ImageDetailModal.tsx` — full side drawer + `usePostMagazine` already wired (HIGH confidence — live code)
+- `packages/web/lib/api/adapters/postDetailToImageDetail.ts` — `post_magazine_id` mapped correctly in adapter (HIGH confidence — live code)
+- `packages/api-server/src/domains/post_magazines/handlers.rs` — `GET /post-magazines/{id}` route confirmed (HIGH confidence — Rust source)
 
 ---
 
-*Stack research for: decoded-monorepo v10.0 Profile Page Completion*
-*Researched: 2026-03-26*
+*Stack research for: v11.0 Explore & Editorial Data Integration*
+*Researched: 2026-04-01*

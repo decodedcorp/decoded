@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import type { PostMagazineEditorialSection } from "@/lib/api/mutation-types";
+import { useTextLayout } from "@/lib/hooks/usePretext";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -13,21 +14,35 @@ if (typeof window !== "undefined") {
 type Props = {
   editorial: PostMagazineEditorialSection;
   accentColor?: string;
+  /** Skip GSAP animations (for drawer/modal context) */
+  isModal?: boolean;
 };
 
-export function MagazineEditorialSection({ editorial, accentColor }: Props) {
+export function MagazineEditorialSection({
+  editorial,
+  accentColor,
+  isModal,
+}: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(isModal ?? false);
+
+  // Pretext.js: measure pull quote for layout stability
+  const { containerRef: quoteRef, height: quoteHeight } = useTextLayout({
+    text: editorial.pull_quote ?? "",
+    font: 'italic 20px "Playfair Display", serif',
+    lineHeight: 28,
+  });
 
   useEffect(() => {
+    if (isModal) return; // Skip reveal animation in modal
     const t = requestAnimationFrame(() => {
       requestAnimationFrame(() => setIsRevealed(true));
     });
     return () => cancelAnimationFrame(t);
-  }, []);
+  }, [isModal]);
 
   useGSAP(() => {
-    if (!sectionRef.current) return;
+    if (!sectionRef.current || isModal) return;
 
     const paragraphs = sectionRef.current.querySelectorAll(".editorial-p");
     paragraphs.forEach((p) => {
@@ -47,7 +62,7 @@ export function MagazineEditorialSection({ editorial, accentColor }: Props) {
         }
       );
     });
-  });
+  }, [isModal]);
 
   const accentStyle = accentColor
     ? ({ "--magazine-accent": accentColor } as React.CSSProperties)
@@ -75,7 +90,11 @@ export function MagazineEditorialSection({ editorial, accentColor }: Props) {
       </article>
 
       {editorial.pull_quote && (
-        <blockquote className="relative my-10 py-8 md:my-12">
+        <blockquote
+          ref={quoteRef as unknown as React.RefObject<HTMLQuoteElement>}
+          className="relative my-10 py-8 md:my-12"
+          style={quoteHeight > 0 ? { minHeight: quoteHeight + 64 } : undefined}
+        >
           <div
             className="absolute left-0 top-0 h-0.5 w-12"
             style={{

@@ -157,9 +157,9 @@ export function ImageDetailContent({
     if (Array.isArray(itemLocations)) {
       itemLocations.forEach((loc: Record<string, unknown>) => {
         if (loc && loc.item_id) {
-          map[(loc.item_id as number | string).toString()] = {
+          map[String(loc.item_id)] = {
             bbox: loc.bbox as number[] | null,
-            center: (loc.center as Json) || (loc as unknown as Json),
+            center: (loc.center as Json | null) || (loc as unknown as Json),
             score: loc.score as number | null,
           };
         }
@@ -247,6 +247,7 @@ export function ImageDetailContent({
           <MagazineTitleSection
             title={magazineLayout.title}
             subtitle={magazineLayout.subtitle}
+            isModal={isModal}
           />
         ) : (
           !hideImage && (
@@ -334,12 +335,14 @@ export function ImageDetailContent({
             <MagazineEditorialSection
               editorial={magazineLayout.editorial}
               accentColor={accentColor}
+              isModal={isModal}
             />
 
             {/* Magazine: Celebrity Style Archive */}
             <MagazineCelebSection
               celebs={magazineLayout.celeb_list}
               accentColor={accentColor}
+              isModal={isModal}
             />
 
             {/* Magazine: The Look + per-item Related Items */}
@@ -347,6 +350,7 @@ export function ImageDetailContent({
               items={magazineLayout.items}
               relatedItems={magazineLayout.related_items}
               accentColor={accentColor}
+              isModal={isModal}
             />
           </>
         ) : (
@@ -394,41 +398,42 @@ export function ImageDetailContent({
           />
         )}
 
-        {/* Try Gallery Section — pass items for VTON */}
-        <TryGallerySection
-          postId={image.id}
-          items={normalizedItems
-            .filter((item) => item.imageUrl)
-            .map(
-              (item): VtonPreloadItem => ({
-                id: String(item.id),
-                title:
-                  item.product_name || item.sam_prompt || `Item ${item.id}`,
-                thumbnail_url: item.imageUrl!,
-                description: item.description,
-                keywords: null,
-              })
-            )}
-        />
+        {/* TODO: Try Gallery Section — temporarily disabled
+      <TryGallerySection
+        postId={image.id}
+        items={normalizedItems
+          .filter((item) => item.imageUrl)
+          .map(
+            (item): VtonPreloadItem => ({
+              id: String(item.id),
+              title: item.product_name || item.sam_prompt || `Item ${item.id}`,
+              thumbnail_url: item.imageUrl!,
+              description: item.description,
+              keywords: null,
+            })
+          )}
+      />
+      */}
 
-        {/* Social Actions & Comments */}
-        <div className="px-6 py-6 md:px-10 border-t border-border">
-          <SocialActions
-            initialLiked={initialLiked}
-            initialSaved={initialSaved}
-            likeCount={likeCount}
-            commentCount={commentCount}
-            showComment
-            variant="default"
-            onLike={handleLike}
-            onSave={handleSave}
-            onShare={handleShare}
-            onComment={scrollToComments}
-          />
-        </div>
-        <div ref={commentSectionRef}>
-          <ImageCommentSection imageId={image.id} />
-        </div>
+        {/* TODO: Social Actions & Comments — temporarily disabled
+      <div className="px-6 py-6 md:px-10 border-t border-border">
+        <SocialActions
+          initialLiked={initialLiked}
+          initialSaved={initialSaved}
+          likeCount={likeCount}
+          commentCount={commentCount}
+          showComment
+          variant="default"
+          onLike={handleLike}
+          onSave={handleSave}
+          onShare={handleShare}
+          onComment={scrollToComments}
+        />
+      </div>
+      <div ref={commentSectionRef}>
+        <ImageCommentSection imageId={image.id} />
+      </div>
+      */}
 
         {/* Magazine: Related Editorials - 맨 마지막 */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
