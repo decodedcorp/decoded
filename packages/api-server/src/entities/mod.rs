@@ -11,6 +11,7 @@ pub mod badges;
 pub mod categories;
 pub mod click_logs;
 pub mod comments;
+pub mod content_reports;
 pub mod curation_posts;
 pub mod curations;
 pub mod earnings;
@@ -96,6 +97,10 @@ pub use user_badges::Model as UserBadgesModel;
 pub use click_logs::ActiveModel as ClickLogsActiveModel;
 pub use click_logs::Entity as ClickLogs;
 pub use click_logs::Model as ClickLogsModel;
+
+pub use content_reports::ActiveModel as ContentReportsActiveModel;
+pub use content_reports::Entity as ContentReports;
+pub use content_reports::Model as ContentReportsModel;
 
 pub use earnings::ActiveModel as EarningsActiveModel;
 pub use earnings::Entity as Earnings;

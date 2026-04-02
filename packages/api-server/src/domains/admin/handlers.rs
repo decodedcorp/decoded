@@ -10,6 +10,7 @@ use super::{
     badges, categories, curations, dashboard, editorial_candidates, magazine_sessions, posts,
     solutions, spots, synonyms,
 };
+use crate::domains::reports;
 
 /// Admin 라우터
 pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
@@ -29,6 +30,10 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
             dashboard::router(state.clone(), app_config.clone()),
         )
         .nest("/badges", badges::router(app_config.clone()))
+        .nest(
+            "/reports",
+            reports::admin_router(app_config.clone()),
+        )
         .nest(
             "/magazine-sessions",
             magazine_sessions::router(state, app_config),

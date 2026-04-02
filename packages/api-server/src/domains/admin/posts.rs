@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::{
     config::{AppConfig, AppState},
     domains::posts::{
-        dto::{PostListItem, PostListQuery},
+        dto::{PostListItem, PostListQuery, UpdatePostDto},
         service,
     },
     error::AppResult,
@@ -110,7 +110,32 @@ pub async fn update_post_status(
         )));
     }
 
-    let post = service::admin_update_post_status(&state.db, post_id, &dto.status).await?;
+    let post = service::admin_update_post_status(&state.search_client, &state.db, post_id, &dto.status).await?;
+    Ok(Json(post))
+}
+
+/// PATCH /api/v1/admin/posts/{id} - Admin용 Post 메타데이터 수정
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/posts/{id}",
+    tag = "admin",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "Post ID")),
+    request_body = UpdatePostDto,
+    responses(
+        (status = 200, description = "수정 성공", body = crate::domains::posts::dto::PostResponse),
+        (status = 401, description = "인증 필요"),
+        (status = 403, description = "Admin 권한 필요"),
+        (status = 404, description = "Post를 찾을 수 없음")
+    )
+)]
+pub async fn admin_update_post(
+    State(state): State<AppState>,
+    _extension: axum::Extension<User>,
+    Path(post_id): Path<Uuid>,
+    Json(dto): Json<UpdatePostDto>,
+) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
+    let post = service::admin_update_post(&state, post_id, dto).await?;
     Ok(Json(post))
 }
 
@@ -118,6 +143,7 @@ pub async fn update_post_status(
 pub fn router(app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .route("/", get(list_posts))
+        .route("/{id}", patch(admin_update_post))
         .route("/{id}/status", patch(update_post_status))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),

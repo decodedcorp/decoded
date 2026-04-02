@@ -22,6 +22,7 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
         .nest("/rankings", domains::rankings::router(config.clone()))
         .nest("/badges", domains::badges::router(config.clone()))
         .nest("/earnings", domains::earnings::router(config.clone()))
+        .nest("/reports", domains::reports::public_router(config.clone()))
         .nest(
             "/admin",
             domains::admin::router(state.clone(), config.clone()),

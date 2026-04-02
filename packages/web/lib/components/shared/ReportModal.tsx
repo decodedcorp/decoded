@@ -4,11 +4,13 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSubmitReport } from "@/lib/hooks/useReport";
 
 export interface ReportModalProps {
   open: boolean;
   onClose: () => void;
   targetType?: string;
+  targetId?: string;
   className?: string;
 }
 
@@ -24,19 +26,49 @@ export function ReportModal({
   open,
   onClose,
   targetType = "content",
+  targetId,
   className,
 }: ReportModalProps) {
   const [reason, setReason] = useState<string>("");
   const [details, setDetails] = useState("");
+  const submitReport = useSubmitReport();
 
   if (!open) return null;
 
   const handleSubmit = () => {
     if (!reason) return;
-    toast.success("Report submitted. Thank you for your feedback.");
-    setReason("");
-    setDetails("");
-    onClose();
+
+    if (!targetId) {
+      toast.success("Report submitted. Thank you for your feedback.");
+      setReason("");
+      setDetails("");
+      onClose();
+      return;
+    }
+
+    submitReport.mutate(
+      {
+        target_type: targetType === "content" ? "post" : targetType,
+        target_id: targetId,
+        reason,
+        details: details || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Report submitted. Thank you for your feedback.");
+          setReason("");
+          setDetails("");
+          onClose();
+        },
+        onError: (error) => {
+          toast.error(
+            error.message === "You have already reported this content"
+              ? "You have already reported this content."
+              : "Failed to submit report. Please try again."
+          );
+        },
+      }
+    );
   };
 
   return (
@@ -108,10 +140,10 @@ export function ReportModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!reason}
+            disabled={!reason || submitReport.isPending}
             className="flex-1 rounded-lg bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
-            Submit Report
+            {submitReport.isPending ? "Submitting..." : "Submit Report"}
           </button>
         </div>
       </div>
