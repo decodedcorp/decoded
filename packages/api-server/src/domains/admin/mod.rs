@@ -7,6 +7,7 @@ pub mod badges;
 pub mod categories;
 pub mod curations;
 pub mod dashboard;
+pub mod editorial_candidates;
 pub mod magazine_sessions;
 pub mod posts;
 pub mod solutions;

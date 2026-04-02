@@ -9,6 +9,7 @@ import {
   DollarSign,
   GitBranch,
   Server,
+  Sparkles,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/editorial-candidates", label: "Editorial", icon: Sparkles },
   { href: "/admin/ai-audit", label: "AI Audit", icon: ScanSearch },
   { href: "/admin/ai-cost", label: "AI Cost", icon: DollarSign },
   { href: "/admin/pipeline-logs", label: "Pipeline Logs", icon: GitBranch },
