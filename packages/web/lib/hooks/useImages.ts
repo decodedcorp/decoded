@@ -19,6 +19,8 @@ import {
 } from "@decoded/shared/supabase/queries/images";
 import { getPost } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
+import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
+import { spotToItemRow } from "@/lib/components/detail/types";
 import type {
   CategoryFilter,
   ImagePage,
@@ -272,15 +274,79 @@ export function useInfinitePosts(params: {
 }
 
 /**
- * Fetch post detail via REST API and convert to ImageDetail for ImageDetailContent
+ * Fetch post detail and convert to ImageDetail for ImageDetailContent.
+ * Tries REST API first (production), falls back to Supabase direct (dev without backend).
  */
 export function usePostDetailForImage(postId: string) {
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
+      // 1. Try REST API (works when backend is running)
       try {
         const response = await getPost(postId);
         return postDetailToImageDetail(response, postId);
+      } catch {
+        // Backend unavailable — fall through to Supabase
+      }
+
+      // 2. Fallback: Supabase direct query
+      try {
+        const result = await fetchPostWithSpotsAndSolutions(postId);
+        if (!result) return null;
+
+        const { post, spots, solutions } = result;
+        // DB has columns not in PostRow type (post_magazine_id, ai_summary, etc.)
+        const postAny = post as Record<string, unknown>;
+
+        const items = spots.map((spot) => {
+          const topSolution = solutions.find((s) => s.spot_id === spot.id);
+          return spotToItemRow(spot, topSolution);
+        });
+
+        return {
+          id: post.id,
+          image_hash: "",
+          image_url: post.image_url,
+          status: (post.status ?? "pending") as "pending" | "extracted" | "skipped" | "extracted_metadata",
+          with_items: items.length > 0,
+          created_at: post.created_at,
+          items,
+          posts: [
+            {
+              id: post.id,
+              account: post.artist_name ?? post.group_name ?? "",
+              article: post.media_title ?? null,
+              created_at: post.created_at,
+              item_ids: null,
+              metadata: [],
+              ts: post.created_at,
+            } as any,
+          ],
+          postImages: [
+            {
+              post: {
+                id: post.id,
+                account: post.artist_name ?? post.group_name ?? "",
+                article: post.media_title ?? null,
+                created_at: post.created_at,
+              } as any,
+              created_at: post.created_at,
+              item_locations: spots.map((s, idx) => ({
+                item_id: idx + 1,
+                center: [parseFloat(s.position_left), parseFloat(s.position_top)],
+              })),
+              item_locations_updated_at: post.updated_at,
+            } as any,
+          ],
+          // Extended fields (exist in DB but not in PostRow type)
+          post_owner_id: post.user_id ?? null,
+          post_magazine_id: (postAny.post_magazine_id as string) ?? null,
+          ai_summary: (postAny.ai_summary as string) ?? null,
+          artist_name: post.artist_name ?? null,
+          group_name: post.group_name ?? null,
+          created_with_solutions: (postAny.created_with_solutions as boolean) ?? null,
+          like_count: (postAny.like_count as number) ?? 0,
+        } as ImageDetail;
       } catch {
         return null;
       }
