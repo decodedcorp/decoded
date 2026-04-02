@@ -191,33 +191,80 @@ export function useInfinitePosts(params: {
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
 
-      // hasMagazine=true → REST API 사용 (Supabase posts 뷰에 magazine 컬럼 없음)
+      // hasMagazine=true → REST API 우선, 실패 시 Supabase fallback
+      // (Supabase posts 뷰에 magazine 컬럼이 없어 직접 필터 불가)
       if (hasMagazine) {
-        const response = await listPosts({
-          page,
-          per_page: limit,
-          sort,
-          has_magazine: true,
-          artist_name: mediaName ?? artistName,
-          group_name: castName ? undefined : groupName,
-          context: contextType ?? (category && category !== "all" ? category : undefined),
-        });
+        try {
+          const response = await listPosts({
+            page,
+            per_page: limit,
+            sort,
+            has_magazine: true,
+            artist_name: mediaName ?? artistName,
+            group_name: castName ? undefined : groupName,
+            context: contextType ?? (category && category !== "all" ? category : undefined),
+          });
 
-        const items: PostGridItem[] = response.data.map((post) => ({
-          id: post.id,
-          imageUrl: post.image_url,
-          postId: post.id,
-          postSource: "post" as const,
-          postAccount: post.artist_name ?? post.group_name ?? "",
-          postCreatedAt: post.created_at,
-          spotCount: post.spot_count ?? 0,
-          viewCount: post.view_count,
-          title: post.post_magazine_title ?? post.title ?? null,
-        }));
+          const items: PostGridItem[] = response.data.map((post) => ({
+            id: post.id,
+            imageUrl: post.image_url,
+            postId: post.id,
+            postSource: "post" as const,
+            postAccount: post.artist_name ?? post.group_name ?? "",
+            postCreatedAt: post.created_at,
+            spotCount: post.spot_count ?? 0,
+            viewCount: post.view_count,
+            title: post.post_magazine_title ?? post.title ?? null,
+          }));
 
-        const totalPages = response.pagination.total_pages;
-        const hasMore = page < totalPages;
-        return { items, nextPage: hasMore ? page + 1 : null, hasMore };
+          const totalPages = response.pagination.total_pages;
+          const hasMore = page < totalPages;
+          return { items, nextPage: hasMore ? page + 1 : null, hasMore };
+        } catch {
+          // REST API 미가용 시 Supabase fallback: post_magazines에서 post_id 조회 후 필터
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: magazines } = await (supabaseBrowserClient as any)
+            .from("post_magazines")
+            .select("post_id, title");
+          const magazineMap = new Map<string, string>(
+            (magazines ?? []).map((m: { post_id: string; title: string }) => [m.post_id, m.title])
+          );
+          const postIds = Array.from(magazineMap.keys());
+          if (postIds.length === 0) {
+            return { items: [], nextPage: null, hasMore: false };
+          }
+
+          const fallbackFrom = (page - 1) * limit;
+          const fallbackTo = fallbackFrom + limit - 1;
+          let fbQuery = supabaseBrowserClient
+            .from("posts")
+            .select("*", { count: "exact" })
+            .in("id", postIds)
+            .eq("status", "active")
+            .not("image_url", "is", null);
+          if (mediaName) fbQuery = fbQuery.ilike("group_name", `%${mediaName}%`);
+          if (castName) fbQuery = fbQuery.ilike("artist_name", `%${castName}%`);
+          fbQuery = fbQuery.order("created_at", { ascending: false }).range(fallbackFrom, fallbackTo);
+
+          const { data: fbData, count: fbCount, error: fbError } = await fbQuery;
+          if (fbError) throw new Error(fbError.message);
+
+          const fbTotal = fbCount ?? 0;
+          const fbTotalPages = Math.ceil(fbTotal / limit);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const items: PostGridItem[] = (fbData ?? []).map((post: any) => ({
+            id: post.id,
+            imageUrl: post.image_url,
+            postId: post.id,
+            postSource: "post" as const,
+            postAccount: post.artist_name ?? post.group_name ?? "",
+            postCreatedAt: post.created_at,
+            spotCount: post.spot_count ?? 0,
+            viewCount: post.view_count,
+            title: magazineMap.get(post.id) ?? post.title ?? null,
+          }));
+          return { items, nextPage: page < fbTotalPages ? page + 1 : null, hasMore: page < fbTotalPages };
+        }
       }
 
       // 일반 모드 → Supabase 직접 쿼리
