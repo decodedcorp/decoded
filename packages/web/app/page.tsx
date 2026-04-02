@@ -22,6 +22,9 @@ import { serverApiGet } from "@/lib/api/server-instance";
 import {
   fetchDecodedPickServer,
   fetchTrendingKeywordsServer,
+  fetchWeeklyBestPostsServer,
+  fetchWhatsNewPostsServer,
+  fetchMagazinePostsServer,
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
@@ -29,21 +32,36 @@ import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entiti
 /** Shorthand for post list item from REST API */
 type ApiPost = PaginatedResponsePostListItemDataItem;
 
-/** Proxy image URL through Next.js image proxy */
 const proxyImg = (url: string) =>
   `/api/v1/image-proxy?url=${encodeURIComponent(url)}`;
 
-/** Safe API fetch with empty fallback */
-async function fetchPosts(
-  params: string
-): Promise<ApiPost[]> {
+/** Convert Supabase PostData to ApiPost shape */
+function toApiPost(p: { id: string; imageUrl: string | null; artistName: string | null; groupName: string | null; context: string | null; mediaTitle: string | null; viewCount: number; createdAt: string }): ApiPost {
+  return {
+    id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
+    group_name: p.groupName, context: p.context, title: p.mediaTitle,
+    view_count: p.viewCount, created_at: p.createdAt,
+    comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
+  };
+}
+
+/** Convert MagazinePostData to ApiPost shape */
+function magazineToApiPost(p: { id: string; imageUrl: string | null; artistName: string | null; groupName: string | null; context: string | null; magazineTitle: string; magazineKeyword: string | null }): ApiPost {
+  return {
+    id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
+    group_name: p.groupName, context: p.context, title: p.magazineTitle,
+    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "",
+    comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
+  };
+}
+
+/** REST API fetch with Supabase fallback when backend unavailable */
+async function fetchPosts(params: string, fallback?: () => Promise<ApiPost[]>): Promise<ApiPost[]> {
   try {
-    const res = await serverApiGet<PaginatedResponsePostListItem>(
-      `/api/v1/posts?${params}`
-    );
+    const res = await serverApiGet<PaginatedResponsePostListItem>(`/api/v1/posts?${params}`);
     return res.data ?? [];
-  } catch (e) {
-    console.error(`[fetchPosts] Failed: ${params}`, e);
+  } catch {
+    if (fallback) return fallback();
     return [];
   }
 }
@@ -55,7 +73,7 @@ export default async function Home({
 }) {
   await searchParams;
 
-  // Parallel fetch: REST API + Supabase (for spots/trending/warehouse)
+  // Parallel fetch: REST API (with Supabase fallback) + Supabase-only
   const [
     popularPosts,
     recentPosts,
@@ -64,12 +82,18 @@ export default async function Home({
     trendingKeywords,
     artistProfileMap,
   ] = await Promise.all([
-    fetchPosts("sort=popular&per_page=30"),
-    fetchPosts("sort=recent&per_page=30"),
-    fetchPosts("has_magazine=true&per_page=8"),
-    fetchDecodedPickServer(),         // Supabase: spots/items join
-    fetchTrendingKeywordsServer(8),   // Supabase: no REST API equivalent
-    buildArtistProfileMap(),          // Supabase: warehouse schema
+    fetchPosts("sort=popular&per_page=30", async () =>
+      (await fetchWeeklyBestPostsServer(30)).map(toApiPost)
+    ),
+    fetchPosts("sort=recent&per_page=30", async () =>
+      (await fetchWhatsNewPostsServer(30)).map((s) => toApiPost(s.post))
+    ),
+    fetchPosts("has_magazine=true&per_page=8", async () =>
+      (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
+    ),
+    fetchDecodedPickServer(),
+    fetchTrendingKeywordsServer(8),
+    buildArtistProfileMap(),
   ]);
 
   // --- Helpers ---
@@ -85,10 +109,7 @@ export default async function Home({
     };
   }
 
-  function buildHeroFromApiPost(
-    post: ApiPost,
-    spots?: HeroSpotAnnotation[]
-  ): MainHeroData {
+  function buildHeroFromApiPost(post: ApiPost, spots?: HeroSpotAnnotation[]): MainHeroData {
     return {
       celebrityName: (post.artist_name || post.group_name || "DECODED").toUpperCase(),
       editorialTitle: post.context || post.title || "Today's Featured Look",
@@ -114,9 +135,7 @@ export default async function Home({
     return items.slice(0, 4).map((item, i) => {
       const pos = positions[i % positions.length];
       return {
-        id: String(item.id),
-        x: pos.x,
-        y: pos.y,
+        id: String(item.id), x: pos.x, y: pos.y,
         label: item.name || item.label,
         brand: item.brand || undefined,
         imageUrl: item.imageUrl || undefined,
@@ -129,63 +148,45 @@ export default async function Home({
 
   const heroPosts: HeroPostEntry[] = [];
 
-  // 1. DecodedPick (Supabase — has spots/items)
   if (decodedPick && decodedPick.post.imageUrl) {
     heroPosts.push({
       id: String(decodedPick.post.id),
       heroData: buildHeroFromApiPost(
-        {
-          id: decodedPick.post.id,
-          image_url: decodedPick.post.imageUrl!,
-          artist_name: decodedPick.post.artistName,
-          group_name: decodedPick.post.groupName,
-          context: decodedPick.post.context,
-        } as ApiPost,
+        { id: decodedPick.post.id, image_url: decodedPick.post.imageUrl!, artist_name: decodedPick.post.artistName, group_name: decodedPick.post.groupName, context: decodedPick.post.context } as ApiPost,
         buildSpots(decodedPick.items)
       ),
       items: decodedPick.items.map((item) => ({
-        id: String(item.id),
-        brand: item.brand || "Unknown",
-        name: item.name || item.label,
-        imageUrl: item.imageUrl || undefined,
+        id: String(item.id), brand: item.brand || "Unknown",
+        name: item.name || item.label, imageUrl: item.imageUrl || undefined,
       })),
       galleryImage: proxyImg(decodedPick.post.imageUrl),
       galleryLabel: decodedPick.post.artistName || decodedPick.post.groupName || "Decoded Pick",
     });
   }
 
-  // 2. Recent posts (REST API)
   for (const post of recentPosts) {
     if (heroPosts.some((hp) => hp.id === post.id)) continue;
     heroPosts.push({
-      id: post.id,
-      heroData: buildHeroFromApiPost(post),
-      items: [],
+      id: post.id, heroData: buildHeroFromApiPost(post), items: [],
       galleryImage: proxyImg(post.image_url),
       galleryLabel: post.artist_name || post.group_name || "New Style",
     });
   }
 
-  // 3. Popular posts (REST API)
   for (const post of popularPosts) {
     if (heroPosts.some((hp) => hp.id === post.id)) continue;
     heroPosts.push({
-      id: post.id,
-      heroData: buildHeroFromApiPost(post),
-      items: [],
+      id: post.id, heroData: buildHeroFromApiPost(post), items: [],
       galleryImage: proxyImg(post.image_url),
       galleryLabel: post.artist_name || post.group_name || "Popular",
     });
   }
 
-  // Fallback
   if (heroPosts.length === 0) {
     const fallback = popularPosts[0] || recentPosts[0];
     if (fallback) {
       heroPosts.push({
-        id: fallback.id,
-        heroData: buildHeroFromApiPost(fallback),
-        items: [],
+        id: fallback.id, heroData: buildHeroFromApiPost(fallback), items: [],
         galleryImage: proxyImg(fallback.image_url),
         galleryLabel: fallback.artist_name || "Featured",
       });
@@ -201,32 +202,21 @@ export default async function Home({
         title: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Editorial",
         description: editorialPost.context || editorialPost.title || "",
         artistName: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Unknown",
-        imageUrl: editorialPost.image_url,
-        link: `/posts/${editorialPost.id}`,
+        imageUrl: editorialPost.image_url, link: `/posts/${editorialPost.id}`,
       }
     : undefined;
 
   const resolvedTrendingKeywords =
     trendingKeywords.length > 0
       ? trendingKeywords
-      : [
-          ...new Map(
-            popularPosts
-              .filter((p) => p.artist_name || p.group_name)
-              .map((p) => {
-                const name = (p.artist_name || p.group_name)!;
-                return [
-                  name,
-                  {
-                    id: `artist-${name}`,
-                    label: name,
-                    href: `/search?q=${encodeURIComponent(name)}`,
-                    image: p.image_url || undefined,
-                  },
-                ];
-              })
-          ).values(),
-        ].slice(0, 8);
+      : [...new Map(
+          popularPosts
+            .filter((p) => p.artist_name || p.group_name)
+            .map((p) => {
+              const name = (p.artist_name || p.group_name)!;
+              return [name, { id: `artist-${name}`, label: name, href: `/search?q=${encodeURIComponent(name)}`, image: p.image_url || undefined }];
+            })
+        ).values()].slice(0, 8);
 
   // --- Magazine ---
 
@@ -236,29 +226,22 @@ export default async function Home({
     .map((mp) => {
       const { displayName } = enrichArtistName(mp.artist_name || mp.group_name);
       return {
-        id: `mag-${mp.id}`,
-        imageUrl: proxyImg(mp.image_url),
-        title: mp.post_magazine_title!,
-        subtitle: mp.context || "",
-        artistName: displayName || "Unknown",
-        category: "Editorial",
+        id: `mag-${mp.id}`, imageUrl: proxyImg(mp.image_url),
+        title: mp.post_magazine_title!, subtitle: mp.context || "",
+        artistName: displayName || "Unknown", category: "Editorial",
         link: `/posts/${mp.id}`,
       };
     });
 
-  // Fallback: fill with popular/recent if fewer than 4 magazine cards
   if (magazineCards.length < 4) {
     const usedIds = new Set(magazineCards.map((c) => c.id.replace("mag-", "")));
     for (const p of [...recentPosts, ...popularPosts]) {
       if (!usedIds.has(p.id) && magazineCards.length < 8) {
         const { displayName } = enrichArtistName(p.artist_name || p.group_name);
         magazineCards.push({
-          id: `mag-${p.id}`,
-          imageUrl: proxyImg(p.image_url),
-          title: displayName || p.title || "Style",
-          subtitle: p.context || "",
-          artistName: displayName || "Unknown",
-          category: "Style",
+          id: `mag-${p.id}`, imageUrl: proxyImg(p.image_url),
+          title: displayName || p.title || "Style", subtitle: p.context || "",
+          artistName: displayName || "Unknown", category: "Style",
           link: `/posts/${p.id}`,
         });
         usedIds.add(p.id);
@@ -266,21 +249,17 @@ export default async function Home({
     }
   }
 
-  const editorialMagazineData: EditorialMagazineData = {
-    cards: magazineCards,
-  };
+  const editorialMagazineData: EditorialMagazineData = { cards: magazineCards };
 
   // --- MasonryGrid ---
 
   const gridItems: GridItemData[] = popularPosts.slice(0, 16).map((post, i) => {
     const { displayName } = enrichArtistName(post.artist_name || post.group_name);
     return {
-      id: post.id,
-      imageUrl: post.image_url,
+      id: post.id, imageUrl: post.image_url,
       title: displayName || "Unknown",
       subtitle: post.context || post.title || undefined,
-      category: "Style",
-      link: `/posts/${post.id}`,
+      category: "Style", link: `/posts/${post.id}`,
       aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
     };
   });
@@ -294,10 +273,8 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
-      {/* ─── 1. Hero Collage ─── */}
       <HeroItemSync posts={heroPosts} />
 
-      {/* ─── 2. Editorial + Trending ─── */}
       <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
         <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
           <EditorialSection style={editorialStyle} embedded />
@@ -305,15 +282,12 @@ export default async function Home({
         </div>
       </section>
 
-      {/* ─── 3. Editorial Magazine ─── */}
       <EditorialMagazine data={editorialMagazineData} />
 
-      {/* ─── 4. Discovery Grid ─── */}
       <section className="relative">
         <MasonryGrid items={gridItems as GridItemData[]} />
       </section>
 
-      {/* ─── 5. VTON Dome Gallery ─── */}
       {domeImages.length > 0 && (
         <DomeGallerySection images={domeImages} />
       )}

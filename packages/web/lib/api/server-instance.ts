@@ -46,10 +46,7 @@ export async function serverApiGet<T>(
   });
 
   if (!res.ok) {
-    console.error(
-      `[serverApiGet] ${res.status} ${res.statusText} — ${url}`
-    );
-    throw new Error(`API error: ${res.status} ${res.statusText}`);
+    throw new Error(`[serverApiGet] ${res.status} ${res.statusText} — ${url}`);
   }
 
   return res.json() as Promise<T>;
