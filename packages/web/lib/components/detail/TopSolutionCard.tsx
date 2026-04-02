@@ -40,6 +40,7 @@ interface TopSolutionCardProps {
   adoptDropdownRef: UseAdoptDropdownReturn["adoptDropdownRef"];
   adoptMutation: UseAdoptDropdownReturn["adoptMutation"];
   unadoptMutation: UseAdoptDropdownReturn["unadoptMutation"];
+  onLinkClick?: (url: string) => void;
 }
 
 /**
@@ -56,6 +57,7 @@ export function TopSolutionCard({
   adoptDropdownRef,
   adoptMutation,
   unadoptMutation,
+  onLinkClick,
 }: TopSolutionCardProps) {
   const linkUrl = topSolution.affiliate_url ?? topSolution.original_url ?? null;
 
@@ -71,6 +73,7 @@ export function TopSolutionCard({
               href={linkUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => linkUrl && onLinkClick?.(linkUrl)}
               className="shrink-0 w-14 h-14 rounded overflow-hidden bg-muted/30 border border-border/20"
             >
               <img
@@ -112,6 +115,7 @@ export function TopSolutionCard({
                 href={linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => linkUrl && onLinkClick?.(linkUrl)}
                 className="group/link flex items-center gap-1.5 text-xs text-muted-foreground/80 hover:text-primary"
               >
                 {(() => {

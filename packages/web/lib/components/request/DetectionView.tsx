@@ -184,12 +184,42 @@ export const DetectionView = memo(
             />
           ))}
 
+        {/* 스팟 배치 가이드 오버레이 */}
+        {!isDetecting && spots.length === 0 && (
+          <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
+            <div className="flex flex-col items-center gap-3 animate-pulse">
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/60 flex items-center justify-center">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="text-white/80"
+                >
+                  <path
+                    d="M12 5v14M5 12h14"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm text-white/90 font-medium drop-shadow-md">
+                아이템 위치를 탭하세요
+              </p>
+              <p className="text-xs text-white/60 drop-shadow-md">
+                최소 1개 이상 표시해주세요
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 안내 메시지 */}
         {!isDetecting && (
           <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
             <p className="text-xs text-white text-center">
               {spots.length > 0
-                ? `${spots.length}개의 스팟이 추가됨`
+                ? `${spots.length}개의 스팟 추가됨 · 더 추가하거나 다음으로 진행하세요`
                 : "이미지를 탭하여 아이템 위치를 표시하세요"}
             </p>
           </div>

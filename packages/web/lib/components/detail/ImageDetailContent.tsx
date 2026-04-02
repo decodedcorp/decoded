@@ -33,6 +33,7 @@ import {
 } from "./magazine";
 import { MagazineTitleSection } from "./magazine/MagazineTitleSection";
 import { SpotDot } from "./SpotDot";
+import { SpotSolutionTabs } from "./SpotSolutionTabs";
 
 type Props = {
   image: ImageDetail & { ai_summary?: string | null };
@@ -355,6 +356,27 @@ export function ImageDetailContent({
           </>
         ) : (
           <>
+            {/* Spot-by-spot Solution Comparison (when 2+ spots) */}
+            {spotIds.length >= 2 && (
+              <section className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+                <h5 className="mb-4 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                  Solutions by Spot
+                </h5>
+                <SpotSolutionTabs
+                  spots={normalizedItems
+                    .filter((i) => i.spot_id)
+                    .map((item, idx) => ({
+                      spotId: item.spot_id!,
+                      label: item.product_name ?? undefined,
+                      index: idx + 1,
+                    }))}
+                  isPostOwner={false}
+                  postId={image.id}
+                  onAddSolution={(spotId) => setSpotIdToAddSolution(spotId)}
+                />
+              </section>
+            )}
+
             {/* Shop Grid (show if any items exist, even without coordinates) */}
             {hasItems && (
               <div>

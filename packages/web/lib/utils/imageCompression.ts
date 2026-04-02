@@ -25,12 +25,16 @@ export interface CompressionResult {
  * - 2MB 이상인 경우 압축
  * - 1920px 이상인 경우 리사이즈
  */
-export async function compressImage(file: File): Promise<CompressionResult> {
+export async function compressImage(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<CompressionResult> {
   const originalSize = file.size;
   const needsCompression =
     file.size > COMPRESSION_CONFIG.maxSizeMB * 1024 * 1024;
 
   if (!needsCompression) {
+    onProgress?.(100);
     return {
       file,
       originalSize,
@@ -44,10 +48,14 @@ export async function compressImage(file: File): Promise<CompressionResult> {
     maxWidthOrHeight: COMPRESSION_CONFIG.maxWidthOrHeight,
     useWebWorker: COMPRESSION_CONFIG.useWebWorker,
     initialQuality: COMPRESSION_CONFIG.initialQuality,
+    onProgress: (percent: number) => {
+      onProgress?.(percent);
+    },
   };
 
   try {
     const compressedFile = await imageCompression(file, options);
+    onProgress?.(100);
     return {
       file: compressedFile,
       originalSize,
@@ -57,6 +65,7 @@ export async function compressImage(file: File): Promise<CompressionResult> {
   } catch {
     // 압축 실패 시 원본 반환
     console.warn("이미지 압축 실패, 원본 파일 사용:", file.name);
+    onProgress?.(100);
     return {
       file,
       originalSize,
@@ -72,7 +81,7 @@ export async function compressImage(file: File): Promise<CompressionResult> {
 export async function compressImages(
   files: File[]
 ): Promise<CompressionResult[]> {
-  return Promise.all(files.map(compressImage));
+  return Promise.all(files.map((file) => compressImage(file)));
 }
 
 /**

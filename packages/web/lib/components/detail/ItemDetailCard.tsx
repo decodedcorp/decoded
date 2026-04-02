@@ -10,6 +10,7 @@ import { useAuthStore } from "@/lib/stores/authStore";
 import { useSolutions } from "@/lib/hooks/useSolutions";
 import { useAdoptDropdown } from "@/lib/hooks/useAdoptDropdown";
 import { useItemCardGSAP } from "@/lib/hooks/useItemCardGSAP";
+import { useAffiliateClick } from "@/lib/hooks/useAffiliateClick";
 import { TopSolutionCard } from "./TopSolutionCard";
 import { OtherSolutionsList } from "./OtherSolutionsList";
 
@@ -25,6 +26,8 @@ type Props = {
   onAddSolution?: (spotId: string) => void;
   /** 포스트 작성자 ID - 채택 UI 표시 여부 */
   postOwnerId?: string | null;
+  /** 포스트 ID - 어필리에이트 클릭 트래킹용 */
+  postId?: string | null;
 };
 
 /**
@@ -39,6 +42,7 @@ export function ItemDetailCard({
   spotId,
   onAddSolution,
   postOwnerId = null,
+  postId = null,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -64,6 +68,7 @@ export function ItemDetailCard({
 
   const adoptDropdown = useAdoptDropdown(spotId);
   useItemCardGSAP(cardRef, contentRef, isModal);
+  const trackAffiliateClick = useAffiliateClick();
 
   // Parse multi-language fields
   const displayBrand = item.brand
@@ -269,6 +274,14 @@ export function ItemDetailCard({
                       topSolution={topSolution}
                       isPostOwner={isPostOwner}
                       spotId={spotId}
+                      onLinkClick={(url) =>
+                        trackAffiliateClick({
+                          solutionId: topSolution.id,
+                          spotId: spotId ?? undefined,
+                          postId: postId ?? undefined,
+                          url,
+                        })
+                      }
                       {...adoptDropdown}
                     />
                   )}
@@ -277,6 +290,14 @@ export function ItemDetailCard({
                     spotId={spotId}
                     onAddSolution={onAddSolution}
                     isPostOwner={isPostOwner}
+                    onLinkClick={(solutionId, url) =>
+                      trackAffiliateClick({
+                        solutionId,
+                        spotId: spotId ?? undefined,
+                        postId: postId ?? undefined,
+                        url,
+                      })
+                    }
                     {...adoptDropdown}
                   />
                 </div>
