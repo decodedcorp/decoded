@@ -222,7 +222,8 @@ export function ImageDetailModal({ imageId }: Props) {
           {image?.items && image.items.length > 0 && (() => {
             const imageRect = getContainedImageRect();
             if (!imageRect) return null;
-            const accentColor = (magazine?.layout_json as { design_spec?: { accent_color?: string } })?.design_spec?.accent_color;
+            // D-08: Always use brand color — per-post design_spec.accent_color override removed
+            const accentColor = "var(--mag-accent)";
             return (
               <div className="absolute inset-0 pointer-events-none z-20">
                 {image.items.map((item, idx) => {

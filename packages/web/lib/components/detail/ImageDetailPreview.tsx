@@ -66,7 +66,8 @@ export function ImageDetailPreview({
   const account =
     (image.postImages?.[0]?.post?.account as string) || "unknown";
 
-  const accentColor = magazineLayout?.design_spec?.accent_color;
+  // D-08: Always use brand color — per-post design_spec.accent_color override removed
+  const accentColor = "var(--mag-accent)";
 
   return (
     <div className="flex flex-col gap-6 px-6 py-8 md:px-8 md:py-10">
@@ -147,7 +148,7 @@ export function ImageDetailPreview({
             </p>
           ))}
           {magazineLayout.editorial.pull_quote && (
-            <blockquote className="relative my-6 py-4 border-l-2 pl-4" style={{ borderColor: accentColor || 'hsl(var(--primary) / 0.3)' }}>
+            <blockquote className="relative my-6 py-4 border-l-2 pl-4" style={{ borderColor: "var(--mag-accent)" }}>
               <p className="font-serif text-base italic text-foreground md:text-lg">
                 {magazineLayout.editorial.pull_quote}
               </p>

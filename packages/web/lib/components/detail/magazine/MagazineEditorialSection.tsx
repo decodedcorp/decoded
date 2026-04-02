@@ -60,9 +60,8 @@ export function MagazineEditorialSection({ editorial, accentColor, isModal }: Pr
     });
   }, [isModal]);
 
-  const accentStyle = accentColor
-    ? ({ "--magazine-accent": accentColor } as React.CSSProperties)
-    : undefined;
+  // D-08: Always use brand color — component is self-sufficient regardless of prop
+  const accentStyle = { "--magazine-accent": "var(--mag-accent)" } as React.CSSProperties;
 
   return (
     <section
@@ -91,12 +90,12 @@ export function MagazineEditorialSection({ editorial, accentColor, isModal }: Pr
           className="relative my-10 py-8 md:my-12"
           style={quoteHeight > 0 ? { minHeight: quoteHeight + 64 } : undefined}
         >
+          {/* D-08: Use brand color with opacity — avoids hex+alpha concatenation on CSS variable */}
           <div
             className="absolute left-0 top-0 h-0.5 w-12"
             style={{
-              backgroundColor: accentColor
-                ? `${accentColor}4D`
-                : "var(--primary-30, hsl(var(--primary) / 0.3))",
+              backgroundColor: "var(--mag-accent)",
+              opacity: 0.3,
             }}
           />
           <p className="font-serif text-xl italic text-foreground md:text-2xl">
@@ -105,9 +104,8 @@ export function MagazineEditorialSection({ editorial, accentColor, isModal }: Pr
           <div
             className="absolute bottom-0 right-0 h-0.5 w-12"
             style={{
-              backgroundColor: accentColor
-                ? `${accentColor}4D`
-                : "var(--primary-30, hsl(var(--primary) / 0.3))",
+              backgroundColor: "var(--mag-accent)",
+              opacity: 0.3,
             }}
           />
         </blockquote>
