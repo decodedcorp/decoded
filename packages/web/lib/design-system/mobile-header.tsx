@@ -48,22 +48,20 @@ export function MobileHeader({
       style={{ height: "56px" }}
       {...props}
     >
-      <div className="w-full px-2 h-full flex items-center">
-        <div className="flex items-center flex-shrink-0">
-          <Link
-            href="/"
-            className="relative w-48 h-14 flex items-center justify-center -ml-4 hover:opacity-80 transition-opacity"
-            aria-label="Go to home"
-          >
-            <DecodedLogo
-              asciiFontSize={3}
-              textFontSize={200}
-              planeBaseHeight={12}
-              enableWaves={false}
-              enableHueRotate={true}
-            />
-          </Link>
-        </div>
+      <div className="w-full px-2 h-full flex items-center justify-center">
+        <Link
+          href="/"
+          className="relative w-48 h-14 flex items-center justify-center hover:opacity-80 transition-opacity"
+          aria-label="Go to home"
+        >
+          <DecodedLogo
+            asciiFontSize={3}
+            textFontSize={200}
+            planeBaseHeight={12}
+            enableWaves={false}
+            enableHueRotate={true}
+          />
+        </Link>
       </div>
     </header>
   );
