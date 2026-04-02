@@ -8,6 +8,7 @@ export const FEATURE_FLAGS = {
     ExploreCardCell: true,
     MasonryGridItem: true,
     PostsGrid: true,
+    RelatedImages: true,
   },
 } as const;
 
