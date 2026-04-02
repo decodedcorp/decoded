@@ -91,24 +91,36 @@ export const ExploreCardCell = memo(function ExploreCardCell({
         <article
           data-flip-id={`card-${imageId}`}
           className={cn(
-            "relative",
-            useDynamicRatio ? "bg-black" : "aspect-[3/4] bg-muted"
+            "relative overflow-hidden",
+            useDynamicRatio ? "h-full bg-black" : "aspect-[3/4] bg-muted"
           )}
         >
           {useDynamicRatio ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt={`Image ${imageId}`}
-              width={imgW}
-              height={imgH}
-              className={cn(
-                "w-full object-contain max-h-[60vh] transition-opacity duration-150 ease-out",
-                isLoaded ? "opacity-100" : "opacity-0"
-              )}
-              onError={() => setImageError(true)}
-              onLoad={() => setIsLoaded(true)}
-            />
+            <>
+              {/* Blurred background — fills letterbox like the detail modal */}
+              <div
+                className="absolute inset-0 -z-10"
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "blur(20px)",
+                  transform: "scale(1.1)",
+                }}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={`Image ${imageId}`}
+                className={cn(
+                  "w-full h-full object-contain transition-opacity duration-150 ease-out",
+                  isLoaded ? "opacity-100" : "opacity-0"
+                )}
+                loading={isTopImage ? "eager" : "lazy"}
+                onError={() => setImageError(true)}
+                onLoad={() => setIsLoaded(true)}
+              />
+            </>
           ) : (
             <Image
               src={imageUrl}
