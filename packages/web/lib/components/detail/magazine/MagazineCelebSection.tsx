@@ -131,16 +131,6 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
                 )}
               </div>
 
-              <div
-                className="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm"
-                style={{
-                  backgroundColor: accentColor
-                    ? `${accentColor}80`
-                    : "hsl(var(--primary) / 0.5)",
-                }}
-              >
-                View Post
-              </div>
             </Link>
           );
         })}

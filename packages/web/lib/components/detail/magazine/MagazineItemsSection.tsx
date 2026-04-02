@@ -249,23 +249,6 @@ export function MagazineItemsSection({
                               </span>
                             </div>
                           )}
-                          <div
-                            className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium backdrop-blur-sm"
-                            style={{
-                              backgroundColor:
-                                ri.source === "external"
-                                  ? accentColor
-                                    ? `${accentColor}80`
-                                    : "hsl(var(--primary) / 0.5)"
-                                  : "hsl(var(--muted) / 0.8)",
-                              color:
-                                ri.source === "external"
-                                  ? "white"
-                                  : "hsl(var(--muted-foreground))",
-                            }}
-                          >
-                            {ri.source === "external" ? "External" : "Internal"}
-                          </div>
                         </div>
                         <div className="p-2">
                           {ri.brand && (

@@ -446,26 +446,6 @@ export function ImageDetailContent({
         {!hasItems && !hasMagazine && (
           <div className="mx-auto max-w-4xl px-4 py-16 md:px-8">
             <div className="mb-8">
-              <div className="mb-4 flex flex-wrap gap-2">
-                {image.status && (
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${
-                      image.status === "pending"
-                        ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
-                        : image.status === "extracted"
-                          ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "bg-slate-100 text-slate-900 dark:bg-slate-800/80 dark:text-slate-100"
-                    }`}
-                  >
-                    {image.status}
-                  </span>
-                )}
-                {image.with_items && (
-                  <span className="rounded-full bg-blue-500/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-100">
-                    Items Detected
-                  </span>
-                )}
-              </div>
               <p className="text-sm text-muted-foreground">
                 Created: {new Date(image.created_at).toLocaleDateString()}
               </p>
