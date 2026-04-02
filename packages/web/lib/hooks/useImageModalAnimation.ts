@@ -56,6 +56,7 @@ export function useImageModalAnimation({
   // Swipe gesture state
   const touchStartY = useRef<number>(0);
   const touchCurrentY = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);
 
   // Mount/Enter Animation — creates the GSAP context that all other animations add to
   useEffect(() => {
@@ -207,6 +208,8 @@ export function useImageModalAnimation({
     }
 
     touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -218,10 +221,22 @@ export function useImageModalAnimation({
     touchCurrentY.current = e.touches[0].clientY;
     const diff = touchCurrentY.current - touchStartY.current;
 
-    if (diff > 0 && drawerRef.current && ctxRef.current) {
+    if (drawerRef.current && ctxRef.current) {
+      // Rubber-band: resist upward drag, follow downward drag
+      const translateY = diff > 0 ? diff : diff * 0.15;
+      const drawerHeight = drawerRef.current.offsetHeight;
+      const progress = Math.min(Math.max(diff / drawerHeight, 0), 1);
+
       ctxRef.current.add(() => {
-        gsap.set(drawerRef.current, { y: diff });
+        gsap.set(drawerRef.current, { y: translateY });
       });
+
+      // Fade backdrop as sheet is dragged down
+      if (backdropRef.current && diff > 0) {
+        ctxRef.current.add(() => {
+          gsap.set(backdropRef.current, { opacity: 1 - progress * 0.6 });
+        });
+      }
     }
   };
 
@@ -232,17 +247,44 @@ export function useImageModalAnimation({
     if (isDesktop) return;
 
     const diff = touchCurrentY.current - touchStartY.current;
+    const elapsed = Date.now() - touchStartTime.current;
+    const velocity = diff / Math.max(elapsed, 1); // px/ms
 
-    if (diff > 100) {
-      handleClose();
-    } else if (diff > 0 && drawerRef.current && ctxRef.current) {
+    // Close if: dragged far enough OR fast flick downward
+    const shouldClose = diff > 100 || (velocity > 0.5 && diff > 30);
+
+    if (shouldClose && drawerRef.current && ctxRef.current) {
+      // Slide down to close (not fade)
+      setIsClosing(true);
       ctxRef.current.add(() => {
-        gsap.to(drawerRef.current, { y: 0, duration: 0.3, ease: "power2.out" });
+        const tl = gsap.timeline({
+          onComplete: () => {
+            gsap.delayedCall(0.05, () => {
+              reset();
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/");
+              }
+            });
+          },
+        });
+        tl.to(drawerRef.current, { y: "100%", duration: 0.25, ease: "power2.in" }, 0);
+        tl.to(backdropRef.current, { opacity: 0, duration: 0.25, ease: "power2.in" }, 0);
+      });
+    } else if (drawerRef.current && ctxRef.current) {
+      // Snap back with spring
+      ctxRef.current.add(() => {
+        gsap.to(drawerRef.current, { y: 0, duration: 0.35, ease: "back.out(1.2)" });
+        if (backdropRef.current) {
+          gsap.to(backdropRef.current, { opacity: 1, duration: 0.35, ease: "power2.out" });
+        }
       });
     }
 
     touchStartY.current = 0;
     touchCurrentY.current = 0;
+    touchStartTime.current = 0;
   };
 
   const handleMaximize = useCallback(() => {
