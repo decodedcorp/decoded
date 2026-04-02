@@ -131,8 +131,8 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation (completed 2026-04-02)
 - [x] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이 (completed 2026-04-02)
 - [x] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증 (completed 2026-04-02)
-- [ ] **Phase 56: Explore UI Enhancement** - 카테고리 필터 Editorial 탭 + 카드 호버 아이템 프리뷰
-- [ ] **Phase 57: Editorial Layout & Detail View** - Editorial 전용 매거진 스타일 레이아웃 + 에디토리얼 상세 뷰
+- [x] **Phase 56: Explore UI Enhancement** - 카테고리 필터 Editorial 탭 + 카드 호버 아이템 프리뷰 ✅ 2026-04-02
+- [x] **Phase 57: Editorial Layout & Detail View** - Editorial 전용 매거진 스타일 레이아웃 + 에디토리얼 상세 뷰 ✅ 2026-04-02
 - [ ] **Phase 58: Artist Discovery** - 아티스트 프로필 카드 + 트렌딩 아티스트 섹션
 
 ## Phase Details
@@ -593,11 +593,11 @@ v11.0: 51 → 52 → 53, 54 (parallel) → 55 → 56 → 57, 58 (parallel)
 | 53: Detail Data Migration                     | v11.0     | 0/2            | Not started   | -          |
 | 54: Card Enrichment                           | v11.0     | 0/2            | Not started   | -          |
 | 55: End-to-End Verification                   | v11.0     | 0/1            | Not started   | -          |
-| 56: Explore UI Enhancement                    | v11.0     | 0/TBD          | Not started   | -          |
-| 57: Editorial Layout & Detail View            | v11.0     | 0/TBD          | Not started   | -          |
+| 56: Explore UI Enhancement                    | v11.0     | 3/3            | Complete      | 2026-04-02 |
+| 57: Editorial Layout & Detail View            | v11.0     | 2/2            | Complete      | 2026-04-02 |
 | 58: Artist Discovery                          | v11.0     | 0/TBD          | Not started   | -          |
 
 ---
 
 _Roadmap created: 2026-01-29_
-_Last updated: 2026-04-01 (v11.0 Phases 51-55 added, 7 requirements mapped)_
+_Last updated: 2026-04-02 (Phases 56, 57 complete)_
