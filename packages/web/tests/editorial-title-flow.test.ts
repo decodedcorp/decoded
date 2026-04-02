@@ -81,10 +81,7 @@ describe("useImages.ts title mapping (CARD-02)", () => {
 
 describe("ExploreClient.tsx editorialTitle gate (CARD-02)", () => {
   test("editorialTitle is set when hasMagazine=true and title is non-null", () => {
-    const gridItem = buildGridItem(
-      { title: "Vogue Korea May 2026" },
-      true
-    );
+    const gridItem = buildGridItem({ title: "Vogue Korea May 2026" }, true);
     expect(gridItem.editorialTitle).toBe("Vogue Korea May 2026");
   });
 

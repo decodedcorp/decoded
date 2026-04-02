@@ -84,9 +84,9 @@ export function initializeIntersectionObserver(
  * Creates the IntersectionObserver for image lazy-loading.
  * Returns the observer instance; caller must call `observeImages` to start observing.
  */
-export function initializeImageObserver(
-  imageObserverRef: { current: IntersectionObserver | null }
-): IntersectionObserver | null {
+export function initializeImageObserver(imageObserverRef: {
+  current: IntersectionObserver | null;
+}): IntersectionObserver | null {
   if (typeof IntersectionObserver === "undefined") {
     return null;
   }

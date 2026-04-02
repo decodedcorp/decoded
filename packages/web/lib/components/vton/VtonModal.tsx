@@ -5,7 +5,11 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { useVtonStore } from "@/lib/stores/vtonStore";
 import { useVtonScrollLock } from "@/lib/hooks/useVtonScrollLock";
-import { useVtonItemFetch, type ItemData, type Category } from "@/lib/hooks/useVtonItemFetch";
+import {
+  useVtonItemFetch,
+  type ItemData,
+  type Category,
+} from "@/lib/hooks/useVtonItemFetch";
 import { useVtonTryOn } from "@/lib/hooks/useVtonTryOn";
 import { VtonPhotoArea } from "./VtonPhotoArea";
 import { VtonItemPanel } from "./VtonItemPanel";
@@ -28,7 +32,9 @@ export function VtonModal() {
   const [personImage, setPersonImage] = useState<string | null>(null);
   const [personPreview, setPersonPreview] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>("tops");
-  const [selectedItems, setSelectedItems] = useState<Record<Category, ItemData | null>>({
+  const [selectedItems, setSelectedItems] = useState<
+    Record<Category, ItemData | null>
+  >({
     tops: null,
     bottoms: null,
   });
@@ -36,7 +42,9 @@ export function VtonModal() {
   const [loadingStage, setLoadingStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPostItemIds, setSelectedPostItemIds] = useState<Set<string>>(new Set());
+  const [selectedPostItemIds, setSelectedPostItemIds] = useState<Set<string>>(
+    new Set()
+  );
   const stageInterval = useRef<ReturnType<typeof setInterval>>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -48,7 +56,9 @@ export function VtonModal() {
     restoredFromJobRef.current = backgroundJob.id;
     setPersonPreview(backgroundJob.personPreview);
     setPersonImage(backgroundJob.personImageBase64);
-    setSelectedPostItemIds(new Set(backgroundJob.selectedItems.map((i) => i.id)));
+    setSelectedPostItemIds(
+      new Set(backgroundJob.selectedItems.map((i) => i.id))
+    );
   }, [isOpen, backgroundJob]);
 
   // Derive display state
@@ -71,9 +81,17 @@ export function VtonModal() {
 
   const selectedList = useMemo(() => {
     if (hasActiveJob && jobSelectedItems.length > 0) return jobSelectedItems;
-    if (isPostMode) return items.filter((item) => selectedPostItemIds.has(item.id));
+    if (isPostMode)
+      return items.filter((item) => selectedPostItemIds.has(item.id));
     return Object.values(selectedItems).filter(Boolean) as ItemData[];
-  }, [hasActiveJob, jobSelectedItems, isPostMode, items, selectedPostItemIds, selectedItems]);
+  }, [
+    hasActiveJob,
+    jobSelectedItems,
+    isPostMode,
+    items,
+    selectedPostItemIds,
+    selectedItems,
+  ]);
   const selectedCount = selectedList.length;
 
   // Sync loading from background job on re-open
@@ -81,9 +99,14 @@ export function VtonModal() {
     if (isOpen && backgroundJob?.status === "processing") {
       setLoading(true);
       setLoadingStage(0);
-      stageInterval.current = setInterval(() => setLoadingStage((s) => Math.min(s + 1, 5)), 2000);
+      stageInterval.current = setInterval(
+        () => setLoadingStage((s) => Math.min(s + 1, 5)),
+        2000
+      );
     }
-    return () => { if (stageInterval.current) clearInterval(stageInterval.current); };
+    return () => {
+      if (stageInterval.current) clearInterval(stageInterval.current);
+    };
   }, [isOpen, backgroundJob?.status]);
 
   // Stop loading animation when job completes
@@ -95,33 +118,56 @@ export function VtonModal() {
   }, [backgroundJob?.status]);
 
   // Abort on unmount
-  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort();
+    },
+    []
+  );
 
-  const { handleTryOn, handleSaveToProfile, handleShare, isSaving, savedToProfile, setSavedToProfile } =
-    useVtonTryOn({
-      personImage,
-      personPreview,
-      selectedItems: selectedList,
-      sourcePostId,
-      displayResultImage,
-      abortControllerRef,
-      onTryOnStart: () => {
-        setLoading(true);
-        setError(null);
-        clearBackgroundJob();
-        setLoadingStage(0);
-        stageInterval.current = setInterval(() => setLoadingStage((s) => Math.min(s + 1, 5)), 2000);
-      },
-      onTryOnComplete: (resultDataUrl, latencyMs) => completeBackgroundJob(resultDataUrl, latencyMs),
-      onTryOnError: (message) => { failBackgroundJob(message); setError(message); },
-      onTryOnFinally: () => { if (stageInterval.current) clearInterval(stageInterval.current); setLoading(false); },
-      startBackgroundJob,
-    });
+  const {
+    handleTryOn,
+    handleSaveToProfile,
+    handleShare,
+    isSaving,
+    savedToProfile,
+    setSavedToProfile,
+  } = useVtonTryOn({
+    personImage,
+    personPreview,
+    selectedItems: selectedList,
+    sourcePostId,
+    displayResultImage,
+    abortControllerRef,
+    onTryOnStart: () => {
+      setLoading(true);
+      setError(null);
+      clearBackgroundJob();
+      setLoadingStage(0);
+      stageInterval.current = setInterval(
+        () => setLoadingStage((s) => Math.min(s + 1, 5)),
+        2000
+      );
+    },
+    onTryOnComplete: (resultDataUrl, latencyMs) =>
+      completeBackgroundJob(resultDataUrl, latencyMs),
+    onTryOnError: (message) => {
+      failBackgroundJob(message);
+      setError(message);
+    },
+    onTryOnFinally: () => {
+      if (stageInterval.current) clearInterval(stageInterval.current);
+      setLoading(false);
+    },
+    startBackgroundJob,
+  });
 
   // Escape key
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen]);
@@ -182,7 +228,8 @@ export function VtonModal() {
       } else {
         setSelectedItems((prev) => {
           const current = prev[activeCategory];
-          if (current?.id === item.id) return { ...prev, [activeCategory]: null };
+          if (current?.id === item.id)
+            return { ...prev, [activeCategory]: null };
           return { ...prev, [activeCategory]: item };
         });
       }
@@ -193,10 +240,15 @@ export function VtonModal() {
   const handleDeselect = useCallback(
     (item: ItemData) => {
       if (isPostMode) {
-        setSelectedPostItemIds((prev) => { const next = new Set(prev); next.delete(item.id); return next; });
+        setSelectedPostItemIds((prev) => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
       } else {
-        const cat = (Object.entries(selectedItems) as [Category, ItemData | null][])
-          .find(([, v]) => v?.id === item.id)?.[0];
+        const cat = (
+          Object.entries(selectedItems) as [Category, ItemData | null][]
+        ).find(([, v]) => v?.id === item.id)?.[0];
         if (cat) setSelectedItems((prev) => ({ ...prev, [cat]: null }));
       }
     },
@@ -206,8 +258,14 @@ export function VtonModal() {
   if (!isOpen) return null;
 
   return (
-    <div data-testid="vton-modal" className="fixed inset-0 z-[100] flex items-center justify-center overscroll-contain">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={handleClose} />
+    <div
+      data-testid="vton-modal"
+      className="fixed inset-0 z-[100] flex items-center justify-center overscroll-contain"
+    >
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={handleClose}
+      />
       <div className="relative z-10 flex h-[90vh] w-[95vw] max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-2xl md:flex-row">
         <button
           onClick={handleClose}
@@ -244,7 +302,10 @@ export function VtonModal() {
           searchQuery={searchQuery}
           error={error}
           bgError={bgError}
-          onCategoryChange={(cat) => { setActiveCategory(cat); setSearchQuery(""); }}
+          onCategoryChange={(cat) => {
+            setActiveCategory(cat);
+            setSearchQuery("");
+          }}
           onSearchChange={setSearchQuery}
           onSelectItem={handleSelectItem}
           onDeselect={handleDeselect}

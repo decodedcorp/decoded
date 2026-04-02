@@ -464,4 +464,3 @@ export async function fetchPostMagazine(
     requiresAuth: false,
   });
 }
-

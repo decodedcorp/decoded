@@ -26,7 +26,8 @@ export const navBarVariants = cva(
 );
 
 export interface NavBarProps
-  extends React.HTMLAttributes<HTMLElement>,
+  extends
+    React.HTMLAttributes<HTMLElement>,
     VariantProps<typeof navBarVariants> {
   /**
    * NavItem children

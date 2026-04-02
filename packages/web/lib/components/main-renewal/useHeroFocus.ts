@@ -16,14 +16,11 @@ export function useHeroFocus() {
     setFocusedId(null);
   }, []);
 
-  const isFocused = useCallback(
-    (id: string) => focusedId === id,
-    [focusedId],
-  );
+  const isFocused = useCallback((id: string) => focusedId === id, [focusedId]);
 
   const isDimmed = useCallback(
     (id: string) => focusedId !== null && focusedId !== id,
-    [focusedId],
+    [focusedId]
   );
 
   /** Get next z-index for any interaction (grab, click, etc.) */

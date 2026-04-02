@@ -3,8 +3,10 @@
 import { useState, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-export interface FollowButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+export interface FollowButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "children"
+> {
   initialFollowing?: boolean;
   onFollowChange?: (following: boolean) => void;
   size?: "sm" | "md";

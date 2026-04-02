@@ -3,7 +3,10 @@
 import Image from "next/image";
 import { Maximize2 } from "lucide-react";
 import { AISummarySection } from "./AISummarySection";
-import type { PostMagazineLayout, RelatedEditorialItem } from "@/lib/api/mutation-types";
+import type {
+  PostMagazineLayout,
+  RelatedEditorialItem,
+} from "@/lib/api/mutation-types";
 
 type ImagePreviewProps = {
   imageUrl: string;
@@ -63,8 +66,7 @@ export function ImageDetailPreview({
 
   const aiSummary = (image as { ai_summary?: string | null }).ai_summary;
   const itemCount = image.items?.length ?? 0;
-  const account =
-    (image.postImages?.[0]?.post?.account as string) || "unknown";
+  const account = (image.postImages?.[0]?.post?.account as string) || "unknown";
 
   const accentColor = magazineLayout?.design_spec?.accent_color;
 
@@ -111,20 +113,31 @@ export function ImageDetailPreview({
       )}
 
       {/* Tags */}
-      {((artistTags?.length ?? 0) > 0 || (brands?.length ?? 0) > 0 || (styleTags?.length ?? 0) > 0) && (
+      {((artistTags?.length ?? 0) > 0 ||
+        (brands?.length ?? 0) > 0 ||
+        (styleTags?.length ?? 0) > 0) && (
         <div className="flex flex-wrap gap-2">
           {artistTags?.map((a) => (
-            <span key={a} className="rounded-full border border-border bg-foreground/10 px-2.5 py-1 text-xs font-medium text-foreground">
+            <span
+              key={a}
+              className="rounded-full border border-border bg-foreground/10 px-2.5 py-1 text-xs font-medium text-foreground"
+            >
               {a}
             </span>
           ))}
           {brands?.map((b) => (
-            <span key={b} className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground/80">
+            <span
+              key={b}
+              className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground/80"
+            >
               {b}
             </span>
           ))}
           {styleTags?.map((s) => (
-            <span key={s} className="rounded-full border border-border/60 bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
+            <span
+              key={s}
+              className="rounded-full border border-border/60 bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground"
+            >
               #{s}
             </span>
           ))}
@@ -147,7 +160,12 @@ export function ImageDetailPreview({
             </p>
           ))}
           {magazineLayout.editorial.pull_quote && (
-            <blockquote className="relative my-6 py-4 border-l-2 pl-4" style={{ borderColor: accentColor || 'hsl(var(--primary) / 0.3)' }}>
+            <blockquote
+              className="relative my-6 py-4 border-l-2 pl-4"
+              style={{
+                borderColor: accentColor || "hsl(var(--primary) / 0.3)",
+              }}
+            >
               <p className="font-serif text-base italic text-foreground md:text-lg">
                 {magazineLayout.editorial.pull_quote}
               </p>
@@ -163,17 +181,30 @@ export function ImageDetailPreview({
             The Look — {magazineLayout.items.length} Items
           </h3>
           {magazineLayout.items.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+            <div
+              key={idx}
+              className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3"
+            >
               {item.image_url && (
                 <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                  <Image src={item.image_url} alt={item.title || `Item ${idx + 1}`} fill className="object-cover" sizes="56px" />
+                  <Image
+                    src={item.image_url}
+                    alt={item.title || `Item ${idx + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="56px"
+                  />
                 </div>
               )}
               <div className="min-w-0 flex-1">
                 {item.brand && (
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{item.brand}</p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                    {item.brand}
+                  </p>
                 )}
-                <p className="text-sm font-medium text-foreground truncate">{item.title || `Item ${idx + 1}`}</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {item.title || `Item ${idx + 1}`}
+                </p>
               </div>
             </div>
           ))}
@@ -188,16 +219,29 @@ export function ImageDetailPreview({
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {magazineLayout.celeb_list.map((celeb, idx) => (
-              <div key={idx} className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+              <div
+                key={idx}
+                className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3"
+              >
                 {celeb.celeb_image_url && (
                   <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-muted">
-                    <Image src={celeb.celeb_image_url} alt={celeb.celeb_name} fill className="object-cover" sizes="48px" />
+                    <Image
+                      src={celeb.celeb_image_url}
+                      alt={celeb.celeb_name}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">{celeb.celeb_name}</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {celeb.celeb_name}
+                  </p>
                   {celeb.item_brand && (
-                    <p className="text-xs text-muted-foreground">{celeb.item_brand} — {celeb.item_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {celeb.item_brand} — {celeb.item_name}
+                    </p>
                   )}
                 </div>
               </div>

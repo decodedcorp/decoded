@@ -53,7 +53,9 @@ export function MagazineTitleSection({ title, subtitle, isModal }: Props) {
       ref={sectionRef}
       className="relative flex min-h-[25vh] flex-col items-center justify-center px-6 pt-16 pb-4 text-center md:pt-20 md:pb-6"
     >
-      <p className={`mag-overline typography-overline mb-6 text-muted-foreground ${isModal ? "" : "opacity-0"}`}>
+      <p
+        className={`mag-overline typography-overline mb-6 text-muted-foreground ${isModal ? "" : "opacity-0"}`}
+      >
         Editorial
       </p>
       <h1
@@ -64,7 +66,9 @@ export function MagazineTitleSection({ title, subtitle, isModal }: Props) {
         {title}
       </h1>
       {subtitle && (
-        <p className={`mag-subtitle mt-6 max-w-xl text-lg font-light leading-relaxed text-muted-foreground ${isModal ? "" : "opacity-0"}`}>
+        <p
+          className={`mag-subtitle mt-6 max-w-xl text-lg font-light leading-relaxed text-muted-foreground ${isModal ? "" : "opacity-0"}`}
+        >
           {subtitle}
         </p>
       )}

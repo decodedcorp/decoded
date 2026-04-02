@@ -32,7 +32,8 @@ export const mobileHeaderVariants = cva(
 );
 
 export interface MobileHeaderProps
-  extends React.HTMLAttributes<HTMLElement>,
+  extends
+    React.HTMLAttributes<HTMLElement>,
     VariantProps<typeof mobileHeaderVariants> {
   onSearchClick?: () => void;
   onFilterClick?: () => void;

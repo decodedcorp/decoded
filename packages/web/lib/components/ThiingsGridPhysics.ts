@@ -390,7 +390,7 @@ export class ThiingsGridPhysics {
     const layer = Math.max(Math.abs(x), Math.abs(y));
     const innerLayersSize = Math.pow(2 * layer - 1, 2);
 
-    let positionInLayer = 0;
+    let positionInLayer: number;
 
     if (y === 0 && x === layer) {
       positionInLayer = 0;
@@ -421,8 +421,16 @@ export class ThiingsGridPhysics {
     maxRenderCells: number,
     itemCount: number | undefined,
     hasMore: boolean | undefined
-  ): { items: Array<{ position: Position; gridIndex: number }>; maxVisibleIndex: number } {
-    const positions = this.calculateVisiblePositions(containerEl, gridWidth, gridHeight, viewportBuffer);
+  ): {
+    items: Array<{ position: Position; gridIndex: number }>;
+    maxVisibleIndex: number;
+  } {
+    const positions = this.calculateVisiblePositions(
+      containerEl,
+      gridWidth,
+      gridHeight,
+      viewportBuffer
+    );
     let maxVisibleIndex = 0;
 
     let allItems = positions
@@ -437,14 +445,18 @@ export class ThiingsGridPhysics {
         maxVisibleIndex = Math.max(maxVisibleIndex, gridIndex);
         return { position, gridIndex };
       })
-      .filter((item): item is { position: Position; gridIndex: number } => item !== null);
+      .filter(
+        (item): item is { position: Position; gridIndex: number } =>
+          item !== null
+      );
 
     if (allItems.length > maxRenderCells) {
       const cx = -this.offset.x / gridWidth;
       const cy = -this.offset.y / gridHeight;
       allItems.sort(
         (a, b) =>
-          Math.pow(a.position.x - cx, 2) + Math.pow(a.position.y - cy, 2) -
+          Math.pow(a.position.x - cx, 2) +
+          Math.pow(a.position.y - cy, 2) -
           (Math.pow(b.position.x - cx, 2) + Math.pow(b.position.y - cy, 2))
       );
       allItems = allItems.slice(0, maxRenderCells);

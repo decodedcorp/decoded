@@ -53,7 +53,11 @@ export function PolaroidCard({
           gsap.to(el, { rotation: rot, duration: 0.1, ease: "power1.out" });
         },
         onDragEnd() {
-          gsap.to(el, { rotation: 0, duration: 0.5, ease: "elastic.out(1,0.5)" });
+          gsap.to(el, {
+            rotation: 0,
+            duration: 0.5,
+            ease: "elastic.out(1,0.5)",
+          });
         },
         onRelease() {
           gsap.to(el, { zIndex: position.zIndex, delay: 0.3 });

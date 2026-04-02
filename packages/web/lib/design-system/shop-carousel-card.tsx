@@ -31,8 +31,10 @@ import { cn } from "@/lib/utils";
  * </div>
  */
 
-export interface ShopCarouselCardProps
-  extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
+export interface ShopCarouselCardProps extends Omit<
+  React.AnchorHTMLAttributes<HTMLAnchorElement>,
+  "href"
+> {
   /**
    * Product image URL
    */

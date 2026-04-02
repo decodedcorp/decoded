@@ -91,6 +91,27 @@ From repo root: `bun run dev:ai-server` (requires `uv` on PATH).
 **Backend stack (Docker)** — `api` + `ai` + Meilisearch + Redis + SearXNG in one Compose: [`packages/api-server/docker/stack/README.md`](packages/api-server/docker/stack/README.md), **`scripts/deploy-backend.sh`**.  
 AI package docs: [`packages/ai-server/README.md`](packages/ai-server/README.md).
 
+### Local development (`just`)
+
+[`just`](https://github.com/casey/just) 설치 후 모노레포 루트에서:
+
+```bash
+just local-deps          # Docker 의존 서비스 기동 (Meilisearch, Redis 등)
+just local-be            # API + AI 서버 로컬 실행 (로그: .logs/local/api.log, ai.log)
+just local-fe            # Next.js 프론트엔드 실행
+just local-deps-down     # 의존 서비스 중지
+just local-help          # 온보딩 안내
+```
+
+**로컬 개발 순서:**
+
+1. `just local-deps` — Meilisearch 등 의존 서비스 Docker로 기동
+2. `just local-be` — API 서버(Rust) + AI 서버(Python) 로컬 프로세스로 실행
+3. 별도 터미널에서 `tail -f .logs/local/api.log` / `tail -f .logs/local/ai.log`로 로그 확인
+4. `just local-fe` — 프론트엔드 실행
+
+`Ctrl+C`로 `local-be` 종료 시 API/AI 프로세스 자동 정리.
+
 ### Monorepo scripts
 
 ```bash

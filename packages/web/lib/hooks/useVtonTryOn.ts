@@ -55,9 +55,7 @@ interface UseVtonTryOnResult {
  * Encapsulates try-on execution and save-to-profile logic.
  * Uses the shared abortControllerRef pattern from Phase 44.
  */
-export function useVtonTryOn(
-  options: UseVtonTryOnOptions
-): UseVtonTryOnResult {
+export function useVtonTryOn(options: UseVtonTryOnOptions): UseVtonTryOnResult {
   const {
     personImage,
     personPreview,
@@ -159,7 +157,13 @@ export function useVtonTryOn(
     } finally {
       setIsSaving(false);
     }
-  }, [displayResultImage, savedToProfile, sourcePostId, selectedItems, abortControllerRef]);
+  }, [
+    displayResultImage,
+    savedToProfile,
+    sourcePostId,
+    selectedItems,
+    abortControllerRef,
+  ]);
 
   const handleShare = useCallback(async () => {
     if (!displayResultImage) return;

@@ -2,7 +2,10 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Link2, Loader2, Check, X, AlertTriangle } from "lucide-react";
-import { extractMetadata, convertAffiliate } from "@/lib/api/generated/solutions/solutions";
+import {
+  extractMetadata,
+  convertAffiliate,
+} from "@/lib/api/generated/solutions/solutions";
 import type { MetadataResponse } from "@/lib/api/generated/models";
 
 export interface SolutionLinkFormData {

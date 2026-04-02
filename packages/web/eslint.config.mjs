@@ -9,7 +9,12 @@ import globals from "globals";
 
 export default tseslint.config(
   {
-    ignores: [".next/**", "node_modules/**", ".yarn/**"],
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      ".yarn/**",
+      "lib/api/generated/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

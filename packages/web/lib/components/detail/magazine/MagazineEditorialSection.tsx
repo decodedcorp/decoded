@@ -18,7 +18,11 @@ type Props = {
   isModal?: boolean;
 };
 
-export function MagazineEditorialSection({ editorial, accentColor, isModal }: Props) {
+export function MagazineEditorialSection({
+  editorial,
+  accentColor,
+  isModal,
+}: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isRevealed, setIsRevealed] = useState(isModal ?? false);
 

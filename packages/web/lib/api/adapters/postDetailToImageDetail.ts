@@ -4,7 +4,10 @@
  * ImageDetailModal/ImageDetailContent가 기대하는 ImageDetail 구조로 변환
  */
 
-import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/generated/models";
+import type {
+  PostDetailResponse,
+  SpotWithTopSolution,
+} from "@/lib/api/generated/models";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
 import type { ItemRow } from "@/lib/components/detail/types";
 
@@ -73,7 +76,7 @@ export function postDetailToImageDetail(
         scores: null,
         ambiguity: null,
         citations,
-        metadata: (top?.metadata as any) ?? null,
+        metadata: (top?.metadata as unknown as ItemRow["metadata"]) ?? null,
         sam_prompt: null,
       };
     }
@@ -109,7 +112,7 @@ export function postDetailToImageDetail(
         item_ids: null,
         metadata: [],
         ts: post.created_at,
-      } as any,
+      } as unknown as ImageDetail["posts"][number],
     ],
     postImages: [
       {
@@ -121,7 +124,7 @@ export function postDetailToImageDetail(
           item_ids: null,
           metadata: [],
           ts: post.created_at,
-        } as any,
+        } as unknown as ImageDetail["posts"][number],
         created_at: post.created_at,
         item_locations: post.spots.map((s, idx) => ({
           item_id: idx + 1,
@@ -131,7 +134,7 @@ export function postDetailToImageDetail(
           ],
         })),
         item_locations_updated_at: post.updated_at,
-      } as any,
+      } as ImageDetail["postImages"][number],
     ],
   };
 }

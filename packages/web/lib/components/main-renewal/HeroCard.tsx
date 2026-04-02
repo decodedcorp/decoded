@@ -50,16 +50,19 @@ export function HeroCard({
 
   const { interactive, floatAmplitude, floatSpeed } = position;
 
-  const startFloat = useCallback((el: HTMLElement) => {
-    floatRef.current = gsap.to(el, {
-      y: `+=${floatAmplitude}`,
-      duration: floatSpeed + (index % 4) * 0.5,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-      delay: 0.3,
-    });
-  }, [index, floatAmplitude, floatSpeed]);
+  const startFloat = useCallback(
+    (el: HTMLElement) => {
+      floatRef.current = gsap.to(el, {
+        y: `+=${floatAmplitude}`,
+        duration: floatSpeed + (index % 4) * 0.5,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+        delay: 0.3,
+      });
+    },
+    [index, floatAmplitude, floatSpeed]
+  );
 
   useEffect(() => {
     const el = cardRef.current;
@@ -116,7 +119,6 @@ export function HeroCard({
       floatRef.current?.kill();
       gsap.killTweensOf(el);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Entry animation — triggered when cover is done AND image is loaded
@@ -126,10 +128,10 @@ export function HeroCard({
 
     // Random direction from outside viewport
     const directions = [
-      { x: -window.innerWidth * 0.5, y: 0 },   // from left
-      { x: window.innerWidth * 0.5, y: 0 },     // from right
-      { x: 0, y: -window.innerHeight * 0.5 },    // from top
-      { x: 0, y: window.innerHeight * 0.5 },     // from bottom
+      { x: -window.innerWidth * 0.5, y: 0 }, // from left
+      { x: window.innerWidth * 0.5, y: 0 }, // from right
+      { x: 0, y: -window.innerHeight * 0.5 }, // from top
+      { x: 0, y: window.innerHeight * 0.5 }, // from bottom
     ];
     const dir = directions[index % 4];
     const delay = index * 0.01; // Nearly simultaneous burst
@@ -153,7 +155,7 @@ export function HeroCard({
         delay,
         ease: "power4.out",
         onComplete: () => startFloat(el),
-      },
+      }
     );
   }, [coverDone]);
 
@@ -190,8 +192,10 @@ export function HeroCard({
         const margin = 20;
         let targetX = parentRect.width / 2 - elRect.width / 2 - el.offsetLeft;
         let targetY = parentRect.height / 2 - elRect.height / 2 - el.offsetTop;
-        const scaledLeft = el.offsetLeft + targetX - (scaledW - elRect.width) / 2;
-        const scaledTop = el.offsetTop + targetY - (scaledH - elRect.height) / 2;
+        const scaledLeft =
+          el.offsetLeft + targetX - (scaledW - elRect.width) / 2;
+        const scaledTop =
+          el.offsetTop + targetY - (scaledH - elRect.height) / 2;
         if (scaledLeft < margin) targetX += margin - scaledLeft;
         if (scaledTop < margin) targetY += margin - scaledTop;
         if (scaledLeft + scaledW > parentRect.width - margin)
@@ -208,16 +212,27 @@ export function HeroCard({
           scale,
           duration: 0.5,
           ease: "power3.out",
-          onComplete: () => { animatingRef.current = false; },
+          onComplete: () => {
+            animatingRef.current = false;
+          },
         });
       }
 
       if (spotRefs.current) {
         const dots = spotRefs.current.querySelectorAll(".spot-marker");
-        gsap.fromTo(dots, { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out" });
+        gsap.fromTo(
+          dots,
+          { opacity: 0 },
+          { opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out" }
+        );
       }
     } else if (isDimmed) {
-      gsap.to(el, { opacity: 0.15, scale: 0.95, duration: 0.4, ease: "power2.out" });
+      gsap.to(el, {
+        opacity: 0.15,
+        scale: 0.95,
+        duration: 0.4,
+        ease: "power2.out",
+      });
     } else {
       animatingRef.current = true;
       const anim: gsap.TweenVars = {
@@ -239,7 +254,15 @@ export function HeroCard({
       }
       gsap.to(el, anim);
     }
-  }, [isFocused, isDimmed, position.zIndex, position.initialOpacity, position.cssFilter, startFloat, interactive]);
+  }, [
+    isFocused,
+    isDimmed,
+    position.zIndex,
+    position.initialOpacity,
+    position.cssFilter,
+    startFloat,
+    interactive,
+  ]);
 
   const isHero = position.tier === "hero";
   const isSmall = position.tier === "small";
@@ -249,7 +272,6 @@ export function HeroCard({
     : isSmall
       ? "0 3px 12px rgba(0,0,0,0.5)"
       : "0 5px 22px rgba(0,0,0,0.6)";
-
 
   const cursorClass = interactive
     ? "cursor-grab active:cursor-grabbing"
@@ -271,24 +293,32 @@ export function HeroCard({
       }}
       tabIndex={interactive ? 0 : -1}
       role={interactive ? "button" : undefined}
-      aria-label={interactive ? (image.label || "Hero image") : undefined}
-      onKeyDown={interactive ? (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (!animatingRef.current) onToggleFocus(image.id);
-        }
-      } : undefined}
+      aria-label={interactive ? image.label || "Hero image" : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (!animatingRef.current) onToggleFocus(image.id);
+              }
+            }
+          : undefined
+      }
     >
       <div
         className="relative rounded-2xl"
         style={{
-          border: (isFocused || showSpots)
-            ? "1.5px solid rgba(234,253,103,0.5)"
-            : "1px solid rgba(255,255,255,0.06)",
+          border:
+            isFocused || showSpots
+              ? "1.5px solid rgba(234,253,103,0.5)"
+              : "1px solid rgba(255,255,255,0.06)",
           boxShadow: shadow,
         }}
       >
-        <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: position.aspectRatio }}>
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{ aspectRatio: position.aspectRatio }}
+        >
           <Image
             src={image.imageUrl}
             alt={image.label || ""}
@@ -320,15 +350,21 @@ export function HeroCard({
         </div>
 
         {/* Spot markers — only for interactive cards */}
-        {interactive && (isFocused || showSpots) && image.spots && image.spots.length > 0 && (
-          <div ref={spotRefs} className="absolute inset-0 pointer-events-none">
-            {image.spots.map((spot) => (
-              <div key={spot.id} className="spot-marker pointer-events-auto">
-                <HeroSpotMarker spot={spot} />
-              </div>
-            ))}
-          </div>
-        )}
+        {interactive &&
+          (isFocused || showSpots) &&
+          image.spots &&
+          image.spots.length > 0 && (
+            <div
+              ref={spotRefs}
+              className="absolute inset-0 pointer-events-none"
+            >
+              {image.spots.map((spot) => (
+                <div key={spot.id} className="spot-marker pointer-events-auto">
+                  <HeroSpotMarker spot={spot} />
+                </div>
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );

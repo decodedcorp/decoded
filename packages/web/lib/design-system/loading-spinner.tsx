@@ -4,8 +4,7 @@ import { cn } from "@/lib/utils";
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 
-export interface LoadingSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface LoadingSpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
    * Text to display next to the spinner
    * @default "Loading..."

@@ -34,7 +34,9 @@ export function useAiCostKPI(days: number = 30): UseQueryResult<AiCostKPI> {
   return useQuery<AiCostKPI>({
     queryKey: ["admin", "ai-cost", "kpi", days],
     queryFn: ({ signal }: { signal?: AbortSignal }) =>
-      adminFetch<AiCostKPI>(`/api/v1/admin/ai-cost/kpi?days=${days}`, { signal }),
+      adminFetch<AiCostKPI>(`/api/v1/admin/ai-cost/kpi?days=${days}`, {
+        signal,
+      }),
     staleTime: 60_000,
   });
 }

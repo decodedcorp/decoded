@@ -21,8 +21,10 @@ import { cn } from "@/lib/utils";
  * @see docs/design-system/decoded.pen
  */
 
-export interface LeaderItemProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface LeaderItemProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   /** Leaderboard ranking position */
   rank: number;
   /** User avatar image URL (optional) */

@@ -43,7 +43,11 @@ export function DraggableDoodle({
           gsap.to(el, { rotation: rot, duration: 0.08, ease: "power1.out" });
         },
         onDragEnd() {
-          gsap.to(el, { rotation: 0, duration: 0.5, ease: "elastic.out(1,0.4)" });
+          gsap.to(el, {
+            rotation: 0,
+            duration: 0.5,
+            ease: "elastic.out(1,0.4)",
+          });
         },
         onRelease() {
           gsap.to(el, { zIndex: 22, delay: 0.3 });

@@ -39,9 +39,11 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
     gsap.fromTo(
       el,
       { opacity: 0, scale: 0.7 },
-      { opacity: 1, scale: 1, duration: 1.8, ease: "power3.out" },
+      { opacity: 1, scale: 1, duration: 1.8, ease: "power3.out" }
     );
-    return () => { gsap.killTweensOf(el); };
+    return () => {
+      gsap.killTweensOf(el);
+    };
   }, []);
 
   // Mouse parallax panning — subtle depth effect
@@ -82,8 +84,10 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
   const positions = images.map((img, i) => computeScatterPosition(img.id, i));
 
   const handleToggleFocus = useCallback(
-    (id: string) => { toggleFocus(id); },
-    [toggleFocus],
+    (id: string) => {
+      toggleFocus(id);
+    },
+    [toggleFocus]
   );
 
   return (

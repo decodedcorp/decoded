@@ -21,8 +21,10 @@ import { cn } from "@/lib/utils";
  * @see docs/design-system/decoded.pen
  */
 
-export interface ArtistCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
+export interface ArtistCardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick"
+> {
   /** Artist's unique identifier for profile link */
   id: string;
   /** Artist's display name */

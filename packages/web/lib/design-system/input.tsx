@@ -28,7 +28,8 @@ export const inputVariants = cva(
 );
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement>,
+  extends
+    React.InputHTMLAttributes<HTMLInputElement>,
     VariantProps<typeof inputVariants> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -112,8 +113,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = "Input";
 
-export interface SearchInputProps
-  extends Omit<InputProps, "leftIcon" | "rightIcon" | "variant"> {
+export interface SearchInputProps extends Omit<
+  InputProps,
+  "leftIcon" | "rightIcon" | "variant"
+> {
   onClear?: () => void;
 }
 

@@ -47,7 +47,8 @@ export const tagVariants = cva(
 );
 
 export interface TagProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof tagVariants> {
   /**
    * Whether the tag is currently active/selected

@@ -42,10 +42,18 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
 
     // Split cover
     if (topHalfRef.current) {
-      tl.to(topHalfRef.current, { y: "-100%", duration: 0.7, ease: "power4.inOut" }, 0);
+      tl.to(
+        topHalfRef.current,
+        { y: "-100%", duration: 0.7, ease: "power4.inOut" },
+        0
+      );
     }
     if (bottomHalfRef.current) {
-      tl.to(bottomHalfRef.current, { y: "100%", duration: 0.7, ease: "power4.inOut" }, 0);
+      tl.to(
+        bottomHalfRef.current,
+        { y: "100%", duration: 0.7, ease: "power4.inOut" },
+        0
+      );
     }
   };
 
@@ -64,7 +72,7 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
       logo,
       { autoAlpha: 0, scale: 0.9 },
       { autoAlpha: 1, scale: 1, duration: 0.1, ease: "none" },
-      "+=0.3",
+      "+=0.3"
     );
     // Glitch flicker
     tl.to(logo, {
@@ -75,14 +83,18 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
         { x: 0, skewX: 0, duration: 0.08 },
       ],
     });
-    tl.fromTo(logo, { scale: 1.03 }, { scale: 1, duration: 0.4, ease: "power2.out" });
+    tl.fromTo(
+      logo,
+      { scale: 1.03 },
+      { scale: 1, duration: 0.4, ease: "power2.out" }
+    );
 
     // 2. Accent line
     tl.fromTo(
       accent,
       { autoAlpha: 0, scaleX: 0 },
       { autoAlpha: 1, scaleX: 1, duration: 0.4, ease: "power3.out" },
-      "-=0.15",
+      "-=0.15"
     );
 
     // 3. Tagline
@@ -90,18 +102,24 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
       tagline,
       { autoAlpha: 0, y: 6 },
       { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out" },
-      "-=0.1",
+      "-=0.1"
     );
 
     // 4. Neon line
-    tl.fromTo(line, { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "power3.out" }, "-=0.1");
+    tl.fromTo(
+      line,
+      { scaleX: 0 },
+      { scaleX: 1, duration: 0.4, ease: "power3.out" },
+      "-=0.1"
+    );
 
     // 5. Hold + reveal
     tl.to({}, { duration: 0.5 });
     tl.call(() => reveal());
 
-    return () => { tl.kill(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      tl.kill();
+    };
   }, []);
 
   if (revealed) return null;
@@ -114,9 +132,15 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
       onTouchStart={reveal}
     >
       {/* Top half */}
-      <div ref={topHalfRef} className="absolute inset-x-0 top-0 h-1/2 bg-[#050505]" />
+      <div
+        ref={topHalfRef}
+        className="absolute inset-x-0 top-0 h-1/2 bg-[#050505]"
+      />
       {/* Bottom half */}
-      <div ref={bottomHalfRef} className="absolute inset-x-0 bottom-0 h-1/2 bg-[#050505]" />
+      <div
+        ref={bottomHalfRef}
+        className="absolute inset-x-0 bottom-0 h-1/2 bg-[#050505]"
+      />
 
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -141,13 +165,19 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
           ref={accentRef}
           className="invisible w-[200px] md:w-[350px] h-[2px] mt-5 origin-center"
           style={{
-            background: "linear-gradient(90deg, transparent, #eafd67, transparent)",
-            boxShadow: "0 0 20px rgba(234,253,103,0.4), 0 0 60px rgba(234,253,103,0.15)",
+            background:
+              "linear-gradient(90deg, transparent, #eafd67, transparent)",
+            boxShadow:
+              "0 0 20px rgba(234,253,103,0.4), 0 0 60px rgba(234,253,103,0.15)",
           }}
         />
 
         {/* Tagline */}
-        <div ref={taglineRef} className="invisible mt-4 text-center" style={{ paddingLeft: "0.15em" }}>
+        <div
+          ref={taglineRef}
+          className="invisible mt-4 text-center"
+          style={{ paddingLeft: "0.15em" }}
+        >
           <p
             className="text-xs md:text-sm text-white/40 tracking-[0.15em] uppercase font-light"
             style={{ fontFamily: "'IBM Plex Mono', monospace" }}

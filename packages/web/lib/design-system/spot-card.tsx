@@ -38,7 +38,8 @@ export const spotCardVariants = cva(
 );
 
 export interface SpotCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">,
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">,
     VariantProps<typeof spotCardVariants> {
   /**
    * Product image URL

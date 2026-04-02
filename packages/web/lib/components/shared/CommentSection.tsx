@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Send, MoreHorizontal, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
+import {
+  Send,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AccountAvatar } from "./AccountAvatar";
 import { formatRelativeTime } from "@/lib/utils";
@@ -171,9 +178,7 @@ export function CommentSection({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                replyingTo ? "Write a reply..." : "Add a comment..."
-              }
+              placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
               className="w-full rounded-full bg-muted px-4 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <button

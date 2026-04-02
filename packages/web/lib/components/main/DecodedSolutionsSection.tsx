@@ -5,7 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { getPost } from "@/lib/api/generated/posts/posts";
-import type { PostDetailResponse, SpotWithTopSolution } from "@/lib/api/generated/models";
+import type {
+  PostDetailResponse,
+  SpotWithTopSolution,
+} from "@/lib/api/generated/models";
 import type { StyleCardData } from "./StyleCard";
 import { cn } from "@/lib/utils";
 import { SpotMarker } from "@/lib/design-system";
@@ -255,7 +258,10 @@ export function DecodedSolutionsSection({
       if (cancelled) return;
       const list = results
         .filter((r) => r.status === "fulfilled")
-        .map((r) => (r as PromiseFulfilledResult<unknown>).value as PostDetailResponse);
+        .map(
+          (r) =>
+            (r as PromiseFulfilledResult<unknown>).value as PostDetailResponse
+        );
       setDetails(list);
     });
     return () => {

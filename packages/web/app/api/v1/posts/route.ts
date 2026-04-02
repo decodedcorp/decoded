@@ -51,8 +51,7 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(
       {
-        message:
-          error instanceof Error ? error.message : "Proxy error",
+        message: error instanceof Error ? error.message : "Proxy error",
       },
       { status: 502 }
     );

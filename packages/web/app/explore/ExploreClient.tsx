@@ -28,7 +28,10 @@ type Props = {
  * - GET /api/v1/posts with pagination
  * - Supports category filtering via API params
  */
-export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Props) {
+export function ExploreClient({
+  initialPosts: _initialPosts,
+  hasMagazine,
+}: Props) {
   const activeFilter = useFilterStore((state) => state.activeFilter);
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -85,8 +88,10 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
         postSource: item.postSource,
         postAccount: item.postAccount,
         postCreatedAt: item.postCreatedAt,
-        ...(hasMagazine && item.title != null && { editorialTitle: item.title }),
-        ...(item.spotCount != null && item.spotCount > 0 && { spotCount: item.spotCount }),
+        ...(hasMagazine &&
+          item.title != null && { editorialTitle: item.title }),
+        ...(item.spotCount != null &&
+          item.spotCount > 0 && { spotCount: item.spotCount }),
       }));
   }, [items, hasMagazine]);
 

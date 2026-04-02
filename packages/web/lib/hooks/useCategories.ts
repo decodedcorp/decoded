@@ -35,7 +35,9 @@ export function useFindCategoryId(code: string | undefined) {
 /**
  * 카테고리 ID로 정보 찾기
  */
-export function useFindCategory(id: string | undefined): CategoryResponse | undefined {
+export function useFindCategory(
+  id: string | undefined
+): CategoryResponse | undefined {
   const { data: categories } = useCategories();
 
   if (!id || !categories) return undefined;
