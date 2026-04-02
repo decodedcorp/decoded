@@ -314,9 +314,9 @@ export default async function Home({
       </section>
 
       {/* ─── 5. VTON Dome Gallery ─── */}
-      <DomeGallerySection
-        images={domeImages.length > 0 ? domeImages : undefined}
-      />
+      {domeImages.length > 0 && (
+        <DomeGallerySection images={domeImages} />
+      )}
     </div>
   );
 }
