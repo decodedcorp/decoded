@@ -129,7 +129,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] **Phase 51: Data Validation Gate** - DB에서 editorial post 존재 확인 (magazine_id 있는 post) (completed 2026-04-01)
 - [x] **Phase 52: Editorial Filter Fix** - hasMagazine 필터 실제 동작 + OpenAPI has_magazine 파라미터 추가 (completed 2026-04-01)
 - [x] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation (completed 2026-04-02)
-- [ ] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이
+- [x] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이 (completed 2026-04-02)
 - [ ] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증
 
 ## Phase Details
@@ -496,7 +496,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 54-01: `useInfinitePosts` `spotCount` 실데이터 매핑 + `ExploreCardCell` 배지 UI (CARD-01)
+- [x] 54-01: `useInfinitePosts` `spotCount` 실데이터 매핑 + `ExploreCardCell` 배지 UI (CARD-01)
 - [x] 54-02: `ExploreCardCell` editorial 타이틀 오버레이 확인 및 non-null 검증 (CARD-02)
 
 ### Phase 55: End-to-End Verification
