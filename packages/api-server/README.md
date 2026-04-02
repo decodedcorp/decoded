@@ -37,7 +37,7 @@ just dev    # pre-push 훅 + .env.dev 준비 + docker/dev (API :8000, Meilisearc
 
 ## 프로젝트 통계
 
-- **총 라인 수**: ~26,968 lines (Rust)
+- **총 라인 수**: ~28,420 lines (Rust)
 - **파일 수**: 182 files
 - **도메인**: 16 domains (users, categories, posts, spots, solutions, comments, votes, feed, rankings, badges, earnings, search, admin, post_magazines, post_likes, saved_posts)
 - **마지막 업데이트**: 2026.03.26

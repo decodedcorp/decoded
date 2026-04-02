@@ -108,6 +108,75 @@ pub struct CreatePostDto {
     pub spots: Vec<CreateSpotDto>,
 }
 
+/// Try Post 생성 요청 (multipart의 data 필드)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
+pub struct CreateTryPostDto {
+    /// 원본 포스트 ID
+    pub parent_post_id: Uuid,
+
+    /// 한줄 코멘트 (선택, 100자)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(max = 100))]
+    pub media_title: Option<String>,
+
+    /// 태깅할 스팟 ID 배열 (선택)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spot_ids: Vec<Uuid>,
+}
+
+/// Try Post 목록 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryPostListItem {
+    /// Try Post ID
+    pub id: Uuid,
+
+    /// 사용자 정보
+    pub user: PostUserInfo,
+
+    /// 이미지 URL
+    pub image_url: String,
+
+    /// 한줄 코멘트
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media_title: Option<String>,
+
+    /// 태깅된 스팟 ID 목록
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tagged_spot_ids: Vec<Uuid>,
+
+    /// 생성일시
+    pub created_at: DateTime<Utc>,
+}
+
+/// Try 목록 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryListResponse {
+    /// Try 목록
+    pub tries: Vec<TryPostListItem>,
+
+    /// 전체 개수
+    pub total: i64,
+}
+
+/// Try 개수 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryCountResponse {
+    /// 개수
+    pub count: i64,
+}
+
+/// Try 목록 조회 쿼리
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct TryListQuery {
+    /// 페이지 번호
+    #[serde(default = "default_page")]
+    pub page: u64,
+
+    /// 페이지당 개수
+    #[serde(default = "default_per_page")]
+    pub per_page: u64,
+}
+
 /// Post 수정 요청
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UpdatePostDto {
@@ -237,6 +306,14 @@ pub struct PostResponse {
 
     /// 상태
     pub status: String,
+
+    /// Try 포스트의 원본 포스트 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_post_id: Option<Uuid>,
+
+    /// 포스트 타입 (post | try)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_type: Option<String>,
 
     /// 생성일시
     pub created_at: DateTime<Utc>,
@@ -441,6 +518,18 @@ pub struct PostDetailResponse {
     /// AI가 생성한 포스트 요약 (1-2문장)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ai_summary: Option<String>,
+
+    /// Try 포스트의 원본 포스트 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_post_id: Option<Uuid>,
+
+    /// 포스트 타입 (post | try)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_type: Option<String>,
+
+    /// Try 개수 (원본 포스트일 때만)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub try_count: Option<i64>,
 }
 
 impl PostDetailResponse {
@@ -470,6 +559,9 @@ impl PostDetailResponse {
             created_with_solutions: post.created_with_solutions,
             post_magazine_id: post.post_magazine_id,
             ai_summary: post.ai_summary.clone(),
+            parent_post_id: post.parent_post_id,
+            post_type: post.post_type.clone(),
+            try_count: None,
             user: PostUserInfo {
                 id: user.id,
                 username: user.username,
@@ -522,6 +614,8 @@ impl From<PostModel> for PostResponse {
             context: model.context,
             view_count: model.view_count,
             status: model.status,
+            parent_post_id: model.parent_post_id,
+            post_type: model.post_type,
             created_at: model.created_at.with_timezone(&chrono::Utc),
         }
     }

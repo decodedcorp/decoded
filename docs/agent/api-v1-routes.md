@@ -16,6 +16,9 @@
 | `/api/v1/posts/[postId]/spots`   | GET/POST | Spots for a post              |
 | `/api/v1/posts/[postId]/likes`   | POST     | Like/unlike a post            |
 | `/api/v1/posts/[postId]/saved`   | POST     | Save/unsave a post            |
+| `/api/v1/posts/try`              | POST     | Create a try post             |
+| `/api/v1/posts/[postId]/tries`   | GET      | List tries for a post         |
+| `/api/v1/posts/[postId]/tries/count` | GET  | Try count for a post          |
 | `/api/v1/post-magazines/[id]`    | GET      | Post magazine data            |
 
 ## Solutions & spots
@@ -27,6 +30,7 @@
 | `/api/v1/solutions/[solutionId]/adopt` | POST      | Adopt a solution             |
 | `/api/v1/solutions/extract-metadata`   | POST      | Solution metadata extraction |
 | `/api/v1/spots/[spotId]`               | GET/PATCH | Spot CRUD                    |
+| `/api/v1/spots/[spotId]/tries`         | GET       | Tries tagged with spot       |
 | `/api/v1/spots/[spotId]/solutions`     | GET/POST  | Solutions for spot           |
 
 ## Users & profile

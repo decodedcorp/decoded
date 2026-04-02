@@ -1,21 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
+import { createTryPost } from "@/lib/api/posts";
+import type {
+  CreateTryPostRequest,
+  TryListResponse,
+  TryCountResponse,
+  TryPostListItem,
+} from "@/lib/api/mutation-types";
 
 // ============================================================
-// Types
+// Types (re-export for consumers)
 // ============================================================
 
-export interface TryPost {
-  id: string;
-  user_id: string;
-  image_url: string;
-  media_title: string | null;
-  created_at: string;
-  user: {
-    display_name: string;
-    avatar_url: string | null;
-    username: string | null;
-  };
-}
+export type TryPost = TryPostListItem;
 
 export interface TriesResponse {
   tries: TryPost[];
@@ -23,36 +20,83 @@ export interface TriesResponse {
 }
 
 // ============================================================
-// Fetch Function
+// Query Keys
 // ============================================================
 
-/**
- * Fetch tries for a given post.
- * TODO: Replace placeholder with actual API call when backend is ready.
- * Will be: GET /api/v1/posts/:postId/tries?limit=N
- */
+export const tryKeys = {
+  all: ["tries"] as const,
+  list: (postId: string, limit?: number) =>
+    [...tryKeys.all, "list", postId, limit] as const,
+  count: (postId: string) => [...tryKeys.all, "count", postId] as const,
+  bySpot: (spotId: string) => [...tryKeys.all, "spot", spotId] as const,
+};
+
+// ============================================================
+// Fetch Functions
+// ============================================================
+
 async function fetchTries(
-  _postId: string,
-  _limit: number
+  postId: string,
+  limit: number
 ): Promise<TriesResponse> {
-  return { tries: [], total: 0 };
+  const data = await apiClient<TryListResponse>({
+    path: `/api/v1/posts/${postId}/tries?per_page=${limit}`,
+    method: "GET",
+  });
+  return { tries: data.tries, total: data.total };
+}
+
+async function fetchTryCount(postId: string): Promise<number> {
+  const data = await apiClient<TryCountResponse>({
+    path: `/api/v1/posts/${postId}/tries/count`,
+    method: "GET",
+  });
+  return data.count;
 }
 
 // ============================================================
-// Hook
+// Hooks
 // ============================================================
 
 /**
  * React Query hook for fetching user "Try" posts linked to an original post.
- *
- * @param postId - The parent post ID
- * @param limit  - Max number of tries to fetch (default 6)
  */
 export function useTries(postId: string, limit = 6) {
   return useQuery({
-    queryKey: ["tries", postId, limit],
+    queryKey: tryKeys.list(postId, limit),
     queryFn: () => fetchTries(postId, limit),
     enabled: !!postId,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60,
+  });
+}
+
+/**
+ * React Query hook for fetching try count for a post.
+ */
+export function useTryCount(postId: string) {
+  return useQuery({
+    queryKey: tryKeys.count(postId),
+    queryFn: () => fetchTryCount(postId),
+    enabled: !!postId,
+    staleTime: 1000 * 60,
+  });
+}
+
+/**
+ * Mutation hook for creating a try post.
+ */
+export function useCreateTryPost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: CreateTryPostRequest) => createTryPost(request),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: tryKeys.list(variables.parent_post_id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: tryKeys.count(variables.parent_post_id),
+      });
+    },
   });
 }

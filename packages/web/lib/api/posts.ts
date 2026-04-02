@@ -18,6 +18,7 @@ import type {
   PostsListResponse,
   PostsListParams,
   PostMagazineResponse,
+  CreateTryPostRequest,
 } from "./mutation-types";
 import { ApiError } from "./mutation-types";
 
@@ -445,6 +446,56 @@ export async function fetchPostsServer(
         total_pages: 0,
       },
     };
+  }
+
+  return response.json();
+}
+
+// ============================================================
+// Create Try Post
+// POST /api/v1/posts/try
+// ============================================================
+
+export async function createTryPost(
+  request: CreateTryPostRequest
+): Promise<CreatePostResponse> {
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  const formData = new FormData();
+  formData.append("image", request.file);
+
+  const data: Record<string, unknown> = {
+    parent_post_id: request.parent_post_id,
+    media_title: request.media_title || "",
+  };
+  if (request.spot_ids && request.spot_ids.length > 0) {
+    data.spot_ids = request.spot_ids;
+  }
+  formData.append("data", JSON.stringify(data));
+
+  const response = await fetch("/api/v1/posts/try", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    let errorMessage = "Try 포스트 생성에 실패했습니다.";
+    try {
+      const errorJson = JSON.parse(responseText);
+      errorMessage =
+        errorJson.message || errorJson.error?.message || errorMessage;
+    } catch {
+      errorMessage = responseText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();

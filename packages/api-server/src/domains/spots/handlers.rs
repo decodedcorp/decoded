@@ -196,6 +196,10 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
 
     Router::new()
         .route("/", get(list_spots))
+        .route(
+            "/{spot_id}/tries",
+            get(crate::domains::posts::handlers::list_tries_by_spot),
+        )
         .merge(optional_auth_routes)
         .merge(protected_routes)
 }

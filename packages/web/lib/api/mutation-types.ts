@@ -316,6 +316,43 @@ export interface PostMagazineResponse {
 // Coordinate Conversion Utilities
 // ============================================================
 
+// ============================================================
+// Try Post API
+// POST /api/v1/posts/try
+// ============================================================
+
+export interface CreateTryPostRequest {
+  file: File;
+  parent_post_id: string;
+  spot_ids?: string[];
+  media_title?: string;
+}
+
+export interface TryPostUser {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  rank: string;
+}
+
+export interface TryPostListItem {
+  id: string;
+  user: TryPostUser;
+  image_url: string;
+  media_title: string | null;
+  tagged_spot_ids: string[];
+  created_at: string;
+}
+
+export interface TryListResponse {
+  tries: TryPostListItem[];
+  total: number;
+}
+
+export interface TryCountResponse {
+  count: number;
+}
+
 /**
  * API 좌표 (백분율 숫자) → Store 좌표 (0-1 비율)
  */

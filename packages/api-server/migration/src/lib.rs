@@ -42,6 +42,8 @@ mod m20260317_000001_add_ai_summary_to_posts;
 mod m20260318_000001_create_post_likes;
 mod m20260318_000002_create_saved_posts;
 mod m20260320_000001_add_system_uncategorized_subcategory;
+mod m20260402_000001_add_try_fields_to_posts;
+mod m20260402_000002_create_try_spot_tags;
 
 pub struct Migrator;
 
@@ -91,6 +93,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260318_000001_create_post_likes::Migration),
             Box::new(m20260318_000002_create_saved_posts::Migration),
             Box::new(m20260320_000001_add_system_uncategorized_subcategory::Migration),
+            Box::new(m20260402_000001_add_try_fields_to_posts::Migration),
+            Box::new(m20260402_000002_create_try_spot_tags::Migration),
         ]
     }
 }
