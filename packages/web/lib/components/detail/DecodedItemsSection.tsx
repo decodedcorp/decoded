@@ -257,13 +257,6 @@ function ExpandedDetailCard({ item }: { item: DecodedItem }) {
 
         {/* Info */}
         <div className="flex flex-col gap-1.5 min-w-0">
-          {/* Match type badge */}
-          <div className="inline-flex self-start">
-            <span className="inline-flex items-center bg-primary rounded-[4px] px-1.5 py-0.5 text-[8px] font-bold text-white tracking-[0.5px] uppercase">
-              {item.matchType}
-            </span>
-          </div>
-
           {/* Title */}
           <h3 className="text-sm md:text-xl font-semibold text-foreground line-clamp-2">
             {item.title}
