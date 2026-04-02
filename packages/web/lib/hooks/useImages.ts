@@ -230,7 +230,7 @@ export function useInfinitePosts(params: {
         postSource: "post" as const,
         postAccount: post.artist_name ?? post.group_name ?? "",
         postCreatedAt: post.created_at,
-        spotCount: 0,
+        spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
         // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
         // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)

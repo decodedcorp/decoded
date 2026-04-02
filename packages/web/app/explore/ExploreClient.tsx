@@ -86,6 +86,7 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
         postAccount: item.postAccount,
         postCreatedAt: item.postCreatedAt,
         ...(hasMagazine && item.title != null && { editorialTitle: item.title }),
+        ...(item.spotCount != null && item.spotCount > 0 && { spotCount: item.spotCount }),
       }));
   }, [items, hasMagazine]);
 
