@@ -199,7 +199,7 @@ export function MagazineItemsSection({
                     />
                   ) : (
                     <div
-                      className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl bg-muted p-6 text-center"
+                      className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/20 bg-muted p-6 text-center"
                       style={{
                         background: accentColor
                           ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
