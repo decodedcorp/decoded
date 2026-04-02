@@ -17,11 +17,12 @@ interface ServerFetchOptions {
 }
 
 function getBaseUrl(): string {
-  // Vercel/production
+  // Explicit backend URL (recommended)
+  if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
+  // Vercel/production — use Next.js proxy
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  // Local dev
-  const port = process.env.PORT || "3000";
-  return `http://localhost:${port}`;
+  // Local dev — default Rust backend port
+  return "http://localhost:8000";
 }
 
 /**
