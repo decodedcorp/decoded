@@ -190,7 +190,6 @@ export function ShopGrid({
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sortedItems.map((item, index) => {
-            const isSpotted = !!item.normalizedCenter;
             const needsSolution = !item.imageUrl && !item.product_name;
             const addSolutionHref = item.image_id
               ? `${item.spot_id ? `/posts/${item.image_id}?spot=${item.spot_id}` : `/posts/${item.image_id}`}`
@@ -271,12 +270,6 @@ export function ShopGrid({
                                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                               />
-                              {/* Spotted badge */}
-                              {isSpotted && (
-                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-[9px] font-medium uppercase tracking-wider px-2 py-1 rounded-sm">
-                                  Spotted
-                                </div>
-                              )}
                             </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted/30">
