@@ -2,13 +2,13 @@
 
 import { memo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Card } from "@/lib/design-system";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
 import type { ItemConfig } from "@/lib/components/ThiingsGrid";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(Flip);
@@ -84,52 +84,18 @@ export const ExploreCardCell = memo(function ExploreCardCell({
       >
         <article
           data-flip-id={`card-${imageId}`}
-          className="relative aspect-[3/4] bg-muted"
+          className="relative overflow-hidden h-full bg-black"
         >
-          <Image
+          <PostImage
             src={imageUrl}
             alt={`Image ${imageId}`}
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-opacity duration-150 ease-out ${
-              isLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            maxHeight="60vh"
+            className="h-full"
+            flagKey="ExploreCardCell"
             priority={isTopImage}
-            onError={() => setImageError(true)}
             onLoad={() => setIsLoaded(true)}
+            onError={() => setImageError(true)}
           />
-          {/* spotCount badge pill — top-right, only when spotCount > 0 */}
-          {item?.spotCount != null && item.spotCount > 0 && (
-            <div className="absolute top-2 right-2 z-10">
-              <span
-                className="inline-flex items-center rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums backdrop-blur-sm"
-                aria-label={`${item.spotCount} spots`}
-              >
-                {item.spotCount}
-              </span>
-            </div>
-          )}
-          {/* Editorial 타이틀 오버레이 - 검은 스킴 + 텍스트 아웃라인으로 어떤 배경에서도 선명하게 */}
-          {item?.editorialTitle && (
-            <div className="absolute inset-x-0 bottom-0">
-              {/* 하단 검은색 오버레이: 타이틀 영역 확실히 어둡게 */}
-              <div
-                className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/95 via-black/80 to-transparent"
-                aria-hidden
-              />
-              <div className="absolute inset-x-0 bottom-0 px-3.5 pb-3 pt-6">
-                <p
-                  className="line-clamp-2 text-[13px] font-semibold leading-[1.35] tracking-tight text-white antialiased"
-                  style={{
-                    textShadow:
-                      "0 0 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)",
-                  }}
-                >
-                  {item.editorialTitle}
-                </p>
-              </div>
-            </div>
-          )}
         </article>
       </Card>
     </Link>

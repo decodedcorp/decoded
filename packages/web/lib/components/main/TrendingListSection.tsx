@@ -145,7 +145,7 @@ function FlowingMenuItem({
       {/* Static label */}
       <Link
         href={item.href}
-        className="flex items-center justify-center h-full relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em]"
+        className="flex items-center justify-center h-full min-h-[44px] relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em]"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -215,7 +215,7 @@ export function TrendingListSection({
         </div>
         <Link
           href="/explore"
-          className="text-[10px] uppercase tracking-[0.2em] text-white/30 hover:text-[#eafd67] transition-colors"
+          className="text-[10px] uppercase tracking-[0.2em] text-white/30 hover:text-[#eafd67] transition-colors py-3 px-2 -my-3 -mx-2"
         >
           View All
         </Link>

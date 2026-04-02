@@ -82,30 +82,21 @@ export function InteractiveShowcase({
     () => {
       if (!sectionRef.current || items.length === 0) return;
 
-      console.count("ScrollTrigger:create");
-
+      const scroller = scrollContainerRef?.current || window;
       const cards = gsap.utils.toArray<HTMLElement>(
         sectionRef.current.querySelectorAll("[data-item-index]")
       );
 
       cards.forEach((card, index) => {
         ScrollTrigger.create({
-          scroller: scrollContainerRef?.current || window,
+          scroller,
           trigger: card,
           start: "top center",
           end: "bottom center",
-          onEnter: () => {
-            console.count("ScrollTrigger:onUpdate");
-            handleActiveIndexChange(index);
-          },
-          onEnterBack: () => {
-            console.count("ScrollTrigger:onUpdate");
-            handleActiveIndexChange(index);
-          },
+          invalidateOnRefresh: true,
+          onEnter: () => handleActiveIndexChange(index),
+          onEnterBack: () => handleActiveIndexChange(index),
           onLeave: () => {
-            // Check ref to avoid stale closure issues
-            // Only clear if we are currently active on this item
-            // This prevents clearing when quickly scrolling through multiple items
             if (activeIndexRef.current === index) {
               handleActiveIndexChange(null);
             }
@@ -118,6 +109,19 @@ export function InteractiveShowcase({
         });
       });
 
+      // Modal: refresh after layout stabilizes (content may load async)
+      if (scrollContainerRef?.current) {
+        const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+        return () => {
+          clearTimeout(timer);
+          ScrollTrigger.getAll().forEach((trigger) => {
+            if (cards.includes(trigger.vars.trigger as HTMLElement)) {
+              trigger.kill();
+            }
+          });
+        };
+      }
+
       return () => {
         ScrollTrigger.getAll().forEach((trigger) => {
           if (cards.includes(trigger.vars.trigger as HTMLElement)) {
@@ -126,7 +130,7 @@ export function InteractiveShowcase({
         });
       };
     },
-    { scope: sectionRef, dependencies: [items.length] } // Only recreate when items structure changes
+    { scope: sectionRef, dependencies: [items.length] }
   );
 
   if (items.length === 0) {
@@ -142,7 +146,7 @@ export function InteractiveShowcase({
       {renderImage && (
         <div
           ref={imageContainerRef}
-          className={`sticky top-0 w-full z-10 ${isModal ? "h-[40vh]" : "h-[40vh] lg:h-screen lg:w-1/2"}`}
+          className={`sticky top-0 w-full z-10 ${isModal ? "h-[30vh] md:h-[40vh]" : "h-[30vh] md:h-[40vh] lg:h-screen lg:w-1/2"}`}
         >
           <ImageCanvas image={image} items={items} activeIndex={activeIndex} />
         </div>
@@ -151,12 +155,12 @@ export function InteractiveShowcase({
       {/* Right: Scrollable Item Details (Desktop) / Bottom: Scrollable (Mobile) */}
       <div
         ref={cardsContainerRef}
-        className={`w-full px-4 py-6 bg-background relative z-20 ${
+        className={`w-full px-4 py-6 bg-background relative ${
           isModal
             ? renderImage
               ? "overflow-visible"
               : "w-full pt-0"
-            : "lg:w-1/2 lg:pl-8 lg:pt-12"
+            : "z-20 lg:w-1/2 lg:pl-8 lg:pt-12"
         }`}
       >
         {items.map((item, index) => (

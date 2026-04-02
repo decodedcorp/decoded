@@ -105,7 +105,7 @@ function PostHeroImage({ post }: { post: MainBPost }) {
 const NAV_ITEMS = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/search", icon: Search, label: "Search" },
-  { href: "/editorial", icon: BookOpen, label: "Editorial" },
+  { href: "/explore", icon: BookOpen, label: "Explore" },
   { href: "/profile", icon: User, label: "Profile" },
 ] as const;
 

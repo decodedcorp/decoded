@@ -6,8 +6,8 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import type { UiItem } from "./types";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 import { SpotlightCard } from "@/lib/components/ui/SpotlightCard";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 
@@ -185,12 +185,11 @@ export function ShopGrid({
           className={`flex md:grid md:grid-cols-3 lg:grid-cols-4 overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory md:snap-none w-full ${
             isModal
               ? "gap-3 md:gap-4 px-4 md:px-6 pb-8 md:pb-10 pt-2 md:pt-4"
-              : "gap-4 md:gap-6 px-6 md:px-8 pb-12 pt-4"
+              : "gap-4 md:gap-6 px-4 md:px-8 pb-12 pt-4"
           }`}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sortedItems.map((item, index) => {
-            const isSpotted = !!item.normalizedCenter;
             const needsSolution = !item.imageUrl && !item.product_name;
             const addSolutionHref = item.image_id
               ? `${item.spot_id ? `/posts/${item.image_id}?spot=${item.spot_id}` : `/posts/${item.image_id}`}`
@@ -201,8 +200,8 @@ export function ShopGrid({
                 key={item.id}
                 className={`shop-card flex-none md:flex-auto snap-center md:snap-start group flex flex-col ${
                   isModal
-                    ? "w-[45%] sm:w-[30%] md:w-auto"
-                    : "w-[45%] sm:w-[30%] md:w-auto"
+                    ? "w-[43%] sm:w-[30%] md:w-auto"
+                    : "w-[43%] sm:w-[30%] md:w-auto"
                 }`}
               >
                 <SpotlightCard className="h-full flex flex-col bg-card/50 backdrop-blur-sm">
@@ -257,35 +256,15 @@ export function ShopGrid({
                     ) : (
                       <>
                         {/* Item Image */}
-                        <div
-                          className={`relative w-full aspect-square overflow-hidden rounded-lg bg-muted ${
+                        <ItemImage
+                          src={item.imageUrl || ""}
+                          alt={item.product_name || "Item"}
+                          size="card"
+                          className={`rounded-lg ${
                             isModal ? "mb-2 md:mb-3" : "mb-3 md:mb-4"
                           }`}
-                        >
-                          {item.imageUrl ? (
-                            <>
-                              <Image
-                                src={item.imageUrl}
-                                alt={item.product_name || "Item"}
-                                fill
-                                className="object-cover transition-transform duration-700 group-hover:scale-105"
-                                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              />
-                              {/* Spotted badge */}
-                              {isSpotted && (
-                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-[9px] font-medium uppercase tracking-wider px-2 py-1 rounded-sm">
-                                  Spotted
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-muted/30">
-                              <span className="text-muted-foreground text-sm font-serif italic">
-                                No Image
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                          imgClassName="transition-transform duration-700 group-hover:scale-105"
+                        />
 
                         {/* Item Details */}
                         <div className="flex flex-col items-center text-center flex-grow">

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
+import DecodedLogo from "../DecodedLogo";
 
 interface HeroCoverProps {
   onRevealed: () => void;
@@ -144,20 +145,15 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
 
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        {/* Logo — CSS neon text, matches brand */}
-        <div ref={logoRef} className="invisible relative">
-          <h1
-            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-[#d9fc69] select-none text-center"
-            style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              textShadow:
-                "0 0 20px rgba(217,252,105,0.4), 0 0 60px rgba(217,252,105,0.15), 0 0 100px rgba(217,252,105,0.08)",
-              letterSpacing: "0.15em",
-              paddingLeft: "0.15em",
-            }}
-          >
-            decoded
-          </h1>
+        {/* Logo — Three.js ASCII art, matches brand */}
+        <div ref={logoRef} className="invisible relative w-[320px] h-[80px] sm:w-[400px] sm:h-[100px] md:w-[600px] md:h-[140px] lg:w-[800px] lg:h-[180px]">
+          <DecodedLogo
+            asciiFontSize={6}
+            textFontSize={300}
+            planeBaseHeight={16}
+            enableWaves={false}
+            enableHueRotate={true}
+          />
         </div>
 
         {/* Neon accent line */}

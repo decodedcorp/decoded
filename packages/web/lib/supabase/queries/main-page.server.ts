@@ -9,6 +9,7 @@
 
 import { createSupabaseServerClient } from "../server";
 import type { PostRow, SpotRow, SolutionRow, BadgeRow } from "../types";
+import { buildArtistProfileMap } from "./warehouse-entities.server";
 
 type SpotWithSolutions = SpotRow & { solutions: SolutionRow[] };
 type PostWithSpots = PostRow & { spots: SpotWithSolutions[] };
@@ -301,7 +302,10 @@ export async function fetchPostsByArtistServer(
 }
 
 /**
- * Fetches trending keywords derived from popular artists (server-side)
+ * Fetches trending keywords derived from popular artists (server-side).
+ *
+ * Hybrid approach: trending order from public.posts frequency counts,
+ * entity data (profile images, canonical names) from warehouse.artists/groups.
  *
  * @param limit - Maximum number of keywords to fetch (default: 7)
  * @returns Array of trending keywords
@@ -312,25 +316,23 @@ export async function fetchTrendingKeywordsServer(
   const supabase = await createSupabaseServerClient();
   const keywords: TrendingKeyword[] = [];
 
-  // Get popular artists — try with view_count, fallback to created_at
-  const result = await supabase
-    .from("posts")
-    .select("artist_name, group_name, thumbnail_url")
-    .not("artist_name", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  // Fetch warehouse profile map and public.posts frequency data in parallel
+  const [profileMap, result] = await Promise.all([
+    buildArtistProfileMap(),
+    supabase
+      .from("posts")
+      .select("artist_name, group_name, thumbnail_url")
+      .not("artist_name", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const { error } = result;
-  const posts = result.data as
-    | {
-        artist_name: string | null;
-        group_name: string | null;
-        thumbnail_url: string | null;
-      }[]
-    | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const posts = result.data as any;
+  const error = result.error;
 
   if (!error && posts) {
-    // Count artist occurrences and keep first image per artist
+    // Count artist occurrences and keep first post thumbnail per artist (fallback)
     const artistCounts = new Map<string, number>();
     const artistImages = new Map<string, string>();
     for (const post of posts) {
@@ -343,18 +345,23 @@ export async function fetchTrendingKeywordsServer(
       }
     }
 
-    // Sort by count and take top entries
+    // Sort by frequency count — trending order is always from public.posts
     const topArtists = [...artistCounts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
       .map(([artist]) => artist);
 
-    for (const artist of topArtists) {
+    for (const rawName of topArtists) {
+      // Look up warehouse entity by lowercase name
+      const warehouseEntry = profileMap.get(rawName.toLowerCase());
+
       keywords.push({
-        id: `artist-${artist}`,
-        label: artist,
-        href: `/search?q=${encodeURIComponent(artist)}`,
-        image: artistImages.get(artist),
+        id: `artist-${rawName}`,
+        // Prefer warehouse canonical name for proper casing; fallback to raw post text
+        label: warehouseEntry?.name ?? rawName,
+        href: `/search?q=${encodeURIComponent(rawName)}`,
+        // Prefer warehouse profile image; fallback to post thumbnail
+        image: warehouseEntry?.profileImageUrl ?? artistImages.get(rawName),
       });
     }
   }

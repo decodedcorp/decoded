@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
+
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { DecodeShowcaseData } from "./types";
+import { PostImage } from "@/lib/components/shared/PostImage";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -26,7 +28,9 @@ export default function DecodeShowcase({
   const progressFillRef = useRef<HTMLDivElement>(null);
   const dotRefs = useRef<(HTMLDivElement | null)[]>([]);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const mobileCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lineRefs = useRef<(SVGLineElement | null)[]>([]);
+  const mobileLineRefs = useRef<(SVGLineElement | null)[]>([]);
 
   const { detectedItems } = data;
 
@@ -49,20 +53,27 @@ export default function DecodeShowcase({
     () => {
       if (!sectionRef.current || !showcaseRef.current) return;
 
+      const isMobile = window.innerWidth < 768;
+      const pinDistance = isMobile
+        ? detectedItems.length * 120
+        : detectedItems.length * 250;
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           pin: true,
           scrub: 1,
           start: "top top",
-          end: `+=${detectedItems.length * 250}`,
+          end: `+=${pinDistance}`,
         },
       });
 
       detectedItems.forEach((_, i) => {
         const dot = dotRefs.current[i];
         const card = cardRefs.current[i];
+        const mobileCard = mobileCardRefs.current[i];
         const line = lineRefs.current[i];
+        const mobileLine = mobileLineRefs.current[i];
         const offset = i / detectedItems.length;
         const dur = 0.8 / detectedItems.length;
 
@@ -74,6 +85,7 @@ export default function DecodeShowcase({
             offset
           );
         }
+        // Desktop line
         if (line) {
           tl.fromTo(
             line,
@@ -87,11 +99,40 @@ export default function DecodeShowcase({
             offset + dur * 0.3
           );
         }
+        // Mobile line
+        if (mobileLine) {
+          tl.fromTo(
+            mobileLine,
+            { opacity: 0, attr: { "stroke-dashoffset": 100 } },
+            {
+              opacity: 0.5,
+              attr: { "stroke-dashoffset": 0 },
+              ease: "power2.out",
+              duration: dur * 0.6,
+            },
+            offset + dur * 0.3
+          );
+        }
+        // Desktop card
         if (card) {
           tl.fromTo(
             card,
             { opacity: 0, y: 10 },
             { opacity: 1, y: 0, ease: "power2.out", duration: dur * 0.6 },
+            offset + dur * 0.5
+          );
+        }
+        // Mobile card (image thumbnail)
+        if (mobileCard) {
+          tl.fromTo(
+            mobileCard,
+            { opacity: 0, scale: 0.8 },
+            {
+              opacity: 1,
+              scale: 1,
+              ease: "back.out(1.5)",
+              duration: dur * 0.6,
+            },
             offset + dur * 0.5
           );
         }
@@ -161,32 +202,30 @@ export default function DecodeShowcase({
         </div>
 
         {/*
-          Single positioning context with overflow visible.
-          Image is the size reference. Dots, lines, and cards all share
-          the same coordinate space (% of image dimensions).
-          Cards are pushed outside via calc(100% + gap).
+          Positioning context.
+          Desktop: overflow-visible for cards outside image.
+          Mobile: overflow-visible too — thumbnails sit at edges within image bounds.
         */}
         <div
-          className="relative mx-auto"
-          style={{ width: "min(45vw, 360px)", overflow: "visible" }}
+          className="relative mx-auto overflow-visible"
+          style={{ width: "min(80vw, 360px)" }}
         >
-          {/* Image — clipped */}
+          {/* Image */}
           <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-neutral-900">
             {data.sourceImageUrl ? (
-              <Image
+              <PostImage
                 src={data.sourceImageUrl}
                 alt={`${data.artistName} outfit decode`}
-                fill
-                className="object-contain object-center"
-                sizes="360px"
-                priority
+                className="absolute inset-0"
+                priority={true}
+                flagKey="FeedCard"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-neutral-600">
                 <p className="text-sm">AI Detection Showcase</p>
               </div>
             )}
-            <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/10 pointer-events-none z-20" />
           </div>
 
           {/* Dots */}
@@ -211,9 +250,9 @@ export default function DecodeShowcase({
             />
           ))}
 
-          {/* SVG lines */}
+          {/* SVG lines — desktop (long, outside image) */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-[5]"
+            className="absolute inset-0 w-full h-full pointer-events-none z-[15] hidden md:block"
             style={{ overflow: "visible" }}
             aria-hidden
           >
@@ -239,7 +278,70 @@ export default function DecodeShowcase({
             })}
           </svg>
 
-          {/* Cards — positioned outside image */}
+          {/* SVG lines — mobile (short, to edge of image) */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none z-[15] md:hidden"
+            aria-hidden
+          >
+            {itemMeta.map((meta) => {
+              const { item, i, isLeft } = meta;
+              const cardY = getCardY(meta);
+              return (
+                <line
+                  key={`mline-${item.id}`}
+                  ref={(el) => {
+                    mobileLineRefs.current[i] = el;
+                  }}
+                  x1={`${item.bbox.x}%`}
+                  y1={`${item.bbox.y}%`}
+                  x2={isLeft ? "8%" : "92%"}
+                  y2={`${cardY}%`}
+                  stroke="var(--mag-accent)"
+                  strokeWidth="1"
+                  strokeDasharray="3 2"
+                  opacity="0"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Mobile cards — image thumbnail only, at image edge */}
+          {itemMeta.map((meta) => {
+            const { item, i, isLeft } = meta;
+            const cardY = getCardY(meta);
+            return (
+              <div
+                key={`mcard-${item.id}`}
+                ref={(el) => {
+                  mobileCardRefs.current[i] = el;
+                }}
+                className="absolute z-20 md:hidden pointer-events-none"
+                style={{
+                  top: `${cardY}%`,
+                  transform: "translateY(-50%)",
+                  ...(isLeft ? { left: "-4px" } : { right: "-4px" }),
+                  opacity: 0,
+                }}
+              >
+                {item.imageUrl ? (
+                  <div className="w-14 h-14 rounded-lg border border-[var(--mag-accent)]/40 shadow-[0_0_8px_rgba(var(--mag-accent-rgb,200,170,100),0.3)]">
+                    <ItemImage
+                      src={item.imageUrl}
+                      alt={item.label}
+                      size="thumbnail"
+                      className="rounded-lg"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-neutral-800 border border-[var(--mag-accent)]/40 flex items-center justify-center">
+                    <span className="text-[8px] text-neutral-500">IMG</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Desktop cards — full card outside image */}
           {itemMeta.map((meta) => {
             const { item, i, isLeft } = meta;
             const cardY = getCardY(meta);
@@ -249,7 +351,7 @@ export default function DecodeShowcase({
                 ref={(el) => {
                   cardRefs.current[i] = el;
                 }}
-                className="absolute z-20 flex items-center gap-3 rounded-xl
+                className="absolute z-20 hidden md:flex items-center gap-3 rounded-xl
                            bg-black/80 backdrop-blur-sm border border-[var(--mag-accent)]/30
                            px-4 py-3 w-[200px] pointer-events-none"
                 style={{
@@ -262,13 +364,12 @@ export default function DecodeShowcase({
                 }}
               >
                 {item.imageUrl ? (
-                  <div className="relative flex-none w-14 h-14 rounded-lg overflow-hidden bg-neutral-800">
-                    <Image
+                  <div className="flex-none w-14 h-14 rounded-lg">
+                    <ItemImage
                       src={item.imageUrl}
                       alt={item.label}
-                      fill
-                      className="object-cover"
-                      sizes="56px"
+                      size="thumbnail"
+                      className="rounded-lg"
                     />
                   </div>
                 ) : (

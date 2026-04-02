@@ -5,7 +5,7 @@
 import type { BrowserManager } from './browser-manager';
 import { handleSnapshot } from './snapshot';
 import { getCleanText } from './read-commands';
-import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from './commands';
+import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS, PAGE_CONTENT_COMMANDS, wrapUntrustedContent } from './commands';
 import { validateNavigationUrl } from './url-validation';
 import * as Diff from 'diff';
 import * as fs from 'fs';
@@ -137,7 +137,11 @@ export async function handleMetaCommand(
 
       // Separate target (selector/@ref) from output path
       for (const arg of remaining) {
-        if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
+        // File paths containing / and ending with an image/pdf extension are never CSS selectors
+        const isFilePath = arg.includes('/') && /\.(png|jpe?g|webp|pdf)$/i.test(arg);
+        if (isFilePath) {
+          outputPath = arg;
+        } else if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
           targetSelector = arg;
         } else {
           outputPath = arg;
@@ -238,6 +242,9 @@ export async function handleMetaCommand(
             lastWasWrite = true;
           } else if (READ_COMMANDS.has(name)) {
             result = await handleReadCommand(name, cmdArgs, bm);
+            if (PAGE_CONTENT_COMMANDS.has(name)) {
+              result = wrapUntrustedContent(result, bm.getCurrentUrl());
+            }
             lastWasWrite = false;
           } else if (META_COMMANDS.has(name)) {
             result = await handleMetaCommand(name, cmdArgs, bm, shutdown);
@@ -284,12 +291,13 @@ export async function handleMetaCommand(
         }
       }
 
-      return output.join('\n');
+      return wrapUntrustedContent(output.join('\n'), `diff: ${url1} vs ${url2}`);
     }
 
     // ─── Snapshot ─────────────────────────────────────
     case 'snapshot': {
-      return await handleSnapshot(args, bm);
+      const snapshotResult = await handleSnapshot(args, bm);
+      return wrapUntrustedContent(snapshotResult, bm.getCurrentUrl());
     }
 
     // ─── Handoff ────────────────────────────────────
@@ -302,7 +310,7 @@ export async function handleMetaCommand(
       bm.resume();
       // Re-snapshot to capture current page state after human interaction
       const snapshot = await handleSnapshot(['-i'], bm);
-      return `RESUMED\n${snapshot}`;
+      return `RESUMED\n${wrapUntrustedContent(snapshot, bm.getCurrentUrl())}`;
     }
 
     // ─── Headed Mode ──────────────────────────────────────
@@ -373,11 +381,14 @@ export async function handleMetaCommand(
         if (!bm.isWatching()) return 'Not currently watching.';
         const result = bm.stopWatch();
         const durationSec = Math.round(result.duration / 1000);
+        const lastSnapshot = result.snapshots.length > 0
+          ? wrapUntrustedContent(result.snapshots[result.snapshots.length - 1], bm.getCurrentUrl())
+          : '(none)';
         return [
           `WATCH STOPPED (${durationSec}s, ${result.snapshots.length} snapshots)`,
           '',
           'Last snapshot:',
-          result.snapshots.length > 0 ? result.snapshots[result.snapshots.length - 1] : '(none)',
+          lastSnapshot,
         ].join('\n');
       }
 
@@ -470,11 +481,12 @@ export async function handleMetaCommand(
         // V1: cookies + URLs only (not localStorage — breaks on load-before-navigate)
         const saveData = {
           version: 1,
+          savedAt: new Date().toISOString(),
           cookies: state.cookies,
           pages: state.pages.map(p => ({ url: p.url, isActive: p.isActive })),
         };
         fs.writeFileSync(statePath, JSON.stringify(saveData, null, 2), { mode: 0o600 });
-        return `State saved: ${statePath} (${state.cookies.length} cookies, ${state.pages.length} pages — treat as sensitive)`;
+        return `State saved: ${statePath} (${state.cookies.length} cookies, ${state.pages.length} pages)\n⚠️  Cookies stored in plaintext. Delete when no longer needed.`;
       }
 
       if (action === 'load') {
@@ -482,6 +494,14 @@ export async function handleMetaCommand(
         const data = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
         if (!Array.isArray(data.cookies) || !Array.isArray(data.pages)) {
           throw new Error('Invalid state file: expected cookies and pages arrays');
+        }
+        // Warn on state files older than 7 days
+        if (data.savedAt) {
+          const ageMs = Date.now() - new Date(data.savedAt).getTime();
+          const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+          if (ageMs > SEVEN_DAYS) {
+            console.warn(`[browse] Warning: State file is ${Math.round(ageMs / 86400000)} days old. Consider re-saving.`);
+          }
         }
         // Close existing pages, then restore (replace, not merge)
         bm.setFrame(null);

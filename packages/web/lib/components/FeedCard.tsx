@@ -13,6 +13,7 @@ import { FollowButton } from "@/lib/components/shared/FollowButton";
 import { useSpots } from "@/lib/hooks/useSpots";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import { useTrackDwellTime } from "@/lib/hooks/useTrackDwellTime";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 // Register GSAP Flip plugin
 if (typeof window !== "undefined") {
@@ -215,28 +216,25 @@ export const FeedCard = memo(
             </div>
           )}
 
-          {/* Image container - 4:5 aspect ratio like Instagram */}
-          <div className="relative aspect-[4/5] bg-muted">
-            {imageUrl && !imageError ? (
-              <img
+          {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
+          <div className="relative overflow-hidden">
+            {imageUrl ? (
+              <PostImage
                 src={imageUrl}
-                loading={priority ? "eager" : "lazy"}
-                decoding="async"
-                fetchPriority={priority ? "high" : "auto"}
                 alt={`Image ${id}`}
-                className={`h-full w-full object-cover object-top transition-opacity duration-200 ease-out ${
-                  isLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                onError={() => setImageError(true)}
+                maxHeight="80vh"
+                flagKey="FeedCard"
+                priority={priority}
                 onLoad={() => setIsLoaded(true)}
+                onError={() => setImageError(true)}
               />
             ) : (
-              <div className="h-full w-full bg-muted" />
+              <div className="w-full aspect-[3/4] bg-neutral-900" />
             )}
 
             {/* Subtle spot indicators */}
             {spots.length > 0 && (
-              <div className="absolute inset-0 pointer-events-none z-10">
+              <div className="absolute inset-0 pointer-events-none z-20">
                 {spots.map((spot) => (
                   <Hotspot
                     key={spot.id}

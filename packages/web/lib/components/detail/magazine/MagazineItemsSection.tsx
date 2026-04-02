@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, RefObject } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 import type {
   PostMagazineSpotItem,
   PostMagazineRelatedItem,
 } from "@/lib/api/mutation-types";
+import { useBatchTextLayout } from "@/lib/hooks/usePretext";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -20,6 +21,8 @@ type Props = {
   relatedItems?: PostMagazineRelatedItem[];
   accentColor?: string;
   isModal?: boolean;
+  scrollContainerRef?: RefObject<HTMLElement>;
+  onActiveIndexChange?: (index: number | null) => void;
 };
 
 export function MagazineItemsSection({
@@ -27,8 +30,38 @@ export function MagazineItemsSection({
   relatedItems = [],
   accentColor,
   isModal,
+  scrollContainerRef,
+  onActiveIndexChange,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionWidth, setSectionWidth] = useState(0);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) =>
+      setSectionWidth(entry.contentRect.width)
+    );
+    obs.observe(el);
+    setSectionWidth(el.getBoundingClientRect().width);
+    return () => obs.disconnect();
+  }, []);
+
+  // Estimate text container width beside the image (md:w-60 lg:w-64 + gap-10 + section px-8*2)
+  const titleContainerWidth =
+    sectionWidth >= 768
+      ? Math.max(sectionWidth - 256 - 40 - 64, 0) // desktop: section - image - gap - section padding
+      : Math.max(sectionWidth - 32, 0); // mobile: section - px-4*2
+
+  const titleLayouts = useBatchTextLayout({
+    items: items.map((item) => ({
+      key: item.spot_id,
+      text: item.title,
+    })),
+    font: "700 20px system-ui, -apple-system, sans-serif",
+    lineHeight: 28,
+    containerWidth: titleContainerWidth,
+  });
 
   const relatedBySpot = useMemo(() => {
     const map = new Map<string, PostMagazineRelatedItem[]>();
@@ -41,32 +74,87 @@ export function MagazineItemsSection({
     return map;
   }, [relatedItems]);
 
-  useGSAP(() => {
-    if (!sectionRef.current || isModal) return;
+  // Track active index ref for stale closure prevention
+  const activeIndexRef = useRef<number | null>(null);
 
-    const cards = gsap.utils.toArray<HTMLElement>(
-      sectionRef.current.querySelectorAll(".item-card")
-    );
+  useGSAP(
+    () => {
+      if (!sectionRef.current) return;
 
-    cards.forEach((card, i) => {
-      gsap.fromTo(
-        card,
-        { y: 50, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.7,
-          delay: i * 0.15,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: card,
-            start: "top 85%",
-            toggleActions: "play none none none",
-          },
-        }
+      const cards = gsap.utils.toArray<HTMLElement>(
+        sectionRef.current.querySelectorAll("[data-item-index]")
       );
-    });
-  });
+
+      if (!isModal) {
+        // Full page: entry animation
+        cards.forEach((card, i) => {
+          gsap.fromTo(
+            card,
+            { y: 50, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.7,
+              delay: i * 0.15,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: card,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        });
+      }
+
+      // Modal: ScrollTrigger for scroll-spot sync
+      if (isModal && onActiveIndexChange && cards.length > 0) {
+        const scroller = scrollContainerRef?.current || window;
+
+        cards.forEach((card, index) => {
+          ScrollTrigger.create({
+            scroller,
+            trigger: card,
+            start: "top center",
+            end: "bottom center",
+            invalidateOnRefresh: true,
+            onEnter: () => {
+              activeIndexRef.current = index;
+              onActiveIndexChange(index);
+            },
+            onEnterBack: () => {
+              activeIndexRef.current = index;
+              onActiveIndexChange(index);
+            },
+            onLeave: () => {
+              if (activeIndexRef.current === index) {
+                onActiveIndexChange(null);
+              }
+            },
+            onLeaveBack: () => {
+              if (activeIndexRef.current === index) {
+                onActiveIndexChange(null);
+              }
+            },
+          });
+        });
+
+        // Refresh after layout stabilizes
+        if (scrollContainerRef?.current) {
+          const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+          return () => {
+            clearTimeout(timer);
+            ScrollTrigger.getAll().forEach((trigger) => {
+              if (cards.includes(trigger.vars.trigger as HTMLElement)) {
+                trigger.kill();
+              }
+            });
+          };
+        }
+      }
+    },
+    { scope: sectionRef, dependencies: [items.length, isModal] }
+  );
 
   if (items.length === 0) return null;
 
@@ -91,27 +179,27 @@ export function MagazineItemsSection({
             | undefined;
           const price = meta?.price;
           const spotRelated = relatedBySpot.get(item.spot_id) ?? [];
+          const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;
 
           return (
-            <div key={item.spot_id} className="item-card">
+            <div key={item.spot_id} className="item-card" data-item-index={i}>
               <div
                 className={`flex flex-col gap-6 md:flex-row md:gap-10 ${
                   i % 2 === 1 ? "md:flex-row-reverse" : ""
                 }`}
               >
                 {/* Item Image */}
-                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-72 lg:w-80">
+                <div className="w-full shrink-0 md:w-60 lg:w-64">
                   {item.image_url ? (
-                    <Image
+                    <ItemImage
                       src={item.image_url}
                       alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 320px"
+                      size="card"
+                      className="rounded-xl"
                     />
                   ) : (
                     <div
-                      className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center"
+                      className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/50 bg-muted p-6 text-center"
                       style={{
                         background: accentColor
                           ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
@@ -122,19 +210,28 @@ export function MagazineItemsSection({
                         {(i + 1).toString().padStart(2, "0")}
                       </span>
                       {item.brand && (
-                        <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
-                          {item.brand}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
+                            {item.brand}
+                          </span>
+                        </>
                       )}
                       {meta?.sub_category && (
-                        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
-                          {meta.sub_category}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
+                            {meta.sub_category}
+                          </span>
+                        </>
                       )}
                       {meta?.material && meta.material.length > 0 && (
-                        <span className="text-[10px] italic text-muted-foreground/40">
-                          {meta.material.join(" · ")}
-                        </span>
+                        <>
+                          <div className="mx-auto h-px w-8 bg-border/30" />
+                          <span className="text-[10px] italic text-muted-foreground/40">
+                            {meta.material.join(" · ")}
+                          </span>
+                        </>
                       )}
                     </div>
                   )}
@@ -147,7 +244,14 @@ export function MagazineItemsSection({
                       {item.brand}
                     </p>
                   )}
-                  <h3 className="typography-h4 mb-2">{item.title}</h3>
+                  <h3
+                    className="typography-h4 mb-2"
+                    style={
+                      titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                    }
+                  >
+                    {item.title}
+                  </h3>
                   {price && (
                     <p className="mb-4 text-sm font-medium text-muted-foreground">
                       {price}
@@ -188,11 +292,11 @@ export function MagazineItemsSection({
 
               {/* Similar Items for this spot */}
               {spotRelated.length > 0 && (
-                <div className="mt-6 ml-0 md:ml-[calc(18rem+2.5rem)] lg:ml-[calc(20rem+2.5rem)]">
+                <div className="mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]">
                   <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Similar Items
                   </p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     {spotRelated.slice(0, 3).map((ri, j) => (
                       <a
                         key={`${ri.title}-${j}`}
@@ -201,41 +305,13 @@ export function MagazineItemsSection({
                         rel="noopener noreferrer"
                         className="group overflow-hidden rounded-lg border border-border/40 bg-card transition-all hover:border-border hover:shadow-md"
                       >
-                        <div className="relative aspect-square w-full overflow-hidden bg-muted">
-                          {ri.image_url ? (
-                            <Image
-                              src={ri.image_url}
-                              alt={ri.title}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
-                              sizes="(max-width: 640px) 50vw, 160px"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center">
-                              <span className="text-2xl text-muted-foreground/20">
-                                {(j + 1).toString().padStart(2, "0")}
-                              </span>
-                            </div>
-                          )}
-                          <div
-                            className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium backdrop-blur-sm"
-                            style={{
-                              backgroundColor:
-                                ri.source === "external"
-                                  ? accentColor
-                                    ? `${accentColor}80`
-                                    : "hsl(var(--primary) / 0.5)"
-                                  : "hsl(var(--muted) / 0.8)",
-                              color:
-                                ri.source === "external"
-                                  ? "white"
-                                  : "hsl(var(--muted-foreground))",
-                            }}
-                          >
-                            {ri.source === "external" ? "External" : "Internal"}
-                          </div>
-                        </div>
-                        <div className="p-2">
+                        <ItemImage
+                          src={ri.image_url || ""}
+                          alt={ri.title}
+                          size="card"
+                          imgClassName="transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="p-2.5">
                           {ri.brand && (
                             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                               {ri.brand}

@@ -20,7 +20,7 @@ type SpotDotProps = {
 export function SpotDot(props: SpotDotProps) {
   const { label, brand, category, accentColor, thumbnailUrl } = props;
   const [hovered, setHovered] = useState(false);
-  const dotColor = accentColor || "hsl(var(--primary))";
+  const dotColor = accentColor || "var(--mag-accent)";
 
   const positionStyle =
     props.mode === "percent"

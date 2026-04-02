@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "motion/react";
 import type { StyleCardData } from "./StyleCard";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 interface EditorialSectionProps {
   style?: StyleCardData;
@@ -19,16 +20,15 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
   const content = (
     <Link href={style.link} className="group block h-full">
       <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_260px] rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/[0.06]">
-        {/* Left: Editorial image — wide landscape ratio */}
+        {/* Left: Editorial image — full image with blur bg */}
         <div className="relative aspect-[16/10] lg:aspect-auto overflow-hidden isolate">
           <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
             {style.imageUrl ? (
-              <Image
+              <PostImage
                 src={style.imageUrl}
                 alt={style.artistName}
-                fill
-                sizes="(max-width: 1024px) 100vw, 65vw"
-                className="object-cover"
+                className="absolute inset-0"
+                flagKey="FeedCard"
               />
             ) : (
               <div className="absolute inset-0 bg-neutral-800" />
@@ -36,10 +36,10 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
           </div>
 
           {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent z-20" />
 
           {/* Top-left: EDITORIAL */}
-          <div className="absolute top-5 left-6">
+          <div className="absolute top-5 left-6 z-20">
             <h2 className="text-xl md:text-2xl font-bold uppercase tracking-[0.1em] text-white">
               Editorial
             </h2>
@@ -47,7 +47,7 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
           </div>
 
           {/* Bottom-left: LATEST STORIES */}
-          <div className="absolute bottom-5 left-6">
+          <div className="absolute bottom-5 left-6 z-20">
             <p className="text-lg md:text-xl font-bold uppercase tracking-wide text-white">
               Latest Stories
             </p>

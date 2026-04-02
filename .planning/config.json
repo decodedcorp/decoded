@@ -3,12 +3,13 @@
   "parallelization": true,
   "commit_docs": true,
   "model_profile": "balanced",
-  "branching_strategy": "milestone",
+  "branching_strategy": "none",
   "milestone_branch_template": "gsd/{milestone}-{slug}",
   "workflow": {
     "research": true,
     "plan_check": true,
     "verifier": false,
+    "nyquist_validation": false,
     "_auto_chain_active": false
   },
   "granularity": "fine"

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Maximize2 } from "lucide-react";
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
-import { ImageDetailPreview } from "./ImageDetailPreview";
 import { ImageDetailContent } from "./ImageDetailContent";
-import { SpotDot } from "./SpotDot";
+import { ImageCanvas } from "./ImageCanvas";
+import { normalizeItem } from "./types";
+import type { UiItem } from "./types";
+import type { Json } from "@/lib/supabase/types";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
-import { ReportErrorButton } from "./ReportErrorButton";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
 import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
@@ -37,15 +38,14 @@ export function ImageDetailModal({ imageId }: Props) {
   const leftImageContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Floating image sizing state (for spot positioning with object-contain)
-  const [naturalSize, setNaturalSize] = useState<{
+  // Floating image sizing state (for fallback img path)
+  const [_naturalSize, setNaturalSize] = useState<{
     width: number;
     height: number;
   } | null>(null);
-  const [containerSize, setContainerSize] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+
+  // Active item index for scroll-spot sync
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   // Image source: store (immediate) -> fetched data
   const activeImageSrc =
@@ -54,13 +54,43 @@ export function ImageDetailModal({ imageId }: Props) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (image as any)?.postImages?.[0]?.post?.image_url;
 
+  // Normalize items for ImageCanvas (same logic as ImageDetailContent)
+  const normalizedItems: UiItem[] = useMemo(() => {
+    if (!image?.items) return [];
+    const firstPostImage = image.postImages?.[0];
+    const itemLocations = firstPostImage?.item_locations;
+    const locMap: Record<
+      string,
+      { bbox?: number[] | null; center?: Json | null; score?: number | null }
+    > = {};
+    if (Array.isArray(itemLocations)) {
+      itemLocations.forEach((loc: Record<string, unknown>) => {
+        if (loc?.item_id) {
+          locMap[String(loc.item_id)] = {
+            bbox: loc.bbox as number[] | null,
+            center: (loc.center as Json | null) || (loc as unknown as Json),
+            score: loc.score as number | null,
+          };
+        }
+      });
+    } else if (itemLocations && typeof itemLocations === "object") {
+      Object.assign(locMap, itemLocations);
+    }
+    return image.items.map((item) =>
+      normalizeItem(item, undefined, locMap[item.id.toString()])
+    );
+  }, [image?.items, image?.postImages]);
+
+  const hasItemsWithCoordinates = normalizedItems.some(
+    (item) => item.normalizedBox !== null
+  );
+
   const {
     handleClose,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
     handleMaximize,
-    isClosing,
   } = useImageModalAnimation({
     imageId,
     activeImageSrc,
@@ -89,43 +119,10 @@ export function ImageDetailModal({ imageId }: Props) {
     if (error) console.error("[ImageDetailModal] error:", error);
   }, [imageId, image, error]);
 
-  // Track floating image container size for spot positioning
-  useEffect(() => {
-    if (!leftImageContainerRef.current) return;
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setContainerSize({ width, height });
-      }
-    });
-    resizeObserver.observe(leftImageContainerRef.current);
-    return () => resizeObserver.disconnect();
-  }, [activeImageSrc]);
-
   // Forward scroll from floating image to drawer content (desktop)
   const handleImageScroll = useCallback((e: React.WheelEvent) => {
     scrollContainerRef.current?.scrollBy({ top: e.deltaY, behavior: "auto" });
   }, []);
-
-  // Calculate actual displayed image rect for object-contain
-  const getContainedImageRect = () => {
-    if (!naturalSize || !containerSize) return null;
-    const containerAspect = containerSize.width / containerSize.height;
-    const imageAspect = naturalSize.width / naturalSize.height;
-    let width, height, left, top;
-    if (imageAspect > containerAspect) {
-      width = containerSize.width;
-      height = width / imageAspect;
-      left = 0;
-      top = (containerSize.height - height) / 2;
-    } else {
-      height = containerSize.height;
-      width = height * imageAspect;
-      top = 0;
-      left = (containerSize.width - width) / 2;
-    }
-    return { width, height, left, top };
-  };
 
   // Render drawer content based on data state
   const renderContent = () => {
@@ -209,12 +206,25 @@ export function ImageDetailModal({ imageId }: Props) {
           scrollContainerRef={
             scrollContainerRef as React.RefObject<HTMLElement>
           }
+          activeIndex={activeIndex}
+          onActiveIndexChange={setActiveIndex}
         />
       );
     }
 
-    // Non-magazine posts: lightweight preview
-    return <ImageDetailPreview image={image} onViewFull={handleMaximize} />;
+    // Non-magazine posts
+    return (
+      <ImageDetailContent
+        image={image}
+        magazineLayout={null}
+        relatedEditorials={[]}
+        isModal
+        hideImage
+        scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
+        activeIndex={activeIndex}
+        onActiveIndexChange={setActiveIndex}
+      />
+    );
   };
 
   return (
@@ -242,6 +252,7 @@ export function ImageDetailModal({ imageId }: Props) {
           style={{ opacity: 0 }}
           onWheel={handleImageScroll}
         >
+          {/* Blur backdrop */}
           <div
             className="absolute inset-0 -z-10"
             style={{
@@ -252,83 +263,46 @@ export function ImageDetailModal({ imageId }: Props) {
               transform: "scale(1.08)",
             }}
           />
-          <img
-            data-testid="image-detail-image"
-            ref={floatingImageRef}
-            src={activeImageSrc}
-            alt="Post image"
-            className="w-full h-full object-contain pointer-events-none"
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              setNaturalSize({
-                width: img.naturalWidth,
-                height: img.naturalHeight,
-              });
-            }}
-          />
-          {image?.items &&
-            image.items.length > 0 &&
-            (() => {
-              const imageRect = getContainedImageRect();
-              if (!imageRect) return null;
-              const accentColor = (
-                magazine?.layout_json as {
-                  design_spec?: { accent_color?: string };
-                }
-              )?.design_spec?.accent_color;
-              return (
-                <div className="absolute inset-0 pointer-events-none z-20">
-                  {image.items.map((item, idx) => {
-                    const center = Array.isArray(item.center)
-                      ? item.center
-                      : null;
-                    if (!center || center.length < 2) return null;
-                    const fracX =
-                      typeof center[0] === "number"
-                        ? center[0]
-                        : parseFloat(String(center[0])) || 0;
-                    const fracY =
-                      typeof center[1] === "number"
-                        ? center[1]
-                        : parseFloat(String(center[1])) || 0;
-                    const pixelLeft =
-                      imageRect.left +
-                      imageRect.width * (fracX > 1 ? fracX / 100 : fracX);
-                    const pixelTop =
-                      imageRect.top +
-                      imageRect.height * (fracY > 1 ? fracY / 100 : fracY);
-                    const meta = item.metadata as unknown as
-                      | Record<string, unknown>
-                      | undefined;
-                    return (
-                      <SpotDot
-                        key={item.id ?? idx}
-                        mode="pixel"
-                        leftPx={pixelLeft}
-                        topPx={pixelTop}
-                        label={item.product_name ?? ""}
-                        brand={meta?.brand as string | undefined}
-                        category={meta?.sub_category as string | undefined}
-                        accentColor={accentColor}
-                        thumbnailUrl={item.cropped_image_path}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })()}
+          {/* ImageCanvas with contain mode for scroll-spot sync */}
+          {image && hasItemsWithCoordinates ? (
+            <ImageCanvas
+              image={image}
+              items={normalizedItems}
+              activeIndex={activeIndex}
+              objectFit="contain"
+            />
+          ) : (
+            <img
+              data-testid="image-detail-image"
+              ref={floatingImageRef}
+              src={activeImageSrc}
+              alt="Post image"
+              className="w-full h-full object-contain pointer-events-none"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                setNaturalSize({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                });
+              }}
+            />
+          )}
         </div>
       )}
 
-      {/* Drawer */}
+      {/* Drawer (mobile: bottom sheet ~90vh, desktop: right-side drawer full height) */}
       <aside
         ref={drawerRef}
-        className="relative z-[70] flex h-full w-full flex-col bg-background shadow-2xl md:w-[50vw] lg:w-[600px] xl:w-[700px] translate-y-full md:translate-x-full md:translate-y-0 overflow-hidden"
+        className="relative z-[70] flex h-[90vh] md:h-full w-full flex-col bg-background shadow-2xl rounded-t-[20px] md:rounded-none md:w-[50vw] lg:w-[600px] xl:w-[700px] translate-y-full md:translate-x-full md:translate-y-0 overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         data-lenis-prevent
       >
+        {/* Drag handle - mobile only */}
+        <div className="md:hidden flex items-center justify-center py-3 shrink-0">
+          <div className="w-10 h-1 bg-[#3D3D3D] rounded-sm" />
+        </div>
         <div
           ref={scrollContainerRef}
           className="relative flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
@@ -336,10 +310,9 @@ export function ImageDetailModal({ imageId }: Props) {
           {renderContent()}
         </div>
         <div className="absolute top-4 right-4 md:top-auto md:right-auto md:bottom-6 md:left-6 z-20 flex gap-3">
-          <ReportErrorButton postId={image?.id} size="md" />
           <button
             onClick={handleMaximize}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/80 text-white backdrop-blur-sm transition-transform hover:scale-105 hover:bg-black active:scale-95 dark:bg-white/80 dark:text-black dark:hover:bg-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white backdrop-blur-sm transition-transform hover:scale-105 hover:bg-black active:scale-95 dark:bg-white/80 dark:text-black dark:hover:bg-white"
             aria-label="View Full Page"
             title="Open in full page"
           >
@@ -348,7 +321,7 @@ export function ImageDetailModal({ imageId }: Props) {
           <button
             data-testid="image-detail-close"
             onClick={handleClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-accent active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur-sm transition-transform hover:scale-105 hover:bg-accent active:scale-95"
             aria-label="Close"
             title="Close"
           >

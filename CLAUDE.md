@@ -27,11 +27,12 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 | [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md) | Next.js `/api/v1/*` 표 |
 | [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md) | 훅·스토어·주요 경로 |
 | [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md) | 디자인 시스템 import·컴포넌트 목록 |
+| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md) | Warehouse 스키마 (ETL·Seed 파이프라인) |
 | [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md) | Rust API 크레이트 전용 |
 
 ## Tech stack (one line)
 
-Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · Supabase · GSAP/Motion · Playwright · ESLint flat · bun · Node 22+ · Rust API (Axum) · Python AI (gRPC). 세부는 STACK.md.
+Next.js 16.2 / React 19 / TypeScript 5.9 · Tailwind 3.4 · Zustand · TanStack Query 5.90 · Supabase · GSAP/Motion · Playwright 1.58 · ESLint v10 flat · bun · Node 22+ · Rust API (Axum 0.8) · Python AI (gRPC). 세부는 STACK.md.
 
 ## Code style
 
@@ -42,9 +43,10 @@ Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · S
 ## Important notes
 
 - **Package manager**: **bun** with Turborepo — use `bun` commands (not yarn/npm)
+- **Task runner**: [`Justfile`](Justfile) — `just local-fe`, `just local-be`, `just --list`
 - **ESLint**: flat config (`eslint.config.mjs`), Node 22+
 - **Env**: `packages/web/.env.local` from `.env.local.example` (gitignored)
-- **Supabase** required for typical data/auth flows
+- **Supabase**: public schema (앱 데이터) + warehouse schema (ETL/Seed 파이프라인)
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
 
 ## Generated API Code
@@ -150,7 +152,27 @@ Use gstack slash commands for the sprint workflow: **Think → Plan → Build �
 - If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup`
 - Follow the sprint order: Think → Plan → Build → Review → Test → Ship → Reflect
 
-<!-- Last Updated: 2026-03-27 -->
+<!-- Last Updated: 2026-04-02 -->
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health
 
 <!-- MANUAL ADDITIONS START -->
 

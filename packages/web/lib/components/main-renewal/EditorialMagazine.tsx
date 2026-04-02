@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { EditorialMagazineData } from "./types";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -144,23 +144,23 @@ export default function EditorialMagazine({
               >
                 {/* Cover image */}
                 {card.imageUrl ? (
-                  <Image
+                  <PostImage
                     src={card.imageUrl}
                     alt={card.title}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 768px) 70vw, (max-width: 1024px) 40vw, 30vw"
+                    className="absolute inset-0"
+                    imgClassName="transition-transform duration-700 group-hover:scale-105"
                     priority={idx === 0}
+                    flagKey="FeedCard"
                   />
                 ) : (
                   <div className="absolute inset-0 bg-neutral-900" />
                 )}
 
                 {/* Bottom gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/60 to-transparent z-20" />
 
                 {/* Card text */}
-                <div className="absolute inset-x-0 bottom-0 p-6 relative z-10">
+                <div className="absolute inset-x-0 bottom-0 p-6 relative z-20">
                   {card.category && (
                     <span className="text-[10px] uppercase tracking-widest text-[var(--mag-accent)] mb-2 block">
                       {card.category}
@@ -180,7 +180,7 @@ export default function EditorialMagazine({
                 {/* Hover: neon corner accent */}
                 <div
                   className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[var(--mag-accent)]
-                               opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                               opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
                 />
               </article>
             ))

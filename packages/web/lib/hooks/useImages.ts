@@ -8,6 +8,7 @@
 import {
   useQuery,
   useInfiniteQuery,
+  useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
 import {
@@ -17,8 +18,10 @@ import {
   fetchUnifiedImages,
   fetchRelatedImagesByAccount,
 } from "@decoded/shared/supabase/queries/images";
-import { getPost } from "@/lib/api/generated/posts/posts";
+import { getPost, listPosts } from "@/lib/api/generated/posts/posts";
 import { postDetailToImageDetail } from "@/lib/api/adapters/postDetailToImageDetail";
+import { fetchPostWithSpotsAndSolutions } from "@/lib/supabase/queries/posts";
+import { spotToItemRow } from "@/lib/components/detail/types";
 import type {
   CategoryFilter,
   ImagePage,
@@ -161,6 +164,11 @@ export function useInfinitePosts(params: {
   groupName?: string;
   sort?: "recent" | "popular" | "trending";
   hasMagazine?: boolean;
+  /** Display name from hierarchical filter (e.g., "NewJeans") — matched via ilike on group_name */
+  mediaName?: string;
+  /** Display name from hierarchical filter (e.g., "Minji") — matched via ilike on artist_name */
+  castName?: string;
+  contextType?: string;
 }) {
   const {
     limit = 40,
@@ -170,16 +178,50 @@ export function useInfinitePosts(params: {
     groupName,
     sort = "recent",
     hasMagazine,
+    mediaName,
+    castName,
+    contextType,
   } = params;
 
   return useInfiniteQuery<PostsPage>({
     queryKey: [
       "posts",
       "infinite",
-      { category, search, artistName, groupName, sort, limit, hasMagazine },
+      { category, search, artistName, groupName, sort, limit, hasMagazine, mediaName, castName, contextType },
     ],
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
+
+      // hasMagazine=true → REST API 사용 (Supabase posts 뷰에 magazine 컬럼 없음)
+      if (hasMagazine) {
+        const response = await listPosts({
+          page,
+          per_page: limit,
+          sort,
+          has_magazine: true,
+          artist_name: mediaName ?? artistName,
+          group_name: castName ? undefined : groupName,
+          context: contextType ?? (category && category !== "all" ? category : undefined),
+        });
+
+        const items: PostGridItem[] = response.data.map((post) => ({
+          id: post.id,
+          imageUrl: post.image_url,
+          postId: post.id,
+          postSource: "post" as const,
+          postAccount: post.artist_name ?? post.group_name ?? "",
+          postCreatedAt: post.created_at,
+          spotCount: post.spot_count ?? 0,
+          viewCount: post.view_count,
+          title: post.post_magazine_title ?? post.title ?? null,
+        }));
+
+        const totalPages = response.pagination.total_pages;
+        const hasMore = page < totalPages;
+        return { items, nextPage: hasMore ? page + 1 : null, hasMore };
+      }
+
+      // 일반 모드 → Supabase 직접 쿼리
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
@@ -189,7 +231,8 @@ export function useInfinitePosts(params: {
         .eq("status", "active")
         .not("image_url", "is", null);
 
-      if (category && category !== "all") {
+      // category filter (flat) — skip if contextType is set (hierarchical takes precedence)
+      if (category && category !== "all" && !contextType) {
         query = query.eq("context", category);
       }
       if (artistName) {
@@ -198,8 +241,18 @@ export function useInfinitePosts(params: {
       if (groupName) {
         query = query.ilike("group_name", `%${groupName}%`);
       }
-      if (hasMagazine) {
-        query = query.not("post_magazine_id", "is", null);
+
+      // mediaName from hierarchical filter — matches group_name column
+      if (mediaName) {
+        query = query.ilike("group_name", `%${mediaName}%`);
+      }
+      // castName from hierarchical filter — matches artist_name column
+      if (castName) {
+        query = query.ilike("artist_name", `%${castName}%`);
+      }
+      // contextType from hierarchical filter — matches context column exactly
+      if (contextType) {
+        query = query.eq("context", contextType);
       }
 
       // Sort
@@ -233,10 +286,7 @@ export function useInfinitePosts(params: {
         postCreatedAt: post.created_at,
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
-        // editorial 오버레이: hasMagazine=true 시 post_magazine_title이 항상 non-null임
-        // (Supabase 필터: .not("post_magazine_id", "is", null) 보장)
-        // 방어적 fallback: post_magazine_title 없는 경우 post.title 사용, 둘 다 없으면 null
-        title: post.post_magazine_title ?? post.title ?? null,
+        title: post.title ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
@@ -250,15 +300,106 @@ export function useInfinitePosts(params: {
 }
 
 /**
- * Fetch post detail via REST API and convert to ImageDetail for ImageDetailContent
+ * Fetch post detail and convert to ImageDetail for ImageDetailContent.
+ * Tries REST API first (production), falls back to Supabase direct (dev without backend).
  */
 export function usePostDetailForImage(postId: string) {
+  const queryClient = useQueryClient();
+
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
+      // Helper: eagerly prefetch magazine data once we have a magazine_id
+      const prefetchMagazine = (magazineId: string | null | undefined) => {
+        if (!magazineId) return;
+        queryClient.prefetchQuery({
+          queryKey: ["post-magazines", magazineId],
+          queryFn: async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabaseBrowserClient as any)
+              .from("post_magazines")
+              .select("*")
+              .eq("id", magazineId)
+              .single();
+            if (error || !data) return null;
+            return data as unknown as PostMagazineResponse;
+          },
+          staleTime: 1000 * 60 * 5,
+        });
+      };
+
+      // 1. Try REST API (works when backend is running)
       try {
         const response = await getPost(postId);
-        return postDetailToImageDetail(response, postId);
+        const detail = postDetailToImageDetail(response, postId);
+        // Start magazine fetch immediately (no waterfall)
+        prefetchMagazine((detail as any)?.post_magazine_id);
+        return detail;
+      } catch {
+        // Backend unavailable — fall through to Supabase
+      }
+
+      // 2. Fallback: Supabase direct query
+      try {
+        const result = await fetchPostWithSpotsAndSolutions(postId);
+        if (!result) return null;
+
+        const { post, spots, solutions } = result;
+        // DB has columns not in PostRow type (post_magazine_id, ai_summary, etc.)
+        const postAny = post as Record<string, unknown>;
+
+        // Eagerly prefetch magazine in Supabase fallback path too
+        prefetchMagazine(postAny.post_magazine_id as string | null);
+
+        const items = spots.map((spot) => {
+          const topSolution = solutions.find((s) => s.spot_id === spot.id);
+          return spotToItemRow(spot, topSolution);
+        });
+
+        return {
+          id: post.id,
+          image_hash: "",
+          image_url: post.image_url,
+          status: (post.status ?? "pending") as "pending" | "extracted" | "skipped" | "extracted_metadata",
+          with_items: items.length > 0,
+          created_at: post.created_at,
+          items,
+          posts: [
+            {
+              id: post.id,
+              account: post.artist_name ?? post.group_name ?? "",
+              article: post.media_title ?? null,
+              created_at: post.created_at,
+              item_ids: null,
+              metadata: [],
+              ts: post.created_at,
+            } as any,
+          ],
+          postImages: [
+            {
+              post: {
+                id: post.id,
+                account: post.artist_name ?? post.group_name ?? "",
+                article: post.media_title ?? null,
+                created_at: post.created_at,
+              } as any,
+              created_at: post.created_at,
+              item_locations: spots.map((s, idx) => ({
+                item_id: idx + 1,
+                center: [parseFloat(s.position_left), parseFloat(s.position_top)],
+              })),
+              item_locations_updated_at: post.updated_at,
+            } as any,
+          ],
+          // Extended fields (exist in DB but not in PostRow type)
+          post_owner_id: post.user_id ?? null,
+          post_magazine_id: (postAny.post_magazine_id as string) ?? null,
+          ai_summary: (postAny.ai_summary as string) ?? null,
+          artist_name: post.artist_name ?? null,
+          group_name: post.group_name ?? null,
+          created_with_solutions: (postAny.created_with_solutions as boolean) ?? null,
+          like_count: (postAny.like_count as number) ?? 0,
+        } as ImageDetail;
       } catch {
         return null;
       }

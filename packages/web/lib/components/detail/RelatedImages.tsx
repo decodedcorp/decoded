@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfinitePosts } from "@/lib/hooks/usePosts";
-import Image from "next/image";
+import { PostImage } from "@/lib/components/shared/PostImage";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
@@ -153,33 +153,23 @@ export function RelatedImages({
                 {...cardProps}
                 className="related-card group block relative aspect-[4/5] overflow-hidden rounded-lg bg-muted"
               >
-                {post.image_url ? (
-                  <Image
-                    src={post.image_url}
-                    alt={`Post by @${account}`}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 33vw"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-muted-foreground text-xs">
-                      No Image
-                    </span>
-                  </div>
-                )}
+                <PostImage
+                  src={post.image_url ?? ""}
+                  alt={`Post by @${account}`}
+                  flagKey="RelatedImages"
+                  className="w-full h-full"
+                  imgClassName="transition-transform duration-700 group-hover:scale-105"
+                />
 
-                {/* Magazine-style overlay: artist_name의 N개의 아이템 둘러보기 + Read CTA */}
-                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="p-4 space-y-3">
-                    <p className="text-white/90 text-sm">
-                      {post.artist_name
-                        ? `${post.artist_name}의 아이템 둘러보기`
-                        : "아이템 둘러보기"}
+                {/* Always-visible overlay with post info */}
+                <div className="absolute inset-0 z-20 flex flex-col justify-end bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                  <div className="p-3 md:p-4">
+                    <p className="text-white/90 text-sm font-medium truncate">
+                      {post.artist_name ?? account}
                     </p>
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-white/90 group-hover:text-white transition-colors border-b border-white/40 group-hover:border-white pb-0.5 w-fit">
-                      Read
-                      <ArrowRight className="h-3.5 w-3.5" />
+                    <span className="inline-flex items-center gap-1 text-xs text-white/60 group-hover:text-white/90 transition-colors mt-1">
+                      View
+                      <ArrowRight className="h-3 w-3" />
                     </span>
                   </div>
                 </div>

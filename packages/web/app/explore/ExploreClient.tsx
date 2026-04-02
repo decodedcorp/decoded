@@ -4,15 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useInfinitePosts, type PostGridItem } from "@/lib/hooks/useImages";
 import ThiingsGrid, { type GridItem } from "@/lib/components/ThiingsGrid";
-import { useFilterStore } from "@/lib/stores/filterStore";
 import { useSearchStore } from "@/lib/stores/searchStore";
 import {
   ExploreCardCell,
   ExploreSkeletonCell,
-  ExploreFilterBar,
-  ExploreFilterSheet,
+  TrendingArtistsSection,
 } from "@/lib/components/explore";
-import { SlidersHorizontal } from "lucide-react";
 import { LoadingSpinner } from "@/lib/design-system";
 
 type Props = {
@@ -28,13 +25,8 @@ type Props = {
  * - GET /api/v1/posts with pagination
  * - Supports category filtering via API params
  */
-export function ExploreClient({
-  initialPosts: _initialPosts,
-  hasMagazine,
-}: Props) {
-  const activeFilter = useFilterStore((state) => state.activeFilter);
+export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Props) {
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Responsive grid size: smaller on mobile, larger on desktop
   const [gridSize, setGridSize] = useState({ width: 400, height: 500 });
@@ -66,10 +58,7 @@ export function ExploreClient({
     isFetchingNextPage,
   } = useInfinitePosts({
     limit: 40,
-    category: activeFilter,
     hasMagazine: hasMagazine ?? false,
-    // Note: search is not directly supported by Posts API
-    // If needed, we can add artist_name or group_name filter
   });
 
   // Flatten pages into a single items array
@@ -98,32 +87,13 @@ export function ExploreClient({
   // Render full-screen ThiingsGrid with filter bar
   return (
     <div className="relative h-[calc(100dvh-120px)] md:h-[calc(100dvh-72px)] flex flex-col">
-      {/* Desktop filter bar */}
-      <div className="hidden md:block px-4 py-3 border-b border-border flex-shrink-0">
-        <ExploreFilterBar />
-      </div>
-
-      {/* Mobile filter toggle button */}
-      <div className="md:hidden flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
-        <button
-          onClick={() => setFilterSheetOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filters
-        </button>
-      </div>
-
-      {/* Mobile filter sheet */}
-      <ExploreFilterSheet
-        open={filterSheetOpen}
-        onClose={() => setFilterSheetOpen(false)}
-      />
+      {/* Trending artists section — only shown on Explore tab, not Editorial */}
+      {!hasMagazine && <TrendingArtistsSection />}
 
       <div className="relative flex-1">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeFilter + debouncedQuery}
+            key={debouncedQuery}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -185,14 +155,14 @@ export function ExploreClient({
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
                   <div className="mb-4 text-4xl">📷</div>
                   <h2 className="mb-2 text-xl font-semibold text-foreground">
-                    {activeFilter !== "all" || debouncedQuery.trim().length > 0
+                    {debouncedQuery.trim().length > 0
                       ? "No posts found"
                       : "No posts found yet."}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {activeFilter !== "all" || debouncedQuery.trim().length > 0
-                      ? "Try adjusting your filters or search query."
-                      : "Check back later or try adjusting your filters."}
+                    {debouncedQuery.trim().length > 0
+                      ? "Try adjusting your search query."
+                      : "Check back later."}
                   </p>
                 </div>
               </div>

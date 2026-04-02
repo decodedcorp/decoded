@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
+import { prepare, layout } from "@chenglou/pretext";
 
 const vertexShader = `
 varying vec2 vUv;
@@ -27,18 +28,16 @@ void main() {
 
 const fragmentShader = `
 varying vec2 vUv;
-uniform float mouse;
 uniform float uTime;
 uniform sampler2D uTexture;
 
 void main() {
     float time = uTime;
     vec2 pos = vUv;
-    
-    float move = sin(time + mouse) * 0.01;
-    float r = texture2D(uTexture, pos + cos(time * 2. - time + pos.x) * .01).r;
-    float g = texture2D(uTexture, pos + tan(time * .5 + pos.x - time) * .01).g;
-    float b = texture2D(uTexture, pos - cos(time * 2. + time + pos.y) * .01).b;
+
+    float r = texture2D(uTexture, pos + cos(time + pos.x) * .01).r;
+    float g = texture2D(uTexture, pos + sin(pos.x - time * .5) * .01).g;
+    float b = texture2D(uTexture, pos - cos(time + pos.y) * .01).b;
     float a = texture2D(uTexture, pos).a;
     gl_FragColor = vec4(r, g, b, a);
 }
@@ -276,11 +275,13 @@ class CanvasTxt {
       this.context.font = this.font;
       const metrics = this.context.measureText(this.txt);
 
-      const textWidth = Math.ceil(metrics.width) + 20;
-      const textHeight =
-        Math.ceil(
-          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
-        ) + 20;
+      // Use measureText width + 2px buffer for sub-pixel rounding safety
+      const textWidth = Math.ceil(metrics.width) + 22;
+
+      // Use pretext for accurate cross-browser height measurement
+      const handle = prepare(this.txt, this.font);
+      const { height: pretextHeight } = layout(handle, Infinity, this.fontSize);
+      const textHeight = Math.ceil(pretextHeight) + 20;
 
       this.canvas.width = textWidth;
       this.canvas.height = textHeight;
@@ -293,11 +294,10 @@ class CanvasTxt {
       this.context.fillStyle = this.color;
       this.context.font = this.font;
 
-      const metrics = this.context.measureText(this.txt);
-      const yPos = 10 + metrics.actualBoundingBoxAscent;
-      const textWidth = metrics.width;
-      const leftMargin = 10;
-      const rightMargin = this.canvas.width - leftMargin - textWidth;
+      // Use pretext-measured height for consistent cross-browser vertical positioning
+      const handle = prepare(this.txt, this.font);
+      const { height } = layout(handle, Infinity, this.fontSize);
+      const yPos = height - 10;
 
       this.context.fillText(this.txt, 10, yPos);
     }
@@ -428,7 +428,6 @@ class CanvAscii {
       transparent: true,
       uniforms: {
         uTime: { value: 0 },
-        mouse: { value: 1.0 },
         uTexture: { value: this.texture },
         uEnableWaves: { value: this.enableWaves ? 1.0 : 0.0 },
       },
@@ -580,6 +579,8 @@ class CanvAscii {
 }
 
 interface DecodedLogoProps {
+  text?: string;
+  textColor?: string;
   asciiFontSize?: number;
   textFontSize?: number;
   planeBaseHeight?: number;
@@ -589,6 +590,8 @@ interface DecodedLogoProps {
 }
 
 export default function DecodedLogo({
+  text = "decoded",
+  textColor = "#d9fc69",
   asciiFontSize = 8,
   textFontSize = 200,
   planeBaseHeight = 8,
@@ -598,9 +601,6 @@ export default function DecodedLogo({
 }: DecodedLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const asciiRef = useRef<CanvAscii | null>(null);
-
-  const text = "decoded";
-  const textColor = "#d9fc69";
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -700,6 +700,8 @@ export default function DecodedLogo({
       }
     };
   }, [
+    text,
+    textColor,
     asciiFontSize,
     textFontSize,
     planeBaseHeight,

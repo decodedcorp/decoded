@@ -65,6 +65,7 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
   private intersectionObserver: IntersectionObserver | null = null;
   private imageObserver: IntersectionObserver | null = null;
   private imageObserverRef = { current: null as IntersectionObserver | null };
+  private resizeObserver: ResizeObserver | null = null;
   private observerState: ObserverState;
 
   constructor(props: ThiingsGridProps) {
@@ -118,6 +119,14 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
         passive: false,
       });
     }
+
+    // Recalculate grid when container resizes (e.g., TrendingArtistsSection loads and shifts layout)
+    if (typeof ResizeObserver !== "undefined" && container) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateGridItems();
+      });
+      this.resizeObserver.observe(container);
+    }
   }
 
   componentDidUpdate(prevProps: ThiingsGridProps, prevState: State) {
@@ -146,6 +155,8 @@ class ThiingsGrid extends Component<ThiingsGridProps, State> {
     this.intersectionObserver = null;
     this.imageObserver?.disconnect();
     this.imageObserver = null;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     const container = this.containerRef.current;
     if (container) {
       container.removeEventListener("wheel", this.handleWheel);

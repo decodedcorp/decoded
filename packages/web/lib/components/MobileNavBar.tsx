@@ -1,11 +1,9 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, BookOpen, PlusCircle, User } from "lucide-react";
+import { memo } from "react";
+import { usePathname } from "next/navigation";
+import { Home, Search, Compass } from "lucide-react";
 import { NavBar, NavItem } from "@/lib/design-system";
-import { RequestModal } from "./request/RequestModal";
-import { useAuthStore } from "@/lib/stores/authStore";
 
 interface NavItemConfig {
   id: string;
@@ -17,21 +15,13 @@ interface NavItemConfig {
 }
 
 /**
- * Navigation items. Feed 비활성화: 네비에서만 제거, /feed 경로·코드는 유지.
- * Home, Search, + (Request), Profile (4 items)
+ * Navigation items for 1차 릴리즈: Home, Search, Explore (3 items)
+ * Upload/Profile은 추후 추가 예정
  */
 const navItems: NavItemConfig[] = [
   { id: "home", href: "/", icon: Home, label: "Home" },
   { id: "search", href: "/search", icon: Search, label: "Search" },
-  { id: "editorial", href: "/editorial", icon: BookOpen, label: "Editorial" },
-  {
-    id: "request",
-    href: "#",
-    icon: PlusCircle,
-    label: "Upload",
-    isAction: true,
-  },
-  { id: "profile", href: "/profile", icon: User, label: "Profile" },
+  { id: "explore", href: "/explore", icon: Compass, label: "Explore" },
 ];
 
 /**
@@ -53,49 +43,28 @@ const navItems: NavItemConfig[] = [
  */
 export const MobileNavBar = memo(() => {
   const pathname = usePathname();
-  const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-
-  const handleRequestOpen = useCallback(() => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    setIsRequestModalOpen(true);
-  }, [user, router]);
-
-  const handleRequestClose = useCallback(() => {
-    setIsRequestModalOpen(false);
-  }, []);
 
   return (
-    <>
-      <NavBar>
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
+    <NavBar>
+      {navItems.map((item) => {
+        const isActive =
+          item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href);
+        const Icon = item.icon;
 
-          return (
-            <NavItem
-              key={item.id}
-              icon={<Icon className="h-[22px] w-[22px]" />}
-              label={item.label}
-              href={item.isAction ? undefined : item.href}
-              onClick={item.isAction ? handleRequestOpen : undefined}
-              active={isActive}
-              disabled={item.disabled}
-            />
-          );
-        })}
-      </NavBar>
-
-      {/* Request Modal */}
-      <RequestModal isOpen={isRequestModalOpen} onClose={handleRequestClose} />
-    </>
+        return (
+          <NavItem
+            key={item.id}
+            icon={<Icon className="h-[22px] w-[22px]" />}
+            label={item.label}
+            href={item.href}
+            active={isActive}
+            disabled={item.disabled}
+          />
+        );
+      })}
+    </NavBar>
   );
 });
 

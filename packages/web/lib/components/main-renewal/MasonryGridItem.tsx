@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 
 import type { GridItemData, GridItemSpot } from "./types";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,6 +30,7 @@ function clampHeight(aspectRatio: number, index: number): number {
   const v = HEIGHT_VARIANTS[index % HEIGHT_VARIANTS.length];
   return Math.min(v.max, Math.max(v.min, Math.round(v.base * aspectRatio)));
 }
+
 
 /* ------------------------------------------------------------------ */
 /*  Spot Marker + Tooltip                                              */
@@ -159,17 +160,17 @@ export default function MasonryGridItem({
       onMouseLeave={handleMouseLeave}
     >
       {/* Background image */}
-      <Image
+      <PostImage
         src={item.imageUrl}
         alt={item.title}
-        fill
-        className="object-cover transition-transform duration-500 group-hover:scale-105"
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+        className="h-full"
+        imgClassName="transition-transform duration-500 group-hover:scale-105"
+        flagKey="MasonryGridItem"
       />
 
       {/* Spot overlay markers */}
       {hasSpots && (
-        <div ref={spotsRef} className="absolute inset-0">
+        <div ref={spotsRef} className="absolute inset-0 z-20">
           {item.spots!.map((spot, i) => (
             <SpotMarker key={`${item.id}-spot-${i}`} spot={spot} />
           ))}
@@ -177,7 +178,7 @@ export default function MasonryGridItem({
       )}
 
       {/* Bottom gradient + text */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-16">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/70 to-transparent p-4 pt-16">
         <h3 className="text-sm font-semibold text-mag-text">{item.title}</h3>
         {item.subtitle && (
           <p className="mt-0.5 text-xs text-mag-text/60">{item.subtitle}</p>

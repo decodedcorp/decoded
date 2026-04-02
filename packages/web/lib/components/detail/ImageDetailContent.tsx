@@ -68,7 +68,8 @@ export function ImageDetailContent({
 }: Props) {
   const hasMagazine = !!magazineLayout;
   const imageUrl = typeof image.image_url === "string" ? image.image_url : null;
-  const accentColor = magazineLayout?.design_spec?.accent_color;
+  // D-08: Always use brand color — per-post design_spec.accent_color override removed
+  const accentColor = "var(--mag-accent)";
   const commentSectionRef = useRef<HTMLDivElement>(null);
 
   const handleShare = useCallback(async () => {
@@ -227,9 +228,9 @@ export function ImageDetailContent({
 
   const commentCount = useCommentCount(image.id);
 
-  const magazineCssVars = accentColor
-    ? ({ "--magazine-accent": accentColor } as React.CSSProperties)
-    : undefined;
+  // D-08: Always set --magazine-accent to brand color (accentColor is always "var(--mag-accent)")
+  const magazineCssVars = { "--magazine-accent": accentColor } as React.CSSProperties;
+  // Note: PostBadge intentionally not rendered (D-06 — clean image-centric UX)
 
   return (
     <div className="detail-content relative" style={magazineCssVars}>
@@ -271,7 +272,8 @@ export function ImageDetailContent({
         )}
 
         {/* Section 2: Interactive Showcase (non-magazine) or static post image with spot dots (magazine) */}
-        {Boolean(hasMagazine && imageUrl) && (
+        {/* In modal mode, the floating left panel already shows this image — skip duplicate */}
+        {Boolean(hasMagazine && imageUrl && !isModal) && (
           <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
             <div className="relative overflow-hidden rounded-xl">
               <Image
@@ -351,6 +353,8 @@ export function ImageDetailContent({
               relatedItems={magazineLayout.related_items}
               accentColor={accentColor}
               isModal={isModal}
+              scrollContainerRef={scrollContainerRef}
+              onActiveIndexChange={onActiveIndexChange}
             />
           </>
         ) : (
@@ -444,26 +448,6 @@ export function ImageDetailContent({
         {!hasItems && !hasMagazine && (
           <div className="mx-auto max-w-4xl px-4 py-16 md:px-8">
             <div className="mb-8">
-              <div className="mb-4 flex flex-wrap gap-2">
-                {image.status && (
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${
-                      image.status === "pending"
-                        ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
-                        : image.status === "extracted"
-                          ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "bg-slate-100 text-slate-900 dark:bg-slate-800/80 dark:text-slate-100"
-                    }`}
-                  >
-                    {image.status}
-                  </span>
-                )}
-                {image.with_items && (
-                  <span className="rounded-full bg-blue-500/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-100">
-                    Items Detected
-                  </span>
-                )}
-              </div>
               <p className="text-sm text-muted-foreground">
                 Created: {new Date(image.created_at).toLocaleDateString()}
               </p>

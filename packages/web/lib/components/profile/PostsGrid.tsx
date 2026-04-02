@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchPostsByUserProfile } from "@/lib/supabase/queries/profile";
+import { PostImage } from "@/lib/components/shared/PostImage";
 
 interface PostItem {
   id: string;
@@ -16,6 +17,29 @@ export interface PostsGridProps {
   userId?: string;
   posts?: PostItem[];
   className?: string;
+}
+
+function PostsGridItem({ post }: { post: PostItem }) {
+  return (
+    <Link
+      href={`/posts/${post.id}`}
+      className="group relative rounded-lg overflow-hidden"
+    >
+      <PostImage
+        src={post.imageUrl}
+        alt={post.title || "Post"}
+        maxHeight="300px"
+        flagKey="PostsGrid"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-20" />
+      <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <p className="text-xs font-medium text-white truncate">
+          {post.title}
+        </p>
+        <p className="text-[10px] text-white/70">{post.itemCount} items</p>
+      </div>
+    </Link>
+  );
 }
 
 export function PostsGrid({ userId, posts, className }: PostsGridProps) {
@@ -53,25 +77,7 @@ export function PostsGrid({ userId, posts, className }: PostsGridProps) {
   return (
     <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-3", className)}>
       {displayPosts.map((post) => (
-        <Link
-          key={post.id}
-          href={`/posts/${post.id}`}
-          className="group relative aspect-[4/5] rounded-lg overflow-hidden bg-muted"
-        >
-          <img
-            src={post.imageUrl}
-            alt={post.title || "Post"}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <p className="text-xs font-medium text-white truncate">
-              {post.title}
-            </p>
-            <p className="text-[10px] text-white/70">{post.itemCount} items</p>
-          </div>
-        </Link>
+        <PostsGridItem key={post.id} post={post} />
       ))}
     </div>
   );

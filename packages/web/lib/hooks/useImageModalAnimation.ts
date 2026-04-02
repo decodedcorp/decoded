@@ -56,6 +56,7 @@ export function useImageModalAnimation({
   // Swipe gesture state
   const touchStartY = useRef<number>(0);
   const touchCurrentY = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);
 
   // Mount/Enter Animation — creates the GSAP context that all other animations add to
   useEffect(() => {
@@ -68,7 +69,8 @@ export function useImageModalAnimation({
     ctxRef.current = gsap.context(() => {
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
 
-      gsap.set(backdropRef.current, { opacity: 0 });
+      // Backdrop visible immediately to prevent background flash
+      gsap.set(backdropRef.current, { opacity: 1 });
 
       if (isDesktop) {
         gsap.set(drawerRef.current, { x: "100%", y: 0 });
@@ -76,16 +78,13 @@ export function useImageModalAnimation({
         gsap.set(drawerRef.current, { x: 0, y: "100%" });
       }
 
-      const tl = gsap.timeline();
-      tl.to(
-        backdropRef.current,
-        { opacity: 1, duration: 0.4, ease: "power2.out" },
-        0
-      ).to(
-        drawerRef.current,
-        { x: "0%", y: "0%", duration: 0.5, ease: "power3.out" },
-        0.1
-      );
+      // Drawer slides in without delay
+      gsap.to(drawerRef.current, {
+        x: "0%",
+        y: "0%",
+        duration: 0.35,
+        ease: "power3.out",
+      });
     }, containerRef);
 
     return () => {
@@ -138,24 +137,12 @@ export function useImageModalAnimation({
         opacity: 1,
       });
 
-      const tl = gsap.timeline();
-      tl.to(leftImageContainerRef.current, {
+      gsap.to(leftImageContainerRef.current, {
         ...targetProps,
-        duration: 0.6,
-        ease: "power3.inOut",
+        duration: 0.4,
+        ease: "power3.out",
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
       });
-      tl.to(
-        leftImageContainerRef.current,
-        {
-          scale: 1.02,
-          duration: 0.3,
-          ease: "power1.out",
-          yoyo: true,
-          repeat: 1,
-        },
-        0
-      );
     } else {
       gsap.set(leftImageContainerRef.current, {
         position: "fixed",
@@ -187,57 +174,13 @@ export function useImageModalAnimation({
         },
       });
 
+      // Fade out all elements together for a clean, synchronized close
+      const targets = [backdropRef.current, drawerRef.current];
       if (isDesktop && leftImageContainerRef.current) {
-        tl.set(leftImageContainerRef.current, { opacity: 1 }, 0);
+        targets.push(leftImageContainerRef.current);
       }
 
-      tl.to(
-        [backdropRef.current, drawerRef.current],
-        { opacity: 0, duration: 0.3, ease: "power3.in" },
-        0
-      );
-
-      if (isDesktop && originRect && leftImageContainerRef.current) {
-        tl.to(
-          leftImageContainerRef.current,
-          {
-            top: originRect.top,
-            left: originRect.left,
-            width: originRect.width,
-            height: originRect.height,
-            borderRadius: "0.75rem",
-            boxShadow: "none",
-            scale: 1,
-            duration: 0.5,
-            ease: "power3.inOut",
-          },
-          0
-        )
-          .to(
-            leftImageContainerRef.current,
-            {
-              scale: 0.98,
-              duration: 0.25,
-              ease: "sine.inOut",
-              yoyo: true,
-              repeat: 1,
-            },
-            0
-          )
-          .to(
-            leftImageContainerRef.current,
-            {
-              opacity: 0,
-              duration: 0.1,
-              ease: "power2.in",
-              yoyo: true,
-              repeat: 1,
-            },
-            "-=0.05"
-          );
-      } else if (isDesktop && leftImageContainerRef.current) {
-        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
-      }
+      tl.to(targets, { opacity: 0, duration: 0.3, ease: "power3.in" }, 0);
     });
   }, [isClosing, isMaximizing, router, originRect, reset]);
 
@@ -265,6 +208,8 @@ export function useImageModalAnimation({
     }
 
     touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -276,10 +221,22 @@ export function useImageModalAnimation({
     touchCurrentY.current = e.touches[0].clientY;
     const diff = touchCurrentY.current - touchStartY.current;
 
-    if (diff > 0 && drawerRef.current && ctxRef.current) {
+    if (drawerRef.current && ctxRef.current) {
+      // Rubber-band: resist upward drag, follow downward drag
+      const translateY = diff > 0 ? diff : diff * 0.15;
+      const drawerHeight = drawerRef.current.offsetHeight;
+      const progress = Math.min(Math.max(diff / drawerHeight, 0), 1);
+
       ctxRef.current.add(() => {
-        gsap.set(drawerRef.current, { y: diff });
+        gsap.set(drawerRef.current, { y: translateY });
       });
+
+      // Fade backdrop as sheet is dragged down
+      if (backdropRef.current && diff > 0) {
+        ctxRef.current.add(() => {
+          gsap.set(backdropRef.current, { opacity: 1 - progress * 0.6 });
+        });
+      }
     }
   };
 
@@ -290,47 +247,57 @@ export function useImageModalAnimation({
     if (isDesktop) return;
 
     const diff = touchCurrentY.current - touchStartY.current;
+    const elapsed = Date.now() - touchStartTime.current;
+    const velocity = diff / Math.max(elapsed, 1); // px/ms
 
-    if (diff > 100) {
-      handleClose();
-    } else if (diff > 0 && drawerRef.current && ctxRef.current) {
+    // Close if: dragged far enough OR fast flick downward
+    const shouldClose = diff > 100 || (velocity > 0.5 && diff > 30);
+
+    if (shouldClose && drawerRef.current && ctxRef.current) {
+      // Slide down to close (not fade)
+      setIsClosing(true);
       ctxRef.current.add(() => {
-        gsap.to(drawerRef.current, { y: 0, duration: 0.3, ease: "power2.out" });
+        const tl = gsap.timeline({
+          onComplete: () => {
+            gsap.delayedCall(0.05, () => {
+              reset();
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/");
+              }
+            });
+          },
+        });
+        tl.to(drawerRef.current, { y: "100%", duration: 0.25, ease: "power2.in" }, 0);
+        tl.to(backdropRef.current, { opacity: 0, duration: 0.25, ease: "power2.in" }, 0);
+      });
+    } else if (drawerRef.current && ctxRef.current) {
+      // Snap back with spring
+      ctxRef.current.add(() => {
+        gsap.to(drawerRef.current, { y: 0, duration: 0.35, ease: "back.out(1.2)" });
+        if (backdropRef.current) {
+          gsap.to(backdropRef.current, { opacity: 1, duration: 0.35, ease: "power2.out" });
+        }
       });
     }
 
     touchStartY.current = 0;
     touchCurrentY.current = 0;
+    touchStartTime.current = 0;
   };
 
   const handleMaximize = useCallback(() => {
     if (isClosing || isMaximizing || !ctxRef.current) return;
     setIsMaximizing(true);
 
-    ctxRef.current.add(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          gsap.delayedCall(0.05, () => {
-            reset();
-            router.push(`/posts/${imageId}`);
-          });
-        },
-      });
-
-      // Fade out backdrop and drawer (same as handleClose)
-      tl.to(
-        [backdropRef.current, drawerRef.current],
-        { opacity: 0, duration: 0.3, ease: "power3.in" },
-        0
-      );
-
-      // Fade out floating image on desktop
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if (isDesktop && leftImageContainerRef.current) {
-        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
-      }
-    });
-  }, [isClosing, isMaximizing, imageId, router, reset]);
+    // Instant transition — hide modal elements and navigate immediately.
+    // The full page has its own fade-in animation for a smooth entry.
+    if (drawerRef.current) drawerRef.current.style.opacity = "0";
+    if (leftImageContainerRef.current) leftImageContainerRef.current.style.opacity = "0";
+    reset();
+    window.location.href = `/posts/${imageId}`;
+  }, [isClosing, isMaximizing, imageId, reset]);
 
   return {
     handleClose,

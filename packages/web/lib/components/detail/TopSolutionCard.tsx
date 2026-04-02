@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, ExternalLink } from "lucide-react";
 import type { UseAdoptDropdownReturn } from "@/lib/hooks/useAdoptDropdown";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 
 /** Minimal shape of what ItemDetailCard uses from SolutionListItem */
 export interface SolutionItem {
@@ -71,20 +72,22 @@ export function TopSolutionCard({
               href={linkUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 w-14 h-14 rounded overflow-hidden bg-muted/30 border border-border/20"
+              className="shrink-0 w-14 h-14 rounded border border-border/20"
             >
-              <img
+              <ItemImage
                 src={topSolution.thumbnail_url}
                 alt=""
-                className="w-full h-full object-cover"
+                size="thumbnail"
+                className="rounded"
               />
             </a>
           ) : (
-            <div className="shrink-0 w-14 h-14 rounded overflow-hidden bg-muted/30 border border-border/20">
-              <img
+            <div className="shrink-0 w-14 h-14 rounded border border-border/20">
+              <ItemImage
                 src={topSolution.thumbnail_url}
                 alt=""
-                className="w-full h-full object-cover"
+                size="thumbnail"
+                className="rounded"
               />
             </div>
           ))}

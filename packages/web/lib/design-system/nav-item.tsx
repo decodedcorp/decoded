@@ -12,7 +12,7 @@ import Link from "next/link";
  * @see docs/design-system/decoded.pen - Mobile Nav Bar spec
  */
 export const navItemVariants = cva(
-  "flex flex-col items-center gap-1 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   {
     variants: {
       state: {

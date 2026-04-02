@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import Image from "next/image";
 import Markdown from "react-markdown";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 import { ExternalLink, Plus } from "lucide-react";
 import { extractKoreanPart, filterKoreanTags } from "@/lib/utils/locale";
 import type { UiItem } from "./types";
@@ -114,21 +114,15 @@ export function ItemDetailCard({
         ref={contentRef}
         className="relative z-10 flex flex-col gap-4 md:gap-6"
       >
-        {/* Item Image - Layered Collage Style */}
-        <div className="group/image relative w-full aspect-[4/3] md:aspect-[3/2] rounded-xl overflow-visible">
-          <div className="absolute inset-4 z-0 bg-primary/5 blur-3xl rounded-full" />
-          <div className="absolute inset-0 z-10 bg-muted/5 rounded-xl border border-border/10 backdrop-blur-[2px] overflow-hidden" />
-          {item.imageUrl && (
-            <div className="absolute inset-0 z-20 transition-transform duration-700 ease-out group-hover/image:scale-105 group-hover/image:-translate-y-2">
-              <Image
-                src={item.imageUrl}
-                alt={item.product_name || `Item ${formattedIndex}`}
-                fill
-                className="object-contain p-3 md:p-5 drop-shadow-2xl filter brightness-[1.02]"
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 800px"
-              />
-            </div>
-          )}
+        {/* Item Image */}
+        <div className="group/image">
+          <ItemImage
+            src={item.imageUrl || ""}
+            alt={item.product_name || `Item ${formattedIndex}`}
+            size="detail"
+            className="rounded-xl transition-transform duration-700 ease-out group-hover/image:scale-105 group-hover/image:-translate-y-2"
+            imgClassName="drop-shadow-2xl"
+          />
         </div>
 
         {/* Text Content */}

@@ -16,11 +16,10 @@ type Props = {
 };
 
 export function MagazineContent({ layout, relatedEditorials }: Props) {
-  const accentColor = layout.design_spec?.accent_color;
+  // D-08: Always use brand color — per-post design_spec.accent_color override removed
+  const accentColor = "var(--mag-accent)";
 
-  const cssVars = accentColor
-    ? ({ "--magazine-accent": accentColor } as React.CSSProperties)
-    : undefined;
+  const cssVars = { "--magazine-accent": accentColor } as React.CSSProperties;
 
   return (
     <div className="magazine-content relative" style={cssVars}>

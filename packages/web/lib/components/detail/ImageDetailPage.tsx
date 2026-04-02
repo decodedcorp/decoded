@@ -6,8 +6,7 @@ import { LenisProvider } from "./LenisProvider";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useRouter } from "next/navigation";
-import { X, Share2, Heart, Bookmark } from "lucide-react";
-import { ReportErrorButton } from "./ReportErrorButton";
+import { ArrowLeft } from "lucide-react";
 import { Lightbox } from "./Lightbox";
 import { ErrorState } from "@/lib/components/shared";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
@@ -53,36 +52,8 @@ export function ImageDetailPage({ imageId }: Props) {
     );
   }, []);
 
-  const handleClose = () => {
+  const handleBack = () => {
     router.back();
-  };
-
-  const handleShare = async () => {
-    const url = window.location.href;
-
-    // Try Web Share API first (mobile/desktop)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Image Details",
-          url: url,
-        });
-        return;
-      } catch (err) {
-        // User cancelled or error occurred, fallback to clipboard
-        if ((err as Error).name !== "AbortError") {
-          console.error("Error sharing:", err);
-        }
-      }
-    }
-
-    // Fallback to clipboard copy
-    try {
-      await navigator.clipboard.writeText(url);
-      // You might want to show a toast notification here
-    } catch (err) {
-      console.error("Failed to copy URL to clipboard:", err);
-    }
   };
 
   const showMagazine =
@@ -120,34 +91,14 @@ export function ImageDetailPage({ imageId }: Props) {
   return (
     <LenisProvider>
       <div ref={pageRef} className="relative">
-        {/* Action Buttons */}
-        <div className="fixed right-4 top-16 md:top-20 z-50 flex gap-2">
+        {/* Back Button */}
+        <div className="fixed left-4 top-16 md:top-20 z-50">
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
-            aria-label="Like"
+            onClick={handleBack}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+            aria-label="Back"
           >
-            <Heart className="h-5 w-5" />
-          </button>
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
-            aria-label="Save"
-          >
-            <Bookmark className="h-5 w-5" />
-          </button>
-          <ReportErrorButton postId={image.id} size="md" />
-          <button
-            onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
-            aria-label="Share"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
         </div>
 

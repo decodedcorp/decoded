@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
 import type { SolutionItem } from "./TopSolutionCard";
 import type { UseAdoptDropdownReturn } from "@/lib/hooks/useAdoptDropdown";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 
 /** Parse solution metadata (Record) into key-value pairs */
 function parseSolutionMetadata(
@@ -96,20 +97,22 @@ export function OtherSolutionsList({
                       href={linkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 w-10 h-10 rounded overflow-hidden bg-muted/30 border border-border/20"
+                      className="shrink-0 w-10 h-10 rounded border border-border/20"
                     >
-                      <img
+                      <ItemImage
                         src={sol.thumbnail_url}
                         alt=""
-                        className="w-full h-full object-cover"
+                        size="thumbnail"
+                        className="rounded"
                       />
                     </a>
                   ) : (
-                    <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-muted/30 border border-border/20">
-                      <img
+                    <div className="shrink-0 w-10 h-10 rounded border border-border/20">
+                      <ItemImage
                         src={sol.thumbnail_url}
                         alt=""
-                        className="w-full h-full object-cover"
+                        size="thumbnail"
+                        className="rounded"
                       />
                     </div>
                   ))}

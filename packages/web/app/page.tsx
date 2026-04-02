@@ -33,6 +33,8 @@ import {
   fetchBestItemsServer,
   fetchTrendingKeywordsServer,
 } from "@/lib/supabase/queries/main-page.server";
+import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
+import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
 import {
   fetchForYouPosts,
   fetchTrendingPosts,
@@ -79,6 +81,7 @@ export default async function Home({
     forYouPosts,
     trendingPosts,
     rankingUsersResult,
+    artistProfileMap,
   ] = await Promise.all([
     fetchFeaturedPostServer(),
     fetchWeeklyBestPostsServer(30),
@@ -94,7 +97,23 @@ export default async function Home({
       .select("id, username, avatar_url, total_points, style_dna")
       .order("total_points", { ascending: false })
       .limit(10),
+    buildArtistProfileMap(),
   ]);
+
+  /**
+   * Enriches a raw artist/group name with warehouse entity data.
+   * Falls back gracefully to the original name when no warehouse match found.
+   */
+  function enrichArtistName(
+    name: string | null
+  ): { displayName: string; profileImageUrl: string | null } {
+    if (!name) return { displayName: "", profileImageUrl: null };
+    const entry: ArtistProfileEntry | undefined = artistProfileMap.get(name.toLowerCase());
+    return {
+      displayName: entry?.name ?? name,
+      profileImageUrl: entry?.profileImageUrl ?? null,
+    };
+  }
 
   // --- Data transforms ---
 
@@ -130,44 +149,51 @@ export default async function Home({
   const gridOffset = Math.min(8, Math.floor(gridSource.length / 2));
   const gridItems: GridItemData[] =
     gridSource.length > 0
-      ? [
-          ...gridSource.slice(gridOffset),
-          ...gridSource.slice(0, gridOffset),
-        ].map((post, i) => ({
-          id: post.id,
-          imageUrl: post.imageUrl!,
-          title: post.artistName || post.groupName || "Unknown",
-          subtitle: post.context || post.mediaTitle || undefined,
-          category: post.mediaType || "Style",
-          link: `/posts/${post.id}`,
-          aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
-        }))
+      ? [...gridSource.slice(gridOffset), ...gridSource.slice(0, gridOffset)]
+          .map((post, i) => {
+            const { displayName } = enrichArtistName(post.artistName || post.groupName);
+            return {
+              id: post.id,
+              imageUrl: post.imageUrl!,
+              title: displayName || "Unknown",
+              subtitle: post.context || post.mediaTitle || undefined,
+              category: post.mediaType || "Style",
+              link: `/posts/${post.id}`,
+              aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
+            };
+          })
       : (defaultGridItems as GridItemData[]);
 
-  const spotlightStyles: StyleCardData[] = artistSpotlight.map((s) => ({
-    id: s.post.id,
-    title: s.post.artistName || s.post.groupName || "Artist",
-    description: s.post.context || s.post.mediaTitle || "",
-    artistName: s.post.artistName || s.post.groupName || "Unknown",
-    imageUrl: s.post.imageUrl || undefined,
-    link: `/posts/${s.post.id}`,
-  }));
+  const spotlightStyles: StyleCardData[] = artistSpotlight.map((s) => {
+    const { displayName } = enrichArtistName(s.post.artistName || s.post.groupName);
+    return {
+      id: s.post.id,
+      title: displayName || "Artist",
+      description: s.post.context || s.post.mediaTitle || "",
+      artistName: displayName || "Unknown",
+      imageUrl: s.post.imageUrl || undefined,
+      link: `/posts/${s.post.id}`,
+    };
+  });
 
-  const whatsNewStyles: StyleCardData[] = whatsNewData.map((s) => ({
-    id: s.post.id,
-    title: s.post.artistName || s.post.groupName || "New Style",
-    description: s.post.context || s.post.mediaTitle || "",
-    artistName: s.post.artistName || s.post.groupName || "Unknown",
-    imageUrl: s.post.imageUrl || undefined,
-    link: `/posts/${s.post.id}`,
-    items: s.items.map((item) => ({
-      id: String(item.id),
-      label: item.label,
-      brand: item.brand,
-      name: item.name,
-      imageUrl: item.imageUrl,
-    })),
-  }));
+  const whatsNewStyles: StyleCardData[] = whatsNewData.map((s) => {
+    const { displayName } = enrichArtistName(s.post.artistName || s.post.groupName);
+    return {
+      id: s.post.id,
+      title: displayName || "New Style",
+      description: s.post.context || s.post.mediaTitle || "",
+      artistName: displayName || "Unknown",
+      imageUrl: s.post.imageUrl || undefined,
+      link: `/posts/${s.post.id}`,
+      items: s.items.map((item) => ({
+        id: String(item.id),
+        label: item.label,
+        brand: item.brand,
+        name: item.name,
+        imageUrl: item.imageUrl,
+      })),
+    };
+  });
 
   // --- Build HeroPostEntry[] for HeroItemSync ---
   // Each entry = a post that can become the hero, with its items
@@ -508,7 +534,7 @@ export default async function Home({
   ].slice(0, 20);
 
   return (
-    <div className="min-h-screen bg-[#050505]">
+    <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       {/* ─── 1. Hero Collage ─── */}
       <HeroItemSync posts={heroPosts} />
 
