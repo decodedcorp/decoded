@@ -310,15 +310,19 @@ export function ImageDetailModal({ imageId }: Props) {
         </div>
       )}
 
-      {/* Drawer */}
+      {/* Drawer (mobile: bottom sheet ~90vh, desktop: right-side drawer full height) */}
       <aside
         ref={drawerRef}
-        className="relative z-[70] flex h-full w-full flex-col bg-background shadow-2xl md:w-[50vw] lg:w-[600px] xl:w-[700px] translate-y-full md:translate-x-full md:translate-y-0 overflow-hidden"
+        className="relative z-[70] flex h-[90vh] md:h-full w-full flex-col bg-background shadow-2xl rounded-t-[20px] md:rounded-none md:w-[50vw] lg:w-[600px] xl:w-[700px] translate-y-full md:translate-x-full md:translate-y-0 overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         data-lenis-prevent
       >
+        {/* Drag handle - mobile only */}
+        <div className="md:hidden flex items-center justify-center py-3 shrink-0">
+          <div className="w-10 h-1 bg-[#3D3D3D] rounded-sm" />
+        </div>
         <div
           ref={scrollContainerRef}
           className="relative flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
