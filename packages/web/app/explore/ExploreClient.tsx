@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useInfinitePosts, type PostGridItem } from "@/lib/hooks/useImages";
 import ThiingsGrid, { type GridItem } from "@/lib/components/ThiingsGrid";
-import { useFilterStore } from "@/lib/stores/filterStore";
 import { useSearchStore } from "@/lib/stores/searchStore";
 import { useHierarchicalFilterStore } from "@decoded/shared/stores/hierarchicalFilterStore";
 import {
@@ -31,10 +30,13 @@ type Props = {
  * - Supports category filtering via API params
  */
 export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Props) {
-  const activeFilter = useFilterStore((state) => state.activeFilter);
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
-  const { category: hierCategory, mediaId, castId, contextType } = useHierarchicalFilterStore();
+  const { mediaId, castId, breadcrumb, hasActiveFilters } = useHierarchicalFilterStore();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  // Derive display names from breadcrumb for ilike queries
+  const mediaName = breadcrumb.find((b) => b.level === 2)?.label ?? undefined;
+  const castName = breadcrumb.find((b) => b.level === 3)?.label ?? undefined;
 
   // Responsive grid size: smaller on mobile, larger on desktop
   const [gridSize, setGridSize] = useState({ width: 400, height: 500 });
@@ -66,13 +68,9 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
     isFetchingNextPage,
   } = useInfinitePosts({
     limit: 40,
-    category: activeFilter,
     hasMagazine: hasMagazine ?? false,
-    mediaId: mediaId ?? undefined,
-    castId: castId ?? undefined,
-    contextType: contextType ?? undefined,
-    // Note: search is not directly supported by Posts API
-    // If needed, we can add artist_name or group_name filter
+    mediaName,
+    castName,
   });
 
   // Flatten pages into a single items array
@@ -127,7 +125,7 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
       <div className="relative flex-1">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeFilter + debouncedQuery}
+            key={`${mediaId}-${castId}-${debouncedQuery}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -189,12 +187,12 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
                   <div className="mb-4 text-4xl">📷</div>
                   <h2 className="mb-2 text-xl font-semibold text-foreground">
-                    {activeFilter !== "all" || debouncedQuery.trim().length > 0
+                    {hasActiveFilters() || debouncedQuery.trim().length > 0
                       ? "No posts found"
                       : "No posts found yet."}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {activeFilter !== "all" || debouncedQuery.trim().length > 0
+                    {hasActiveFilters() || debouncedQuery.trim().length > 0
                       ? "Try adjusting your filters or search query."
                       : "Check back later or try adjusting your filters."}
                   </p>

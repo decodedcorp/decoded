@@ -132,6 +132,7 @@ v9.0 key constraints (from research):
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260402-j6l | 상단 ASCII 코드로고에 @chenglou/pretext 적용하여 클리어하게 조정 | 2026-04-02 | da81dc60 | [260402-j6l-ascii-pretext](./quick/260402-j6l-ascii-pretext/) |
+| 260402-j3i | explore 상단 필터 정리 (Category/Context/Sort 제거) | 2026-04-02 | 4c8a7338 | [260402-j3i-explore](./quick/260402-j3i-explore/) |
 
 ### Pending Todos
 

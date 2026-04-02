@@ -161,8 +161,10 @@ export function useInfinitePosts(params: {
   groupName?: string;
   sort?: "recent" | "popular" | "trending";
   hasMagazine?: boolean;
-  mediaId?: string;
-  castId?: string;
+  /** Display name from hierarchical filter (e.g., "NewJeans") — matched via ilike on group_name */
+  mediaName?: string;
+  /** Display name from hierarchical filter (e.g., "Minji") — matched via ilike on artist_name */
+  castName?: string;
   contextType?: string;
 }) {
   const {
@@ -173,8 +175,8 @@ export function useInfinitePosts(params: {
     groupName,
     sort = "recent",
     hasMagazine,
-    mediaId,
-    castId,
+    mediaName,
+    castName,
     contextType,
   } = params;
 
@@ -182,7 +184,7 @@ export function useInfinitePosts(params: {
     queryKey: [
       "posts",
       "infinite",
-      { category, search, artistName, groupName, sort, limit, hasMagazine, mediaId, castId, contextType },
+      { category, search, artistName, groupName, sort, limit, hasMagazine, mediaName, castName, contextType },
     ],
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
@@ -209,18 +211,17 @@ export function useInfinitePosts(params: {
         query = query.not("post_magazine_id", "is", null);
       }
 
-      // Hierarchical filters
-      // contextType maps directly to posts.context column (confirmed)
+      // mediaName from hierarchical filter — matches group_name column
+      if (mediaName) {
+        query = query.ilike("group_name", `%${mediaName}%`);
+      }
+      // castName from hierarchical filter — matches artist_name column
+      if (castName) {
+        query = query.ilike("artist_name", `%${castName}%`);
+      }
+      // contextType from hierarchical filter — matches context column exactly
       if (contextType) {
         query = query.eq("context", contextType);
-      }
-      // mediaId from hierarchical filter — mock data, use group_name ilike as approximation
-      if (mediaId) {
-        query = query.ilike("group_name", `%${mediaId}%`);
-      }
-      // castId from hierarchical filter — mock data, use artist_name ilike as approximation
-      if (castId) {
-        query = query.ilike("artist_name", `%${castId}%`);
       }
 
       // Sort
