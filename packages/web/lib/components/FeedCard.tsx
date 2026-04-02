@@ -223,30 +223,41 @@ export const FeedCard = memo(
           {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
           <div
             className={cn(
-              "relative",
+              "relative overflow-hidden",
               useDynamicRatio ? "bg-black" : "aspect-[4/5] bg-muted"
             )}
           >
             {imageUrl && !imageError ? (
-              <img
-                src={imageUrl}
-                loading={priority ? "eager" : "lazy"}
-                decoding="async"
-                fetchPriority={priority ? "high" : "auto"}
-                alt={`Image ${id}`}
-                {...(useDynamicRatio && imgW && imgH
-                  ? { width: imgW, height: imgH }
-                  : {})}
-                className={cn(
-                  "transition-opacity duration-200 ease-out",
-                  isLoaded ? "opacity-100" : "opacity-0",
-                  useDynamicRatio
-                    ? "w-full object-contain max-h-[80vh]"
-                    : "h-full w-full object-cover object-top"
+              <>
+                {useDynamicRatio && (
+                  <div
+                    className="absolute inset-0 z-0"
+                    style={{
+                      backgroundImage: `url(${imageUrl})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      filter: "blur(24px) brightness(0.7)",
+                      transform: "scale(1.15)",
+                    }}
+                  />
                 )}
-                onError={() => setImageError(true)}
-                onLoad={() => setIsLoaded(true)}
-              />
+                <img
+                  src={imageUrl}
+                  loading={priority ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={priority ? "high" : "auto"}
+                  alt={`Image ${id}`}
+                  className={cn(
+                    "transition-opacity duration-200 ease-out",
+                    isLoaded ? "opacity-100" : "opacity-0",
+                    useDynamicRatio
+                      ? "relative z-10 w-full object-contain max-h-[80vh]"
+                      : "h-full w-full object-cover object-top"
+                  )}
+                  onError={() => setImageError(true)}
+                  onLoad={() => setIsLoaded(true)}
+                />
+              </>
             ) : (
               <div
                 className={cn(

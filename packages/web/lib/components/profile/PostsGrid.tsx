@@ -32,14 +32,25 @@ function PostsGridItem({ post }: { post: PostItem }) {
         useDynamicRatio ? "bg-black" : "aspect-[4/5] bg-muted"
       )}
     >
+      {useDynamicRatio && (
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${post.imageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(24px) brightness(0.7)",
+            transform: "scale(1.15)",
+          }}
+        />
+      )}
       <img
         src={post.imageUrl}
         alt={post.title || "Post"}
-        {...(useDynamicRatio && imgW && imgH ? { width: imgW, height: imgH } : {})}
         className={cn(
           "transition-transform duration-300 group-hover:scale-105",
           useDynamicRatio
-            ? "w-full object-contain max-h-[300px]"
+            ? "relative z-10 w-full object-contain max-h-[300px]"
             : "h-full w-full object-cover"
         )}
         loading="lazy"
