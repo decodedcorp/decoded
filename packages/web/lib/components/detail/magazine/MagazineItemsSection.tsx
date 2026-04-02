@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState, RefObject } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+import { ItemImage } from "@/lib/components/shared/ItemImage";
 import type {
   PostMagazineSpotItem,
   PostMagazineRelatedItem,
@@ -183,18 +183,17 @@ export function MagazineItemsSection({
                 }`}
               >
                 {/* Item Image */}
-                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-60 lg:w-64">
+                <div className="w-full shrink-0 md:w-60 lg:w-64">
                   {item.image_url ? (
-                    <Image
+                    <ItemImage
                       src={item.image_url}
                       alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 320px"
+                      size="card"
+                      className="rounded-xl"
                     />
                   ) : (
                     <div
-                      className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center"
+                      className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl bg-muted p-6 text-center"
                       style={{
                         background: accentColor
                           ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
@@ -289,23 +288,12 @@ export function MagazineItemsSection({
                         rel="noopener noreferrer"
                         className="group overflow-hidden rounded-lg border border-border/40 bg-card transition-all hover:border-border hover:shadow-md"
                       >
-                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-muted">
-                          {ri.image_url ? (
-                            <Image
-                              src={ri.image_url}
-                              alt={ri.title}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
-                              sizes="(max-width: 640px) 50vw, 160px"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center">
-                              <span className="text-2xl text-muted-foreground/20">
-                                {(j + 1).toString().padStart(2, "0")}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        <ItemImage
+                          src={ri.image_url || ""}
+                          alt={ri.title}
+                          size="card"
+                          imgClassName="transition-transform duration-500 group-hover:scale-105"
+                        />
                         <div className="p-2.5">
                           {ri.brand && (
                             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
