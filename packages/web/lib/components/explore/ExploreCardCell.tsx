@@ -99,13 +99,13 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             <>
               {/* Blurred background — fills letterbox like the detail modal */}
               <div
-                className="absolute inset-0 -z-10"
+                className="absolute inset-0 z-0"
                 style={{
                   backgroundImage: `url(${imageUrl})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
-                  filter: "blur(20px)",
-                  transform: "scale(1.1)",
+                  filter: "blur(24px) brightness(0.7)",
+                  transform: "scale(1.15)",
                 }}
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -113,7 +113,7 @@ export const ExploreCardCell = memo(function ExploreCardCell({
                 src={imageUrl}
                 alt={`Image ${imageId}`}
                 className={cn(
-                  "w-full h-full object-contain transition-opacity duration-150 ease-out",
+                  "relative z-10 w-full h-full object-contain transition-opacity duration-150 ease-out",
                   isLoaded ? "opacity-100" : "opacity-0"
                 )}
                 loading={isTopImage ? "eager" : "lazy"}
