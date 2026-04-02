@@ -6,7 +6,6 @@ import type {
   MainHeroData,
   GridItemData,
   HeroSpotAnnotation,
-  CommunityLeaderboardData,
   EditorialMagazineData,
 } from "@/lib/components/main-renewal";
 import {
@@ -14,7 +13,6 @@ import {
   HeroItemSync,
   EditorialSection,
   TrendingListSection,
-  ForYouSection,
 } from "@/lib/components/main";
 import type { StyleCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
@@ -29,26 +27,8 @@ import {
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
-import {
-  fetchForYouPosts,
-  fetchTrendingPosts,
-  type PersonalizedPostData,
-} from "@/lib/supabase/queries/personalization.server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import defaultHeroData from "@/lib/components/main-renewal/mock/main-hero.json";
 import defaultGridItems from "@/lib/components/main-renewal/mock/main-grid-items.json";
-
-/** Convert PersonalizedPostData to StyleCardData */
-function toStyleCard(post: PersonalizedPostData): StyleCardData {
-  return {
-    id: post.id,
-    title: post.artistName || post.groupName || "Style",
-    description: post.context || post.mediaTitle || "",
-    artistName: post.artistName || post.groupName || "Unknown",
-    imageUrl: post.imageUrl || undefined,
-    link: `/posts/${post.id}`,
-  };
-}
 
 export default async function Home({
   searchParams,
@@ -56,12 +36,6 @@ export default async function Home({
   searchParams: Promise<{ variant?: string }>;
 }) {
   await searchParams;
-  // Resolve auth user for personalization
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? null;
 
   // Parallel fetch: all section data
   const [
@@ -72,9 +46,6 @@ export default async function Home({
     artistSpotlight,
     trendingKeywords,
     magazinePosts,
-    forYouPosts,
-    trendingPosts,
-    rankingUsersResult,
     artistProfileMap,
   ] = await Promise.all([
     fetchFeaturedPostServer(),
@@ -84,13 +55,6 @@ export default async function Home({
     fetchArtistSpotlightServer(30),
     fetchTrendingKeywordsServer(8),
     fetchMagazinePostsServer(8),
-    userId ? fetchForYouPosts(userId, 9) : fetchTrendingPosts(9),
-    fetchTrendingPosts(9),
-    supabase
-      .from("users")
-      .select("id, username, avatar_url, total_points, style_dna")
-      .order("total_points", { ascending: false })
-      .limit(10),
     buildArtistProfileMap(),
   ]);
 
@@ -335,9 +299,6 @@ export default async function Home({
     });
   }
 
-  const forYouStyles = forYouPosts.map(toStyleCard);
-  const trendingStyles = trendingPosts.map(toStyleCard);
-
   const editorialStyle: StyleCardData | undefined =
     whatsNewStyles.length > 1
       ? whatsNewStyles[1]
@@ -425,47 +386,14 @@ export default async function Home({
     cards: magazineCards,
   };
 
-  // CommunityLeaderboard data (kept for future use)
-  const rankingUsers = rankingUsersResult.data ?? [];
-  const leaderboardData: CommunityLeaderboardData = {
-    trendingUsers: rankingUsers
-      .filter((u) => u.username)
-      .map((u) => {
-        const dna = u.style_dna as Record<string, unknown> | null;
-        const styleTags: string[] = Array.isArray(dna?.tags)
-          ? (dna.tags as unknown[])
-              .filter((t): t is string => typeof t === "string")
-              .slice(0, 3)
-          : [];
-        return {
-          id: u.id,
-          username: u.username!,
-          avatarUrl: u.avatar_url ?? undefined,
-          styleTags,
-          score: u.total_points,
-        };
-      }),
-    trendingTags: resolvedTrendingKeywords.map((k) =>
-      typeof k === "string" ? k : k.label
-    ),
-  };
-
-  // DomeGallery images
-  const domeImages = [
-    ...trendingPosts
-      .filter((p) => p.imageUrl)
-      .map((p) => ({
-        src: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl!)}`,
-        alt: p.artistName || p.groupName || "Style",
-      })),
-    ...weeklyBestPosts
-      .filter((p) => p.imageUrl)
-      .slice(10, 20)
-      .map((p) => ({
-        src: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl!)}`,
-        alt: p.artistName || p.groupName || "Style",
-      })),
-  ].slice(0, 20);
+  // DomeGallery images — use weeklyBest posts
+  const domeImages = weeklyBestPosts
+    .filter((p) => p.imageUrl)
+    .slice(0, 20)
+    .map((p) => ({
+      src: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl!)}`,
+      alt: p.artistName || p.groupName || "Style",
+    }));
 
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
@@ -488,19 +416,9 @@ export default async function Home({
         <MasonryGrid items={gridItems as GridItemData[]} />
       </section>
 
-      {/* ─── 5. For You (logged-in only) ─── */}
-      {userId && (
-        <ForYouSection
-          forYouPosts={forYouStyles}
-          trendingPosts={trendingStyles}
-          followingPosts={forYouStyles}
-        />
-      )}
+      {/* ─── 5. For You — will migrate to Orval hooks (CSR) ─── */}
 
-      {/* ─── 6. Style DNA & Community Rank ─── */}
-      {/* <CommunityLeaderboard data={leaderboardData} /> */}
-
-      {/* ─── 7. VTON Dome Gallery ─── */}
+      {/* ─── 6. VTON Dome Gallery ─── */}
       <DomeGallerySection
         images={domeImages.length > 0 ? domeImages : undefined}
       />
