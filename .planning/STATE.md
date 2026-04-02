@@ -133,6 +133,7 @@ v9.0 key constraints (from research):
 |---|-------------|------|--------|-----------|
 | 260402-j6l | 상단 ASCII 코드로고에 @chenglou/pretext 적용하여 클리어하게 조정 | 2026-04-02 | da81dc60 | [260402-j6l-ascii-pretext](./quick/260402-j6l-ascii-pretext/) |
 | 260402-j3i | explore 상단 필터 정리 (Category/Context/Sort 제거) | 2026-04-02 | 4c8a7338 | [260402-j3i-explore](./quick/260402-j3i-explore/) |
+| 260402-jg7 | 메인 페이지 트렌딩 키워드/그리드에 warehouse 아티스트 프로필 이미지 적용 | 2026-04-02 | 6ab13b9e | [260402-jg7-warehouse](./quick/260402-jg7-warehouse/) |
 
 ### Pending Todos
 
@@ -142,7 +143,7 @@ v9.0 key constraints (from research):
 
 ## Session Continuity
 
-Last activity: 2026-04-02 - Completed quick task 260402-j6l: 상단 ASCII 코드로고에 pretext 적용
+Last activity: 2026-04-02 - Completed quick task 260402-jg7: warehouse entity enrichment for main page
 Last session: 2026-04-02T02:27:15.842Z
 Stopped at: Completed 54-01-PLAN.md
 Resume file: None
