@@ -1,15 +1,3 @@
 {
-  "mode": "yolo",
-  "parallelization": true,
-  "commit_docs": true,
-  "model_profile": "balanced",
-  "branching_strategy": "milestone",
-  "milestone_branch_template": "gsd/{milestone}-{slug}",
-  "workflow": {
-    "research": true,
-    "plan_check": true,
-    "verifier": false,
-    "_auto_chain_active": true
-  },
-  "granularity": "fine"
+  "branching_strategy": "none"
 }
