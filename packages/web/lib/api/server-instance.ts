@@ -1,14 +1,13 @@
 /**
  * Server-side API fetch utility for React Server Components.
  *
- * Calls the Rust backend directly using API_BASE_URL (same as proxy routes).
+ * Calls the Next.js internal API routes which proxy to the Rust backend.
+ * Uses NEXT_PUBLIC_SITE_URL or falls back to localhost.
  * Returns Orval generated types for type safety.
  *
  * Usage:
  *   const posts = await serverApiGet<PaginatedResponsePostListItem>('/api/v1/posts?sort=popular');
  */
-
-import { API_BASE_URL } from "@/lib/server-env";
 
 interface ServerFetchOptions {
   /** Next.js revalidation in seconds (default: 60) */
@@ -17,9 +16,17 @@ interface ServerFetchOptions {
   headers?: Record<string, string>;
 }
 
+function getBaseUrl(): string {
+  // Vercel/production
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  // Local dev
+  const port = process.env.PORT || "3000";
+  return `http://localhost:${port}`;
+}
+
 /**
  * GET request to backend API from server components.
- * Uses Rust backend directly (no Next.js proxy hop).
+ * Routes through Next.js API proxy (/api/v1/* → Rust backend).
  */
 export async function serverApiGet<T>(
   path: string,
@@ -27,7 +34,7 @@ export async function serverApiGet<T>(
 ): Promise<T> {
   const { revalidate = 60, headers = {} } = options;
 
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${getBaseUrl()}${path}`;
 
   const res = await fetch(url, {
     method: "GET",

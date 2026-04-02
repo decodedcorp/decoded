@@ -25,8 +25,6 @@ import {
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
-import defaultHeroData from "@/lib/components/main-renewal/mock/main-hero.json";
-import defaultGridItems from "@/lib/components/main-renewal/mock/main-grid-items.json";
 
 /** Shorthand for post list item from REST API */
 type ApiPost = PaginatedResponsePostListItemDataItem;
@@ -274,21 +272,18 @@ export default async function Home({
 
   // --- MasonryGrid ---
 
-  const gridItems: GridItemData[] =
-    popularPosts.length > 0
-      ? popularPosts.slice(0, 16).map((post, i) => {
-          const { displayName } = enrichArtistName(post.artist_name || post.group_name);
-          return {
-            id: post.id,
-            imageUrl: post.image_url,
-            title: displayName || "Unknown",
-            subtitle: post.context || post.title || undefined,
-            category: "Style",
-            link: `/posts/${post.id}`,
-            aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
-          };
-        })
-      : (defaultGridItems as GridItemData[]);
+  const gridItems: GridItemData[] = popularPosts.slice(0, 16).map((post, i) => {
+    const { displayName } = enrichArtistName(post.artist_name || post.group_name);
+    return {
+      id: post.id,
+      imageUrl: post.image_url,
+      title: displayName || "Unknown",
+      subtitle: post.context || post.title || undefined,
+      category: "Style",
+      link: `/posts/${post.id}`,
+      aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
+    };
+  });
 
   // --- DomeGallery ---
 
