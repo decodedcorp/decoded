@@ -60,14 +60,14 @@ export function MagazineTitleSection({ title, subtitle, isModal }: Props) {
       </p>
       <h1
         ref={titleRef as React.RefObject<HTMLHeadingElement>}
-        className={`mag-title ${isModal ? "typography-h2" : "typography-hero"} max-w-3xl ${isModal ? "" : "opacity-0"}`}
+        className={`mag-title ${isModal ? "typography-h2" : "typography-h1"} max-w-3xl break-keep ${isModal ? "" : "opacity-0"}`}
         style={titleHeight > 0 ? { minHeight: titleHeight } : undefined}
       >
         {title}
       </h1>
       {subtitle && (
         <p
-          className={`mag-subtitle mt-6 max-w-xl text-lg font-light leading-relaxed text-muted-foreground ${isModal ? "" : "opacity-0"}`}
+          className={`mag-subtitle mt-6 max-w-xl text-lg font-light leading-relaxed text-muted-foreground break-keep ${isModal ? "" : "opacity-0"}`}
         >
           {subtitle}
         </p>

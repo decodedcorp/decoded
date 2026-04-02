@@ -84,7 +84,7 @@ export function MagazineEditorialSection({
       style={accentStyle}
       className={`mx-auto max-w-3xl px-4 py-12 md:px-8 md:py-16 overflow-hidden transition-opacity ${isRevealed ? "animate-ai-summary-reveal" : "opacity-0 invisible"}`}
     >
-      <article className="space-y-6 md:space-y-8">
+      <article className="space-y-6 md:space-y-8 break-keep">
         {editorial.paragraphs.map((text, i) => {
           const pHeight = i > 0 ? (paragraphLayouts[`p-${i}`]?.height ?? 0) : 0;
           return (
@@ -117,7 +117,7 @@ export function MagazineEditorialSection({
               opacity: 0.3,
             }}
           />
-          <p className="font-serif text-xl italic text-foreground md:text-2xl">
+          <p className="font-serif text-xl italic text-foreground md:text-2xl break-keep">
             {editorial.pull_quote}
           </p>
           <div
