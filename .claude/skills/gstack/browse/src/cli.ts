@@ -291,8 +291,9 @@ async function startServer(extraEnv?: Record<string, string>): Promise<ServerSta
 function acquireServerLock(): (() => void) | null {
   const lockPath = `${config.stateFile}.lock`;
   try {
-    // O_CREAT | O_EXCL — fails if file already exists (atomic check-and-create)
-    const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
+    // 'wx' — create exclusively, fails if file already exists (atomic check-and-create)
+    // Using string flag instead of numeric constants for Bun Windows compatibility
+    const fd = fs.openSync(lockPath, 'wx');
     fs.writeSync(fd, `${process.pid}\n`);
     fs.closeSync(fd);
     return () => { try { fs.unlinkSync(lockPath); } catch {} };
@@ -375,7 +376,9 @@ async function ensureServer(): Promise<ServerState> {
 
 // ─── Command Dispatch ──────────────────────────────────────────
 async function sendCommand(state: ServerState, command: string, args: string[], retries = 0): Promise<void> {
-  const body = JSON.stringify({ command, args });
+  // BROWSE_TAB env var pins commands to a specific tab (set by sidebar-agent per-tab)
+  const browseTab = process.env.BROWSE_TAB;
+  const body = JSON.stringify({ command, args, ...(browseTab ? { tabId: parseInt(browseTab, 10) } : {}) });
 
   try {
     const resp = await fetch(`http://127.0.0.1:${state.port}/command`, {
@@ -511,8 +514,27 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
       }
     }
 
-    // Clean up Chromium profile locks (can persist after crashes)
+    // Kill orphaned Chromium processes that may still hold the profile lock.
+    // The server PID is the Bun process; Chromium is a child that can outlive it
+    // if the server is killed abruptly (SIGKILL, crash, manual rm of state file).
     const profileDir = path.join(process.env.HOME || '/tmp', '.gstack', 'chromium-profile');
+    try {
+      const singletonLock = path.join(profileDir, 'SingletonLock');
+      const lockTarget = fs.readlinkSync(singletonLock); // e.g. "hostname-12345"
+      const orphanPid = parseInt(lockTarget.split('-').pop() || '', 10);
+      if (orphanPid && isProcessAlive(orphanPid)) {
+        try { process.kill(orphanPid, 'SIGTERM'); } catch {}
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (isProcessAlive(orphanPid)) {
+          try { process.kill(orphanPid, 'SIGKILL'); } catch {}
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    } catch {
+      // No lock symlink or not readable — nothing to kill
+    }
+
+    // Clean up Chromium profile locks (can persist after crashes)
     for (const lockFile of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
       try { fs.unlinkSync(path.join(profileDir, lockFile)); } catch {}
     }
@@ -545,17 +567,38 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
       console.log(`Connected to real Chrome\n${status}`);
 
       // Auto-start sidebar agent
-      const agentScript = path.resolve(__dirname, 'sidebar-agent.ts');
+      // __dirname is inside $bunfs in compiled binaries — resolve from execPath instead
+      let agentScript = path.resolve(__dirname, 'sidebar-agent.ts');
+      if (!fs.existsSync(agentScript)) {
+        agentScript = path.resolve(path.dirname(process.execPath), '..', 'src', 'sidebar-agent.ts');
+      }
       try {
+        if (!fs.existsSync(agentScript)) {
+          throw new Error(`sidebar-agent.ts not found at ${agentScript}`);
+        }
         // Clear old agent queue
         const agentQueue = path.join(process.env.HOME || '/tmp', '.gstack', 'sidebar-agent-queue.jsonl');
         try { fs.writeFileSync(agentQueue, ''); } catch {}
+
+        // Resolve browse binary path the same way — execPath-relative
+        let browseBin = path.resolve(__dirname, '..', 'dist', 'browse');
+        if (!fs.existsSync(browseBin)) {
+          browseBin = process.execPath; // the compiled binary itself
+        }
+
+        // Kill any existing sidebar-agent processes before starting a new one.
+        // Old agents have stale auth tokens and will silently fail to relay events,
+        // causing the server to mark the agent as "hung".
+        try {
+          const { spawnSync } = require('child_process');
+          spawnSync('pkill', ['-f', 'sidebar-agent\\.ts'], { stdio: 'ignore', timeout: 3000 });
+        } catch {}
 
         const agentProc = Bun.spawn(['bun', 'run', agentScript], {
           cwd: config.projectDir,
           env: {
             ...process.env,
-            BROWSE_BIN: path.resolve(__dirname, '..', 'dist', 'browse'),
+            BROWSE_BIN: browseBin,
             BROWSE_STATE_FILE: config.stateFile,
             BROWSE_SERVER_PORT: String(newState.port),
           },
