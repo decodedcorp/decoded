@@ -5,7 +5,7 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import type { PostMagazineEditorialSection } from "@/lib/api/mutation-types";
-import { useTextLayout } from "@/lib/hooks/usePretext";
+import { useTextLayout, useBatchTextLayout } from "@/lib/hooks/usePretext";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -22,11 +22,22 @@ export function MagazineEditorialSection({ editorial, accentColor, isModal }: Pr
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isRevealed, setIsRevealed] = useState(isModal ?? false);
 
-  // Pretext.js: measure pull quote for layout stability
-  const { containerRef: quoteRef, height: quoteHeight } = useTextLayout({
+  // Pretext.js: measure pull quote for layout stability; also provides containerWidth
+  const { containerRef: quoteRef, height: quoteHeight, containerWidth: editorialWidth } = useTextLayout({
     text: editorial.pull_quote ?? "",
     font: 'italic 20px "Playfair Display", serif',
     lineHeight: 28,
+  });
+
+  // Pretext.js: measure paragraphs 1+ (skip index 0 — drop-cap excluded from batch)
+  const paragraphLayouts = useBatchTextLayout({
+    items: editorial.paragraphs.slice(1).map((text, i) => ({
+      key: `p-${i + 1}`,
+      text,
+    })),
+    font: '400 18px "Playfair Display", serif',
+    lineHeight: 36,
+    containerWidth: editorialWidth,
   });
 
   useEffect(() => {
@@ -70,18 +81,22 @@ export function MagazineEditorialSection({ editorial, accentColor, isModal }: Pr
       className={`mx-auto max-w-3xl px-4 py-12 md:px-8 md:py-16 overflow-hidden transition-opacity ${isRevealed ? "animate-ai-summary-reveal" : "opacity-0 invisible"}`}
     >
       <article className="space-y-6 md:space-y-8">
-        {editorial.paragraphs.map((text, i) => (
-          <p
-            key={i}
-            className={`editorial-p font-serif text-base leading-loose text-foreground md:text-lg ${
-              i === 0
-                ? "[&]:first-letter:text-6xl md:[&]:first-letter:text-7xl [&]:first-letter:font-serif [&]:first-letter:font-bold [&]:first-letter:mr-3 [&]:first-letter:float-left [&]:first-letter:text-foreground [&]:first-letter:leading-[0.8] [&]:first-letter:mt-2"
-                : ""
-            }`}
-          >
-            {text}
-          </p>
-        ))}
+        {editorial.paragraphs.map((text, i) => {
+          const pHeight = i > 0 ? (paragraphLayouts[`p-${i}`]?.height ?? 0) : 0;
+          return (
+            <p
+              key={i}
+              className={`editorial-p font-serif text-base leading-loose text-foreground md:text-lg ${
+                i === 0
+                  ? "[&]:first-letter:text-6xl md:[&]:first-letter:text-7xl [&]:first-letter:font-serif [&]:first-letter:font-bold [&]:first-letter:mr-3 [&]:first-letter:float-left [&]:first-letter:text-foreground [&]:first-letter:leading-[0.8] [&]:first-letter:mt-2"
+                  : ""
+              }`}
+              style={pHeight > 0 ? { minHeight: pHeight } : undefined}
+            >
+              {text}
+            </p>
+          );
+        })}
       </article>
 
       {editorial.pull_quote && (
