@@ -11,6 +11,7 @@ type Props = {
   image: ImageRow;
   items: UiItem[];
   activeIndex: number | null;
+  objectFit?: "cover" | "contain";
 };
 
 /**
@@ -22,7 +23,12 @@ type Props = {
  * - Pan & Zoom effect (scale + translation, not transform-origin)
  * - Object-fit: cover coordinate correction
  */
-export function ImageCanvas({ image, items, activeIndex }: Props) {
+export function ImageCanvas({
+  image,
+  items,
+  activeIndex,
+  objectFit = "cover",
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -61,7 +67,7 @@ export function ImageCanvas({ image, items, activeIndex }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  // Helper: Calculate displayed image rect (px) considering object-fit: cover
+  // Helper: Calculate displayed image rect (px) considering object-fit mode
   const getDisplayedRect = () => {
     if (!naturalSize || !containerSize) return null;
 
@@ -70,18 +76,36 @@ export function ImageCanvas({ image, items, activeIndex }: Props) {
 
     let width, height, left, top;
 
-    if (imageAspect > containerAspect) {
-      // Image is wider than container (height fits, width cropped)
-      height = containerSize.height;
-      width = height * imageAspect;
-      top = 0;
-      left = (containerSize.width - width) / 2; // Center horizontally
+    if (objectFit === "contain") {
+      // contain: image fits inside container, letterboxed — no cropping
+      if (imageAspect > containerAspect) {
+        // Image is wider → width fills container, vertical letterbox
+        width = containerSize.width;
+        height = width / imageAspect;
+        left = 0;
+        top = (containerSize.height - height) / 2;
+      } else {
+        // Image is taller → height fills container, horizontal letterbox
+        height = containerSize.height;
+        width = height * imageAspect;
+        top = 0;
+        left = (containerSize.width - width) / 2;
+      }
     } else {
-      // Image is taller than container (width fits, height cropped)
-      width = containerSize.width;
-      height = width / imageAspect;
-      left = 0;
-      top = (containerSize.height - height) / 2; // Center vertically
+      // cover: image fills container, excess cropped
+      if (imageAspect > containerAspect) {
+        // Image is wider than container (height fits, width cropped)
+        height = containerSize.height;
+        width = height * imageAspect;
+        top = 0;
+        left = (containerSize.width - width) / 2; // Center horizontally
+      } else {
+        // Image is taller than container (width fits, height cropped)
+        width = containerSize.width;
+        height = width / imageAspect;
+        left = 0;
+        top = (containerSize.height - height) / 2; // Center vertically
+      }
     }
 
     return { width, height, left, top };
@@ -264,7 +288,7 @@ export function ImageCanvas({ image, items, activeIndex }: Props) {
             ref={imageRef}
             src={image.image_url}
             alt={`Image ${image.id}`}
-            className="h-full w-full object-cover will-change-transform"
+            className={`h-full w-full ${objectFit === "contain" ? "object-contain" : "object-cover"} will-change-transform`}
             style={{ transformOrigin: "center center" }}
             loading="lazy"
             onLoad={(e) => {
