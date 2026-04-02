@@ -531,7 +531,12 @@ Plans:
 4. 상세페이지에 Pretext 라이브러리 매거진 레이아웃이 적용된다
 5. 상세페이지 왼쪽 상단 뱃지가 모두 제거된다
 6. 상세페이지 컬러가 브랜드 컬러로 통일된다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 56-01-PLAN.md — Brand color unification (SpotDot + HeroSpotMarker)
+- [ ] 56-02-PLAN.md — Hierarchical filter wiring (ExploreClient + useInfinitePosts)
+- [ ] 56-03-PLAN.md — Detail page brand color + badge cleanup
 
 ### Phase 57: Editorial Layout & Detail View
 
