@@ -8,7 +8,7 @@ Accepted (v1.0)
 
 We use multiple AI tools in our development workflow:
 
-- **Claude** (via Speckit): For small refactors, code analysis, and spec reviews
+- **Claude** (via gstack/Superpowers): For refactors, code analysis, and TDD-driven implementation
 - **Cursor**: Main coding assistant for feature implementation
 - **Gemini**: Documentation generation
 - **Codex**: Spec templates and checklists
@@ -43,7 +43,7 @@ We will create a dedicated AI playbook structure with:
 
 4. **Configuration files**:
    - `.cursor/rules/`: Cursor-specific rules (JSONC format)
-   - `.speckit/speckit.config.json`: Speckit configuration
+   - `.claude/settings.json`: Claude Code harness configuration
    - `.codex/config.json`: Codex CLI configuration
 
 5. **Prompt templates** (`docs/prompts/`):
@@ -51,9 +51,8 @@ We will create a dedicated AI playbook structure with:
    - Templates for Codex spec generation
 
 6. **Integration with existing infrastructure**:
-   - Preserve existing `.specify/` Speckit infrastructure
-   - Integrate with `.claude/commands/` workflow
-   - Reference `.specify/memory/constitution.md`
+   - Integrate with `.claude/` harness workflow (gstack, Superpowers, GSD)
+   - Preserve `.cursor/rules/` for Cursor users
 
 ## Consequences
 
