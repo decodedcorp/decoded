@@ -312,7 +312,7 @@ export function useImageModalAnimation({
         onComplete: () => {
           gsap.delayedCall(0.05, () => {
             reset();
-            router.push(`/posts/${imageId}`);
+            window.location.href = `/posts/${imageId}`;
           });
         },
       });
@@ -330,7 +330,7 @@ export function useImageModalAnimation({
         tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
       }
     });
-  }, [isClosing, isMaximizing, imageId, router, reset]);
+  }, [isClosing, isMaximizing, imageId, reset]);
 
   return {
     handleClose,

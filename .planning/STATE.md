@@ -48,10 +48,11 @@ See: .planning/PROJECT.md
 |---|-------------|------|--------|-----------|
 | 260402-mls | Nav 기능 숨기기 (GH #35) | 2026-04-02 | 8c01341c | [260402-mls](./quick/260402-mls-github-35-1-upload-lab-try-on-notice-pro/) |
 | 260402-mym | Explore 페이지 editorial post만 필터링 | 2026-04-02 | 1169e31b | [260402-mym](./quick/260402-mym-explore-editorial-post/) |
+| 260402-n75 | 포스트 상세 크게보기 버튼 페이지 전환 수정 | 2026-04-02 | - | [260402-n75](./quick/260402-n75-post-detail-fullview-nav-fix/) |
 
 ---
 
-Last activity: 2026-04-02 - Completed quick task 260402-mym: Explore 페이지 editorial post만 필터링
+Last activity: 2026-04-02 - Completed quick task 260402-n75: 포스트 상세 크게보기 버튼 페이지 전환 수정
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_
