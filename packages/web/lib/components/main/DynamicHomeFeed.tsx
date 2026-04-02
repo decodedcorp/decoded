@@ -17,7 +17,6 @@ import { TrendingListSection } from "./TrendingListSection";
 import DomeGallery from "@/lib/components/dome/DomeGallery";
 import type { ImageItem } from "@/lib/utils/fallbackImages";
 import { FuzzyText } from "@/lib/components/ui/FuzzyText";
-import { useVtonStore } from "@/lib/stores/vtonStore";
 
 import type { StyleCardData } from "./StyleCard";
 import type { ItemCardData } from "./ItemCard";
@@ -306,7 +305,6 @@ interface DomeGallerySectionProps {
 
 /** Full-bleed dome gallery with centered CTA */
 export function DomeGallerySection({ images }: DomeGallerySectionProps) {
-  const openVton = useVtonStore((s) => s.open);
 
   return (
     <motion.section
@@ -379,16 +377,15 @@ export function DomeGallerySection({ images }: DomeGallerySectionProps) {
         >
           셀럽의 스타일을 AI로 직접 입어보세요
         </p>
-        <button
-          onClick={openVton}
+        <span
           className="pointer-events-auto relative px-10 py-3.5 text-sm font-semibold tracking-[0.15em] uppercase
-            text-black rounded-full
-            bg-[#eafd67] hover:bg-[#ff6767] hover:text-white
-            transition-all duration-500 ease-out
-            shadow-[0_0_30px_rgba(234,253,103,0.3)] hover:shadow-[0_0_40px_rgba(255,103,103,0.4)]"
+            text-white rounded-full
+            bg-white/20 border border-white/40 backdrop-blur-sm
+            cursor-not-allowed
+            shadow-[0_0_20px_rgba(255,255,255,0.15)]"
         >
-          Try On Now
-        </button>
+          Coming Soon
+        </span>
       </div>
     </motion.section>
   );

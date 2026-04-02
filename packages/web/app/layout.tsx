@@ -8,6 +8,7 @@ import {
 } from "@/lib/components/ConditionalNav";
 import { LazyOnboardingSheet } from "@/lib/components/auth/LazyOnboardingSheet";
 import { LazyVtonModal } from "@/lib/components/vton/LazyVtonModal";
+import { ThemeScript } from "@/lib/theme/theme-script";
 import { EventFlushProvider } from "./EventFlushProvider";
 
 const playfairDisplay = Playfair_Display({
@@ -36,6 +37,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body
         className={`${playfairDisplay.variable} ${inter.variable} font-sans`}
         suppressHydrationWarning

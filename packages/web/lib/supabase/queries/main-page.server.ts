@@ -60,6 +60,75 @@ export interface TrendingKeyword {
 }
 
 /**
+ * Magazine post data — post with a published editorial magazine
+ */
+export interface MagazinePostData {
+  id: string;
+  imageUrl: string | null;
+  artistName: string | null;
+  groupName: string | null;
+  context: string | null;
+  magazineTitle: string;
+  magazineKeyword: string | null;
+}
+
+/**
+ * Fetches posts that have a published post_magazine (server-side)
+ */
+export async function fetchMagazinePostsServer(
+  limit = 8
+): Promise<MagazinePostData[]> {
+  const supabase = await createSupabaseServerClient();
+
+  // First: get published magazine IDs
+  const { data: magazines, error: magError } = await supabase
+    .from("post_magazines")
+    .select("id, title, keyword")
+    .eq("status", "published")
+    .limit(limit);
+
+  if (magError || !magazines || magazines.length === 0) {
+    if (magError) console.error("[fetchMagazinePostsServer] Magazine error:", magError);
+    return [];
+  }
+
+  const publishedIds = magazines.map((m) => m.id);
+
+  // Then: get posts that reference these published magazines
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("status", "active")
+    .not("image_url", "is", null)
+    .in("post_magazine_id", publishedIds)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !posts || posts.length === 0) {
+    if (error) console.error("[fetchMagazinePostsServer] Posts error:", error);
+    return [];
+  }
+
+  const magazineMap = new Map(
+    magazines.map((m) => [m.id, { title: m.title, keyword: m.keyword }])
+  );
+
+  return posts
+    .map((row) => {
+      const mag = magazineMap.get(row.post_magazine_id!);
+      return {
+        id: row.id,
+        imageUrl: row.image_url,
+        artistName: row.artist_name,
+        groupName: row.group_name,
+        context: row.context,
+        magazineTitle: mag?.title || row.context || "Editorial",
+        magazineKeyword: mag?.keyword ?? null,
+      };
+    });
+}
+
+/**
  * Transforms a raw post row to PostData
  */
 function toPostData(row: PostRow): PostData {

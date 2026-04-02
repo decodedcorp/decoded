@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { EditorialMagazineData } from "./types";
 import { PostImage } from "@/lib/components/shared/PostImage";
+
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -134,13 +136,14 @@ export default function EditorialMagazine({
         >
           {data.cards.length > 0 ? (
             data.cards.map((card, idx) => (
-              <article
+              <Link
                 key={`${card.id}-${idx}`}
+                href={card.link || "#"}
+                className="flex-none w-[70vw] md:w-[40vw] lg:w-[30vw] h-[65vh] rounded-2xl overflow-hidden
+                           bg-neutral-900 border border-neutral-800 relative group will-change-transform block"
                 ref={(el) => {
                   cardRefs.current[idx] = el;
                 }}
-                className="flex-none w-[70vw] md:w-[40vw] lg:w-[30vw] h-[65vh] rounded-2xl overflow-hidden
-                           bg-neutral-900 border border-neutral-800 relative group will-change-transform"
               >
                 {/* Cover image */}
                 {card.imageUrl ? (
@@ -160,21 +163,16 @@ export default function EditorialMagazine({
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/60 to-transparent z-20" />
 
                 {/* Card text */}
-                <div className="absolute inset-x-0 bottom-0 p-6 relative z-20">
+                <div className="absolute inset-x-0 bottom-0 p-6 z-20">
                   {card.category && (
                     <span className="text-[10px] uppercase tracking-widest text-[var(--mag-accent)] mb-2 block">
                       {card.category}
                     </span>
                   )}
-                  <h3 className="text-2xl md:text-3xl font-serif font-bold text-[var(--mag-text)] leading-tight mb-1">
+                  <h3 className="text-lg md:text-xl font-serif font-bold text-[var(--mag-text)] leading-snug mb-2 line-clamp-2">
                     {card.title}
                   </h3>
-                  <p className="text-sm text-neutral-400">{card.artistName}</p>
-                  {card.subtitle && (
-                    <p className="text-xs text-neutral-500 mt-2 line-clamp-2">
-                      {card.subtitle}
-                    </p>
-                  )}
+                  <p className="text-xs text-neutral-400 uppercase tracking-wide">{card.artistName}</p>
                 </div>
 
                 {/* Hover: neon corner accent */}
@@ -182,7 +180,7 @@ export default function EditorialMagazine({
                   className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[var(--mag-accent)]
                                opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
                 />
-              </article>
+              </Link>
             ))
           ) : (
             <div className="w-[100vw] flex items-center justify-center text-neutral-600">

@@ -3,7 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getQueryClient } from "@/lib/react-query/client";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/components/auth";
 import { Toaster } from "@/lib/components/ui/sonner";
 
@@ -20,7 +20,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <ThemeProvider defaultTheme="dark">
         <AuthProvider>{children}</AuthProvider>
       </ThemeProvider>
       <Toaster position="bottom-right" />

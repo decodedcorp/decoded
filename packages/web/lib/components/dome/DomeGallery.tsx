@@ -560,19 +560,31 @@ const DomeGallery = forwardRef<DomeGalleryRef, DomeGalleryProps>(
                     }
                   >
                     <div
-                      className="item__image absolute block overflow-hidden bg-gray-200"
+                      className="item__image absolute block overflow-hidden bg-black"
                       style={{
                         inset: "10px",
                         borderRadius: `var(--tile-radius, ${imageBorderRadius})`,
                         backfaceVisibility: "hidden",
                       }}
                     >
+                      {/* Blur background fill */}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          backgroundImage: `url(${it.src})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          filter: `blur(16px) brightness(0.6) ${grayscale ? "grayscale(1)" : ""}`,
+                          transform: "scale(1.15)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={it.src}
                         draggable={false}
                         alt={it.alt}
-                        className="w-full h-full object-cover pointer-events-none"
+                        className="relative z-10 w-full h-full object-contain pointer-events-none"
                         style={{
                           backfaceVisibility: "hidden",
                           filter: `var(--image-filter, ${grayscale ? "grayscale(1)" : "none"})`,
