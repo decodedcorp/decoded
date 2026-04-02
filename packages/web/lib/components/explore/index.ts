@@ -6,3 +6,4 @@ export { ExploreFilterBar } from "./ExploreFilterBar";
 export { ExploreFilterSheet } from "./ExploreFilterSheet";
 export { ExploreSortControls } from "./ExploreSortControls";
 export { FilterChip } from "./FilterChip";
+export { TrendingArtistsSection } from "./TrendingArtistsSection";

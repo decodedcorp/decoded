@@ -12,6 +12,7 @@ import {
   ExploreSkeletonCell,
   ExploreFilterBar,
   ExploreFilterSheet,
+  TrendingArtistsSection,
 } from "@/lib/components/explore";
 import { SlidersHorizontal } from "lucide-react";
 import { LoadingSpinner } from "@/lib/design-system";
@@ -118,6 +119,9 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
         open={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
       />
+
+      {/* Trending artists section — only shown on Explore tab, not Editorial */}
+      {!hasMagazine && <TrendingArtistsSection />}
 
       <div className="relative flex-1">
         <AnimatePresence mode="wait">
