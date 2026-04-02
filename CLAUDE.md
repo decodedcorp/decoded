@@ -95,10 +95,14 @@ When adding a new API endpoint:
 /gsd:quick             # 빠른 작업
 ```
 
-## SpecKit Integration
+## Harness Workflow
 
-- Specs: `specs/` (feature별)
-- Commands: `/speckit.*` (Claude Code)
+| Tool | Role | When |
+|------|------|------|
+| gstack | 기획/리뷰/QA/배포 | Think → Plan → Ship |
+| Superpowers | TDD, 코드 품질 강제 | Build (구현) |
+| OMC | Claude + Gemini 듀얼 | 대규모 작업 보조 |
+| GSD quick | 원자적 단발 패치 | 유지보수 |
 
 ## Documentation
 

@@ -33,7 +33,7 @@ decoded-monorepo/                 # Monorepo root (bun workspaces + Turborepo)
 │
 ├── docs/                        # Project documentation
 ├── .planning/                   # GSD artifacts and codebase docs
-├── specs/                       # Feature specs (SpecKit)
+├── specs/                       # Feature specs
 ├── turbo.json                   # Turborepo pipeline config
 ├── package.json                 # Root workspace config
 └── bunfig.toml                  # Bun config

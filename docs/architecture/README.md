@@ -185,7 +185,7 @@ decoded-app/
 │
 ├── specs/                            # 기능 명세
 │   ├── feature-spec/                 # 기능별 명세서
-│   └── 001-scroll-animation/         # SpecKit 명세
+│   └── 001-scroll-animation/         # Feature spec
 │
 ├── __tests__/                        # 테스트 파일
 │

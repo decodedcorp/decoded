@@ -14,7 +14,7 @@
 
 ### 2. 검토
 
-- Speckit + Claude를 사용하여:
+- gstack의 `/plan-eng-review`를 사용하여:
   - 가정, 엣지 케이스, 위험 요소를 확인합니다.
   - `docs/ai-playbook/01-principles.md`와 정렬합니다.
 
@@ -56,6 +56,6 @@
 
 ## 통합 노트
 
-- **Speckit** (`.specify/`): 기존 인프라 유지. Claude는 스펙 검토를 위해 `.claude/commands/speckit.*`를 사용합니다.
+- **Harness Workflow**: gstack(기획/QA) + Superpowers(TDD) + GSD quick(유지보수). 상세: `CLAUDE.md`의 Harness Workflow 섹션 참조.
 - **Cursor Rules** (`.cursor/rules/`): Cursor 사용 시 자동 적용됩니다.
 - **템플릿**: Gemini와 Codex용 템플릿은 `docs/prompts/`에 있습니다.
