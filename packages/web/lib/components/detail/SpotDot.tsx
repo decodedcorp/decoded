@@ -7,6 +7,7 @@ type SpotDotProps = {
   brand?: string;
   category?: string;
   accentColor?: string;
+  thumbnailUrl?: string | null;
 } & (
   | { mode: "percent"; x: number; y: number }
   | { mode: "pixel"; leftPx: number; topPx: number }
@@ -17,7 +18,7 @@ type SpotDotProps = {
  * Use mode="percent" for image-fill layouts, mode="pixel" for object-contain.
  */
 export function SpotDot(props: SpotDotProps) {
-  const { label, brand, category, accentColor } = props;
+  const { label, brand, category, accentColor, thumbnailUrl } = props;
   const [hovered, setHovered] = useState(false);
   const dotColor = accentColor || "hsl(var(--primary))";
 
@@ -54,6 +55,16 @@ export function SpotDot(props: SpotDotProps) {
           transform: hovered ? "scale(1.4)" : "scale(1)",
         }}
       />
+      {/* Thumbnail - above dot when solution has a thumbnail */}
+      {thumbnailUrl && (
+        <div className="absolute left-1/2 bottom-full mb-1.5 -translate-x-1/2 pointer-events-none z-[99]">
+          <img
+            src={thumbnailUrl}
+            alt={label || "solution"}
+            className="h-8 w-8 rounded-md object-cover border border-border/50 shadow-sm"
+          />
+        </div>
+      )}
       {/* Tooltip - below dot to avoid clipping by overflow-hidden parent */}
       {hovered && (
         <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-background/95 px-3 py-1.5 text-xs shadow-lg border border-border/50 backdrop-blur-sm pointer-events-none z-[100]">

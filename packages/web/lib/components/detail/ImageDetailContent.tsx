@@ -243,6 +243,7 @@ export function ImageDetailContent({
         <MagazineTitleSection
           title={magazineLayout.title}
           subtitle={magazineLayout.subtitle}
+          isModal={isModal}
         />
       ) : (
         !hideImage && (
@@ -326,12 +327,14 @@ export function ImageDetailContent({
           <MagazineEditorialSection
             editorial={magazineLayout.editorial}
             accentColor={accentColor}
+            isModal={isModal}
           />
 
           {/* Magazine: Celebrity Style Archive */}
           <MagazineCelebSection
             celebs={magazineLayout.celeb_list}
             accentColor={accentColor}
+            isModal={isModal}
           />
 
           {/* Magazine: The Look + per-item Related Items */}
@@ -339,6 +342,7 @@ export function ImageDetailContent({
             items={magazineLayout.items}
             relatedItems={magazineLayout.related_items}
             accentColor={accentColor}
+            isModal={isModal}
           />
         </>
       ) : (
@@ -384,7 +388,7 @@ export function ImageDetailContent({
         />
       )}
 
-      {/* Try Gallery Section — pass items for VTON */}
+      {/* TODO: Try Gallery Section — temporarily disabled
       <TryGallerySection
         postId={image.id}
         items={normalizedItems
@@ -399,8 +403,9 @@ export function ImageDetailContent({
             })
           )}
       />
+      */}
 
-      {/* Social Actions & Comments */}
+      {/* TODO: Social Actions & Comments — temporarily disabled
       <div className="px-6 py-6 md:px-10 border-t border-border">
         <SocialActions
           initialLiked={initialLiked}
@@ -418,6 +423,7 @@ export function ImageDetailContent({
       <div ref={commentSectionRef}>
         <ImageCommentSection imageId={image.id} />
       </div>
+      */}
 
       {/* Magazine: Related Editorials - 맨 마지막 */}
       {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
