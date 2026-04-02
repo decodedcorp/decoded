@@ -42,7 +42,15 @@ See: .planning/PROJECT.md
 - Quick task history available via `git log`
 - v6.0 paused: PIPA/GDPR disclosure required before behavioral tracking
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260402-mls | Nav 기능 숨기기 (GH #35) | 2026-04-02 | 8c01341c | [260402-mls](./quick/260402-mls-github-35-1-upload-lab-try-on-notice-pro/) |
+
 ---
+
+Last activity: 2026-04-02 - Completed quick task 260402-mls: Nav 기능 숨기기 (GH #35)
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_
