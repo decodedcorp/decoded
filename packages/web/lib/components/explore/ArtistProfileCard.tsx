@@ -7,7 +7,7 @@ import type { TrendingArtist } from "@/lib/hooks/useTrendingArtists";
 
 interface ArtistProfileCardProps {
   artist: TrendingArtist;
-  onClick: (name: string) => void;
+  onClick?: (name: string) => void;
 }
 
 export const ArtistProfileCard = memo(function ArtistProfileCard({
@@ -19,7 +19,7 @@ export const ArtistProfileCard = memo(function ArtistProfileCard({
   return (
     <button
       type="button"
-      onClick={() => onClick(artist.name)}
+      onClick={() => onClick?.(artist.name)}
       className="flex flex-col items-center gap-2 flex-none w-[72px] md:w-[80px] group"
     >
       {/* Circular avatar */}
