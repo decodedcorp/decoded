@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -10,6 +10,7 @@ import type {
   PostMagazineSpotItem,
   PostMagazineRelatedItem,
 } from "@/lib/api/mutation-types";
+import { useBatchTextLayout } from "@/lib/hooks/usePretext";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -29,6 +30,31 @@ export function MagazineItemsSection({
   isModal,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionWidth, setSectionWidth] = useState(0);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => setSectionWidth(entry.contentRect.width));
+    obs.observe(el);
+    setSectionWidth(el.getBoundingClientRect().width);
+    return () => obs.disconnect();
+  }, []);
+
+  // Estimate text container width beside the image (md:w-72 lg:w-80 + gap-10 + section px-8*2)
+  const titleContainerWidth = sectionWidth >= 768
+    ? Math.max(sectionWidth - 320 - 40 - 64, 0)  // desktop: section - image - gap - section padding
+    : Math.max(sectionWidth - 32, 0);              // mobile: section - px-4*2
+
+  const titleLayouts = useBatchTextLayout({
+    items: items.map((item) => ({
+      key: item.spot_id,
+      text: item.title,
+    })),
+    font: '700 20px system-ui, -apple-system, sans-serif',
+    lineHeight: 28,
+    containerWidth: titleContainerWidth,
+  });
 
   const relatedBySpot = useMemo(() => {
     const map = new Map<string, PostMagazineRelatedItem[]>();
@@ -89,6 +115,7 @@ export function MagazineItemsSection({
           } | undefined;
           const price = meta?.price;
           const spotRelated = relatedBySpot.get(item.spot_id) ?? [];
+          const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;
 
           return (
             <div key={item.spot_id} className="item-card">
@@ -145,7 +172,12 @@ export function MagazineItemsSection({
                       {item.brand}
                     </p>
                   )}
-                  <h3 className="typography-h4 mb-2">{item.title}</h3>
+                  <h3
+                    className="typography-h4 mb-2"
+                    style={titleHeight > 0 ? { minHeight: titleHeight } : undefined}
+                  >
+                    {item.title}
+                  </h3>
                   {price && (
                     <p className="mb-4 text-sm font-medium text-muted-foreground">
                       {price}
