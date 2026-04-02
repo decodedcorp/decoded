@@ -32,7 +32,7 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 
 ## Tech stack (one line)
 
-Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · Supabase · GSAP/Motion · Playwright · ESLint flat · bun · Node 22+ · Rust API (Axum) · Python AI (gRPC). 세부는 STACK.md.
+Next.js 16.2 / React 19 / TypeScript 5.9 · Tailwind 3.4 · Zustand · TanStack Query 5.90 · Supabase · GSAP/Motion · Playwright 1.58 · ESLint v10 flat · bun · Node 22+ · Rust API (Axum 0.8) · Python AI (gRPC). 세부는 STACK.md.
 
 ## Code style
 
@@ -43,9 +43,10 @@ Next.js 16 / React 19 / TypeScript · Tailwind · Zustand · TanStack Query · S
 ## Important notes
 
 - **Package manager**: **bun** with Turborepo — use `bun` commands (not yarn/npm)
+- **Task runner**: [`Justfile`](Justfile) — `just local-fe`, `just local-be`, `just --list`
 - **ESLint**: flat config (`eslint.config.mjs`), Node 22+
 - **Env**: `packages/web/.env.local` from `.env.local.example` (gitignored)
-- **Supabase** required for typical data/auth flows
+- **Supabase**: public schema (앱 데이터) + warehouse schema (ETL/Seed 파이프라인)
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
 
 ## Generated API Code
@@ -147,7 +148,7 @@ Use gstack slash commands for the sprint workflow: **Think → Plan → Build �
 - If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup`
 - Follow the sprint order: Think → Plan → Build → Review → Test → Ship → Reflect
 
-<!-- Last Updated: 2026-03-27 -->
+<!-- Last Updated: 2026-04-02 -->
 
 <!-- MANUAL ADDITIONS START -->
 

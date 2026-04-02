@@ -271,26 +271,67 @@ Seed post의 아카이브된 이미지 에셋.
 
 ---
 
-## App 활용 가능 데이터
+## Data Volume (2026-04-02 기준)
 
-| 데이터 | 테이블 | 활용 아이디어 |
-|--------|--------|--------------|
-| 아티스트/그룹 목록 | `artists`, `groups` | 아티스트 브라우징, 필터, 프로필 |
-| 브랜드 목록 | `brands` | 브랜드 디렉토리, 필터 |
-| 아티스트 IG 계정 | `instagram_accounts` | 소셜 링크, 프로필 이미지 |
-| 수집된 포스트 | `posts` + `images` | 갤러리, 타임라인, AI 분석 원본 |
-| 큐레이션된 포스트 | `seed_posts` (status=published) | 메인 피드 콘텐츠 |
-| 아이템 스팟 | `seed_spots` | 이미지 위 아이템 마커 |
-| 상품 매칭 | `seed_solutions` | "이 아이템 찾기" 기능 |
+| Table | Rows | Note |
+|-------|------|------|
+| `artists` | 67 | K-pop 아티스트 |
+| `brands` | 395 | 패션 브랜드 |
+| `groups` | 39 | K-pop 그룹 |
+| `group_members` | 48 | Artist↔Group 매핑 |
+| `instagram_accounts` | 618 | brand 419, artist 130, group 40, other 15, place 6, influencer 5, source 3 |
+| `posts` | 849 | 수집된 IG 게시물 |
+| `images` | 2,542 | pending 1,651 / skipped 647 / extracted 233 (with_items=true) / pending+items 10 |
+| `seed_posts` | 244 | **draft 243**, failed 1 — published 0 |
+| `seed_spots` | **0** | 아직 어노테이션 없음 |
+| `seed_solutions` | **0** | 아직 상품 매칭 없음 |
+| `seed_asset` | 244 | 아카이브 이미지 |
+
+### 데이터 상태 요약
+
+- **Entity 레이어**: 충분한 데이터 (artists 67, brands 395, groups 39)
+- **Instagram 수집**: 활발 (618 계정, 849 포스트, 2,542 이미지)
+- **Seed 파이프라인**: **초기 단계** — seed_posts 244개 모두 draft, spots/solutions 비어있음
+- **즉시 활용 가능**: artists, brands, groups, instagram_accounts (Entity 데이터)
+- **아직 미완성**: seed 퍼블리싱 파이프라인 (spots/solutions 비어있어 앱 연동 불가)
 
 ---
 
-## RLS 주의사항
+## App 활용 가능 데이터
 
-warehouse 스키마의 RLS 정책을 반드시 확인할 것:
-- anon key로 접근 시 RLS 정책에 따라 데이터 접근이 제한될 수 있음
-- 대시보드 → Authentication → Policies에서 warehouse 테이블별 정책 확인
-- 읽기 전용(SELECT)만 허용하는 게 일반적
+| 데이터 | 테이블 | Rows | 활용 아이디어 | 상태 |
+|--------|--------|------|--------------|------|
+| 아티스트/그룹 목록 | `artists`, `groups` | 67/39 | 아티스트 브라우징, 필터, 프로필 | **Ready** |
+| 브랜드 목록 | `brands` | 395 | 브랜드 디렉토리, 필터 | **Ready** |
+| IG 계정 정보 | `instagram_accounts` | 618 | 소셜 링크, 프로필 이미지 | **Ready** |
+| 수집된 이미지 | `images` (extracted) | 233 | 갤러리, AI 분석 원본 | **Ready** |
+| 수집된 포스트 | `posts` | 849 | 타임라인 | **Ready** |
+| 큐레이션 포스트 | `seed_posts` | 244 | 피드 콘텐츠 | Draft only |
+| 아이템 스팟 | `seed_spots` | 0 | 이미지 위 아이템 마커 | Empty |
+| 상품 매칭 | `seed_solutions` | 0 | "이 아이템 찾기" | Empty |
+
+---
+
+## RLS 상태
+
+> 모든 warehouse 테이블: RLS ON + **"Allow public read" (SELECT)** 정책 적용 (2026-04-02)
+
+| Table | RLS | Read Policy | Write |
+|-------|-----|-------------|-------|
+| artists | ON | Public read | 없음 (차단) |
+| brands | ON | Public read | 없음 (차단) |
+| groups | ON | Public read | 없음 (차단) |
+| group_members | ON | Public read | 없음 (차단) |
+| instagram_accounts | ON | Public read | 없음 (차단) |
+| posts | ON | Public read | 없음 (차단) |
+| images | ON | Public read | 없음 (차단) |
+| seed_posts | ON | Public read | 없음 (차단) |
+| seed_spots | ON | Public read | 없음 (차단) |
+| seed_solutions | ON | Public read | 없음 (차단) |
+| seed_asset | ON | Public read | 없음 (차단) |
+
+- anon key로 **SELECT 가능**, INSERT/UPDATE/DELETE는 차단
+- 쓰기가 필요하면 별도 정책 추가 또는 service_role key 사용 (Server-side only)
 
 ---
 
