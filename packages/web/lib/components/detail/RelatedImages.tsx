@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfinitePosts } from "@/lib/hooks/usePosts";
-import Image from "next/image";
+import { PostImage } from "@/lib/components/shared/PostImage";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
@@ -153,21 +153,13 @@ export function RelatedImages({
                 {...cardProps}
                 className="related-card group block relative aspect-[4/5] overflow-hidden rounded-lg bg-muted"
               >
-                {post.image_url ? (
-                  <Image
-                    src={post.image_url}
-                    alt={`Post by @${account}`}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 33vw"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-muted-foreground text-xs">
-                      No Image
-                    </span>
-                  </div>
-                )}
+                <PostImage
+                  src={post.image_url ?? ""}
+                  alt={`Post by @${account}`}
+                  flagKey="RelatedImages"
+                  className="w-full h-full"
+                  imgClassName="transition-transform duration-700 group-hover:scale-105"
+                />
 
                 {/* Magazine-style overlay: artist_name의 N개의 아이템 둘러보기 + Read CTA */}
                 <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
