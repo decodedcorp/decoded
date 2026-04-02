@@ -11,6 +11,7 @@
 | Next.js `app/api/v1/*` 라우트 표 | [api-v1-routes.md](api-v1-routes.md) |
 | 훅 목록, 스토어·주요 경로 | [web-hooks-and-stores.md](web-hooks-and-stores.md) |
 | 디자인 시스템 import·컴포넌트 인벤토리 | [design-system-llm.md](design-system-llm.md) |
+| Warehouse 스키마 (ETL·Seed 파이프라인) | [warehouse-schema.md](warehouse-schema.md) |
 | 아키텍처·컨벤션·스택 심층 | [`.planning/codebase/`](../../.planning/codebase/) |
 | 디자인 토큰·UI 상세 | [`docs/design-system/`](../design-system/) |
 

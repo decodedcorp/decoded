@@ -27,6 +27,7 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 | [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md) | Next.js `/api/v1/*` 표 |
 | [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md) | 훅·스토어·주요 경로 |
 | [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md) | 디자인 시스템 import·컴포넌트 목록 |
+| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md) | Warehouse 스키마 (ETL·Seed 파이프라인) |
 | [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md) | Rust API 크레이트 전용 |
 
 ## Tech stack (one line)
