@@ -133,7 +133,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증 (completed 2026-04-02)
 - [x] **Phase 56: Explore UI Enhancement** - 카테고리 필터 Editorial 탭 + 카드 호버 아이템 프리뷰 ✅ 2026-04-02
 - [x] **Phase 57: Editorial Layout & Detail View** - Editorial 전용 매거진 스타일 레이아웃 + 에디토리얼 상세 뷰 ✅ 2026-04-02
-- [ ] **Phase 58: Artist Discovery** - 아티스트 프로필 카드 + 트렌딩 아티스트 섹션
+- [x] **Phase 58: Artist Discovery** - 아티스트 프로필 카드 + 트렌딩 아티스트 섹션 (completed 2026-04-02)
 
 ## Phase Details
 
@@ -557,10 +557,10 @@ Plans:
 2. 트렌딩 아티스트 섹션이 추가된다
 
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 58-01-PLAN.md — Trending artists hook, card, section + ExploreClient integration
+- [x] 58-01-PLAN.md — Trending artists hook, card, section + ExploreClient integration
 ## Progress
 
 **Execution Order:**
