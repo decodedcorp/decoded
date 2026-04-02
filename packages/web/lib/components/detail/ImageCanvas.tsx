@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import type { ImageRow } from "@/lib/supabase/types";
 import type { UiItem, BoundingBox } from "./types";
 import { getHighlightStyle } from "./types";
+import { SpotDot } from "./SpotDot";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
@@ -306,35 +307,40 @@ export function ImageCanvas({
             style={{ opacity: 0, transformOrigin: "center center" }}
           />
 
-          {/* Highlight Boxes Container - Applies same transform as image */}
+          {/* Spot Dots Container - Applies same transform as image */}
           <div
             ref={boxesRef}
             className="absolute inset-0 pointer-events-none"
             style={{ transformOrigin: "center center" }}
           >
             {items.map((item, index) => {
-              if (!item.normalizedBox) return null;
+              if (!item.normalizedCenter) return null;
+
+              const rect = getDisplayedRect();
+              if (!rect) return null;
 
               const isActive = index === activeIndex;
-              // Use corrected style for object-fit: cover
-              const style = getCorrectedBoxStyle(item.normalizedBox);
+              const pixelLeft = rect.left + rect.width * item.normalizedCenter.x;
+              const pixelTop = rect.top + rect.height * item.normalizedCenter.y;
+              const meta = item.metadata as unknown as Record<string, unknown> | undefined;
 
               return (
                 <div
                   key={item.id}
-                  className={`absolute transition-all duration-300 pointer-events-none ${
-                    isActive
-                      ? "border border-white/90 shadow-sm opacity-100"
-                      : "border-0 opacity-0"
+                  className={`transition-all duration-300 ${
+                    isActive ? "opacity-100 scale-125" : "opacity-60 scale-100"
                   }`}
-                  style={style}
+                  style={{ position: "absolute", left: 0, top: 0, transformOrigin: `${pixelLeft}px ${pixelTop}px` }}
                 >
-                  {/* Index Label */}
-                  {isActive && (
-                    <div className="absolute -top-6 left-0 bg-white text-black text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
-                      {String(index + 1).padStart(2, "0")}
-                    </div>
-                  )}
+                  <SpotDot
+                    mode="pixel"
+                    leftPx={pixelLeft}
+                    topPx={pixelTop}
+                    label={item.product_name ?? ""}
+                    brand={meta?.brand as string | undefined}
+                    category={meta?.sub_category as string | undefined}
+                    accentColor="var(--mag-accent)"
+                  />
                 </div>
               );
             })}
