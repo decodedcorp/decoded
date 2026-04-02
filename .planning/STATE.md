@@ -47,10 +47,11 @@ See: .planning/PROJECT.md
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260402-mls | Nav 기능 숨기기 (GH #35) | 2026-04-02 | 8c01341c | [260402-mls](./quick/260402-mls-github-35-1-upload-lab-try-on-notice-pro/) |
+| 260402-mym | Explore 페이지 editorial post만 필터링 | 2026-04-02 | 1169e31b | [260402-mym](./quick/260402-mym-explore-editorial-post/) |
 
 ---
 
-Last activity: 2026-04-02 - Completed quick task 260402-mls: Nav 기능 숨기기 (GH #35)
+Last activity: 2026-04-02 - Completed quick task 260402-mym: Explore 페이지 editorial post만 필터링
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_
