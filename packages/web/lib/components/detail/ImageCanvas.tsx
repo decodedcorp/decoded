@@ -328,7 +328,7 @@ export function ImageCanvas({
                 <div
                   key={item.id}
                   className={`transition-all duration-300 ${
-                    isActive ? "opacity-100 scale-125" : "opacity-60 scale-100"
+                    isActive ? "opacity-100 scale-125" : "opacity-0 scale-100"
                   }`}
                   style={{ position: "absolute", left: 0, top: 0, transformOrigin: `${pixelLeft}px ${pixelTop}px` }}
                 >
