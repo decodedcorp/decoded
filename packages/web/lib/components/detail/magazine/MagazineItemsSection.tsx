@@ -45,9 +45,9 @@ export function MagazineItemsSection({
     return () => obs.disconnect();
   }, []);
 
-  // Estimate text container width beside the image (md:w-72 lg:w-80 + gap-10 + section px-8*2)
+  // Estimate text container width beside the image (md:w-60 lg:w-64 + gap-10 + section px-8*2)
   const titleContainerWidth = sectionWidth >= 768
-    ? Math.max(sectionWidth - 320 - 40 - 64, 0)  // desktop: section - image - gap - section padding
+    ? Math.max(sectionWidth - 256 - 40 - 64, 0)  // desktop: section - image - gap - section padding
     : Math.max(sectionWidth - 32, 0);              // mobile: section - px-4*2
 
   const titleLayouts = useBatchTextLayout({
@@ -183,7 +183,7 @@ export function MagazineItemsSection({
                 }`}
               >
                 {/* Item Image */}
-                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-72 lg:w-80">
+                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-60 lg:w-64">
                   {item.image_url ? (
                     <Image
                       src={item.image_url}
@@ -276,11 +276,11 @@ export function MagazineItemsSection({
 
               {/* Similar Items for this spot */}
               {spotRelated.length > 0 && (
-                <div className="mt-6 ml-0 md:ml-[calc(18rem+2.5rem)] lg:ml-[calc(20rem+2.5rem)]">
+                <div className="mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]">
                   <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Similar Items
                   </p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     {spotRelated.slice(0, 3).map((ri, j) => (
                       <a
                         key={`${ri.title}-${j}`}
@@ -289,7 +289,7 @@ export function MagazineItemsSection({
                         rel="noopener noreferrer"
                         className="group overflow-hidden rounded-lg border border-border/40 bg-card transition-all hover:border-border hover:shadow-md"
                       >
-                        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-muted">
                           {ri.image_url ? (
                             <Image
                               src={ri.image_url}
@@ -306,7 +306,7 @@ export function MagazineItemsSection({
                             </div>
                           )}
                         </div>
-                        <div className="p-2">
+                        <div className="p-2.5">
                           {ri.brand && (
                             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                               {ri.brand}

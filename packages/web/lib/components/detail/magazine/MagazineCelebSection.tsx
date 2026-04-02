@@ -33,8 +33,8 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
     return () => obs.disconnect();
   }, []);
 
-  // Estimate columns based on width (breakpoints: lg=1024 → 5col, md=768 → 3col, else 2col)
-  const cols = gridWidth >= 1024 ? 5 : gridWidth >= 768 ? 3 : 2;
+  // Estimate columns based on width (breakpoints: lg=1024 → 4col, md=768 → 3col, else 2col)
+  const cols = gridWidth >= 1024 ? 4 : gridWidth >= 768 ? 3 : 2;
   const cardTextWidth = gridWidth > 0
     ? (gridWidth - (cols - 1) * 16) / cols - 24  // subtract p-3 padding (12*2)
     : 0;
@@ -81,14 +81,14 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
   return (
     <section
       ref={sectionRef}
-      className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16"
+      className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16"
     >
       <h2 className="typography-h3 mb-2 text-center">Style Archive</h2>
       <p className="mb-10 text-center text-sm text-muted-foreground">
         같은 아이템을 착용한 셀럽들
       </p>
 
-      <div ref={gridRef} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div ref={gridRef} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {celebs.map((celeb, i) => {
           const nameHeight = nameLayouts[`${celeb.celeb_name}-${i}`]?.height ?? 0;
           return (
