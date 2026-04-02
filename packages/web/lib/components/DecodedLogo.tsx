@@ -582,6 +582,8 @@ class CanvAscii {
 }
 
 interface DecodedLogoProps {
+  text?: string;
+  textColor?: string;
   asciiFontSize?: number;
   textFontSize?: number;
   planeBaseHeight?: number;
@@ -591,6 +593,8 @@ interface DecodedLogoProps {
 }
 
 export default function DecodedLogo({
+  text = "decoded",
+  textColor = "#d9fc69",
   asciiFontSize = 8,
   textFontSize = 200,
   planeBaseHeight = 8,
@@ -600,9 +604,6 @@ export default function DecodedLogo({
 }: DecodedLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const asciiRef = useRef<CanvAscii | null>(null);
-
-  const text = "decoded";
-  const textColor = "#d9fc69";
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -702,6 +703,8 @@ export default function DecodedLogo({
       }
     };
   }, [
+    text,
+    textColor,
     asciiFontSize,
     textFontSize,
     planeBaseHeight,
