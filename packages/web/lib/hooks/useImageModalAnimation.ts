@@ -68,7 +68,8 @@ export function useImageModalAnimation({
     ctxRef.current = gsap.context(() => {
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
 
-      gsap.set(backdropRef.current, { opacity: 0 });
+      // Backdrop visible immediately to prevent background flash
+      gsap.set(backdropRef.current, { opacity: 1 });
 
       if (isDesktop) {
         gsap.set(drawerRef.current, { x: "100%", y: 0 });
@@ -76,16 +77,13 @@ export function useImageModalAnimation({
         gsap.set(drawerRef.current, { x: 0, y: "100%" });
       }
 
-      const tl = gsap.timeline();
-      tl.to(
-        backdropRef.current,
-        { opacity: 1, duration: 0.4, ease: "power2.out" },
-        0
-      ).to(
-        drawerRef.current,
-        { x: "0%", y: "0%", duration: 0.5, ease: "power3.out" },
-        0.1
-      );
+      // Drawer slides in without delay
+      gsap.to(drawerRef.current, {
+        x: "0%",
+        y: "0%",
+        duration: 0.35,
+        ease: "power3.out",
+      });
     }, containerRef);
 
     return () => {
@@ -138,24 +136,12 @@ export function useImageModalAnimation({
         opacity: 1,
       });
 
-      const tl = gsap.timeline();
-      tl.to(leftImageContainerRef.current, {
+      gsap.to(leftImageContainerRef.current, {
         ...targetProps,
-        duration: 0.6,
-        ease: "power3.inOut",
+        duration: 0.4,
+        ease: "power3.out",
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
       });
-      tl.to(
-        leftImageContainerRef.current,
-        {
-          scale: 1.02,
-          duration: 0.3,
-          ease: "power1.out",
-          yoyo: true,
-          repeat: 1,
-        },
-        0
-      );
     } else {
       gsap.set(leftImageContainerRef.current, {
         position: "fixed",

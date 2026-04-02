@@ -9,6 +9,9 @@ import { Card } from "@/lib/design-system";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
 import type { ItemConfig } from "@/lib/components/ThiingsGrid";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
+import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
+import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+import { cn } from "@/lib/utils";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(Flip);
@@ -34,6 +37,9 @@ export const ExploreCardCell = memo(function ExploreCardCell({
   const isTopImage = gridIndex < 6;
   const imageUrl = item?.imageUrl;
   const imageId = item?.id;
+
+  const { width: imgW, height: imgH } = useImageDimensions(imageUrl);
+  const useDynamicRatio = FEATURE_FLAGS.dynamicImageRatio.ExploreCardCell;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!imageId) return;
@@ -84,51 +90,38 @@ export const ExploreCardCell = memo(function ExploreCardCell({
       >
         <article
           data-flip-id={`card-${imageId}`}
-          className="relative aspect-[3/4] bg-muted"
-        >
-          <Image
-            src={imageUrl}
-            alt={`Image ${imageId}`}
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-opacity duration-150 ease-out ${
-              isLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            priority={isTopImage}
-            onError={() => setImageError(true)}
-            onLoad={() => setIsLoaded(true)}
-          />
-          {/* spotCount badge pill — top-right, only when spotCount > 0 */}
-          {item?.spotCount != null && item.spotCount > 0 && (
-            <div className="absolute top-2 right-2 z-10">
-              <span
-                className="inline-flex items-center rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums backdrop-blur-sm"
-                aria-label={`${item.spotCount} spots`}
-              >
-                {item.spotCount}
-              </span>
-            </div>
+          className={cn(
+            "relative",
+            useDynamicRatio ? "bg-black" : "aspect-[3/4] bg-muted"
           )}
-          {/* Editorial 타이틀 오버레이 - 검은 스킴 + 텍스트 아웃라인으로 어떤 배경에서도 선명하게 */}
-          {item?.editorialTitle && (
-            <div className="absolute inset-x-0 bottom-0">
-              {/* 하단 검은색 오버레이: 타이틀 영역 확실히 어둡게 */}
-              <div
-                className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/95 via-black/80 to-transparent"
-                aria-hidden
-              />
-              <div className="absolute inset-x-0 bottom-0 px-3.5 pb-3 pt-6">
-                <p
-                  className="line-clamp-2 text-[13px] font-semibold leading-[1.35] tracking-tight text-white antialiased"
-                  style={{
-                    textShadow:
-                      "0 0 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)",
-                  }}
-                >
-                  {item.editorialTitle}
-                </p>
-              </div>
-            </div>
+        >
+          {useDynamicRatio ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt={`Image ${imageId}`}
+              width={imgW}
+              height={imgH}
+              className={cn(
+                "w-full object-contain max-h-[60vh] transition-opacity duration-150 ease-out",
+                isLoaded ? "opacity-100" : "opacity-0"
+              )}
+              onError={() => setImageError(true)}
+              onLoad={() => setIsLoaded(true)}
+            />
+          ) : (
+            <Image
+              src={imageUrl}
+              alt={`Image ${imageId}`}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className={`object-cover transition-opacity duration-150 ease-out ${
+                isLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              priority={isTopImage}
+              onError={() => setImageError(true)}
+              onLoad={() => setIsLoaded(true)}
+            />
           )}
         </article>
       </Card>

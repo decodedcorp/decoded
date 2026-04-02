@@ -8,6 +8,7 @@
 import {
   useQuery,
   useInfiniteQuery,
+  useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
 import {
@@ -191,80 +192,33 @@ export function useInfinitePosts(params: {
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
 
-      // hasMagazine=true → REST API 우선, 실패 시 Supabase fallback
-      // (Supabase posts 뷰에 magazine 컬럼이 없어 직접 필터 불가)
+      // hasMagazine=true → REST API 사용 (Supabase posts 뷰에 magazine 컬럼 없음)
       if (hasMagazine) {
-        try {
-          const response = await listPosts({
-            page,
-            per_page: limit,
-            sort,
-            has_magazine: true,
-            artist_name: mediaName ?? artistName,
-            group_name: castName ? undefined : groupName,
-            context: contextType ?? (category && category !== "all" ? category : undefined),
-          });
+        const response = await listPosts({
+          page,
+          per_page: limit,
+          sort,
+          has_magazine: true,
+          artist_name: mediaName ?? artistName,
+          group_name: castName ? undefined : groupName,
+          context: contextType ?? (category && category !== "all" ? category : undefined),
+        });
 
-          const items: PostGridItem[] = response.data.map((post) => ({
-            id: post.id,
-            imageUrl: post.image_url,
-            postId: post.id,
-            postSource: "post" as const,
-            postAccount: post.artist_name ?? post.group_name ?? "",
-            postCreatedAt: post.created_at,
-            spotCount: post.spot_count ?? 0,
-            viewCount: post.view_count,
-            title: post.post_magazine_title ?? post.title ?? null,
-          }));
+        const items: PostGridItem[] = response.data.map((post) => ({
+          id: post.id,
+          imageUrl: post.image_url,
+          postId: post.id,
+          postSource: "post" as const,
+          postAccount: post.artist_name ?? post.group_name ?? "",
+          postCreatedAt: post.created_at,
+          spotCount: post.spot_count ?? 0,
+          viewCount: post.view_count,
+          title: post.post_magazine_title ?? post.title ?? null,
+        }));
 
-          const totalPages = response.pagination.total_pages;
-          const hasMore = page < totalPages;
-          return { items, nextPage: hasMore ? page + 1 : null, hasMore };
-        } catch {
-          // REST API 미가용 시 Supabase fallback: post_magazines에서 post_id 조회 후 필터
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: magazines } = await (supabaseBrowserClient as any)
-            .from("post_magazines")
-            .select("post_id, title");
-          const magazineMap = new Map<string, string>(
-            (magazines ?? []).map((m: { post_id: string; title: string }) => [m.post_id, m.title])
-          );
-          const postIds = Array.from(magazineMap.keys());
-          if (postIds.length === 0) {
-            return { items: [], nextPage: null, hasMore: false };
-          }
-
-          const fallbackFrom = (page - 1) * limit;
-          const fallbackTo = fallbackFrom + limit - 1;
-          let fbQuery = supabaseBrowserClient
-            .from("posts")
-            .select("*", { count: "exact" })
-            .in("id", postIds)
-            .eq("status", "active")
-            .not("image_url", "is", null);
-          if (mediaName) fbQuery = fbQuery.ilike("group_name", `%${mediaName}%`);
-          if (castName) fbQuery = fbQuery.ilike("artist_name", `%${castName}%`);
-          fbQuery = fbQuery.order("created_at", { ascending: false }).range(fallbackFrom, fallbackTo);
-
-          const { data: fbData, count: fbCount, error: fbError } = await fbQuery;
-          if (fbError) throw new Error(fbError.message);
-
-          const fbTotal = fbCount ?? 0;
-          const fbTotalPages = Math.ceil(fbTotal / limit);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const items: PostGridItem[] = (fbData ?? []).map((post: any) => ({
-            id: post.id,
-            imageUrl: post.image_url,
-            postId: post.id,
-            postSource: "post" as const,
-            postAccount: post.artist_name ?? post.group_name ?? "",
-            postCreatedAt: post.created_at,
-            spotCount: post.spot_count ?? 0,
-            viewCount: post.view_count,
-            title: magazineMap.get(post.id) ?? post.title ?? null,
-          }));
-          return { items, nextPage: page < fbTotalPages ? page + 1 : null, hasMore: page < fbTotalPages };
-        }
+        const totalPages = response.pagination.total_pages;
+        const hasMore = page < totalPages;
+        return { items, nextPage: hasMore ? page + 1 : null, hasMore };
       }
 
       // 일반 모드 → Supabase 직접 쿼리
@@ -350,13 +304,37 @@ export function useInfinitePosts(params: {
  * Tries REST API first (production), falls back to Supabase direct (dev without backend).
  */
 export function usePostDetailForImage(postId: string) {
+  const queryClient = useQueryClient();
+
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
+      // Helper: eagerly prefetch magazine data once we have a magazine_id
+      const prefetchMagazine = (magazineId: string | null | undefined) => {
+        if (!magazineId) return;
+        queryClient.prefetchQuery({
+          queryKey: ["post-magazines", magazineId],
+          queryFn: async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabaseBrowserClient as any)
+              .from("post_magazines")
+              .select("*")
+              .eq("id", magazineId)
+              .single();
+            if (error || !data) return null;
+            return data as unknown as PostMagazineResponse;
+          },
+          staleTime: 1000 * 60 * 5,
+        });
+      };
+
       // 1. Try REST API (works when backend is running)
       try {
         const response = await getPost(postId);
-        return postDetailToImageDetail(response, postId);
+        const detail = postDetailToImageDetail(response, postId);
+        // Start magazine fetch immediately (no waterfall)
+        prefetchMagazine((detail as any)?.post_magazine_id);
+        return detail;
       } catch {
         // Backend unavailable — fall through to Supabase
       }
@@ -369,6 +347,9 @@ export function usePostDetailForImage(postId: string) {
         const { post, spots, solutions } = result;
         // DB has columns not in PostRow type (post_magazine_id, ai_summary, etc.)
         const postAny = post as Record<string, unknown>;
+
+        // Eagerly prefetch magazine in Supabase fallback path too
+        prefetchMagazine(postAny.post_magazine_id as string | null);
 
         const items = spots.map((spot) => {
           const topSolution = solutions.find((s) => s.spot_id === spot.id);
