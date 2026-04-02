@@ -6,6 +6,7 @@ import { useInfinitePosts, type PostGridItem } from "@/lib/hooks/useImages";
 import ThiingsGrid, { type GridItem } from "@/lib/components/ThiingsGrid";
 import { useFilterStore } from "@/lib/stores/filterStore";
 import { useSearchStore } from "@/lib/stores/searchStore";
+import { useHierarchicalFilterStore } from "@decoded/shared/stores/hierarchicalFilterStore";
 import {
   ExploreCardCell,
   ExploreSkeletonCell,
@@ -31,6 +32,7 @@ type Props = {
 export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Props) {
   const activeFilter = useFilterStore((state) => state.activeFilter);
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
+  const { category: hierCategory, mediaId, castId, contextType } = useHierarchicalFilterStore();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Responsive grid size: smaller on mobile, larger on desktop
@@ -65,6 +67,9 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
     limit: 40,
     category: activeFilter,
     hasMagazine: hasMagazine ?? false,
+    mediaId: mediaId ?? undefined,
+    castId: castId ?? undefined,
+    contextType: contextType ?? undefined,
     // Note: search is not directly supported by Posts API
     // If needed, we can add artist_name or group_name filter
   });
