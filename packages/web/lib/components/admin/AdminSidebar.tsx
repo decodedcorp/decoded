@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   LayoutDashboard,
+  FileText,
   ScanSearch,
   DollarSign,
   GitBranch,
@@ -24,6 +25,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/content", label: "Content", icon: FileText },
   { href: "/admin/editorial-candidates", label: "Editorial", icon: Sparkles },
   { href: "/admin/ai-audit", label: "AI Audit", icon: ScanSearch },
   { href: "/admin/ai-cost", label: "AI Cost", icon: DollarSign },

@@ -15,7 +15,8 @@ App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트
 | `/profile`           | User profile with activity, badges, tries, stats, rankings, style DNA, collections |
 | `/editorial`         | Daily editorial page with curated content                                          |
 | `/magazine/personal` | Personal magazine issue viewer with decoding ritual                                |
-| `/admin`             | Admin dashboard (AI cost, audit, pipeline, server logs)                            |
+| `/admin`             | Admin dashboard (AI cost, audit, content, pipeline, server logs)                   |
+| `/admin/content`     | Content management — post visibility, status control                               |
 | `/request/upload`    | Image upload with DropZone                                                         |
 | `/request/detect`    | AI detection results with item spotting                                            |
 | `/login`             | OAuth authentication (Kakao, Google, Apple)                                        |

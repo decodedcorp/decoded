@@ -829,6 +829,7 @@ pub async fn list_posts(
                 spot_count,
                 view_count: post.view_count,
                 comment_count,
+                status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
             }
@@ -1112,6 +1113,7 @@ pub async fn admin_list_posts(
                 spot_count,
                 view_count: post.view_count,
                 comment_count,
+                status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
             }
@@ -1123,6 +1125,7 @@ pub async fn admin_list_posts(
 
 /// Admin용 Post 상태 변경
 pub async fn admin_update_post_status(
+    search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     db: &DatabaseConnection,
     post_id: Uuid,
     status: &str,
@@ -1140,7 +1143,97 @@ pub async fn admin_update_post_status(
         .await
         .map_err(AppError::DatabaseError)?;
 
+    // Meilisearch 동기화 (비동기, 실패해도 상태 변경은 성공)
+    match status {
+        "hidden" | "deleted" => {
+            if let Err(e) = search_client.delete("posts", &post_id.to_string()).await {
+                tracing::warn!(
+                    "Failed to delete post {} from Meilisearch: {}",
+                    post_id,
+                    e
+                );
+            }
+        }
+        "active" => {
+            let doc = serde_json::json!({
+                "id": post_id.to_string(),
+                "status": "active"
+            });
+            if let Err(e) = search_client
+                .update_document("posts", &post_id.to_string(), doc)
+                .await
+            {
+                tracing::warn!(
+                    "Failed to update post {} in Meilisearch: {}",
+                    post_id,
+                    e
+                );
+            }
+        }
+        _ => {}
+    }
+
     Ok(updated_post.into())
+}
+
+/// Admin용 Post 메타데이터 수정 (소유권 검사 없음)
+pub async fn admin_update_post(
+    state: &AppState,
+    post_id: Uuid,
+    dto: UpdatePostDto,
+) -> AppResult<PostResponse> {
+    let post = get_post_by_id(&state.db, post_id).await?;
+
+    let mut active_post: ActiveModel = post.into();
+
+    if let Some(media_source) = dto.media_source {
+        active_post.media_type = Set(media_source.media_type().to_string());
+    }
+    if let Some(group_name) = dto.group_name {
+        active_post.group_name = Set(Some(group_name));
+    }
+    if let Some(artist_name) = dto.artist_name {
+        active_post.artist_name = Set(Some(artist_name));
+    }
+    if let Some(context) = dto.context {
+        active_post.context = Set(Some(context));
+    }
+    if let Some(status) = dto.status {
+        active_post.status = Set(status);
+    }
+
+    let updated_post = active_post
+        .update(&state.db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let updated_response: PostResponse = updated_post.into();
+
+    // Meilisearch 재인덱싱
+    let search_fields = match load_post_related_data(&state.db, post_id).await {
+        Ok(data) => compute_search_fields(&data),
+        Err(e) => {
+            tracing::warn!("Failed to load search fields for post {}: {}", post_id, e);
+            PostSearchFields {
+                category_codes: vec![],
+                has_adopted_solution: false,
+                solution_count: 0,
+                spot_count: 0,
+            }
+        }
+    };
+    if let Err(e) = index_post_to_meilisearch(
+        &state.search_client,
+        &updated_response,
+        &updated_response.image_url,
+        &search_fields,
+    )
+    .await
+    {
+        tracing::warn!("Failed to update post {} in Meilisearch: {}", post_id, e);
+    }
+
+    Ok(updated_response)
 }
 
 /// 조회수 증가
