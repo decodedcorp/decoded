@@ -85,7 +85,7 @@ export function ExploreClient({ initialPosts: _initialPosts, hasMagazine }: Prop
         postSource: item.postSource,
         postAccount: item.postAccount,
         postCreatedAt: item.postCreatedAt,
-        ...(hasMagazine && item.title && { editorialTitle: item.title }),
+        ...(hasMagazine && item.title != null && { editorialTitle: item.title }),
       }));
   }, [items, hasMagazine]);
 
