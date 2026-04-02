@@ -4,7 +4,6 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    // Default environment for node-based tests
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'lib/**/__tests__/**/*.test.tsx'],
     env: {
