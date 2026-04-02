@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
 
@@ -42,6 +42,14 @@ export function PostImage({
 }: PostImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Handle already-cached images that won't fire onLoad
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true);
+    }
+  }, [src]);
 
   const useDynamic = FEATURE_FLAGS.dynamicImageRatio[flagKey];
 
@@ -64,6 +72,7 @@ export function PostImage({
     return (
       <div className={cn("relative overflow-hidden bg-muted", className)}>
         <img
+          ref={imgRef}
           src={src}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
@@ -94,6 +103,7 @@ export function PostImage({
         }}
       />
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         loading={priority ? "eager" : "lazy"}

@@ -8,6 +8,7 @@ import { useGSAP } from "@gsap/react";
 import type { EditorialMagazineData } from "./types";
 import { PostImage } from "@/lib/components/shared/PostImage";
 
+
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }

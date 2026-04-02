@@ -80,43 +80,50 @@ export async function fetchMagazinePostsServer(
 ): Promise<MagazinePostData[]> {
   const supabase = await createSupabaseServerClient();
 
+  // First: get published magazine IDs
+  const { data: magazines, error: magError } = await supabase
+    .from("post_magazines")
+    .select("id, title, keyword")
+    .eq("status", "published")
+    .limit(limit);
+
+  if (magError || !magazines || magazines.length === 0) {
+    if (magError) console.error("[fetchMagazinePostsServer] Magazine error:", magError);
+    return [];
+  }
+
+  const publishedIds = magazines.map((m) => m.id);
+
+  // Then: get posts that reference these published magazines
   const { data: posts, error } = await supabase
     .from("posts")
     .select("*")
     .eq("status", "active")
     .not("image_url", "is", null)
-    .not("post_magazine_id", "is", null)
+    .in("post_magazine_id", publishedIds)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error || !posts || posts.length === 0) {
-    if (error) console.error("[fetchMagazinePostsServer] Error:", error);
+    if (error) console.error("[fetchMagazinePostsServer] Posts error:", error);
     return [];
   }
 
-  const magazineIds = posts.map((p) => p.post_magazine_id!);
-  const { data: magazines } = await supabase
-    .from("post_magazines")
-    .select("id, title, keyword, status")
-    .in("id", magazineIds)
-    .eq("status", "published");
-
   const magazineMap = new Map(
-    (magazines ?? []).map((m) => [m.id, { title: m.title, keyword: m.keyword }])
+    magazines.map((m) => [m.id, { title: m.title, keyword: m.keyword }])
   );
 
   return posts
-    .filter((p) => magazineMap.has(p.post_magazine_id!))
     .map((row) => {
-      const mag = magazineMap.get(row.post_magazine_id!)!;
+      const mag = magazineMap.get(row.post_magazine_id!);
       return {
         id: row.id,
         imageUrl: row.image_url,
         artistName: row.artist_name,
         groupName: row.group_name,
         context: row.context,
-        magazineTitle: mag.title || row.context || "Editorial",
-        magazineKeyword: mag.keyword,
+        magazineTitle: mag?.title || row.context || "Editorial",
+        magazineKeyword: mag?.keyword ?? null,
       };
     });
 }

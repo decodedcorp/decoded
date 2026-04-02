@@ -368,23 +368,61 @@ export default async function Home({
           ).values(),
         ].slice(0, 8);
 
-  // EditorialMagazine — use posts with published post_magazines
+  // EditorialMagazine — use posts with published post_magazines, fallback to mixed sources
+  const magazineCards = magazinePosts
+    .filter((mp) => mp.imageUrl)
+    .slice(0, 8)
+    .map((mp) => {
+      const { displayName } = enrichArtistName(mp.artistName || mp.groupName);
+      return {
+        id: `mag-${mp.id}`,
+        imageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(mp.imageUrl!)}`,
+        title: mp.magazineTitle,
+        subtitle: mp.context || "",
+        artistName: displayName || "Unknown",
+        category: mp.magazineKeyword || "Editorial",
+        link: `/posts/${mp.id}`,
+      };
+    });
+
+  // Fallback: if fewer than 4 magazine cards, fill with spotlight/whatsNew/weeklyBest
+  if (magazineCards.length < 4) {
+    const usedPostIds = new Set<string | number>(magazineCards.map((c) => c.id.replace("mag-", "")));
+    if (editorialStyle) usedPostIds.add(editorialStyle.id);
+    if (decodedPick) usedPostIds.add(decodedPick.post.id);
+
+    for (const s of [...spotlightStyles, ...whatsNewStyles]) {
+      if (!usedPostIds.has(s.id) && s.imageUrl && magazineCards.length < 8) {
+        magazineCards.push({
+          id: `mag-${s.id}`,
+          imageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(s.imageUrl)}`,
+          title: s.title,
+          subtitle: s.description,
+          artistName: s.artistName,
+          category: "Style",
+          link: s.link || `/posts/${s.id}`,
+        });
+        usedPostIds.add(s.id);
+      }
+    }
+    for (const p of weeklyBestPosts) {
+      if (!usedPostIds.has(p.id) && p.imageUrl && magazineCards.length < 8) {
+        magazineCards.push({
+          id: `mag-${p.id}`,
+          imageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(p.imageUrl)}`,
+          title: p.artistName || p.groupName || "Style",
+          subtitle: p.context || "",
+          artistName: p.artistName || p.groupName || "Unknown",
+          category: "Weekly Best",
+          link: `/posts/${p.id}`,
+        });
+        usedPostIds.add(p.id);
+      }
+    }
+  }
+
   const editorialMagazineData: EditorialMagazineData = {
-    cards: magazinePosts
-      .filter((mp) => mp.imageUrl)
-      .slice(0, 8)
-      .map((mp) => {
-        const { displayName } = enrichArtistName(mp.artistName || mp.groupName);
-        return {
-          id: `mag-${mp.id}`,
-          imageUrl: `/api/v1/image-proxy?url=${encodeURIComponent(mp.imageUrl!)}`,
-          title: mp.magazineTitle,
-          subtitle: mp.context || "",
-          artistName: displayName || "Unknown",
-          category: mp.magazineKeyword || "Editorial",
-          link: `/posts/${mp.id}`,
-        };
-      }),
+    cards: magazineCards,
   };
 
   // CommunityLeaderboard data (kept for future use)
