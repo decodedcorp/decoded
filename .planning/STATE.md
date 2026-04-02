@@ -51,10 +51,12 @@ See: .planning/PROJECT.md
 | 260402-n75 | 포스트 상세 크게보기 버튼 페이지 전환 수정 | 2026-04-02 | - | [260402-n75](./quick/260402-n75-post-detail-fullview-nav-fix/) |
 | 260402-n99 | Explore editorial 필터링 버그 수정 (REST API 전환) | 2026-04-02 | 109b6325 | [260402-n99](./quick/260402-n99-explore-editorial-editorial-post/) |
 | 260402-p1w | Explore 모바일 모달 바텀시트 스타일 변경 | 2026-04-02 | d9953e0c | [260402-p1w](./quick/260402-p1w-explore-mobile-bottom-sheet-modal/) |
+| 260402-pj2 | PostImage 공통컴포넌트 썸네일 정렬 수정 | 2026-04-02 | - | [260402-pj2](./quick/260402-pj2-postimage/) |
+| 260402-pm9 | RelatedImages PostImage 마이그레이션 | 2026-04-02 | ae3ec387 | [260402-pm9](./quick/260402-pm9-more-from-this-look-and-from-decoded-age/) |
 
 ---
 
-Last activity: 2026-04-02 - Completed quick task 260402-p1w: Explore 모바일 모달 바텀시트 스타일 변경
+Last activity: 2026-04-02 - Completed quick task 260402-pm9: RelatedImages PostImage 마이그레이션
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_
