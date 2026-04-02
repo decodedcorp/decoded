@@ -170,7 +170,7 @@ export default function MasonryGridItem({
 
       {/* Spot overlay markers */}
       {hasSpots && (
-        <div ref={spotsRef} className="absolute inset-0">
+        <div ref={spotsRef} className="absolute inset-0 z-20">
           {item.spots!.map((spot, i) => (
             <SpotMarker key={`${item.id}-spot-${i}`} spot={spot} />
           ))}
@@ -178,7 +178,7 @@ export default function MasonryGridItem({
       )}
 
       {/* Bottom gradient + text */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-16">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/70 to-transparent p-4 pt-16">
         <h3 className="text-sm font-semibold text-mag-text">{item.title}</h3>
         {item.subtitle && (
           <p className="mt-0.5 text-xs text-mag-text/60">{item.subtitle}</p>

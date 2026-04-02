@@ -234,7 +234,7 @@ export const FeedCard = memo(
 
             {/* Subtle spot indicators */}
             {spots.length > 0 && (
-              <div className="absolute inset-0 pointer-events-none z-10">
+              <div className="absolute inset-0 pointer-events-none z-20">
                 {spots.map((spot) => (
                   <Hotspot
                     key={spot.id}
