@@ -164,6 +164,9 @@ export function useInfinitePosts(params: {
   groupName?: string;
   sort?: "recent" | "popular" | "trending";
   hasMagazine?: boolean;
+  mediaId?: string;
+  castId?: string;
+  contextType?: string;
 }) {
   const {
     limit = 40,
@@ -173,13 +176,16 @@ export function useInfinitePosts(params: {
     groupName,
     sort = "recent",
     hasMagazine,
+    mediaId,
+    castId,
+    contextType,
   } = params;
 
   return useInfiniteQuery<PostsPage>({
     queryKey: [
       "posts",
       "infinite",
-      { category, search, artistName, groupName, sort, limit, hasMagazine },
+      { category, search, artistName, groupName, sort, limit, hasMagazine, mediaId, castId, contextType },
     ],
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
@@ -192,7 +198,8 @@ export function useInfinitePosts(params: {
         .eq("status", "active")
         .not("image_url", "is", null);
 
-      if (category && category !== "all") {
+      // category filter (flat) — skip if contextType is set (hierarchical takes precedence)
+      if (category && category !== "all" && !contextType) {
         query = query.eq("context", category);
       }
       if (artistName) {
@@ -203,6 +210,20 @@ export function useInfinitePosts(params: {
       }
       if (hasMagazine) {
         query = query.not("post_magazine_id", "is", null);
+      }
+
+      // Hierarchical filters
+      // contextType maps directly to posts.context column (confirmed)
+      if (contextType) {
+        query = query.eq("context", contextType);
+      }
+      // mediaId from hierarchical filter — mock data, use group_name ilike as approximation
+      if (mediaId) {
+        query = query.ilike("group_name", `%${mediaId}%`);
+      }
+      // castId from hierarchical filter — mock data, use artist_name ilike as approximation
+      if (castId) {
+        query = query.ilike("artist_name", `%${castId}%`);
       }
 
       // Sort
