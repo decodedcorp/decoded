@@ -535,7 +535,7 @@ Plans:
 
 Plans:
 - [ ] 56-01-PLAN.md — Brand color unification (SpotDot + HeroSpotMarker)
-- [ ] 56-02-PLAN.md — Hierarchical filter wiring (ExploreClient + useInfinitePosts)
+- [x] 56-02-PLAN.md — Hierarchical filter wiring (ExploreClient + useInfinitePosts)
 - [ ] 56-03-PLAN.md — Detail page brand color + badge cleanup
 
 ### Phase 57: Editorial Layout & Detail View
