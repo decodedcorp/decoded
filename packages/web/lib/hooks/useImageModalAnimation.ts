@@ -310,24 +310,22 @@ export function useImageModalAnimation({
     ctxRef.current.add(() => {
       const tl = gsap.timeline({
         onComplete: () => {
-          gsap.delayedCall(0.05, () => {
-            reset();
-            window.location.href = `/posts/${imageId}`;
-          });
+          reset();
+          window.location.href = `/posts/${imageId}`;
         },
       });
 
-      // Fade out backdrop and drawer (same as handleClose)
+      // Fade out drawer only — keep backdrop visible for seamless transition
       tl.to(
-        [backdropRef.current, drawerRef.current],
-        { opacity: 0, duration: 0.3, ease: "power3.in" },
+        drawerRef.current,
+        { opacity: 0, duration: 0.25, ease: "power3.in" },
         0
       );
 
       // Fade out floating image on desktop
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
       if (isDesktop && leftImageContainerRef.current) {
-        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.3 }, 0);
+        tl.to(leftImageContainerRef.current, { opacity: 0, duration: 0.25 }, 0);
       }
     });
   }, [isClosing, isMaximizing, imageId, reset]);
