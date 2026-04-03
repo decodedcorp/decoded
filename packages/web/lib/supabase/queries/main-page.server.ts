@@ -50,6 +50,15 @@ export interface StyleCardServerData {
 }
 
 /**
+ * Extended style data with decoded_picks curation metadata
+ */
+export interface DecodedPickServerData extends StyleCardServerData {
+  pickDate: string | null;
+  curatedBy: string | null;
+  note: string | null;
+}
+
+/**
  * Trending keyword data
  */
 export interface TrendingKeyword {
@@ -249,37 +258,60 @@ export async function fetchWhatsNewPostsServer(
 
 /**
  * Fetches data for Decoded Pick section (server-side)
- * Gets a style with its spots and solutions
  *
- * @param offset - Number of posts to skip (default: 2 to skip What's New)
- * @returns Style card data or null
+ * Queries decoded_picks table for the most recent active pick,
+ * then fetches the associated post with spots/solutions.
+ * Falls back to offset-based selection if no curated pick exists.
  */
-export async function fetchDecodedPickServer(
-  offset = 2
-): Promise<StyleCardServerData | null> {
+export async function fetchDecodedPickServer(): Promise<DecodedPickServerData | null> {
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*, spots(*, solutions(*))")
-    .eq("status", "active")
-    .not("image_url", "is", null)
-    .order("created_at", { ascending: false })
-    .range(offset, offset);
+  // 1. Try to get the most recent active curated pick
+  const { data: pickRow } = await supabase
+    .from("decoded_picks")
+    .select("post_id, pick_date, curated_by, note")
+    .eq("is_active", true)
+    .order("pick_date", { ascending: false })
+    .limit(1)
+    .single();
 
-  if (error) {
-    console.error(
-      "Error fetching decoded pick:",
-      JSON.stringify(error, null, 2)
-    );
-    return null;
+  let postId: string | null = pickRow?.post_id ?? null;
+  let pickDate: string | null = pickRow?.pick_date ?? null;
+  let curatedBy: string | null = pickRow?.curated_by ?? null;
+  let note: string | null = pickRow?.note ?? null;
+
+  // 2. Fetch the post (by pick's post_id, or fallback to offset=2)
+  let row: PostWithSpots | null = null;
+
+  if (postId) {
+    const { data } = await supabase
+      .from("posts")
+      .select("*, spots(*, solutions(*))")
+      .eq("id", postId)
+      .eq("status", "active")
+      .single();
+    row = data as PostWithSpots | null;
   }
 
-  if (!data || data.length === 0) {
-    return null;
+  // Fallback: no curated pick or post inactive — use offset-based selection
+  if (!row) {
+    pickDate = null;
+    curatedBy = null;
+    note = null;
+
+    const { data } = await supabase
+      .from("posts")
+      .select("*, spots(*, solutions(*))")
+      .eq("status", "active")
+      .not("image_url", "is", null)
+      .order("created_at", { ascending: false })
+      .range(2, 2);
+
+    row = (data?.[0] as PostWithSpots) ?? null;
   }
 
-  const row = data[0] as PostWithSpots;
+  if (!row) return null;
+
   return {
     post: toPostData(row),
     items: (row.spots || []).flatMap((spot) =>
@@ -294,6 +326,9 @@ export async function fetchDecodedPickServer(
       }))
     ),
     spots: row.spots || [],
+    pickDate,
+    curatedBy,
+    note,
   };
 }
 
@@ -672,10 +707,11 @@ export async function fetchAllBadgesServer(): Promise<BadgeRow[]> {
 }
 
 /** @deprecated Use fetchDecodedPickServer instead */
-export async function fetchDecodedPickStyleServer(
-  offset = 2
-): Promise<{ style: WhatsNewStyleData | null; items: ItemWithImage[] }> {
-  const pick = await fetchDecodedPickServer(offset);
+export async function fetchDecodedPickStyleServer(): Promise<{
+  style: WhatsNewStyleData | null;
+  items: ItemWithImage[];
+}> {
+  const pick = await fetchDecodedPickServer();
   if (!pick)
     return {
       style: null,

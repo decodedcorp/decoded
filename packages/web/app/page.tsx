@@ -13,8 +13,11 @@ import {
   HeroItemSync,
   TrendingPostsSection,
   HelpFindSection,
+  EditorialSection,
+  TrendingListSection,
+  DecodedPickSection,
 } from "@/lib/components/main";
-import type { LatestPostCardData } from "@/lib/components/main";
+import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 import type { PaginatedResponsePostListItemDataItem } from "@/lib/api/generated/models";
@@ -145,22 +148,6 @@ export default async function Home({
 
   const heroPosts: HeroPostEntry[] = [];
 
-  if (decodedPick && decodedPick.post.imageUrl) {
-    heroPosts.push({
-      id: String(decodedPick.post.id),
-      heroData: buildHeroFromApiPost(
-        { id: decodedPick.post.id, image_url: decodedPick.post.imageUrl!, artist_name: decodedPick.post.artistName, group_name: decodedPick.post.groupName, context: decodedPick.post.context } as ApiPost,
-        buildSpots(decodedPick.items)
-      ),
-      items: decodedPick.items.map((item) => ({
-        id: String(item.id), brand: item.brand || "Unknown",
-        name: item.name || item.label, imageUrl: item.imageUrl || undefined,
-      })),
-      galleryImage: proxyImg(decodedPick.post.imageUrl),
-      galleryLabel: decodedPick.post.artistName || decodedPick.post.groupName || "Decoded Pick",
-    });
-  }
-
   for (const post of recentPosts) {
     if (heroPosts.some((hp) => hp.id === post.id)) continue;
     heroPosts.push({
@@ -256,6 +243,34 @@ export default async function Home({
 
   const editorialMagazineData: EditorialMagazineData = { cards: magazineCards };
 
+  // --- Decoded Pick ---
+
+  const pickStyleData: StyleCardData | undefined =
+    decodedPick && decodedPick.post.imageUrl
+      ? {
+          id: decodedPick.post.id,
+          title: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Decoded Pick",
+          description: decodedPick.post.context || "",
+          artistName: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Unknown",
+          imageUrl: proxyImg(decodedPick.post.imageUrl),
+          link: `/posts/${decodedPick.post.id}`,
+          spots: decodedPick.spots?.map((s) => ({
+            id: s.id, x: parseFloat(s.position_left) || 50, y: parseFloat(s.position_top) || 50,
+            label: s.solutions?.[0]?.title || "Item",
+          })),
+        }
+      : undefined;
+
+  const pickItems: ItemCardData[] | undefined = decodedPick
+    ? decodedPick.items.map((item) => ({
+        id: String(item.id),
+        brand: item.brand || "Unknown",
+        name: item.name || item.label,
+        imageUrl: item.imageUrl,
+        link: `/items/${item.id}`,
+      }))
+    : undefined;
+
   // --- MasonryGrid ---
 
   const gridItems: GridItemData[] = popularPosts.slice(0, 16).map((post, i) => {
@@ -285,6 +300,14 @@ export default async function Home({
       <HelpFindSection posts={helpFindCards} />
 
       <EditorialMagazine data={editorialMagazineData} />
+
+      <DecodedPickSection
+        styleData={pickStyleData}
+        items={pickItems}
+        pickDate={decodedPick?.pickDate ?? null}
+        curatedBy={decodedPick?.curatedBy ?? null}
+        note={decodedPick?.note ?? null}
+      />
 
       <section className="relative">
         <MasonryGrid items={gridItems as GridItemData[]} />
