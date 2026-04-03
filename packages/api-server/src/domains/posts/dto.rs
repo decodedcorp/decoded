@@ -291,6 +291,10 @@ pub struct PostListItem {
     /// 에디토리얼(매거진) 타이틀. post_magazine_id가 있을 때만 설정
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_magazine_title: Option<String>,
+
+    /// 포스트 생성 시 솔루션을 알고 등록했는지. true=with-solutions, false=without, null=기존 데이터
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_with_solutions: Option<bool>,
 }
 
 /// Post에 포함된 사용자 정보 (간소화)

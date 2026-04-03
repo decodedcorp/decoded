@@ -11,17 +11,16 @@ import type {
 import {
   DomeGallerySection,
   HeroItemSync,
-  EditorialSection,
-  TrendingListSection,
+  TrendingPostsSection,
+  HelpFindSection,
 } from "@/lib/components/main";
-import type { StyleCardData } from "@/lib/components/main";
+import type { LatestPostCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 import type { PaginatedResponsePostListItemDataItem } from "@/lib/api/generated/models";
 import { serverApiGet } from "@/lib/api/server-instance";
 import {
   fetchDecodedPickServer,
-  fetchTrendingKeywordsServer,
   fetchWeeklyBestPostsServer,
   fetchWhatsNewPostsServer,
   fetchMagazinePostsServer,
@@ -40,7 +39,7 @@ function toApiPost(p: { id: string; imageUrl: string | null; artistName: string 
   return {
     id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
     group_name: p.groupName, context: p.context, title: p.mediaTitle,
-    view_count: p.viewCount, created_at: p.createdAt,
+    view_count: p.viewCount, created_at: p.createdAt, status: "published" as const,
     comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
   };
 }
@@ -50,7 +49,7 @@ function magazineToApiPost(p: { id: string; imageUrl: string | null; artistName:
   return {
     id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
     group_name: p.groupName, context: p.context, title: p.magazineTitle,
-    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "",
+    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "", status: "published" as const,
     comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
   };
 }
@@ -79,20 +78,18 @@ export default async function Home({
     recentPosts,
     magazinePosts,
     decodedPick,
-    trendingKeywords,
     artistProfileMap,
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30", async () =>
       (await fetchWeeklyBestPostsServer(30)).map(toApiPost)
     ),
-    fetchPosts("sort=recent&per_page=30", async () =>
-      (await fetchWhatsNewPostsServer(30)).map((s) => toApiPost(s.post))
+    fetchPosts("sort=recent&per_page=50", async () =>
+      (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
     ),
     fetchPosts("has_magazine=true&per_page=8", async () =>
       (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
     ),
     fetchDecodedPickServer(),
-    fetchTrendingKeywordsServer(8),
     buildArtistProfileMap(),
   ]);
 
@@ -193,30 +190,38 @@ export default async function Home({
     }
   }
 
-  // --- Editorial + Trending ---
+  // --- Trending on Decoded ---
 
-  const editorialPost = recentPosts[0];
-  const editorialStyle: StyleCardData | undefined = editorialPost
-    ? {
-        id: editorialPost.id,
-        title: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Editorial",
-        description: editorialPost.context || editorialPost.title || "",
-        artistName: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Unknown",
-        imageUrl: editorialPost.image_url, link: `/posts/${editorialPost.id}`,
-      }
-    : undefined;
+  const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
+    const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+    return {
+      id: p.id,
+      imageUrl: proxyImg(p.image_url),
+      artistName: displayName || "Unknown",
+      context: p.context || p.title || "",
+      createdAt: p.created_at,
+      createdWithSolutions: p.created_with_solutions ?? null,
+      link: `/posts/${p.id}`,
+    };
+  });
 
-  const resolvedTrendingKeywords =
-    trendingKeywords.length > 0
-      ? trendingKeywords
-      : [...new Map(
-          popularPosts
-            .filter((p) => p.artist_name || p.group_name)
-            .map((p) => {
-              const name = (p.artist_name || p.group_name)!;
-              return [name, { id: `artist-${name}`, label: name, href: `/search?q=${encodeURIComponent(name)}`, image: p.image_url || undefined }];
-            })
-        ).values()].slice(0, 8);
+  // --- 아이템 찾아주세요 (created_with_solutions = false) ---
+
+  const helpFindCards: LatestPostCardData[] = recentPosts
+    .filter((p) => p.created_with_solutions === false)
+    .slice(0, 12)
+    .map((p) => {
+      const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+      return {
+        id: p.id,
+        imageUrl: proxyImg(p.image_url),
+        artistName: displayName || "Unknown",
+        context: p.context || p.title || "",
+        createdAt: p.created_at,
+        createdWithSolutions: false,
+        link: `/posts/${p.id}`,
+      };
+    });
 
   // --- Magazine ---
 
@@ -275,12 +280,9 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
-        <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
-          <EditorialSection style={editorialStyle} embedded />
-          <TrendingListSection keywords={resolvedTrendingKeywords} embedded />
-        </div>
-      </section>
+      <TrendingPostsSection posts={trendingPostCards} />
+
+      <HelpFindSection posts={helpFindCards} />
 
       <EditorialMagazine data={editorialMagazineData} />
 

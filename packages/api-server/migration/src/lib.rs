@@ -42,6 +42,7 @@ mod m20260317_000001_add_ai_summary_to_posts;
 mod m20260318_000001_create_post_likes;
 mod m20260318_000002_create_saved_posts;
 mod m20260320_000001_add_system_uncategorized_subcategory;
+mod m20260403_000001_backfill_created_with_solutions;
 
 pub struct Migrator;
 
@@ -91,6 +92,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260318_000001_create_post_likes::Migration),
             Box::new(m20260318_000002_create_saved_posts::Migration),
             Box::new(m20260320_000001_add_system_uncategorized_subcategory::Migration),
+            Box::new(m20260403_000001_backfill_created_with_solutions::Migration),
         ]
     }
 }
