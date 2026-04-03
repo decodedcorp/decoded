@@ -9,6 +9,7 @@ export interface LatestPostCardData {
   artistName: string;
   context: string;
   createdAt: string;
+  createdWithSolutions: boolean | null;
   link: string;
 }
 
@@ -20,7 +21,7 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
   if (posts.length === 0) return null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       {/* Sub-header */}
       <div className="flex items-center gap-3 mb-6">
         <span className="w-8 h-[2px] bg-[#eafd67]" />
@@ -31,7 +32,7 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
 
       {/* Scroll container */}
       <div
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2"
+        className="latest-scroll flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2"
         style={{ scrollbarWidth: "none" }}
       >
         <style>{`.latest-scroll::-webkit-scrollbar { display: none; }`}</style>
@@ -50,6 +51,17 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
+              {post.createdWithSolutions !== null && (
+                <span className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide backdrop-blur-md ${
+                  post.createdWithSolutions
+                    ? "bg-[#eafd67]/90 text-[#050505]"
+                    : "bg-white/15 text-white/90"
+                }`}>
+                  {post.createdWithSolutions
+                    ? "아이템을 공유해요"
+                    : "아이템이 궁금해요"}
+                </span>
+              )}
             </div>
 
             {/* Text */}

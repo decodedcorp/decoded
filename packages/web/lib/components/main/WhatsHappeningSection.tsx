@@ -21,23 +21,26 @@ export function WhatsHappeningSection({
     <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
       <div className="mx-auto max-w-[1400px]">
         {/* Section header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-[2px] bg-[#eafd67]" />
-            <h2 className="text-xs uppercase tracking-[0.2em] text-white/50 font-sans font-medium">
+        <div className="flex items-end justify-between mb-10 md:mb-14">
+          <div>
+            <span className="text-[10px] md:text-xs font-sans font-bold tracking-[0.4em] text-[#eafd67] uppercase mb-4 block">
+              Now
+            </span>
+            <h2 className="text-4xl md:text-6xl font-serif font-bold italic tracking-tighter text-white">
               What&apos;s Happening
             </h2>
           </div>
           <Link
             href="/feed"
-            className="text-[10px] uppercase tracking-[0.2em] text-white/30 hover:text-[#eafd67] transition-colors py-3 px-2 -my-3 -mx-2"
+            className="group flex items-center gap-4 text-[10px] font-sans font-bold tracking-[0.3em] text-white/30 hover:text-white transition-all uppercase"
           >
-            View All
+            <span>View All</span>
+            <div className="w-10 h-[1px] bg-white/10 group-hover:bg-[#eafd67] transition-all group-hover:w-14" />
           </Link>
         </div>
 
         {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_7fr] gap-6">
           <TrendingListSection keywords={trendingKeywords} embedded />
           <LatestPostsScroll posts={latestPosts} />
         </div>

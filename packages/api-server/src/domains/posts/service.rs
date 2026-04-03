@@ -832,6 +832,7 @@ pub async fn list_posts(
                 status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
+                created_with_solutions: post.created_with_solutions,
             }
         })
         .collect();
@@ -1116,6 +1117,7 @@ pub async fn admin_list_posts(
                 status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
+                created_with_solutions: post.created_with_solutions,
             }
         })
         .collect();

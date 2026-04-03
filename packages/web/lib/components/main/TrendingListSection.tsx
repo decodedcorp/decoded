@@ -145,11 +145,11 @@ function FlowingMenuItem({
       {/* Static label */}
       <Link
         href={item.href}
-        className="flex items-center justify-center h-full min-h-[44px] relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em]"
+        className="flex items-center h-full min-h-[44px] relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em] px-6"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <span className="text-white/10 text-[2vh] font-mono mr-4 tabular-nums">
+        <span className="text-white/10 text-[2vh] font-mono mr-4 tabular-nums w-[3ch] shrink-0">
           {String(index + 1).padStart(2, "0")}
         </span>
         {item.label}

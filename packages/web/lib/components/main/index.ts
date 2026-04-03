@@ -26,6 +26,8 @@ export { EditorialSection } from "./EditorialSection";
 export { TrendingListSection } from "./TrendingListSection";
 export { WhatsHappeningSection } from "./WhatsHappeningSection";
 export type { LatestPostCardData } from "./LatestPostsScroll";
+export { TrendingPostsSection } from "./TrendingPostsSection";
+export { HelpFindSection } from "./HelpFindSection";
 export { DynamicHomeFeed, DomeGallerySection } from "./DynamicHomeFeed";
 export type {
   DynamicHomeFeedProps,

@@ -11,7 +11,8 @@ import type {
 import {
   DomeGallerySection,
   HeroItemSync,
-  WhatsHappeningSection,
+  TrendingPostsSection,
+  HelpFindSection,
 } from "@/lib/components/main";
 import type { LatestPostCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
@@ -38,7 +39,7 @@ function toApiPost(p: { id: string; imageUrl: string | null; artistName: string 
   return {
     id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
     group_name: p.groupName, context: p.context, title: p.mediaTitle,
-    view_count: p.viewCount, created_at: p.createdAt,
+    view_count: p.viewCount, created_at: p.createdAt, status: "published" as const,
     comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
   };
 }
@@ -48,7 +49,7 @@ function magazineToApiPost(p: { id: string; imageUrl: string | null; artistName:
   return {
     id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
     group_name: p.groupName, context: p.context, title: p.magazineTitle,
-    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "",
+    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "", status: "published" as const,
     comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
   };
 }
@@ -77,20 +78,18 @@ export default async function Home({
     recentPosts,
     magazinePosts,
     decodedPick,
-    trendingPosts,
     artistProfileMap,
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30", async () =>
       (await fetchWeeklyBestPostsServer(30)).map(toApiPost)
     ),
-    fetchPosts("sort=recent&per_page=30", async () =>
-      (await fetchWhatsNewPostsServer(30)).map((s) => toApiPost(s.post))
+    fetchPosts("sort=recent&per_page=50", async () =>
+      (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
     ),
     fetchPosts("has_magazine=true&per_page=8", async () =>
       (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
     ),
     fetchDecodedPickServer(),
-    fetchPosts("sort=popular&per_page=50"),
     buildArtistProfileMap(),
   ]);
 
@@ -191,30 +190,9 @@ export default async function Home({
     }
   }
 
-  // --- What's Happening: Trending artists + Latest posts ---
+  // --- Trending on Decoded ---
 
-  const artistCounts = new Map<string, { count: number; image: string }>();
-  for (const post of trendingPosts) {
-    const name = post.artist_name || post.group_name;
-    if (!name) continue;
-    const existing = artistCounts.get(name);
-    if (existing) {
-      existing.count++;
-    } else {
-      artistCounts.set(name, { count: 1, image: post.image_url });
-    }
-  }
-  const resolvedTrendingKeywords = [...artistCounts.entries()]
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 8)
-    .map(([name, { image }]) => ({
-      id: `artist-${name}`,
-      label: enrichArtistName(name).displayName || name,
-      href: `/search?q=${encodeURIComponent(name)}`,
-      image: proxyImg(image),
-    }));
-
-  const latestPostCards: LatestPostCardData[] = recentPosts.slice(0, 12).map((p) => {
+  const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
     const { displayName } = enrichArtistName(p.artist_name || p.group_name);
     return {
       id: p.id,
@@ -222,9 +200,28 @@ export default async function Home({
       artistName: displayName || "Unknown",
       context: p.context || p.title || "",
       createdAt: p.created_at,
+      createdWithSolutions: p.created_with_solutions ?? null,
       link: `/posts/${p.id}`,
     };
   });
+
+  // --- 아이템 찾아주세요 (created_with_solutions = false) ---
+
+  const helpFindCards: LatestPostCardData[] = recentPosts
+    .filter((p) => p.created_with_solutions === false)
+    .slice(0, 12)
+    .map((p) => {
+      const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+      return {
+        id: p.id,
+        imageUrl: proxyImg(p.image_url),
+        artistName: displayName || "Unknown",
+        context: p.context || p.title || "",
+        createdAt: p.created_at,
+        createdWithSolutions: false,
+        link: `/posts/${p.id}`,
+      };
+    });
 
   // --- Magazine ---
 
@@ -283,10 +280,9 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      <WhatsHappeningSection
-        trendingKeywords={resolvedTrendingKeywords}
-        latestPosts={latestPostCards}
-      />
+      <TrendingPostsSection posts={trendingPostCards} />
+
+      <HelpFindSection posts={helpFindCards} />
 
       <EditorialMagazine data={editorialMagazineData} />
 
