@@ -11,17 +11,15 @@ import type {
 import {
   DomeGallerySection,
   HeroItemSync,
-  EditorialSection,
-  TrendingListSection,
+  WhatsHappeningSection,
 } from "@/lib/components/main";
-import type { StyleCardData } from "@/lib/components/main";
+import type { LatestPostCardData } from "@/lib/components/main";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 import type { PaginatedResponsePostListItemDataItem } from "@/lib/api/generated/models";
 import { serverApiGet } from "@/lib/api/server-instance";
 import {
   fetchDecodedPickServer,
-  fetchTrendingKeywordsServer,
   fetchWeeklyBestPostsServer,
   fetchWhatsNewPostsServer,
   fetchMagazinePostsServer,
@@ -79,7 +77,7 @@ export default async function Home({
     recentPosts,
     magazinePosts,
     decodedPick,
-    trendingKeywords,
+    trendingPosts,
     artistProfileMap,
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30", async () =>
@@ -92,7 +90,7 @@ export default async function Home({
       (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
     ),
     fetchDecodedPickServer(),
-    fetchTrendingKeywordsServer(8),
+    fetchPosts("sort=popular&per_page=50"),
     buildArtistProfileMap(),
   ]);
 
@@ -193,30 +191,40 @@ export default async function Home({
     }
   }
 
-  // --- Editorial + Trending ---
+  // --- What's Happening: Trending artists + Latest posts ---
 
-  const editorialPost = recentPosts[0];
-  const editorialStyle: StyleCardData | undefined = editorialPost
-    ? {
-        id: editorialPost.id,
-        title: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Editorial",
-        description: editorialPost.context || editorialPost.title || "",
-        artistName: enrichArtistName(editorialPost.artist_name || editorialPost.group_name).displayName || "Unknown",
-        imageUrl: editorialPost.image_url, link: `/posts/${editorialPost.id}`,
-      }
-    : undefined;
+  const artistCounts = new Map<string, { count: number; image: string }>();
+  for (const post of trendingPosts) {
+    const name = post.artist_name || post.group_name;
+    if (!name) continue;
+    const existing = artistCounts.get(name);
+    if (existing) {
+      existing.count++;
+    } else {
+      artistCounts.set(name, { count: 1, image: post.image_url });
+    }
+  }
+  const resolvedTrendingKeywords = [...artistCounts.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 8)
+    .map(([name, { image }]) => ({
+      id: `artist-${name}`,
+      label: enrichArtistName(name).displayName || name,
+      href: `/search?q=${encodeURIComponent(name)}`,
+      image: proxyImg(image),
+    }));
 
-  const resolvedTrendingKeywords =
-    trendingKeywords.length > 0
-      ? trendingKeywords
-      : [...new Map(
-          popularPosts
-            .filter((p) => p.artist_name || p.group_name)
-            .map((p) => {
-              const name = (p.artist_name || p.group_name)!;
-              return [name, { id: `artist-${name}`, label: name, href: `/search?q=${encodeURIComponent(name)}`, image: p.image_url || undefined }];
-            })
-        ).values()].slice(0, 8);
+  const latestPostCards: LatestPostCardData[] = recentPosts.slice(0, 12).map((p) => {
+    const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+    return {
+      id: p.id,
+      imageUrl: proxyImg(p.image_url),
+      artistName: displayName || "Unknown",
+      context: p.context || p.title || "",
+      createdAt: p.created_at,
+      link: `/posts/${p.id}`,
+    };
+  });
 
   // --- Magazine ---
 
@@ -275,12 +283,10 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
-        <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
-          <EditorialSection style={editorialStyle} embedded />
-          <TrendingListSection keywords={resolvedTrendingKeywords} embedded />
-        </div>
-      </section>
+      <WhatsHappeningSection
+        trendingKeywords={resolvedTrendingKeywords}
+        latestPosts={latestPostCards}
+      />
 
       <EditorialMagazine data={editorialMagazineData} />
 
