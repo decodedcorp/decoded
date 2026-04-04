@@ -11,8 +11,8 @@ import type {
 import {
   DomeGallerySection,
   HeroItemSync,
-  TrendingPostsSection,
-  HelpFindSection,
+  // TrendingPostsSection,  // #88: temporarily disabled
+  // HelpFindSection,        // #88: temporarily disabled
   DecodedPickSection,
 } from "@/lib/components/main";
 import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
@@ -175,38 +175,28 @@ export default async function Home({
     }
   }
 
-  // --- Trending on Decoded ---
+  // --- Trending on Decoded --- (#88: temporarily disabled)
+  // const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
+  //   const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+  //   return {
+  //     id: p.id, imageUrl: proxyImg(p.image_url), artistName: displayName || "Unknown",
+  //     context: p.context || p.title || "", createdAt: p.created_at,
+  //     createdWithSolutions: p.created_with_solutions ?? null, link: `/posts/${p.id}`,
+  //   };
+  // });
 
-  const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
-    const { displayName } = enrichArtistName(p.artist_name || p.group_name);
-    return {
-      id: p.id,
-      imageUrl: proxyImg(p.image_url),
-      artistName: displayName || "Unknown",
-      context: p.context || p.title || "",
-      createdAt: p.created_at,
-      createdWithSolutions: p.created_with_solutions ?? null,
-      link: `/posts/${p.id}`,
-    };
-  });
-
-  // --- 아이템 찾아주세요 (created_with_solutions = false) ---
-
-  const helpFindCards: LatestPostCardData[] = recentPosts
-    .filter((p) => p.created_with_solutions === false)
-    .slice(0, 12)
-    .map((p) => {
-      const { displayName } = enrichArtistName(p.artist_name || p.group_name);
-      return {
-        id: p.id,
-        imageUrl: proxyImg(p.image_url),
-        artistName: displayName || "Unknown",
-        context: p.context || p.title || "",
-        createdAt: p.created_at,
-        createdWithSolutions: false,
-        link: `/posts/${p.id}`,
-      };
-    });
+  // --- 아이템 찾아주세요 --- (#88: temporarily disabled)
+  // const helpFindCards: LatestPostCardData[] = recentPosts
+  //   .filter((p) => p.created_with_solutions === false)
+  //   .slice(0, 12)
+  //   .map((p) => {
+  //     const { displayName } = enrichArtistName(p.artist_name || p.group_name);
+  //     return {
+  //       id: p.id, imageUrl: proxyImg(p.image_url), artistName: displayName || "Unknown",
+  //       context: p.context || p.title || "", createdAt: p.created_at,
+  //       createdWithSolutions: false, link: `/posts/${p.id}`,
+  //     };
+  //   });
 
   // --- Magazine ---
 
@@ -293,9 +283,9 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      <TrendingPostsSection posts={trendingPostCards} />
-
-      <HelpFindSection posts={helpFindCards} />
+      {/* #88: temporarily disabled */}
+      {/* <TrendingPostsSection posts={trendingPostCards} /> */}
+      {/* <HelpFindSection posts={helpFindCards} /> */}
 
       <EditorialMagazine data={editorialMagazineData} />
 
