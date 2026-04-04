@@ -86,8 +86,8 @@ export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfile
 
   try {
     const [artists, groups] = await Promise.all([
-      fetchWarehouseArtists(50),
-      fetchWarehouseGroups(50),
+      fetchWarehouseArtists(),
+      fetchWarehouseGroups(),
     ]);
 
     const addEntity = (
