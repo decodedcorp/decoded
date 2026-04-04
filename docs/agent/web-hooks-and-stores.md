@@ -18,6 +18,7 @@ Paths below are under `packages/web/` unless absolute from repo root.
 | **Request**        | `lib/stores/requestStore.ts`        | Post request/upload flow state                               |
 | **Transition**     | `lib/stores/transitionStore.ts`     | Page transition animation state                              |
 | **API Client**     | `lib/api/`                          | Backend API calls                                            |
+| **API Generated**  | `lib/api/generated/`                | Orval 자동 생성 — 절대 수동 편집 금지 (아래 섹션 참조)        |
 | **API Routes**     | `app/api/v1/`                       | Next.js API proxy & server logic                             |
 | **Supabase**       | `lib/supabase/queries/`             | DB queries (events, images, posts, profile, personalization) |
 | **Shared Queries** | `packages/shared/supabase/queries/` | Cross-package queries (images, items)                        |
@@ -31,6 +32,79 @@ Paths below are under `packages/web/` unless absolute from repo root.
 | **Frontend CI**    | `packages/web/scripts/pre-push.sh`  | ESLint, Prettier, TypeScript checks                          |
 | **Git workflow**   | `docs/GIT-WORKFLOW.md`              | Branch, commit, PR conventions                             |
 | **Code reviewer**  | `.claude/agents/code-reviewer.md`   | Repository code-review agent notes                           |
+
+## Generated API (Orval + Zod)
+
+> `lib/api/generated/`는 **자동 생성 코드** — 절대 수동 편집하지 않는다. Gitignored (`.gitkeep`만 트래킹).
+
+### Source of truth
+
+`packages/api-server/openapi.json` (Rust backend utoipa에서 생성)
+
+### 재생성
+
+```bash
+cd packages/web && bun run generate:api
+```
+
+### 구조
+
+```
+lib/api/
+├── generated/           # Orval 자동 생성 (수동 편집 금지)
+│   ├── models/          # TypeScript 인터페이스 (response/request types)
+│   ├── admin/           # Admin endpoint hooks (useListAdminPosts 등)
+│   ├── posts/           # Posts endpoint hooks (useListPosts 등)
+│   ├── search/          # Search endpoint hooks
+│   ├── solutions/       # Solutions endpoint hooks
+│   ├── spots/           # Spots endpoint hooks
+│   ├── users/           # Users endpoint hooks
+│   ├── zod/             # Zod 스키마 (decodedApi.zod.ts — 전체 ��드포인트 검증)
+│   └── ...              # 태그별 분리 (badges, categories, rankings 등)
+├── mutator/
+│   └── custom-instance.ts  # Axios 인스턴스 커스텀 (baseURL, 인터셉터)
+├── server-instance.ts       # 서버 컴포넌트용 API 클라이언트
+└── adapters/                # API 응답 → UI 모델 변환
+```
+
+### Orval 설정 (`orval.config.ts`)
+
+| 설정 | 값 |
+|------|-----|
+| **Input** | `../api-server/openapi.json` |
+| **Output mode** | `tags-split` (태그별 파일 분리) |
+| **Client** | `react-query` (TanStack Query 5) |
+| **HTTP client** | `axios` (custom-instance.ts mutator) |
+| **Zod output** | `lib/api/generated/zod/` (별도 client: zod) |
+| **제외 엔드포인트** | multipart POST 4개 (create_post, with-solutions, upload, analyze) |
+
+### 사용 패턴
+
+```ts
+// Hook import (태그/operationId 기반)
+import { useListPosts } from "@/lib/api/generated/posts/posts";
+
+// Zod 스키마 import
+import { listPostsQueryParams } from "@/lib/api/generated/zod/decodedApi.zod";
+
+// Type import
+import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
+```
+
+### 새 엔드포인트 추가 시
+
+1. Backend에서 OpenAPI spec 업데이트
+2. `packages/api-server/openapi.json` 복사
+3. `cd packages/web && bun run generate:api`
+4. `@/lib/api/generated/{tag}/{operationId}`에서 생성된 hook import
+
+### 동작 확장
+
+- **Axios 인터셉터**: `lib/api/mutator/custom-instance.ts` 편집
+- **Orval 설정**: `orval.config.ts` 편집
+- **생성 코드 자체**: 절대 편집하지 않음
+
+---
 
 ## Custom hooks
 
