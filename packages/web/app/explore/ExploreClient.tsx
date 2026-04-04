@@ -10,7 +10,7 @@ import { FilterChip } from "@/lib/components/explore/FilterChip";
 import ThiingsGrid, { type GridItem } from "@/lib/components/ThiingsGrid";
 import { useSearchStore } from "@/lib/stores/searchStore";
 import { ExploreCardCell, ExploreSkeletonCell } from "@/lib/components/explore";
-import { LoadingSpinner } from "@/lib/design-system";
+import { LoadingSpinner } from "@/lib/design-system/loading-spinner";
 import { SearchSuggestions } from "@/lib/components/search/SearchSuggestions";
 import { cn } from "@/lib/utils";
 

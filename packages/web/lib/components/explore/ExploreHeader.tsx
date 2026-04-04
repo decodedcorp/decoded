@@ -1,6 +1,6 @@
 "use client";
 
-import { Heading, Text } from "@/lib/design-system";
+import { Heading, Text } from "@/lib/design-system/typography";
 
 interface ExploreHeaderProps {
   title?: string;

@@ -3,7 +3,12 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import DecodedLogo from "@/lib/components/DecodedLogo";
+import dynamic from "next/dynamic";
+
+const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
+  ssr: false,
+  loading: () => <span className="font-bold text-[#eafd67] tracking-tight">decoded</span>,
+});
 
 /**
  * Mobile Header Variants

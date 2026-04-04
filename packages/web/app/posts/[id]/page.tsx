@@ -10,23 +10,15 @@ type Props = {
  * Uses ImageDetailPage (image-centric UI)
  */
 export default async function PostDetailPageRoute({ params }: Props) {
-  const { id } = await params;
-
-  // Fetch artist/group + brand profile data in parallel
-  const [artistProfileMap, brandProfileMap] = await Promise.all([
+  const [{ id }, artistProfileMap, brandProfileMap] = await Promise.all([
+    params,
     buildArtistProfileMap(),
     buildBrandProfileMap(),
   ]);
 
-  const artistProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
-  artistProfileMap.forEach((value, key) => {
-    artistProfiles[key] = value;
-  });
-
-  const brandProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
-  brandProfileMap.forEach((value, key) => {
-    brandProfiles[key] = value;
-  });
+  // TODO: filter to only relevant entries for this post to reduce RSC payload
+  const artistProfiles = Object.fromEntries(artistProfileMap);
+  const brandProfiles = Object.fromEntries(brandProfileMap);
 
   return <ImageDetailPage imageId={id} artistProfiles={artistProfiles} brandProfiles={brandProfiles} />;
 }

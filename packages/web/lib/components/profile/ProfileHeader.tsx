@@ -9,8 +9,8 @@ import {
   selectStats,
   formatCurrency,
 } from "@/lib/stores/profileStore";
-import { useAuthStore } from "@/lib/stores/authStore";
-import { ProfileHeaderCard } from "@/lib/design-system";
+import { useAuthStore, selectLogout, selectIsLoading } from "@/lib/stores/authStore";
+import { ProfileHeaderCard } from "@/lib/design-system/profile-header-card";
 
 interface ProfileHeaderProps {
   onEditClick?: () => void;
@@ -20,7 +20,8 @@ export function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
   const user = useProfileStore(selectUser);
   const stats = useProfileStore(selectStats);
   const router = useRouter();
-  const { logout, isLoading } = useAuthStore();
+  const logout = useAuthStore(selectLogout);
+  const isLoading = useAuthStore(selectIsLoading);
 
   // Format stats for ProfileHeaderCard
   const formattedStats = [

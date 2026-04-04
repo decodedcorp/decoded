@@ -5,6 +5,7 @@ import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { useStudioStore } from "@/lib/stores/studioStore";
 import { useMagazineStore } from "@/lib/stores/magazineStore";
+import { useShallow } from "zustand/react/shallow";
 import { useSplineRuntime } from "./useSplineRuntime";
 import { useSplineBridge } from "./useSplineBridge";
 import { StudioHUD } from "../StudioHUD";
@@ -32,7 +33,17 @@ export function SplineStudio() {
     focusIssue,
     unfocus,
     focusedIssueId,
-  } = useStudioStore();
+  } = useStudioStore(
+    useShallow((s) => ({
+      setSplineApp: s.setSplineApp,
+      setSplineLoaded: s.setSplineLoaded,
+      setCameraState: s.setCameraState,
+      setEntryComplete: s.setEntryComplete,
+      focusIssue: s.focusIssue,
+      unfocus: s.unfocus,
+      focusedIssueId: s.focusedIssueId,
+    }))
+  );
 
   const collectionIssues = useMagazineStore((s) => s.collectionIssues);
 

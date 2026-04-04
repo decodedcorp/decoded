@@ -319,3 +319,6 @@ export const selectIsLoggedIn = (state: AuthState) => !!state.user;
 export const selectIsGuest = (state: AuthState) => state.isGuest;
 export const selectIsLoading = (state: AuthState) => state.isLoading;
 export const selectIsInitialized = (state: AuthState) => state.isInitialized;
+export const selectLoadingProvider = (state: AuthState) => state.loadingProvider;
+export const selectError = (state: AuthState) => state.error;
+export const selectLogout = (state: AuthState) => state.logout;

@@ -3,7 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardFooter } from "@/lib/components/ui/card";
 import { OAuthButton } from "./OAuthButton";
-import { useAuthStore, type OAuthProvider } from "@/lib/stores/authStore";
+import {
+  useAuthStore,
+  selectLoadingProvider,
+  selectIsLoading,
+  selectError,
+  type OAuthProvider,
+} from "@/lib/stores/authStore";
 
 // Prevent open redirect: only allow same-origin relative paths
 function getSafeRedirect(url: string | null): string {
@@ -15,8 +21,11 @@ export function LoginCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirect(searchParams.get("redirect"));
-  const { signInWithOAuth, guestLogin, loadingProvider, isLoading, error } =
-    useAuthStore();
+  const signInWithOAuth = useAuthStore((s) => s.signInWithOAuth);
+  const guestLogin = useAuthStore((s) => s.guestLogin);
+  const loadingProvider = useAuthStore(selectLoadingProvider);
+  const isLoading = useAuthStore(selectIsLoading);
+  const error = useAuthStore(selectError);
 
   const handleLogin = async (provider: OAuthProvider) => {
     // Store redirect destination before OAuth round-trip (browser loses query params)

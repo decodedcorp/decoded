@@ -15,25 +15,17 @@ export default async function ModalPostDetailPage({
   params,
   searchParams,
 }: Props) {
-  const { id } = await params;
-  const { from } = await searchParams;
-  const variant = from === "explore" ? "explore-preview" : "full";
-
-  // Fetch artist/group + brand profile data in parallel
-  const [artistProfileMap, brandProfileMap] = await Promise.all([
+  const [{ id }, { from }, artistProfileMap, brandProfileMap] = await Promise.all([
+    params,
+    searchParams,
     buildArtistProfileMap(),
     buildBrandProfileMap(),
   ]);
+  const variant = from === "explore" ? "explore-preview" : "full";
 
-  const artistProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
-  artistProfileMap.forEach((value, key) => {
-    artistProfiles[key] = value;
-  });
-
-  const brandProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
-  brandProfileMap.forEach((value, key) => {
-    brandProfiles[key] = value;
-  });
+  // TODO: filter to only relevant entries for this post to reduce RSC payload
+  const artistProfiles = Object.fromEntries(artistProfileMap);
+  const brandProfiles = Object.fromEntries(brandProfileMap);
 
   return <ImageDetailModal imageId={id} variant={variant} artistProfiles={artistProfiles} brandProfiles={brandProfiles} />;
 }
