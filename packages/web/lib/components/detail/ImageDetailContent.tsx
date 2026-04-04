@@ -47,6 +47,7 @@ type Props = {
   onHeroClick?: () => void;
   variant?: "full" | "explore-preview";
   artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 /**
@@ -70,6 +71,7 @@ export function ImageDetailContent({
   onHeroClick,
   variant = "full",
   artistProfiles,
+  brandProfiles,
 }: Props) {
   const isExplorePreview = variant === "explore-preview";
   const hasMagazine = !!magazineLayout;
@@ -292,7 +294,7 @@ export function ImageDetailContent({
             <div className="flex items-center gap-3 px-6 py-3">
               {profile?.profileImageUrl ? (
                 <img
-                  src={profile.profileImageUrl}
+                  src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
                   alt=""
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                 />
@@ -350,7 +352,7 @@ export function ImageDetailContent({
             <div className="flex items-center gap-3 px-6 py-3">
               {profile?.profileImageUrl ? (
                 <img
-                  src={profile.profileImageUrl}
+                  src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
                   alt=""
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                 />
@@ -464,6 +466,7 @@ export function ImageDetailContent({
                   onAddSolutionClick={(spotId) =>
                     setSpotIdToAddSolution(spotId)
                   }
+                  brandProfiles={brandProfiles}
                 />
               </div>
             )}

@@ -1,5 +1,5 @@
 import { ImageDetailPage } from "@/lib/components/detail/ImageDetailPage";
-import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
+import { buildArtistProfileMap, buildBrandProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -12,12 +12,21 @@ type Props = {
 export default async function PostDetailPageRoute({ params }: Props) {
   const { id } = await params;
 
-  // Fetch artist/group profile data for display
-  const profileMap = await buildArtistProfileMap();
+  // Fetch artist/group + brand profile data in parallel
+  const [artistProfileMap, brandProfileMap] = await Promise.all([
+    buildArtistProfileMap(),
+    buildBrandProfileMap(),
+  ]);
+
   const artistProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
-  profileMap.forEach((value, key) => {
+  artistProfileMap.forEach((value, key) => {
     artistProfiles[key] = value;
   });
 
-  return <ImageDetailPage imageId={id} artistProfiles={artistProfiles} />;
+  const brandProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
+  brandProfileMap.forEach((value, key) => {
+    brandProfiles[key] = value;
+  });
+
+  return <ImageDetailPage imageId={id} artistProfiles={artistProfiles} brandProfiles={brandProfiles} />;
 }

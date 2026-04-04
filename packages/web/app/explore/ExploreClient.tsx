@@ -25,17 +25,12 @@ type Props = {
   initialPosts?: PostGridItem[];
   hasMagazine?: boolean;
   initialQuery?: string;
-  artistProfiles?: Record<
-    string,
-    { name: string; profileImageUrl: string | null }
-  >;
 };
 
 export function ExploreClient({
   initialPosts: _initialPosts,
   hasMagazine,
   initialQuery = "",
-  artistProfiles,
 }: Props) {
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
   const query = useSearchStore((state) => state.query);
@@ -406,7 +401,6 @@ export function ExploreClient({
                   renderItem={(config) => (
                     <ExploreCardCell
                       {...config}
-                      artistProfiles={artistProfiles}
                     />
                   )}
                   initialPosition={{ x: 0, y: 0 }}

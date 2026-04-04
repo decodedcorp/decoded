@@ -15,6 +15,7 @@ import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToIm
 type Props = {
   imageId: string;
   artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 /**
@@ -22,7 +23,7 @@ type Props = {
  * Used when directly accessing URL or refreshing page
  * Now renders post data instead of old image data
  */
-export function ImageDetailPage({ imageId, artistProfiles }: Props) {
+export function ImageDetailPage({ imageId, artistProfiles, brandProfiles }: Props) {
   const router = useRouter();
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
@@ -108,6 +109,7 @@ export function ImageDetailPage({ imageId, artistProfiles }: Props) {
           magazineLayout={showMagazine ? magazine!.layout_json : null}
           relatedEditorials={magazine?.related_editorials ?? []}
           artistProfiles={artistProfiles}
+          brandProfiles={brandProfiles}
         />
 
         {/* Lightbox */}
