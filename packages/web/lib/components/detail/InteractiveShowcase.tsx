@@ -109,11 +109,27 @@ export function InteractiveShowcase({
         });
       });
 
-      // Modal: refresh after layout stabilizes (content may load async)
+      // Modal: refresh once scroller has scrollable content (content may load async)
       if (scrollContainerRef?.current) {
-        const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+        let cancelled = false;
+        const scrollerEl = scrollContainerRef.current;
+        let attempts = 0;
+        const maxAttempts = 25;
+
+        const checkReady = () => {
+          if (cancelled) return;
+          attempts++;
+          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+            ScrollTrigger.refresh();
+          } else {
+            requestAnimationFrame(checkReady);
+          }
+        };
+
+        requestAnimationFrame(checkReady);
+
         return () => {
-          clearTimeout(timer);
+          cancelled = true;
           ScrollTrigger.getAll().forEach((trigger) => {
             if (cards.includes(trigger.vars.trigger as HTMLElement)) {
               trigger.kill();

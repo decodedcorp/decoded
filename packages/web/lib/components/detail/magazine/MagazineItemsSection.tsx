@@ -112,11 +112,14 @@ export function MagazineItemsSection({
       }
 
       // Modal: ScrollTrigger for scroll-spot sync
-      // Defer until modal open animation completes (~700ms) to prevent first-scroll jank
+      // Use RAF loop to wait until scroller has scrollable content before initializing
       if (isModal && onActiveIndexChange && cards.length > 0) {
         const scroller = scrollContainerRef?.current || window;
+        let cancelled = false;
 
-        const initTimer = setTimeout(() => {
+        const initScrollTriggers = () => {
+          if (cancelled) return;
+
           cards.forEach((card, index) => {
             ScrollTrigger.create({
               scroller,
@@ -145,10 +148,26 @@ export function MagazineItemsSection({
             });
           });
           ScrollTrigger.refresh();
-        }, 700);
+        };
+
+        const scrollerEl = scroller instanceof Window ? document.documentElement : scroller as HTMLElement;
+        let attempts = 0;
+        const maxAttempts = 25;
+
+        const checkReady = () => {
+          if (cancelled) return;
+          attempts++;
+          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+            initScrollTriggers();
+          } else {
+            requestAnimationFrame(checkReady);
+          }
+        };
+
+        requestAnimationFrame(checkReady);
 
         return () => {
-          clearTimeout(initTimer);
+          cancelled = true;
           ScrollTrigger.getAll().forEach((trigger) => {
             if (cards.includes(trigger.vars.trigger as HTMLElement)) {
               trigger.kill();
