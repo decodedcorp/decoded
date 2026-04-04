@@ -5,7 +5,7 @@ import type { ImageRow } from "@/lib/supabase/types";
 import type { UiItem, BoundingBox } from "./types";
 import { getHighlightStyle } from "./types";
 import { SpotDot } from "./SpotDot";
-import { useGSAP } from "@gsap/react";
+
 import gsap from "gsap";
 
 type Props = {
@@ -135,101 +135,36 @@ export function ImageCanvas({
     if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
   }, []);
 
-  // Pan & Zoom effect: Calculate scale and translation
-  useGSAP(
-    () => {
-      if (!imageRef.current || activeIndex === null) {
-        // Reset to default state
-        if (imageRef.current) {
-          // Kill any running tweens before reset
-          gsap.killTweensOf(imageRef.current);
-          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
-          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
+  // Pan & Zoom effect: lightweight useEffect (no GSAP context recreation)
+  useEffect(() => {
+    const targets = [imageRef.current, boxesRef.current, overlayRef.current].filter(Boolean);
+    if (targets.length === 0) return;
 
-          const resetVars = {
-            scale: 1,
-            x: 0,
-            y: 0,
-            duration: 0.5,
-            ease: "power2.out",
-            overwrite: true,
-            force3D: true,
-          };
-
-          gsap.to(imageRef.current, resetVars);
-
-          if (boxesRef.current) {
-            gsap.to(boxesRef.current, resetVars);
-          }
-
-          if (overlayRef.current) {
-            gsap.to(overlayRef.current, resetVars);
-          }
-
-          transformRef.current = { scale: 1, x: 0, y: 0 };
-        }
-        return;
-      }
-
-      const activeItem = items[activeIndex];
-      if (!activeItem?.normalizedCenter || !activeItem?.normalizedBox) {
-        return;
-      }
-
-      const center = activeItem.normalizedCenter;
-      const scale = 1.2; // Zoom level
-
-      // Calculate translation to center the item
-      // We reuse logic similar to getDisplayedRect but within the GSAP context
-      if (
-        containerRef.current &&
-        imageRef.current &&
-        naturalSize &&
-        containerSize
-      ) {
-        const rect = getDisplayedRect();
-
-        if (rect) {
-          // Kill any running tweens before pan/zoom
-          gsap.killTweensOf(imageRef.current);
-          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
-          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
-
-          // Calculate offset needed to center the item based on displayed dimensions
-          const offsetX = (center.x - 0.5) * (scale - 1) * rect.width;
-          const offsetY = (center.y - 0.5) * (scale - 1) * rect.height;
-
-          const animVars = {
-            scale,
-            x: -offsetX,
-            y: -offsetY,
-            duration: 0.5,
-            ease: "power2.out",
-            overwrite: true,
-            force3D: true,
-          };
-
-          gsap.to(imageRef.current, animVars);
-
-          // Apply same transform to boxes container
-          if (boxesRef.current) {
-            gsap.to(boxesRef.current, animVars);
-          }
-
-          // Apply same transform to overlay to keep spotlight aligned
-          if (overlayRef.current) {
-            gsap.to(overlayRef.current, animVars);
-          }
-
-          transformRef.current = { scale, x: -offsetX, y: -offsetY };
-        }
-      }
-    },
-    {
-      scope: containerRef,
-      dependencies: [activeIndex, naturalSize, containerSize],
+    if (activeIndex === null) {
+      // Reset to default state
+      const resetVars = { scale: 1, x: 0, y: 0, duration: 0.5, ease: "power2.out", overwrite: true as const, force3D: true };
+      targets.forEach((el) => gsap.to(el!, resetVars));
+      transformRef.current = { scale: 1, x: 0, y: 0 };
+      return;
     }
-  );
+
+    const activeItem = items[activeIndex];
+    if (!activeItem?.normalizedCenter || !activeItem?.normalizedBox) return;
+    if (!containerRef.current || !imageRef.current || !naturalSize || !containerSize) return;
+
+    const rect = getDisplayedRect();
+    if (!rect) return;
+
+    const center = activeItem.normalizedCenter;
+    const scale = 1.2;
+    const offsetX = (center.x - 0.5) * (scale - 1) * rect.width;
+    const offsetY = (center.y - 0.5) * (scale - 1) * rect.height;
+
+    const animVars = { scale, x: -offsetX, y: -offsetY, duration: 0.5, ease: "power2.out", overwrite: true as const, force3D: true };
+    targets.forEach((el) => gsap.to(el!, animVars));
+    transformRef.current = { scale, x: -offsetX, y: -offsetY };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, naturalSize, containerSize]);
 
   // Spotlight effect: Update overlay mask
   useEffect(() => {
