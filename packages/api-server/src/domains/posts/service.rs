@@ -612,6 +612,14 @@ pub async fn list_posts(
         select = select.filter(Column::GroupName.eq(group_name));
     }
 
+    if let Some(artist_id) = query.artist_id {
+        select = select.filter(Column::ArtistId.eq(artist_id));
+    }
+
+    if let Some(group_id) = query.group_id {
+        select = select.filter(Column::GroupId.eq(group_id));
+    }
+
     if let Some(ref context) = query.context {
         select = select.filter(Column::Context.eq(context));
     }

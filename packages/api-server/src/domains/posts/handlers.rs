@@ -204,6 +204,8 @@ pub async fn create_post_with_solutions(
         ("context" = Option<String>, Query, description = "상황 필터"),
         ("category" = Option<String>, Query, description = "카테고리 필터 (Phase 7)"),
         ("user_id" = Option<Uuid>, Query, description = "사용자 ID 필터"),
+        ("artist_id" = Option<Uuid>, Query, description = "아티스트 ID 필터 (warehouse FK)"),
+        ("group_id" = Option<Uuid>, Query, description = "그룹 ID 필터 (warehouse FK)"),
         ("sort" = Option<String>, Query, description = "정렬: recent | popular | trending"),
         ("page" = Option<u64>, Query, description = "페이지 번호"),
         ("per_page" = Option<u64>, Query, description = "페이지당 개수"),
