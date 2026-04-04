@@ -212,25 +212,9 @@ export default async function Home({
         id: `mag-${mp.id}`, imageUrl: proxyImg(mp.image_url),
         title: mp.post_magazine_title!, subtitle: mp.context || "",
         artistName: displayName || "Unknown", category: "Editorial",
-        link: `/posts/${mp.id}`,
+        link: `/posts/${mp.id}?from=explore`,
       };
     });
-
-  if (magazineCards.length < 4) {
-    const usedIds = new Set(magazineCards.map((c) => c.id.replace("mag-", "")));
-    for (const p of [...recentPosts, ...popularPosts]) {
-      if (!usedIds.has(p.id) && magazineCards.length < 8) {
-        const { displayName } = enrichArtistName(p.artist_name || p.group_name);
-        magazineCards.push({
-          id: `mag-${p.id}`, imageUrl: proxyImg(p.image_url),
-          title: displayName || p.title || "Style", subtitle: p.context || "",
-          artistName: displayName || "Unknown", category: "Style",
-          link: `/posts/${p.id}`,
-        });
-        usedIds.add(p.id);
-      }
-    }
-  }
 
   const editorialMagazineData: EditorialMagazineData = { cards: magazineCards };
 
