@@ -6,6 +6,7 @@
  * All queries use createWarehouseServerClient and fail gracefully.
  */
 
+import { cache } from "react";
 import { createWarehouseServerClient } from "@/lib/supabase/warehouse";
 import type { ArtistRow, GroupRow, BrandRow } from "@/lib/supabase/warehouse-types";
 
@@ -81,7 +82,7 @@ export interface ArtistProfileEntry {
  *
  * @returns Map keyed by lowercased name, empty Map on error
  */
-export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfileEntry>> {
+export const buildArtistProfileMap = cache(async (): Promise<Map<string, ArtistProfileEntry>> => {
   const map = new Map<string, ArtistProfileEntry>();
 
   try {
@@ -128,7 +129,7 @@ export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfile
   }
 
   return map;
-}
+});
 
 /**
  * Fetches brands from warehouse.brands with logo images.
@@ -171,7 +172,7 @@ export interface BrandProfileEntry {
  *
  * @returns Map keyed by lowercased name or brand ID, empty Map on error
  */
-export async function buildBrandProfileMap(): Promise<Map<string, BrandProfileEntry>> {
+export const buildBrandProfileMap = cache(async (): Promise<Map<string, BrandProfileEntry>> => {
   const map = new Map<string, BrandProfileEntry>();
 
   try {
@@ -196,4 +197,4 @@ export async function buildBrandProfileMap(): Promise<Map<string, BrandProfileEn
   }
 
   return map;
-}
+});

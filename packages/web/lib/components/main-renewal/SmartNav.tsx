@@ -3,8 +3,13 @@
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import Link from "next/link";
-import DecodedLogo from "@/lib/components/DecodedLogo";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
+  ssr: false,
+  loading: () => <span className="font-bold text-[#eafd67] tracking-tight">decoded</span>,
+});
 
 const NAV_ITEMS = [
   { href: "/", label: "Home" },

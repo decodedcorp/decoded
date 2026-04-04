@@ -1,5 +1,4 @@
 import {
-  MasonryGrid,
   EditorialMagazine,
 } from "@/lib/components/main-renewal";
 import type {
@@ -9,14 +8,14 @@ import type {
   EditorialMagazineData,
 } from "@/lib/components/main-renewal";
 import {
-  DomeGallerySection,
   HeroItemSync,
-  // TrendingPostsSection,  // #88: temporarily disabled
-  // HelpFindSection,        // #88: temporarily disabled
   EditorialSection,
-  TrendingListSection,
-  // DecodedPickSection,  // #91: temporarily disabled
 } from "@/lib/components/main";
+import {
+  DynamicTrendingListSection as TrendingListSection,
+  DynamicMasonryGrid as MasonryGrid,
+  DynamicDomeGallerySection as DomeGallerySection,
+} from "./home-dynamic-sections";
 import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
 import type { TrendingKeywordItem } from "@/lib/components/main/TrendingListSection";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
@@ -149,9 +148,11 @@ export default async function Home({
   // --- Hero ---
 
   const heroPosts: HeroPostEntry[] = [];
+  const heroIds = new Set<string>();
 
   for (const post of recentPosts) {
-    if (heroPosts.some((hp) => hp.id === post.id)) continue;
+    if (heroIds.has(post.id)) continue;
+    heroIds.add(post.id);
     heroPosts.push({
       id: post.id, heroData: buildHeroFromApiPost(post), items: [],
       galleryImage: proxyImg(post.image_url),
@@ -160,7 +161,8 @@ export default async function Home({
   }
 
   for (const post of popularPosts) {
-    if (heroPosts.some((hp) => hp.id === post.id)) continue;
+    if (heroIds.has(post.id)) continue;
+    heroIds.add(post.id);
     heroPosts.push({
       id: post.id, heroData: buildHeroFromApiPost(post), items: [],
       galleryImage: proxyImg(post.image_url),
@@ -325,23 +327,29 @@ export default async function Home({
   }
 
   const editorialStyle: StyleCardData | undefined = editorialMain
-    ? {
-        id: editorialMain.id,
-        title: enrichArtistName(editorialMain.artist_name).displayName || "Featured",
-        description: editorialMain.context || editorialMain.title || "",
-        artistName: enrichArtistName(editorialMain.artist_name).displayName || "Unknown",
-        imageUrl: proxyImg(editorialMain.image_url),
-        link: `/posts/${editorialMain.id}`,
-        items: editorialSolutionItems.length > 0
-          ? editorialSolutionItems
-          : editorialPool.slice(1, 4).map((p) => ({
-              id: p.id,
-              label: enrichArtistName(p.artist_name).displayName || "Item",
-              name: enrichArtistName(p.artist_name).displayName || "Item",
-              brand: p.group_name || "",
-              imageUrl: proxyImg(p.image_url),
-            })),
-      }
+    ? (() => {
+        const { displayName: editorialName } = enrichArtistName(editorialMain.artist_name);
+        return {
+          id: editorialMain.id,
+          title: editorialName || "Featured",
+          description: editorialMain.context || editorialMain.title || "",
+          artistName: editorialName || "Unknown",
+          imageUrl: proxyImg(editorialMain.image_url),
+          link: `/posts/${editorialMain.id}`,
+          items: editorialSolutionItems.length > 0
+            ? editorialSolutionItems
+            : editorialPool.slice(1, 4).map((p) => {
+                const { displayName } = enrichArtistName(p.artist_name);
+                return {
+                  id: p.id,
+                  label: displayName || "Item",
+                  name: displayName || "Item",
+                  brand: p.group_name || "",
+                  imageUrl: proxyImg(p.image_url),
+                };
+              }),
+        };
+      })()
     : undefined;
 
   // --- MasonryGrid ---
