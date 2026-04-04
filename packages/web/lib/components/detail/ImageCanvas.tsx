@@ -128,18 +128,31 @@ export function ImageCanvas({
     };
   };
 
+  // Pre-set initial transforms to avoid first-scroll layout computation jank
+  useEffect(() => {
+    if (imageRef.current) gsap.set(imageRef.current, { scale: 1, x: 0, y: 0 });
+    if (boxesRef.current) gsap.set(boxesRef.current, { scale: 1, x: 0, y: 0 });
+    if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0 });
+  }, []);
+
   // Pan & Zoom effect: Calculate scale and translation
   useGSAP(
     () => {
       if (!imageRef.current || activeIndex === null) {
         // Reset to default state
         if (imageRef.current) {
+          // Kill any running tweens before reset
+          gsap.killTweensOf(imageRef.current);
+          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
+          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
+
           const resetVars = {
             scale: 1,
             x: 0,
             y: 0,
-            duration: 0.8,
+            duration: 0.5,
             ease: "power2.out",
+            overwrite: true,
           };
 
           gsap.to(imageRef.current, resetVars);
@@ -176,6 +189,11 @@ export function ImageCanvas({
         const rect = getDisplayedRect();
 
         if (rect) {
+          // Kill any running tweens before pan/zoom
+          gsap.killTweensOf(imageRef.current);
+          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
+          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
+
           // Calculate offset needed to center the item based on displayed dimensions
           const offsetX = (center.x - 0.5) * (scale - 1) * rect.width;
           const offsetY = (center.y - 0.5) * (scale - 1) * rect.height;
@@ -184,8 +202,9 @@ export function ImageCanvas({
             scale,
             x: -offsetX,
             y: -offsetY,
-            duration: 0.8,
+            duration: 0.5,
             ease: "power2.out",
+            overwrite: true,
           };
 
           gsap.to(imageRef.current, animVars);

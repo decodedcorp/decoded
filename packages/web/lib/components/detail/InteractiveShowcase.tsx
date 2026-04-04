@@ -87,33 +87,59 @@ export function InteractiveShowcase({
         sectionRef.current.querySelectorAll("[data-item-index]")
       );
 
+      // Ignore initial ScrollTrigger fire — only activate after user scrolls
+      let hasScrolled = false;
+      const scrollerTarget = scroller instanceof Window ? window : scroller;
+      const markScrolled = () => {
+        hasScrolled = true;
+        scrollerTarget.removeEventListener("scroll", markScrolled);
+        ScrollTrigger.update();
+      };
+      scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
+
       cards.forEach((card, index) => {
         ScrollTrigger.create({
           scroller,
           trigger: card,
-          start: "top center",
+          start: "top 70%",
           end: "bottom center",
           invalidateOnRefresh: true,
-          onEnter: () => handleActiveIndexChange(index),
-          onEnterBack: () => handleActiveIndexChange(index),
+          onEnter: () => { if (hasScrolled) handleActiveIndexChange(index); },
+          onEnterBack: () => { if (hasScrolled) handleActiveIndexChange(index); },
           onLeave: () => {
-            if (activeIndexRef.current === index) {
+            if (hasScrolled && activeIndexRef.current === index) {
               handleActiveIndexChange(null);
             }
           },
           onLeaveBack: () => {
-            if (activeIndexRef.current === index) {
+            if (hasScrolled && activeIndexRef.current === index) {
               handleActiveIndexChange(null);
             }
           },
         });
       });
 
-      // Modal: refresh after layout stabilizes (content may load async)
+      // Modal: refresh once scroller has scrollable content (content may load async)
       if (scrollContainerRef?.current) {
-        const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
+        let cancelled = false;
+        const scrollerEl = scrollContainerRef.current;
+        let attempts = 0;
+        const maxAttempts = 25;
+
+        const checkReady = () => {
+          if (cancelled) return;
+          attempts++;
+          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+            ScrollTrigger.refresh();
+          } else {
+            requestAnimationFrame(checkReady);
+          }
+        };
+
+        requestAnimationFrame(checkReady);
+
         return () => {
-          clearTimeout(timer);
+          cancelled = true;
           ScrollTrigger.getAll().forEach((trigger) => {
             if (cards.includes(trigger.vars.trigger as HTMLElement)) {
               trigger.kill();

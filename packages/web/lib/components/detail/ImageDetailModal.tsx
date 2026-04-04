@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Maximize2 } from "lucide-react";
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
@@ -123,8 +123,19 @@ export function ImageDetailModal({ imageId, variant = "full", artistProfiles, br
   }, [imageId, image, error]);
 
   // Forward scroll from floating image to drawer content (desktop)
-  const handleImageScroll = useCallback((e: React.WheelEvent) => {
-    scrollContainerRef.current?.scrollBy({ top: e.deltaY, behavior: "auto" });
+  // Native listener with preventDefault() prevents the browser's default scroll
+  // from firing simultaneously with our manual scrollBy call (double-scroll bug).
+  useEffect(() => {
+    const el = leftImageContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      scrollContainerRef.current?.scrollBy({ top: e.deltaY });
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
   // Render drawer content based on data state
@@ -259,7 +270,6 @@ export function ImageDetailModal({ imageId, variant = "full", artistProfiles, br
           ref={leftImageContainerRef}
           className="hidden md:block fixed z-60 shadow-2xl rounded-lg overflow-hidden"
           style={{ opacity: 0 }}
-          onWheel={handleImageScroll}
         >
           {/* Blur backdrop */}
           <div

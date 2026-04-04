@@ -112,32 +112,49 @@ export function MagazineItemsSection({
       }
 
       // Modal: ScrollTrigger for scroll-spot sync
-      // Defer until modal open animation completes (~700ms) to prevent first-scroll jank
+      // Use RAF loop to wait until scroller has scrollable content before initializing
       if (isModal && onActiveIndexChange && cards.length > 0) {
         const scroller = scrollContainerRef?.current || window;
+        let cancelled = false;
+        // Ignore initial ScrollTrigger fire — only activate after user scrolls
+        let hasScrolled = false;
+        const scrollerTarget = scroller instanceof Window ? window : scroller;
+        const markScrolled = () => {
+          hasScrolled = true;
+          scrollerTarget.removeEventListener("scroll", markScrolled);
+          // Re-evaluate triggers now that hasScrolled is true
+          ScrollTrigger.update();
+        };
+        scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
 
-        const initTimer = setTimeout(() => {
+        const initScrollTriggers = () => {
+          if (cancelled) return;
+
           cards.forEach((card, index) => {
             ScrollTrigger.create({
               scroller,
               trigger: card,
-              start: "top center",
+              start: "top 70%",
               end: "bottom center",
               invalidateOnRefresh: true,
               onEnter: () => {
+                if (!hasScrolled) return;
                 activeIndexRef.current = index;
                 onActiveIndexChange(index);
               },
               onEnterBack: () => {
+                if (!hasScrolled) return;
                 activeIndexRef.current = index;
                 onActiveIndexChange(index);
               },
               onLeave: () => {
+                if (!hasScrolled) return;
                 if (activeIndexRef.current === index) {
                   onActiveIndexChange(null);
                 }
               },
               onLeaveBack: () => {
+                if (!hasScrolled) return;
                 if (activeIndexRef.current === index) {
                   onActiveIndexChange(null);
                 }
@@ -145,10 +162,26 @@ export function MagazineItemsSection({
             });
           });
           ScrollTrigger.refresh();
-        }, 700);
+        };
+
+        const scrollerEl = scroller instanceof Window ? document.documentElement : scroller as HTMLElement;
+        let attempts = 0;
+        const maxAttempts = 25;
+
+        const checkReady = () => {
+          if (cancelled) return;
+          attempts++;
+          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+            initScrollTriggers();
+          } else {
+            requestAnimationFrame(checkReady);
+          }
+        };
+
+        requestAnimationFrame(checkReady);
 
         return () => {
-          clearTimeout(initTimer);
+          cancelled = true;
           ScrollTrigger.getAll().forEach((trigger) => {
             if (cards.includes(trigger.vars.trigger as HTMLElement)) {
               trigger.kill();
