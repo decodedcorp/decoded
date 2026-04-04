@@ -438,6 +438,7 @@ export function ImageDetailContent({
               compact={isExplorePreview}
               scrollContainerRef={scrollContainerRef}
               onActiveIndexChange={onActiveIndexChange}
+              brandProfiles={brandProfiles}
             />
           </>
         )}
