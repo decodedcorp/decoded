@@ -90,8 +90,8 @@ export default async function Home({
     fetchPosts("sort=recent&per_page=50", async () =>
       (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
     ),
-    fetchPosts("has_magazine=true&per_page=8", async () =>
-      (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
+    fetchPosts("has_magazine=true&per_page=30", async () =>
+      (await fetchMagazinePostsServer(30)).map(magazineToApiPost)
     ),
     // fetchDecodedPickServer(),  // #91: temporarily disabled
     buildArtistProfileMap(),
@@ -215,13 +215,25 @@ export default async function Home({
       };
     });
 
-  const magazineArtists = [...new Set(allMagazineCards.map((c) => c.artistName))];
-  const featuredArtist = magazineArtists.length > 0
-    ? magazineArtists[Math.floor(Math.random() * magazineArtists.length)]
+  const magazineArtistCounts = new Map<string, { count: number; displayName: string }>();
+  for (const c of allMagazineCards) {
+    const key = c.artistName.toLowerCase();
+    const existing = magazineArtistCounts.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      magazineArtistCounts.set(key, { count: 1, displayName: c.artistName });
+    }
+  }
+  const eligibleArtists = [...magazineArtistCounts.values()]
+    .filter(({ count }) => count >= 3)
+    .map(({ displayName }) => displayName);
+  const featuredArtist = eligibleArtists.length > 0
+    ? eligibleArtists[Math.floor(Math.random() * eligibleArtists.length)]
     : undefined;
 
   const magazineCards = featuredArtist
-    ? allMagazineCards.filter((c) => c.artistName === featuredArtist)
+    ? allMagazineCards.filter((c) => c.artistName.toLowerCase() === featuredArtist.toLowerCase())
     : allMagazineCards.slice(0, 8);
 
   const editorialMagazineData: EditorialMagazineData = {
@@ -324,8 +336,8 @@ export default async function Home({
       <HeroItemSync posts={heroPosts} />
 
       {/* #89: 2-column Editorial + Trending */}
-      <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
-        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
+      <section className="py-14 lg:py-20 px-6 md:px-12 lg:px-20">
+        <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-8 lg:min-h-[520px]">
           <EditorialSection style={editorialStyle} embedded />
           <TrendingListSection keywords={trendingKeywords} embedded />
         </div>
