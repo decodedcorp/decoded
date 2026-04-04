@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v10.0
-milestone_name: Profile Page Completion
-status: active
+milestone: v11.0
+milestone_name: Explore & Editorial Data Integration
+status: shipped
 last_updated: "2026-04-02"
 progress:
-  total_phases: 20
-  completed_phases: 17
+  total_phases: 5
+  completed_phases: 5
 ---
 
 # Project State
@@ -30,7 +30,8 @@ See: .planning/PROJECT.md
 | v7.0 Sticker Canvas          | Paused     | -          |
 | v8.0 Monorepo & Bun          | Shipped    | 2026-03-23 |
 | v9.0 API Generation          | Shipped    | 2026-03-23 |
-| **v10.0 Profile Completion** | **Active** | -          |
+| v10.0 Profile Completion     | Shipped    | 2026-03-26 |
+| **v11.0 Explore & Editorial** | **Shipped** | 2026-04-02 |
 
 ## Pending Todos
 

@@ -7,7 +7,8 @@
 
 **Project ID:** `fvxchskblyhuswzlcmql`  
 **Schema:** `warehouse` (API Exposed)  
-**Types 파일:** `packages/web/lib/supabase/warehouse-types.ts` (2026-03-26 생성)  
+**Types 파일:** `packages/web/lib/supabase/warehouse-types.ts` (2026-03-26 생성, warehouse 스키마 전용)
+**Public Types 파일:** `packages/web/lib/supabase/types.ts` (2026-04-04 재생성, `supabase gen types` 기반)  
 **Client 파일:** `packages/web/lib/supabase/warehouse.ts`
 
 ---
@@ -356,6 +357,8 @@ PR #69 / SeaORM migration `m20260402_000001_add_warehouse_fk_posts_solutions`에
 | Column | Type | Constraint | Note |
 |--------|------|------------|------|
 | `brand_id` | uuid | nullable, FK → `warehouse.brands.id` ON DELETE SET NULL | `metadata.brand` 또는 `title` prefix 매칭으로 백필됨 |
+| `price_amount` | numeric(12,2) | nullable | 상품 가격 (2026-04-04 추가) |
+| `price_currency` | varchar(10) | nullable, DEFAULT 'KRW' | 통화 코드 (2026-04-04 추가) |
 
 인덱스: `idx_solutions_brand_id`
 
