@@ -163,6 +163,11 @@ export function useImageModalAnimation({
     ctxRef.current.add(() => {
       const tl = gsap.timeline({
         onComplete: () => {
+          // Hide container before navigation to prevent GSAP context revert
+          // from flashing elements back to visible during unmount
+          if (containerRef.current) {
+            containerRef.current.style.visibility = "hidden";
+          }
           gsap.delayedCall(0.05, () => {
             reset();
             if (window.history.length > 1) {
@@ -259,6 +264,10 @@ export function useImageModalAnimation({
       ctxRef.current.add(() => {
         const tl = gsap.timeline({
           onComplete: () => {
+            // Hide container before navigation to prevent GSAP revert flash
+            if (containerRef.current) {
+              containerRef.current.style.visibility = "hidden";
+            }
             gsap.delayedCall(0.05, () => {
               reset();
               if (window.history.length > 1) {

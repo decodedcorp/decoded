@@ -47,7 +47,7 @@ export function ExploreClient({
   }, [debouncedValue, setDebouncedQuery]);
 
   // Initialize from server-provided URL query
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (initialQuery && !query) {
       setQuery(initialQuery);
@@ -90,7 +90,7 @@ export function ExploreClient({
       addRecentSearch(selectedQuery);
       inputRef.current?.blur();
     },
-    [setQuery, setDebouncedQuery, addRecentSearch],
+    [setQuery, setDebouncedQuery, addRecentSearch]
   );
 
   const handleKeyDown = useCallback(
@@ -106,7 +106,7 @@ export function ExploreClient({
         setShowSuggestions(false);
       }
     },
-    [showSuggestions],
+    [showSuggestions]
   );
 
   const handleClear = useCallback(() => {
@@ -123,7 +123,7 @@ export function ExploreClient({
     const updateGridSize = () => {
       const isMobile = window.innerWidth < 768;
       setGridSize(
-        isMobile ? { width: 180, height: 225 } : { width: 400, height: 500 },
+        isMobile ? { width: 180, height: 225 } : { width: 400, height: 500 }
       );
     };
     updateGridSize();
@@ -158,10 +158,10 @@ export function ExploreClient({
   useEffect(() => {
     if (!gridRef.current) return;
     const timer = setTimeout(() => {
-      const cards = gridRef.current?.querySelectorAll('.js-observe');
-      cards?.forEach(el => {
-        el.classList.add('is-visible');
-        el.classList.remove('is-hidden');
+      const cards = gridRef.current?.querySelectorAll(".js-observe");
+      cards?.forEach((el) => {
+        el.classList.add("is-visible");
+        el.classList.remove("is-hidden");
       });
     }, 800); // Wait for physics engine to settle
     return () => clearTimeout(timer);
@@ -199,7 +199,9 @@ export function ExploreClient({
   }, [artistFacets]);
 
   const hasActiveFilters =
-    selectedArtists.length > 0 || activeContext !== null || activeSort !== "relevant";
+    selectedArtists.length > 0 ||
+    activeContext !== null ||
+    activeSort !== "relevant";
 
   return (
     <div className="relative h-[calc(100dvh-120px)] md:h-[calc(100dvh-72px)] flex flex-col">
@@ -251,7 +253,7 @@ export function ExploreClient({
               "appearance-none rounded-full pl-3 pr-7 py-1 text-xs font-medium border transition-colors cursor-pointer bg-transparent",
               activeSort !== "relevant"
                 ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:bg-accent",
+                : "border-border text-muted-foreground hover:bg-accent"
             )}
           >
             {SORT_OPTIONS.map((opt) => (
@@ -275,7 +277,7 @@ export function ExploreClient({
                 "appearance-none rounded-full pl-3 pr-7 py-1 text-xs font-medium border transition-colors cursor-pointer bg-transparent",
                 activeContext
                   ? "border-primary/30 bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:bg-accent",
+                  : "border-border text-muted-foreground hover:bg-accent"
               )}
             >
               <option value="">Context</option>
@@ -353,7 +355,7 @@ export function ExploreClient({
                     {(() => {
                       console.error(
                         "[ExploreClient] Posts fetch error:",
-                        error,
+                        error
                       );
                       if (error instanceof Error) return error.message;
                       if (typeof error === "object" && error !== null)
@@ -396,7 +398,11 @@ export function ExploreClient({
               <div className="absolute inset-0 z-0">
                 <ThiingsGrid
                   gridSize={gridSize}
-                  renderItem={(config) => <ExploreCardCell {...config} />}
+                  renderItem={(config) => (
+                    <ExploreCardCell
+                      {...config}
+                    />
+                  )}
                   initialPosition={{ x: 0, y: 0 }}
                   items={gridItems}
                   onReachEnd={() => {

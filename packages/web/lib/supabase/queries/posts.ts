@@ -156,7 +156,7 @@ export async function fetchPostWithImagesAndItems(
     post: {
       id: result.post.id,
       account: result.post.artist_name || result.post.group_name || "",
-      article: result.post.media_title,
+      article: result.post.title,
       created_at: result.post.created_at,
       item_ids: result.solutions.map((s) => s.id),
       metadata: null,

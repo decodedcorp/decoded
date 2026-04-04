@@ -50,8 +50,9 @@ function formatPrice(amount: number | null, currency: string): string {
 function extractBrand(solution: SolutionRow | undefined): string {
   if (!solution) return "Unknown";
   // Try keywords first
-  if (solution.keywords && solution.keywords.length > 0) {
-    return solution.keywords[0].toUpperCase();
+  const kw = solution.keywords as string[] | null;
+  if (kw && kw.length > 0) {
+    return kw[0].toUpperCase();
   }
   // Try extracting from title -- take first word as brand
   if (solution.title) {

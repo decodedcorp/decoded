@@ -159,6 +159,14 @@ pub struct PostListQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<Uuid>,
 
+    /// 아티스트 ID 필터 (warehouse FK)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<Uuid>,
+
+    /// 그룹 ID 필터 (warehouse FK)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<Uuid>,
+
     /// 정렬 방식
     #[serde(default = "default_sort")]
     pub sort: String, // 'recent' | 'popular' | 'trending'
@@ -268,6 +276,14 @@ pub struct PostListItem {
     /// 그룹명
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_name: Option<String>,
+
+    /// 아티스트 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<Uuid>,
+
+    /// 그룹 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<Uuid>,
 
     /// 상황 정보
     #[serde(skip_serializing_if = "Option::is_none")]

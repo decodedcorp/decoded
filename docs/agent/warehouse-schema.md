@@ -3,9 +3,12 @@
 > ETL 파이프라인 데이터를 저장하는 Supabase `warehouse` 스키마.  
 > Instagram 수집 → 엔티티 관리 → Seed 퍼블리싱 파이프라인 전체를 커버한다.
 
+> **참고**: `public.posts` 및 `public.solutions` 테이블(앱 스키마)에는 warehouse 엔티티를 참조하는 FK 컬럼이 추가되었습니다. 자세한 내용은 아래 [App 스키마 FK 컬럼](#app-스키마-fk-컬럼-warehouse-참조) 섹션을 참고합니다.
+
 **Project ID:** `fvxchskblyhuswzlcmql`  
 **Schema:** `warehouse` (API Exposed)  
-**Types 파일:** `packages/web/lib/supabase/warehouse-types.ts` (2026-03-26 생성)  
+**Types 파일:** `packages/web/lib/supabase/warehouse-types.ts` (2026-03-26 생성, warehouse 스키마 전용)
+**Public Types 파일:** `packages/web/lib/supabase/types.ts` (2026-04-04 재생성, `supabase gen types` 기반)  
 **Client 파일:** `packages/web/lib/supabase/warehouse.ts`
 
 ---
@@ -332,6 +335,38 @@ Seed post의 아카이브된 이미지 에셋.
 
 - anon key로 **SELECT 가능**, INSERT/UPDATE/DELETE는 차단
 - 쓰기가 필요하면 별도 정책 추가 또는 service_role key 사용 (Server-side only)
+
+---
+
+## App 스키마 FK 컬럼 (warehouse 참조)
+
+PR #69 / SeaORM migration `m20260402_000001_add_warehouse_fk_posts_solutions`에서 추가됨.  
+`public` 스키마(앱 데이터)의 테이블에 warehouse 엔티티 FK를 연결한다.
+
+### `public.posts` 추가 컬럼
+
+| Column | Type | Constraint | Note |
+|--------|------|------------|------|
+| `artist_id` | uuid | nullable, FK → `warehouse.artists.id` ON DELETE SET NULL | `artist_name`에서 이름 매칭으로 백필됨 |
+| `group_id` | uuid | nullable, FK → `warehouse.groups.id` ON DELETE SET NULL | `group_name`에서 이름 매칭으로 백필됨 |
+
+인덱스: `idx_posts_artist_id`, `idx_posts_group_id`
+
+### `public.solutions` 추가 컬럼
+
+| Column | Type | Constraint | Note |
+|--------|------|------------|------|
+| `brand_id` | uuid | nullable, FK → `warehouse.brands.id` ON DELETE SET NULL | `metadata.brand` 또는 `title` prefix 매칭으로 백필됨 |
+| `price_amount` | numeric(12,2) | nullable | 상품 가격 (2026-04-04 추가) |
+| `price_currency` | varchar(10) | nullable, DEFAULT 'KRW' | 통화 코드 (2026-04-04 추가) |
+
+인덱스: `idx_solutions_brand_id`
+
+### 백필 전략
+
+- `posts.artist_id`: `artist_name` → `warehouse.artists.name_ko / name_en` (unaccent + lower 정규화, 고유 매칭만)
+- `posts.group_id`: `group_name` → `warehouse.groups.name_ko / name_en` (동일 방식)
+- `solutions.brand_id`: `metadata->>'brand'` 값 우선, 없으면 `title` prefix로 `warehouse.brands` 매칭
 
 ---
 

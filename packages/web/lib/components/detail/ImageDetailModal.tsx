@@ -17,13 +17,15 @@ import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
 type Props = {
   imageId: string;
   variant?: "full" | "explore-preview";
+  artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 /**
  * Side Drawer version of image detail page
  * Used when navigating from grid (intercepting route)
  */
-export function ImageDetailModal({ imageId, variant = "full" }: Props) {
+export function ImageDetailModal({ imageId, variant = "full", artistProfiles, brandProfiles }: Props) {
   const router = useRouter();
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
@@ -210,6 +212,8 @@ export function ImageDetailModal({ imageId, variant = "full" }: Props) {
           }
           activeIndex={activeIndex}
           onActiveIndexChange={setActiveIndex}
+          artistProfiles={artistProfiles}
+          brandProfiles={brandProfiles}
         />
       );
     }
@@ -226,6 +230,8 @@ export function ImageDetailModal({ imageId, variant = "full" }: Props) {
         scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
         activeIndex={activeIndex}
         onActiveIndexChange={setActiveIndex}
+        artistProfiles={artistProfiles}
+        brandProfiles={brandProfiles}
       />
     );
   };

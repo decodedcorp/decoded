@@ -1,4 +1,5 @@
 import { ImageDetailModal } from "@/lib/components/detail/ImageDetailModal";
+import { buildArtistProfileMap, buildBrandProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -17,5 +18,22 @@ export default async function ModalPostDetailPage({
   const { id } = await params;
   const { from } = await searchParams;
   const variant = from === "explore" ? "explore-preview" : "full";
-  return <ImageDetailModal imageId={id} variant={variant} />;
+
+  // Fetch artist/group + brand profile data in parallel
+  const [artistProfileMap, brandProfileMap] = await Promise.all([
+    buildArtistProfileMap(),
+    buildBrandProfileMap(),
+  ]);
+
+  const artistProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
+  artistProfileMap.forEach((value, key) => {
+    artistProfiles[key] = value;
+  });
+
+  const brandProfiles: Record<string, { name: string; profileImageUrl: string | null }> = {};
+  brandProfileMap.forEach((value, key) => {
+    brandProfiles[key] = value;
+  });
+
+  return <ImageDetailModal imageId={id} variant={variant} artistProfiles={artistProfiles} brandProfiles={brandProfiles} />;
 }

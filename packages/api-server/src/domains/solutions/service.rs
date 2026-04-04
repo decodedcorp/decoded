@@ -63,6 +63,7 @@ pub async fn list_solutions_by_spot_id(
 
         items.push(SolutionListItem {
             id: solution.id,
+            brand_id: solution.brand_id,
             user: user.into(),
             match_type: solution.match_type,
             link_type: solution.link_type,
@@ -100,6 +101,7 @@ pub async fn get_solution_by_id(
     Ok(SolutionResponse {
         id: solution.id,
         spot_id: solution.spot_id,
+        brand_id: solution.brand_id,
         user: user.into(),
         match_type: solution.match_type,
         link_type: solution.link_type,
@@ -268,6 +270,7 @@ pub async fn admin_list_solutions(
         };
         items.push(SolutionListItem {
             id: solution.id,
+            brand_id: solution.brand_id,
             user: user.into(),
             match_type: solution.match_type,
             link_type: solution.link_type,

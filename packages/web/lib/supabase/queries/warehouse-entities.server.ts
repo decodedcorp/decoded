@@ -7,7 +7,7 @@
  */
 
 import { createWarehouseServerClient } from "@/lib/supabase/warehouse";
-import type { ArtistRow, GroupRow } from "@/lib/supabase/warehouse-types";
+import type { ArtistRow, GroupRow, BrandRow } from "@/lib/supabase/warehouse-types";
 
 /**
  * Fetches artists from warehouse.artists with profile images.
@@ -15,7 +15,7 @@ import type { ArtistRow, GroupRow } from "@/lib/supabase/warehouse-types";
  * @param limit - Maximum number of artists to fetch (default: 50)
  * @returns Array of ArtistRow, empty on error
  */
-export async function fetchWarehouseArtists(limit = 50): Promise<ArtistRow[]> {
+export async function fetchWarehouseArtists(limit = 500): Promise<ArtistRow[]> {
   try {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
@@ -42,7 +42,7 @@ export async function fetchWarehouseArtists(limit = 50): Promise<ArtistRow[]> {
  * @param limit - Maximum number of groups to fetch (default: 50)
  * @returns Array of GroupRow, empty on error
  */
-export async function fetchWarehouseGroups(limit = 50): Promise<GroupRow[]> {
+export async function fetchWarehouseGroups(limit = 500): Promise<GroupRow[]> {
   try {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
@@ -86,8 +86,8 @@ export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfile
 
   try {
     const [artists, groups] = await Promise.all([
-      fetchWarehouseArtists(50),
-      fetchWarehouseGroups(50),
+      fetchWarehouseArtists(),
+      fetchWarehouseGroups(),
     ]);
 
     const addEntity = (
@@ -125,6 +125,74 @@ export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfile
     }
   } catch (err) {
     console.error("[warehouse-entities] buildArtistProfileMap unexpected error:", err);
+  }
+
+  return map;
+}
+
+/**
+ * Fetches brands from warehouse.brands with logo images.
+ *
+ * @param limit - Maximum number of brands to fetch (default: 100)
+ * @returns Array of BrandRow, empty on error
+ */
+export async function fetchWarehouseBrands(limit = 500): Promise<BrandRow[]> {
+  try {
+    const wh = await createWarehouseServerClient();
+    const { data, error } = await wh
+      .from("brands")
+      .select("id, name_ko, name_en, logo_image_url, primary_instagram_account_id, metadata, created_at, updated_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("[warehouse-entities] fetchWarehouseBrands error:", error);
+      return [];
+    }
+
+    return (data ?? []) as BrandRow[];
+  } catch (err) {
+    console.error("[warehouse-entities] fetchWarehouseBrands unexpected error:", err);
+    return [];
+  }
+}
+
+/** Brand profile entry for lookup by brand name or ID */
+export interface BrandProfileEntry {
+  name: string;
+  profileImageUrl: string | null;
+}
+
+/**
+ * Builds a lookup map from brand names (lowercased) to profile data.
+ *
+ * Fetches brands and indexes each by name_ko, name_en (lowercased),
+ * and by ID so callers can look up by raw text or brand_id.
+ *
+ * @returns Map keyed by lowercased name or brand ID, empty Map on error
+ */
+export async function buildBrandProfileMap(): Promise<Map<string, BrandProfileEntry>> {
+  const map = new Map<string, BrandProfileEntry>();
+
+  try {
+    const brands = await fetchWarehouseBrands();
+
+    for (const brand of brands) {
+      const displayName = brand.name_en || brand.name_ko || "";
+      if (!displayName) continue;
+
+      const entry: BrandProfileEntry = {
+        name: displayName,
+        profileImageUrl: brand.logo_image_url,
+      };
+
+      if (brand.name_ko) map.set(brand.name_ko.toLowerCase(), entry);
+      if (brand.name_en) map.set(brand.name_en.toLowerCase(), entry);
+      // Also key by ID for brand_id lookup
+      if (brand.id) map.set(brand.id, entry);
+    }
+  } catch (err) {
+    console.error("[warehouse-entities] buildBrandProfileMap error:", err);
   }
 
   return map;

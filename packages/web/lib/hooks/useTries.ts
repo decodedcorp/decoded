@@ -8,7 +8,7 @@ export interface TryPost {
   id: string;
   user_id: string;
   image_url: string;
-  media_title: string | null;
+  title: string | null;
   created_at: string;
   user: {
     display_name: string;

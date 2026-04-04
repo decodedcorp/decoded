@@ -24,6 +24,7 @@ type Props = {
   compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   onActiveIndexChange?: (index: number | null) => void;
+  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 export function MagazineItemsSection({
@@ -34,6 +35,7 @@ export function MagazineItemsSection({
   compact = false,
   scrollContainerRef,
   onActiveIndexChange,
+  brandProfiles,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [sectionWidth, setSectionWidth] = useState(0);
@@ -193,7 +195,7 @@ export function MagazineItemsSection({
                 className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
               >
                 {/* Item Image */}
-                <div className={`w-full shrink-0 ${compact ? "md:w-36 lg:w-40" : "md:w-60 lg:w-64"}`}>
+                <div className={`w-full shrink-0 ${compact ? "md:w-52 lg:w-56" : "md:w-60 lg:w-64"}`}>
                   {item.image_url ? (
                     <ItemImage
                       src={item.image_url}
@@ -244,9 +246,22 @@ export function MagazineItemsSection({
                 {/* Item Details */}
                 <div className="flex flex-1 flex-col justify-center">
                   {item.brand && (
-                    <p className={`typography-overline text-muted-foreground ${compact ? "mb-1 text-[10px]" : "mb-2"}`}>
-                      {item.brand}
-                    </p>
+                    <div className={`flex items-center gap-2 ${compact ? "mb-1" : "mb-2"}`}>
+                      {(() => {
+                        const bp = brandProfiles?.[item.brand.toLowerCase()];
+                        if (!bp?.profileImageUrl) return null;
+                        return (
+                          <img
+                            src={`/api/v1/image-proxy?url=${encodeURIComponent(bp.profileImageUrl)}`}
+                            alt={bp.name}
+                            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                          />
+                        );
+                      })()}
+                      <p className="typography-overline text-muted-foreground">
+                        {item.brand}
+                      </p>
+                    </div>
                   )}
                   <h3
                     className={compact ? "text-base font-semibold mb-1" : "typography-h4 mb-2"}

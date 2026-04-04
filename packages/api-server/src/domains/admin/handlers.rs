@@ -30,10 +30,7 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
             dashboard::router(state.clone(), app_config.clone()),
         )
         .nest("/badges", badges::router(app_config.clone()))
-        .nest(
-            "/reports",
-            reports::admin_router(app_config.clone()),
-        )
+        .nest("/reports", reports::admin_router(app_config.clone()))
         .nest(
             "/magazine-sessions",
             magazine_sessions::router(state, app_config),

@@ -112,7 +112,7 @@ async function supabaseSearchFallback(searchParams: URLSearchParams) {
       view_count: post.view_count ?? 0,
       type: "post",
       media_source: post.media_type
-        ? { type: post.media_type, title: post.media_title ?? null }
+        ? { type: post.media_type, title: post.title ?? null }
         : null,
       highlight: null,
     }));

@@ -13,8 +13,6 @@ import {
   HeroItemSync,
   TrendingPostsSection,
   HelpFindSection,
-  EditorialSection,
-  TrendingListSection,
   DecodedPickSection,
 } from "@/lib/components/main";
 import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";

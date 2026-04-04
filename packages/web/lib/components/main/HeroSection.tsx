@@ -39,7 +39,7 @@ export function HeroSection({ data = defaultHeroData }: HeroSectionProps) {
         className="absolute inset-0 z-0"
       >
         {data.imageUrl ? (
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="wait">
             {isNeonMode ? (
               <motion.div
                 key="neon"

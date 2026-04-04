@@ -23,6 +23,8 @@ type Props = {
   postId?: string;
   /** CTA 클릭 시 솔루션 등록 시트 열기 (postId 필요) */
   onAddSolutionClick?: (spotId: string) => void;
+  /** Brand profile lookup for displaying brand logos */
+  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 /**
@@ -42,6 +44,7 @@ export function ShopGrid({
   isModal = false,
   postId,
   onAddSolutionClick,
+  brandProfiles,
 }: Props) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -269,13 +272,26 @@ export function ShopGrid({
                         {/* Item Details */}
                         <div className="flex flex-col items-center text-center flex-grow">
                           {item.brand && (
-                            <p
-                              className={`text-xs uppercase tracking-wide text-muted-foreground ${
+                            <div
+                              className={`flex items-center gap-1.5 ${
                                 isModal ? "mb-1" : "mb-2"
                               }`}
                             >
-                              {item.brand}
-                            </p>
+                              {(() => {
+                                const brandProfile = brandProfiles?.[item.brand.toLowerCase()];
+                                if (!brandProfile?.profileImageUrl) return null;
+                                return (
+                                  <img
+                                    src={`/api/v1/image-proxy?url=${encodeURIComponent(brandProfile.profileImageUrl)}`}
+                                    alt={brandProfile.name}
+                                    className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                  />
+                                );
+                              })()}
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                {item.brand}
+                              </p>
+                            </div>
                           )}
                           <h3
                             className={`text-sm font-medium truncate w-full ${

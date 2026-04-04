@@ -2,6 +2,14 @@
 
 `packages/web/app/api/v1/` 기준. 메서드·경로 추가 시 이 파일과 실제 라우트 핸들러를 함께 갱신합니다.
 
+## Search
+
+| Route              | Methods | Description                                                              |
+| ------------------ | ------- | ------------------------------------------------------------------------ |
+| `/api/v1/search`   | GET     | Unified search — proxies to backend Meilisearch; Supabase ilike fallback |
+
+Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
+
 ## Posts & content
 
 | Route                            | Methods  | Description                   |
@@ -17,6 +25,7 @@
 | `/api/v1/posts/[postId]/likes`   | POST     | Like/unlike a post            |
 | `/api/v1/posts/[postId]/saved`   | POST     | Save/unsave a post            |
 | `/api/v1/post-magazines/[id]`    | GET      | Post magazine data            |
+| `/api/v1/post-magazines/generate` | POST   | Trigger editorial generation for a post (admin only, proxy → Rust)      |
 
 ## Solutions & spots
 
@@ -77,5 +86,14 @@
 | `/api/v1/admin/reports/[reportId]`    | PATCH   | Update report status (proxy → Rust) |
 | `/api/v1/admin/server-logs`           | GET     | Server logs              |
 | `/api/v1/admin/server-logs/stream`    | GET     | Server logs (SSE stream) |
+| `/api/v1/admin/editorial-candidates`  | GET     | Posts eligible for editorial (spot ≥ 4, solution ≥ 1/spot; proxy → Rust) |
+| `/api/v1/admin/picks`                 | GET/POST | List / create decoded picks (Supabase `decoded_picks` table) |
+| `/api/v1/admin/picks/[pickId]`        | PATCH/DELETE | Update / delete a decoded pick |
+
+## Utility
+
+| Route                    | Methods | Description                                      |
+| ------------------------ | ------- | ------------------------------------------------ |
+| `/api/v1/image-proxy`    | GET     | Proxy external image URLs (avoids CORS/hotlink)  |
 
 Rust REST API와의 관계는 [`.planning/codebase/INTEGRATIONS.md`](../../.planning/codebase/INTEGRATIONS.md) 및 `packages/api-server` 문서를 참고합니다.

@@ -1945,6 +1945,26 @@
             }
           },
           {
+            "name": "artist_id",
+            "in": "query",
+            "description": "아티스트 ID 필터 (warehouse FK)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "그룹 ID 필터 (warehouse FK)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "description": "정렬: recent | popular | trending",
@@ -6404,6 +6424,14 @@
                 "created_at"
               ],
               "properties": {
+                "artist_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "아티스트 ID (warehouse FK, nullable)"
+                },
                 "artist_name": {
                   "type": [
                     "string",
@@ -6434,6 +6462,14 @@
                     "null"
                   ],
                   "description": "포스트 생성 시 솔루션을 알고 등록했는지. true=with-solutions, false=without, null=기존 데이터"
+                },
+                "group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "그룹 ID (warehouse FK, nullable)"
                 },
                 "group_name": {
                   "type": [
@@ -6573,6 +6609,14 @@
                     "null"
                   ],
                   "description": "제휴 링크 URL"
+                },
+                "brand_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "브랜드 ID (warehouse FK, nullable)"
                 },
                 "created_at": {
                   "type": "string",
@@ -7025,6 +7069,14 @@
           "created_at"
         ],
         "properties": {
+          "artist_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "아티스트 ID (warehouse FK, nullable)"
+          },
           "artist_name": {
             "type": [
               "string",
@@ -7050,9 +7102,19 @@
             "description": "생성일시"
           },
           "created_with_solutions": {
-            "type": "boolean",
-            "nullable": true,
+            "type": [
+              "boolean",
+              "null"
+            ],
             "description": "포스트 생성 시 솔루션을 알고 등록했는지. true=with-solutions, false=without, null=기존 데이터"
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "그룹 ID (warehouse FK, nullable)"
           },
           "group_name": {
             "type": [
@@ -7780,6 +7842,14 @@
             ],
             "description": "제휴 링크 URL"
           },
+          "brand_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "브랜드 ID (warehouse FK, nullable)"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -7873,6 +7943,14 @@
               "null"
             ],
             "description": "제휴 링크 URL"
+          },
+          "brand_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "브랜드 ID (warehouse FK, nullable)"
           },
           "click_count": {
             "type": "integer",

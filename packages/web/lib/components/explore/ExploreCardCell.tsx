@@ -126,12 +126,12 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             onLoad={() => setIsLoaded(true)}
             onError={() => setImageError(true)}
           />
-          {/* Artist name overlay — search mode only (when highlight exists) */}
+          {/* Search highlight overlay — only visible when search highlights exist */}
           {item?.highlight && item.postAccount && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-6">
               <p className="text-[11px] font-medium text-white/90 truncate">
                 <HighlightText
-                  html={item.highlight?.["artist_name"]}
+                  html={item.highlight["artist_name"]}
                   fallback={item.postAccount}
                 />
               </p>

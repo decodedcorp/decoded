@@ -52,7 +52,7 @@ function toPersonalizedPostData(row: {
   image_url: string | null;
   artist_name: string | null;
   group_name: string | null;
-  media_title: string | null;
+  title: string | null;
   media_type: string | null;
   context: string | null;
   view_count: number;
@@ -63,7 +63,7 @@ function toPersonalizedPostData(row: {
     imageUrl: row.image_url,
     artistName: row.artist_name,
     groupName: row.group_name,
-    mediaTitle: row.media_title,
+    mediaTitle: row.title,
     mediaType: row.media_type,
     context: row.context,
     viewCount: row.view_count,

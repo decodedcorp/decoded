@@ -92,11 +92,7 @@ pub async fn admin_list_reports(
 
     q = q.order_by_desc(Column::CreatedAt);
 
-    let total = q
-        .clone()
-        .count(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
+    let total = q.clone().count(db).await.map_err(AppError::DatabaseError)?;
 
     let reports = q
         .offset((pagination.page - 1) * pagination.per_page)

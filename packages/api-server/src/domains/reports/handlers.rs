@@ -137,8 +137,7 @@ async fn admin_update_report(
     Path(report_id): Path<Uuid>,
     Json(dto): Json<UpdateReportStatusDto>,
 ) -> AppResult<Json<ReportListItem>> {
-    let report =
-        service::admin_update_report_status(&state.db, report_id, user.id, dto).await?;
+    let report = service::admin_update_report_status(&state.db, report_id, user.id, dto).await?;
     Ok(Json(report))
 }
 

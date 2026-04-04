@@ -70,7 +70,7 @@ export function PostImage({
   if (!useDynamic) {
     // Fallback: original object-cover behavior
     return (
-      <div className={cn("relative overflow-hidden bg-muted", className)}>
+      <div className={cn("relative overflow-hidden bg-muted min-h-[200px]", className)}>
         <img
           ref={imgRef}
           src={src}

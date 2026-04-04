@@ -14,7 +14,7 @@
 - [x] **v8.0 Monorepo Consolidation & Bun Migration** — m10-Phases 01-04 (shipped 2026-03-23)
 - [x] **v9.0 Type-Safe API Generation** — Phases 39-43 (shipped 2026-03-24)
 - [x] **v10.0 Profile Page Completion** — Phases 44-50 (shipped 2026-03-26)
-- [ ] **v11.0 Explore & Editorial Data Integration** — Phases 51-55
+- [x] **v11.0 Explore & Editorial Data Integration** — Phases 51-55 (shipped 2026-04-02)
 
 ## Phases
 
@@ -130,7 +130,7 @@ See archived roadmap: `.planning/milestones/v9.0-ROADMAP.md`
 - [x] **Phase 52: Editorial Filter Fix** - hasMagazine 필터 실제 동작 + OpenAPI has_magazine 파라미터 추가 (completed 2026-04-01)
 - [x] **Phase 53: Detail Data Migration** - usePostDetailForImage REST 마이그레이션 + Maximize 버튼 soft navigation (completed 2026-04-02)
 - [x] **Phase 54: Card Enrichment** - Explore spot_count 배지 + Editorial 매거진 타이틀 오버레이 (completed 2026-04-02)
-- [ ] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증
+- [x] **Phase 55: End-to-End Verification** - 탐색 → 드로어 → 풀 페이지 전체 플로우 검증 (completed 2026-04-02)
 
 ## Phase Details
 

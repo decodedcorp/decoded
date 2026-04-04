@@ -612,6 +612,14 @@ pub async fn list_posts(
         select = select.filter(Column::GroupName.eq(group_name));
     }
 
+    if let Some(artist_id) = query.artist_id {
+        select = select.filter(Column::ArtistId.eq(artist_id));
+    }
+
+    if let Some(group_id) = query.group_id {
+        select = select.filter(Column::GroupId.eq(group_id));
+    }
+
     if let Some(ref context) = query.context {
         select = select.filter(Column::Context.eq(context));
     }
@@ -825,6 +833,8 @@ pub async fn list_posts(
                 title: post.title.clone(),
                 artist_name: post.artist_name,
                 group_name: post.group_name,
+                artist_id: post.artist_id,
+                group_id: post.group_id,
                 context: post.context,
                 spot_count,
                 view_count: post.view_count,
@@ -1110,6 +1120,8 @@ pub async fn admin_list_posts(
                 title: post.title.clone(),
                 artist_name: post.artist_name,
                 group_name: post.group_name,
+                artist_id: post.artist_id,
+                group_id: post.group_id,
                 context: post.context,
                 spot_count,
                 view_count: post.view_count,
@@ -1149,11 +1161,7 @@ pub async fn admin_update_post_status(
     match status {
         "hidden" | "deleted" => {
             if let Err(e) = search_client.delete("posts", &post_id.to_string()).await {
-                tracing::warn!(
-                    "Failed to delete post {} from Meilisearch: {}",
-                    post_id,
-                    e
-                );
+                tracing::warn!("Failed to delete post {} from Meilisearch: {}", post_id, e);
             }
         }
         "active" => {
@@ -1165,11 +1173,7 @@ pub async fn admin_update_post_status(
                 .update_document("posts", &post_id.to_string(), doc)
                 .await
             {
-                tracing::warn!(
-                    "Failed to update post {} in Meilisearch: {}",
-                    post_id,
-                    e
-                );
+                tracing::warn!("Failed to update post {} in Meilisearch: {}", post_id, e);
             }
         }
         _ => {}
