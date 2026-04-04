@@ -66,3 +66,8 @@ packages/backend/target/
 .agents/skills/gstack*/node_modules/
 .dmux/
 .gstack/
+
+# OMC / Superpowers tool state (ephemeral, session-specific)
+.omc/
+.superpowers/
+**/.omc/
