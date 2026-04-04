@@ -29,6 +29,7 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
                 alt={style.artistName}
                 className="absolute inset-0"
                 flagKey="FeedCard"
+                priority
               />
             ) : (
               <div className="absolute inset-0 bg-neutral-800" />

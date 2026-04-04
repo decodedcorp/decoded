@@ -397,14 +397,14 @@ class CanvAscii {
     this.onMouseMove = this.onMouseMove.bind(this);
   }
 
-  async init() {
+  async init(): Promise<boolean> {
     // Wait for font to be loaded before measuring text
     await document.fonts.ready;
 
-    if (this.isDisposed) return;
+    if (this.isDisposed) return false;
 
     this.setMesh();
-    this.setRenderer();
+    return this.setRenderer();
   }
 
   setMesh() {
@@ -440,8 +440,13 @@ class CanvAscii {
     this.scene.add(this.mesh);
   }
 
-  setRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+  setRenderer(): boolean {
+    try {
+      this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+    } catch {
+      // WebGL not available — skip rendering silently
+      return false;
+    }
     this.renderer.setPixelRatio(1);
     this.renderer.setClearColor(0x000000, 0);
 
@@ -459,6 +464,7 @@ class CanvAscii {
       this.container.addEventListener("mousemove", this.onMouseMove);
       this.container.addEventListener("touchmove", this.onMouseMove);
     }
+    return true;
   }
 
   setSize(w: number, h: number) {
@@ -478,8 +484,8 @@ class CanvAscii {
   }
 
   async load() {
-    await this.init();
-    if (this.isDisposed) return;
+    const ok = await this.init();
+    if (!ok || this.isDisposed) return;
     this.animate();
   }
 

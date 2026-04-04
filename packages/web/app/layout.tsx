@@ -24,8 +24,27 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Decoded App",
-  description: "Decoded application",
+  title: {
+    default: "Decoded — AI-Powered Celebrity Fashion Discovery",
+    template: "%s | Decoded",
+  },
+  description:
+    "Discover what your favorite celebrities are wearing. AI-powered item detection, editorial magazines, and virtual try-on.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://decoded.style"
+  ),
+  openGraph: {
+    type: "website",
+    siteName: "Decoded",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

@@ -76,6 +76,7 @@ export function PostImage({
           src={src}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           className={cn(
             "h-full w-full object-cover transition-opacity duration-200 ease-out",
             isLoaded ? "opacity-100" : "opacity-0",
