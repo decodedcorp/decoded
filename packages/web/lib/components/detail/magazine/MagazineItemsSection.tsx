@@ -129,7 +129,7 @@ export function MagazineItemsSection({
             ScrollTrigger.create({
               scroller,
               trigger: card,
-              start: "top center",
+              start: "top 70%",
               end: "bottom center",
               invalidateOnRefresh: true,
               onEnter: () => {
