@@ -195,7 +195,7 @@ export function MagazineItemsSection({
                 className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
               >
                 {/* Item Image */}
-                <div className={`w-full shrink-0 ${compact ? "md:w-48 lg:w-52" : "md:w-60 lg:w-64"}`}>
+                <div className={`w-full shrink-0 ${compact ? "md:w-52 lg:w-56" : "md:w-60 lg:w-64"}`}>
                   {item.image_url ? (
                     <ItemImage
                       src={item.image_url}
