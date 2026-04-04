@@ -128,11 +128,12 @@ export function ImageCanvas({
     };
   };
 
-  // Pre-set initial transforms with GPU acceleration to avoid first-scroll jank
+  // Pre-warm GPU layers + GSAP internals to eliminate first-animation jank
   useEffect(() => {
-    if (imageRef.current) gsap.set(imageRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
-    if (boxesRef.current) gsap.set(boxesRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
-    if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
+    const targets = [imageRef.current, boxesRef.current, overlayRef.current].filter(Boolean);
+    targets.forEach((el) => {
+      gsap.to(el!, { scale: 1, x: 0, y: 0, duration: 0.001, force3D: true, willChange: "transform" });
+    });
   }, []);
 
   // Pan & Zoom effect: lightweight useEffect (no GSAP context recreation)
