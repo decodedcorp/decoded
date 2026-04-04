@@ -5,26 +5,42 @@ import { cn } from "@/lib/utils";
 
 export interface FilterChipProps {
   label: string;
-  onRemove: () => void;
+  count?: number;
+  active?: boolean;
+  onClick?: () => void;
+  onRemove?: () => void;
   className?: string;
 }
 
-export function FilterChip({ label, onRemove, className }: FilterChipProps) {
+export function FilterChip({
+  label,
+  count,
+  active = false,
+  onClick,
+  onRemove,
+  className,
+}: FilterChipProps) {
   return (
-    <span
+    <button
+      type="button"
+      onClick={active ? onRemove : onClick}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary",
-        className
+        "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+        active
+          ? "bg-primary/10 text-primary border border-primary/30"
+          : "border border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+        className,
       )}
     >
       {label}
-      <button
-        onClick={onRemove}
-        className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors"
-        aria-label={`Remove ${label} filter`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </span>
+      {count != null && (
+        <span className={cn("text-[10px]", active ? "text-primary/60" : "text-muted-foreground/60")}>
+          {count}
+        </span>
+      )}
+      {active && (
+        <X className="h-3 w-3 ml-0.5" />
+      )}
+    </button>
   );
 }

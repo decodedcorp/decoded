@@ -157,12 +157,15 @@ class AsciiFilter {
       this.pre.style.padding = "0";
       this.pre.style.lineHeight = "1em";
       this.pre.style.position = "absolute";
-      this.pre.style.left = "50%";
-      this.pre.style.top = "50%";
-      this.pre.style.transform = "translate(-50%, -50%)";
+      this.pre.style.left = "0";
+      this.pre.style.top = "0";
+      this.pre.style.transform = "none";
       this.pre.style.zIndex = "9";
       this.pre.style.backgroundAttachment = "fixed";
       this.pre.style.mixBlendMode = "difference";
+      this.pre.style.overflow = "hidden";
+      this.pre.style.width = "100%";
+      this.pre.style.height = "100%";
     }
   }
 
@@ -748,11 +751,13 @@ export default function DecodedLogo({
           user-select: none;
           padding: 0;
           line-height: 1em;
-          text-align: center;
+          text-align: left;
           position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
+          left: 0;
+          top: 0;
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
           background-image: radial-gradient(circle, #d9fc69 0%, #b8d855 50%, #9ab842 100%);
           background-attachment: fixed;
           -webkit-text-fill-color: transparent;

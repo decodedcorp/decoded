@@ -142,6 +142,8 @@ export type PostGridItem = {
   viewCount: number;
   /** 에디토리얼 그리드 오버레이용 (post.title 또는 post_magazine_title) */
   title?: string | null;
+  /** Meilisearch highlight (검색 결과에서만) */
+  highlight?: Record<string, string> | null;
 };
 
 /**
@@ -169,6 +171,7 @@ export function useInfinitePosts(params: {
   /** Display name from hierarchical filter (e.g., "Minji") — matched via ilike on artist_name */
   castName?: string;
   contextType?: string;
+  enabled?: boolean;
 }) {
   const {
     limit = 40,
@@ -181,14 +184,27 @@ export function useInfinitePosts(params: {
     mediaName,
     castName,
     contextType,
+    enabled = true,
   } = params;
 
   return useInfiniteQuery<PostsPage>({
     queryKey: [
       "posts",
       "infinite",
-      { category, search, artistName, groupName, sort, limit, hasMagazine, mediaName, castName, contextType },
+      {
+        category,
+        search,
+        artistName,
+        groupName,
+        sort,
+        limit,
+        hasMagazine,
+        mediaName,
+        castName,
+        contextType,
+      },
     ],
+    enabled,
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
 
@@ -201,7 +217,9 @@ export function useInfinitePosts(params: {
           has_magazine: true,
           artist_name: mediaName ?? artistName,
           group_name: castName ? undefined : groupName,
-          context: contextType ?? (category && category !== "all" ? category : undefined),
+          context:
+            contextType ??
+            (category && category !== "all" ? category : undefined),
         });
 
         const items: PostGridItem[] = response.data.map((post) => ({
@@ -225,11 +243,10 @@ export function useInfinitePosts(params: {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
-      let query = supabaseBrowserClient
-        .from("posts")
-        .select("*", { count: "exact" })
-        .eq("status", "active")
-        .not("image_url", "is", null);
+      // explore_posts is a DB view not yet in generated Supabase types
+      let query = (supabaseBrowserClient as any)
+        .from("explore_posts")
+        .select("*", { count: "exact" });
 
       // category filter (flat) — skip if contextType is set (hierarchical takes precedence)
       if (category && category !== "all" && !contextType) {
@@ -286,7 +303,7 @@ export function useInfinitePosts(params: {
         postCreatedAt: post.created_at,
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
-        title: post.title ?? null,
+        title: post.post_magazine_title ?? post.title ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };
@@ -360,7 +377,11 @@ export function usePostDetailForImage(postId: string) {
           id: post.id,
           image_hash: "",
           image_url: post.image_url,
-          status: (post.status ?? "pending") as "pending" | "extracted" | "skipped" | "extracted_metadata",
+          status: (post.status ?? "pending") as
+            | "pending"
+            | "extracted"
+            | "skipped"
+            | "extracted_metadata",
           with_items: items.length > 0,
           created_at: post.created_at,
           items,
@@ -386,7 +407,26 @@ export function usePostDetailForImage(postId: string) {
               created_at: post.created_at,
               item_locations: spots.map((s, idx) => ({
                 item_id: idx + 1,
-                center: [parseFloat(s.position_left), parseFloat(s.position_top)],
+                center: [
+                  Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      parseFloat(s.position_left) > 1
+                        ? parseFloat(s.position_left) / 100
+                        : parseFloat(s.position_left)
+                    )
+                  ),
+                  Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      parseFloat(s.position_top) > 1
+                        ? parseFloat(s.position_top) / 100
+                        : parseFloat(s.position_top)
+                    )
+                  ),
+                ],
               })),
               item_locations_updated_at: post.updated_at,
             } as any,
@@ -397,7 +437,8 @@ export function usePostDetailForImage(postId: string) {
           ai_summary: (postAny.ai_summary as string) ?? null,
           artist_name: post.artist_name ?? null,
           group_name: post.group_name ?? null,
-          created_with_solutions: (postAny.created_with_solutions as boolean) ?? null,
+          created_with_solutions:
+            (postAny.created_with_solutions as boolean) ?? null,
           like_count: (postAny.like_count as number) ?? 0,
         } as ImageDetail;
       } catch {

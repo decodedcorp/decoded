@@ -128,13 +128,22 @@ export function spotToItemRow(spot: SpotRow, solution?: SolutionRow): ItemRow {
     status: solution?.status || spot.status || null,
     created_at: spot.created_at || null,
     bboxes: null,
-    center: [parseFloat(spot.position_left), parseFloat(spot.position_top)],
+    center: [
+      normalizePos(parseFloat(spot.position_left)),
+      normalizePos(parseFloat(spot.position_top)),
+    ],
     scores: null,
     ambiguity: null,
     citations: null,
     metadata: null,
     sam_prompt: null,
   };
+}
+
+/** Normalize position: if 0-100 percentage → divide by 100, then clamp to 0-1 */
+function normalizePos(v: number): number {
+  const n = v > 1 ? v / 100 : v;
+  return Math.max(0, Math.min(1, n));
 }
 
 /**

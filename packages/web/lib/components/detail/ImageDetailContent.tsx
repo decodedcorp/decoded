@@ -24,7 +24,6 @@ import type { VtonPreloadItem } from "@/lib/stores/vtonStore";
 import { useCommentCount } from "@/lib/hooks/useComments";
 import { usePostLike } from "@/lib/hooks/usePostLike";
 import { useSavedPost } from "@/lib/hooks/useSavedPost";
-import Image from "next/image";
 import {
   MagazineEditorialSection,
   MagazineCelebSection,
@@ -32,7 +31,9 @@ import {
   MagazineRelatedSection,
 } from "./magazine";
 import { MagazineTitleSection } from "./magazine/MagazineTitleSection";
-import { SpotDot } from "./SpotDot";
+import { EditorialPreviewHeader } from "./EditorialPreviewHeader";
+import DecodeShowcase from "@/lib/components/main-renewal/DecodeShowcase";
+import { toDecodeShowcaseData } from "./adapters/toDecodeShowcaseData";
 
 type Props = {
   image: ImageDetail & { ai_summary?: string | null };
@@ -44,6 +45,7 @@ type Props = {
   onActiveIndexChange?: (index: number | null) => void;
   hideImage?: boolean;
   onHeroClick?: () => void;
+  variant?: "full" | "explore-preview";
 };
 
 /**
@@ -65,7 +67,9 @@ export function ImageDetailContent({
   onActiveIndexChange,
   hideImage = false,
   onHeroClick,
+  variant = "full",
 }: Props) {
+  const isExplorePreview = variant === "explore-preview";
   const hasMagazine = !!magazineLayout;
   const imageUrl = typeof image.image_url === "string" ? image.image_url : null;
   // D-08: Always use brand color — per-post design_spec.accent_color override removed
@@ -228,40 +232,87 @@ export function ImageDetailContent({
 
   const commentCount = useCommentCount(image.id);
 
+  // Build DecodeShowcase data from normalized items (magazine mode)
+  const decodeShowcaseData = useMemo(() => {
+    if (!hasMagazine || !imageUrl) return null;
+    const itemsWithCenter = normalizedItems.filter((i) => i.normalizedCenter);
+    if (itemsWithCenter.length === 0) return null;
+    return toDecodeShowcaseData({
+      items: normalizedItems,
+      imageUrl,
+      artistName:
+        imageWithOwner.artist_name ?? imageWithOwner.group_name ?? "DECODED",
+    });
+  }, [
+    hasMagazine,
+    imageUrl,
+    normalizedItems,
+    imageWithOwner.artist_name,
+    imageWithOwner.group_name,
+  ]);
+
   // D-08: Always set --magazine-accent to brand color (accentColor is always "var(--mag-accent)")
-  const magazineCssVars = { "--magazine-accent": accentColor } as React.CSSProperties;
+  const magazineCssVars = {
+    "--magazine-accent": accentColor,
+  } as React.CSSProperties;
   // Note: PostBadge intentionally not rendered (D-06 — clean image-centric UX)
 
   return (
     <div className="detail-content relative" style={magazineCssVars}>
       <>
+        {/* Editorial Preview Header — explore modal only */}
+        {isExplorePreview && (
+          <EditorialPreviewHeader
+            title={
+              hasMagazine
+                ? magazineLayout.title
+                : (((firstPost as Record<string, unknown>)?.title as string) ??
+                  imageWithOwner.artist_name ??
+                  "Untitled")
+            }
+            subtitle={hasMagazine ? magazineLayout.subtitle : null}
+            description={
+              hasMagazine
+                ? (magazineLayout.editorial.paragraphs?.[0] ?? null)
+                : aiSummary
+            }
+            postId={image.id}
+          />
+        )}
+
         {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
-          <span className="font-serif text-[10px] uppercase tracking-[1em] text-primary/5 writing-mode-vertical-rl rotate-180 opacity-50">
-            Decoded Editorial Archive —{" "}
-            {new Date(image.created_at).getFullYear()}
-          </span>
-        </div>
+        {!isExplorePreview && (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
+            <span className="font-serif text-[10px] uppercase tracking-[1em] text-primary/5 writing-mode-vertical-rl rotate-180 opacity-50">
+              Decoded Editorial Archive —{" "}
+              {new Date(image.created_at).getFullYear()}
+            </span>
+          </div>
+        )}
 
         {/* Section 1: Magazine Title (text header) or Hero Image */}
-        {hasMagazine ? (
-          <MagazineTitleSection
-            title={magazineLayout.title}
-            subtitle={magazineLayout.subtitle}
-            isModal={isModal}
-          />
-        ) : (
-          !hideImage && (
-            <HeroSection
-              image={image}
-              isModal={isModal}
-              onClick={onHeroClick}
-            />
-          )
+        {!isExplorePreview && (
+          <>
+            {hasMagazine ? (
+              <MagazineTitleSection
+                title={magazineLayout.title}
+                subtitle={magazineLayout.subtitle}
+                isModal={isModal}
+              />
+            ) : (
+              !hideImage && (
+                <HeroSection
+                  image={image}
+                  isModal={isModal}
+                  onClick={onHeroClick}
+                />
+              )
+            )}
+          </>
         )}
 
         {/* AI Summary Section — only rendered when summary exists */}
-        {aiSummary && (
+        {aiSummary && !isExplorePreview && (
           <section
             className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
           >
@@ -271,41 +322,10 @@ export function ImageDetailContent({
           </section>
         )}
 
-        {/* Section 2: Interactive Showcase (non-magazine) or static post image with spot dots (magazine) */}
-        {/* In modal mode, the floating left panel already shows this image — skip duplicate */}
-        {Boolean(hasMagazine && imageUrl && !isModal) && (
-          <section className="mx-auto max-w-sm px-4 py-8 md:px-8 md:py-12">
-            <div className="relative overflow-hidden rounded-xl">
-              <Image
-                src={imageUrl!}
-                alt="Post image"
-                width={384}
-                height={0}
-                className="h-auto w-full"
-                sizes="(max-width: 768px) 80vw, 384px"
-                priority
-              />
-              {/* Spot overlay dots */}
-              {normalizedItems.map((item) => {
-                if (!item.normalizedCenter) return null;
-                const meta = item.metadata as unknown as
-                  | Record<string, unknown>
-                  | undefined;
-                return (
-                  <SpotDot
-                    key={item.id}
-                    mode="percent"
-                    x={item.normalizedCenter.x}
-                    y={item.normalizedCenter.y}
-                    label={item.product_name ?? ""}
-                    brand={meta?.brand as string | undefined}
-                    category={meta?.sub_category as string | undefined}
-                    accentColor={accentColor}
-                  />
-                );
-              })}
-            </div>
-          </section>
+        {/* Section 2: DecodeShowcase (magazine) or Interactive Showcase (non-magazine) */}
+        {/* In modal mode, skip — the floating left panel already shows this image */}
+        {decodeShowcaseData && !isModal && !isExplorePreview && (
+          <DecodeShowcase data={decodeShowcaseData} />
         )}
         {!hasMagazine && hasItemsWithCoordinates && (
           <InteractiveShowcase
@@ -331,38 +351,44 @@ export function ImageDetailContent({
           onClose={() => setSpotIdToAddSolution(null)}
         />
 
-        {hasMagazine ? (
+        {hasMagazine && (
           <>
-            {/* Magazine: Editorial Section */}
-            <MagazineEditorialSection
-              editorial={magazineLayout.editorial}
-              accentColor={accentColor}
-              isModal={isModal}
-            />
+            {/* Magazine: Editorial & Celeb — hidden in explore-preview */}
+            {!isExplorePreview && (
+              <>
+                <MagazineEditorialSection
+                  editorial={magazineLayout.editorial}
+                  accentColor={accentColor}
+                  isModal={isModal}
+                />
+                <MagazineCelebSection
+                  celebs={magazineLayout.celeb_list}
+                  accentColor={accentColor}
+                  isModal={isModal}
+                />
+              </>
+            )}
 
-            {/* Magazine: Celebrity Style Archive */}
-            <MagazineCelebSection
-              celebs={magazineLayout.celeb_list}
-              accentColor={accentColor}
-              isModal={isModal}
-            />
-
-            {/* Magazine: The Look + per-item Related Items */}
+            {/* Magazine: Items — always visible (compact in explore-preview) */}
             <MagazineItemsSection
               items={magazineLayout.items}
               relatedItems={magazineLayout.related_items}
               accentColor={accentColor}
               isModal={isModal}
+              compact={isExplorePreview}
               scrollContainerRef={scrollContainerRef}
               onActiveIndexChange={onActiveIndexChange}
             />
           </>
-        ) : (
+        )}
+
+        {!hasMagazine && (
           <>
-            {/* Shop Grid (show if any items exist, even without coordinates) */}
+            {/* Shop Grid — visible in both full and explore-preview */}
             {hasItems && (
               <div>
-                {itemsFromPost &&
+                {!isExplorePreview &&
+                  itemsFromPost &&
                   image.postImages &&
                   image.postImages.length > 0 && (
                     <div className="mx-auto max-w-6xl px-4 py-3 md:px-8">
@@ -389,18 +415,19 @@ export function ImageDetailContent({
         )}
 
         {/* Related Posts - 같은 유저가 올린 다른 포스트 */}
-        {(image.postImages?.[0]?.post as Record<string, unknown>)?.account && (
-          <RelatedImages
-            currentPostId={image.id}
-            account={String(
-              (image.postImages![0].post as Record<string, unknown>).account
-            )}
-            userId={
-              (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
-            }
-            isModal={isModal}
-          />
-        )}
+        {!isExplorePreview &&
+          (image.postImages?.[0]?.post as Record<string, unknown>)?.account && (
+            <RelatedImages
+              currentPostId={image.id}
+              account={String(
+                (image.postImages![0].post as Record<string, unknown>).account
+              )}
+              userId={
+                (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
+              }
+              isModal={isModal}
+            />
+          )}
 
         {/* TODO: Try Gallery Section — temporarily disabled
       <TryGallerySection
@@ -445,7 +472,7 @@ export function ImageDetailContent({
         )}
 
         {/* Fallback: Show basic info if no items */}
-        {!hasItems && !hasMagazine && (
+        {!isExplorePreview && !hasItems && !hasMagazine && (
           <div className="mx-auto max-w-4xl px-4 py-16 md:px-8">
             <div className="mb-8">
               <p className="text-sm text-muted-foreground">

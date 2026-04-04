@@ -21,6 +21,7 @@ type Props = {
   relatedItems?: PostMagazineRelatedItem[];
   accentColor?: string;
   isModal?: boolean;
+  compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   onActiveIndexChange?: (index: number | null) => void;
 };
@@ -30,6 +31,7 @@ export function MagazineItemsSection({
   relatedItems = [],
   accentColor,
   isModal,
+  compact = false,
   scrollContainerRef,
   onActiveIndexChange,
 }: Props) {
@@ -108,49 +110,49 @@ export function MagazineItemsSection({
       }
 
       // Modal: ScrollTrigger for scroll-spot sync
+      // Defer until modal open animation completes (~700ms) to prevent first-scroll jank
       if (isModal && onActiveIndexChange && cards.length > 0) {
         const scroller = scrollContainerRef?.current || window;
 
-        cards.forEach((card, index) => {
-          ScrollTrigger.create({
-            scroller,
-            trigger: card,
-            start: "top center",
-            end: "bottom center",
-            invalidateOnRefresh: true,
-            onEnter: () => {
-              activeIndexRef.current = index;
-              onActiveIndexChange(index);
-            },
-            onEnterBack: () => {
-              activeIndexRef.current = index;
-              onActiveIndexChange(index);
-            },
-            onLeave: () => {
-              if (activeIndexRef.current === index) {
-                onActiveIndexChange(null);
-              }
-            },
-            onLeaveBack: () => {
-              if (activeIndexRef.current === index) {
-                onActiveIndexChange(null);
-              }
-            },
-          });
-        });
-
-        // Refresh after layout stabilizes
-        if (scrollContainerRef?.current) {
-          const timer = setTimeout(() => ScrollTrigger.refresh(), 300);
-          return () => {
-            clearTimeout(timer);
-            ScrollTrigger.getAll().forEach((trigger) => {
-              if (cards.includes(trigger.vars.trigger as HTMLElement)) {
-                trigger.kill();
-              }
+        const initTimer = setTimeout(() => {
+          cards.forEach((card, index) => {
+            ScrollTrigger.create({
+              scroller,
+              trigger: card,
+              start: "top center",
+              end: "bottom center",
+              invalidateOnRefresh: true,
+              onEnter: () => {
+                activeIndexRef.current = index;
+                onActiveIndexChange(index);
+              },
+              onEnterBack: () => {
+                activeIndexRef.current = index;
+                onActiveIndexChange(index);
+              },
+              onLeave: () => {
+                if (activeIndexRef.current === index) {
+                  onActiveIndexChange(null);
+                }
+              },
+              onLeaveBack: () => {
+                if (activeIndexRef.current === index) {
+                  onActiveIndexChange(null);
+                }
+              },
             });
-          };
-        }
+          });
+          ScrollTrigger.refresh();
+        }, 700);
+
+        return () => {
+          clearTimeout(initTimer);
+          ScrollTrigger.getAll().forEach((trigger) => {
+            if (cards.includes(trigger.vars.trigger as HTMLElement)) {
+              trigger.kill();
+            }
+          });
+        };
       }
     },
     { scope: sectionRef, dependencies: [items.length, isModal] }
@@ -161,14 +163,18 @@ export function MagazineItemsSection({
   return (
     <section
       ref={sectionRef}
-      className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16"
+      className={`mx-auto ${compact ? "max-w-5xl px-4 py-4 md:px-6 md:py-6" : "max-w-5xl px-4 py-12 md:px-8 md:py-16"}`}
     >
-      <h2 className="typography-h3 mb-2 text-center">The Look</h2>
-      <p className="mb-10 text-center text-sm text-muted-foreground">
-        아이템 상세 & 에디토리얼
-      </p>
+      {!compact && (
+        <>
+          <h2 className="typography-h3 mb-2 text-center">The Look</h2>
+          <p className="mb-10 text-center text-sm text-muted-foreground">
+            아이템 상세 & 에디토리얼
+          </p>
+        </>
+      )}
 
-      <div className="space-y-12 md:space-y-16">
+      <div className={compact ? "divide-y divide-border/20" : "space-y-12 md:space-y-16"}>
         {items.map((item, i) => {
           const meta = item.metadata as
             | {
@@ -182,14 +188,12 @@ export function MagazineItemsSection({
           const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;
 
           return (
-            <div key={item.spot_id} className="item-card" data-item-index={i}>
+            <div key={item.spot_id} className={compact ? "item-card py-5 first:pt-0 last:pb-0" : "item-card"} data-item-index={i}>
               <div
-                className={`flex flex-col gap-6 md:flex-row md:gap-10 ${
-                  i % 2 === 1 ? "md:flex-row-reverse" : ""
-                }`}
+                className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
               >
                 {/* Item Image */}
-                <div className="w-full shrink-0 md:w-60 lg:w-64">
+                <div className={`w-full shrink-0 ${compact ? "md:w-36 lg:w-40" : "md:w-60 lg:w-64"}`}>
                   {item.image_url ? (
                     <ItemImage
                       src={item.image_url}
@@ -199,7 +203,7 @@ export function MagazineItemsSection({
                     />
                   ) : (
                     <div
-                      className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/50 bg-muted p-6 text-center"
+                      className={`flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-border/50 bg-muted text-center ${compact ? "aspect-square p-4" : "aspect-[3/4] gap-3 p-6"}`}
                       style={{
                         background: accentColor
                           ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
@@ -212,7 +216,7 @@ export function MagazineItemsSection({
                       {item.brand && (
                         <>
                           <div className="mx-auto h-px w-8 bg-border/30" />
-                          <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
+                          <span className={`font-serif font-light tracking-wide text-foreground/70 ${compact ? "text-lg" : "text-2xl md:text-3xl"}`}>
                             {item.brand}
                           </span>
                         </>
@@ -225,7 +229,7 @@ export function MagazineItemsSection({
                           </span>
                         </>
                       )}
-                      {meta?.material && meta.material.length > 0 && (
+                      {!compact && meta?.material && meta.material.length > 0 && (
                         <>
                           <div className="mx-auto h-px w-8 bg-border/30" />
                           <span className="text-[10px] italic text-muted-foreground/40">
@@ -237,66 +241,98 @@ export function MagazineItemsSection({
                   )}
                 </div>
 
-                {/* Item Details + Editorial */}
+                {/* Item Details */}
                 <div className="flex flex-1 flex-col justify-center">
                   {item.brand && (
-                    <p className="typography-overline mb-2 text-muted-foreground">
+                    <p className={`typography-overline text-muted-foreground ${compact ? "mb-1 text-[10px]" : "mb-2"}`}>
                       {item.brand}
                     </p>
                   )}
                   <h3
-                    className="typography-h4 mb-2"
+                    className={compact ? "text-base font-semibold mb-1" : "typography-h4 mb-2"}
                     style={
-                      titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                      !compact && titleHeight > 0 ? { minHeight: titleHeight } : undefined
                     }
                   >
                     {item.title}
                   </h3>
-                  {price && (
-                    <p className="mb-4 text-sm font-medium text-muted-foreground">
-                      {price}
-                    </p>
-                  )}
-
-                  {item.editorial_paragraphs.length > 0 && (
-                    <div className="mb-6 space-y-3">
-                      {item.editorial_paragraphs.map((p, j) => (
-                        <p
-                          key={j}
-                          className="font-serif text-sm leading-relaxed text-foreground/80 md:text-base"
-                        >
-                          {p}
+                  {compact ? (
+                    /* Compact: description + price + Shop Now inline */
+                    <>
+                      {item.editorial_paragraphs.length > 0 && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                          {item.editorial_paragraphs[0]}
                         </p>
-                      ))}
+                      )}
+                    <div className="flex items-center gap-3 mt-1">
+                      {price && (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {price}
+                        </span>
+                      )}
+                      {item.original_url && (
+                        <a
+                          href={item.original_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Shop
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
                     </div>
-                  )}
+                    </>
+                  ) : (
+                    /* Full: original layout */
+                    <>
+                      {price && (
+                        <p className="mb-4 text-sm font-medium text-muted-foreground">
+                          {price}
+                        </p>
+                      )}
 
-                  {item.original_url && (
-                    <a
-                      href={item.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-foreground hover:text-background"
-                      style={
-                        accentColor
-                          ? { borderColor: `${accentColor}40` }
-                          : undefined
-                      }
-                    >
-                      Shop Now
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+                      {item.editorial_paragraphs.length > 0 && (
+                        <div className="mb-6 space-y-3">
+                          {item.editorial_paragraphs.map((p, j) => (
+                            <p
+                              key={j}
+                              className="font-serif text-sm leading-relaxed text-foreground/80 md:text-base"
+                            >
+                              {p}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.original_url && (
+                        <a
+                          href={item.original_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-foreground hover:text-background"
+                          style={
+                            accentColor
+                              ? { borderColor: `${accentColor}40` }
+                              : undefined
+                          }
+                        >
+                          Shop Now
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
 
               {/* Similar Items for this spot */}
               {spotRelated.length > 0 && (
-                <div className="mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <div className={compact ? "mt-3" : "mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"}>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Similar Items
                   </p>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  <div className={`grid ${compact ? "grid-cols-3 gap-2" : "grid-cols-2 gap-4 sm:grid-cols-3"}`}>
                     {spotRelated.slice(0, 3).map((ri, j) => (
                       <a
                         key={`${ri.title}-${j}`}
@@ -308,16 +344,16 @@ export function MagazineItemsSection({
                         <ItemImage
                           src={ri.image_url || ""}
                           alt={ri.title}
-                          size="card"
+                          size={compact ? "thumbnail" : "card"}
                           imgClassName="transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className="p-2.5">
+                        <div className={compact ? "p-1.5" : "p-2"}>
                           {ri.brand && (
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            <p className={`font-medium uppercase tracking-wider text-muted-foreground ${compact ? "text-[8px]" : "text-[10px]"}`}>
                               {ri.brand}
                             </p>
                           )}
-                          <p className="mt-0.5 text-xs font-medium leading-snug line-clamp-2">
+                          <p className={`mt-0.5 font-medium leading-snug line-clamp-1 ${compact ? "text-[10px]" : "text-xs line-clamp-2"}`}>
                             {ri.title}
                           </p>
                         </div>

@@ -1,5 +1,15 @@
+import { Suspense } from "react";
 import { ExploreClient } from "./ExploreClient";
 
-export default function ExplorePage() {
-  return <ExploreClient hasMagazine />;
+type Props = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function ExplorePage({ searchParams }: Props) {
+  const { q } = await searchParams;
+  return (
+    <Suspense>
+      <ExploreClient hasMagazine initialQuery={q ?? ""} />
+    </Suspense>
+  );
 }

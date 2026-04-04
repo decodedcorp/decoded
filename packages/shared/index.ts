@@ -30,30 +30,9 @@ export type {
 } from "./stores/searchStore";
 export { useRecentSearchesStore } from "./stores/recentSearchesStore";
 export type { RecentSearchesStore } from "./stores/recentSearchesStore";
-export {
-  useHierarchicalFilterStore,
-  CATEGORY_LABELS,
-  CONTEXT_LABELS,
-} from "./stores/hierarchicalFilterStore";
-export type { HierarchicalFilterState } from "./stores/hierarchicalFilterStore";
-
 // Types
 export * from "./types/filter";
 export * from "./types/search";
-
-// Mock data (for development)
-export {
-  getMockCategories,
-  getMockMediaByCategory,
-  getMockCastByMedia,
-  getMockContextOptions,
-  searchMockMedia,
-  searchMockCast,
-  MOCK_CATEGORIES,
-  MOCK_MEDIA,
-  MOCK_CAST,
-  CONTEXT_OPTIONS,
-} from "./data/mockFilterData";
 
 // Query functions (for direct use)
 export {

@@ -9,6 +9,8 @@ export default defineConfig({
       "tests/**/*.test.ts",
       "tests/**/*.test.tsx",
       "lib/**/__tests__/**/*.test.tsx",
+      "lib/**/*.test.ts",
+      "lib/**/*.test.tsx",
     ],
     env: {
       NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
