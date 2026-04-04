@@ -269,6 +269,14 @@ pub struct PostListItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_name: Option<String>,
 
+    /// 아티스트 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<Uuid>,
+
+    /// 그룹 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<Uuid>,
+
     /// 상황 정보
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<String>,
