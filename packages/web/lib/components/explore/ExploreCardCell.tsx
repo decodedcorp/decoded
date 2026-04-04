@@ -133,41 +133,41 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             onLoad={() => setIsLoaded(true)}
             onError={() => setImageError(true)}
           />
-          {/* Artist name overlay — search mode only (when highlight exists) */}
-          {item?.highlight && item.postAccount && (
+          {/* Artist / group overlay — always visible when postAccount exists */}
+          {item?.postAccount && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-6">
-              <p className="text-[11px] font-medium text-white/90 truncate">
-                <HighlightText
-                  html={item.highlight?.["artist_name"]}
-                  fallback={item.postAccount}
-                />
-              </p>
+              <div className="flex items-center gap-1.5">
+                {(() => {
+                  const profile = artistProfiles?.[item.postAccount.toLowerCase()];
+                  if (profile?.profileImageUrl) {
+                    return (
+                      <Image
+                        src={profile.profileImageUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="rounded-full object-cover border border-white/20 flex-shrink-0"
+                      />
+                    );
+                  }
+                  return null;
+                })()}
+                <p className="text-[11px] font-medium text-white/90 truncate">
+                  {item.highlight?.["artist_name"] ? (
+                    <HighlightText
+                      html={item.highlight["artist_name"]}
+                      fallback={item.postAccount}
+                    />
+                  ) : (
+                    (() => {
+                      const profile = artistProfiles?.[item.postAccount.toLowerCase()];
+                      return profile?.name || item.postAccount;
+                    })()
+                  )}
+                </p>
+              </div>
             </div>
           )}
-          {/* Artist profile avatar — when no highlight but profile data exists */}
-          {(() => {
-            if (item?.highlight || !item?.postAccount) return null;
-            const profile = artistProfiles?.[item.postAccount.toLowerCase()];
-            if (!profile) return null;
-            return (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2.5 pb-2 pt-6">
-                <div className="flex items-center gap-1.5">
-                  {profile.profileImageUrl && (
-                    <Image
-                      src={profile.profileImageUrl}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="rounded-full object-cover border border-white/20 flex-shrink-0"
-                    />
-                  )}
-                  <span className="text-[10px] font-medium text-white/80 truncate max-w-[80px]">
-                    {profile.name}
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
         </article>
       </Card>
     </Link>

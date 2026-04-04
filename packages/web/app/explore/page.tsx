@@ -43,7 +43,6 @@ export default async function ExplorePage({ searchParams }: Props) {
   return (
     <Suspense fallback={<ExploreSkeleton />}>
       <ExploreClient
-        hasMagazine
         initialQuery={q ?? ""}
         artistProfiles={artistProfiles}
       />
