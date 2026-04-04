@@ -49,6 +49,16 @@ export function ImageDetailModal({ imageId, variant = "full", artistProfiles, br
 
   // Active item index for scroll-spot sync
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // Gate: don't forward activeIndex to ImageCanvas until user scrolls
+  // Prevents zoom-to-first-spot on panel open
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => setUserHasScrolled(true);
+    el.addEventListener("scroll", onScroll, { once: true, passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Image source: store (immediate) -> fetched data
   const activeImageSrc =
@@ -287,7 +297,7 @@ export function ImageDetailModal({ imageId, variant = "full", artistProfiles, br
             <ImageCanvas
               image={image}
               items={normalizedItems}
-              activeIndex={activeIndex}
+              activeIndex={userHasScrolled ? activeIndex : null}
               objectFit="contain"
             />
           ) : (

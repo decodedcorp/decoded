@@ -116,16 +116,6 @@ export function MagazineItemsSection({
       if (isModal && onActiveIndexChange && cards.length > 0) {
         const scroller = scrollContainerRef?.current || window;
         let cancelled = false;
-        // Ignore initial ScrollTrigger fire — only activate after user scrolls
-        let hasScrolled = false;
-        const scrollerTarget = scroller instanceof Window ? window : scroller;
-        const markScrolled = () => {
-          hasScrolled = true;
-          scrollerTarget.removeEventListener("scroll", markScrolled);
-          // Re-evaluate triggers now that hasScrolled is true
-          ScrollTrigger.update();
-        };
-        scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
 
         const initScrollTriggers = () => {
           if (cancelled) return;
@@ -138,23 +128,19 @@ export function MagazineItemsSection({
               end: "bottom center",
               invalidateOnRefresh: true,
               onEnter: () => {
-                if (!hasScrolled) return;
                 activeIndexRef.current = index;
                 onActiveIndexChange(index);
               },
               onEnterBack: () => {
-                if (!hasScrolled) return;
                 activeIndexRef.current = index;
                 onActiveIndexChange(index);
               },
               onLeave: () => {
-                if (!hasScrolled) return;
                 if (activeIndexRef.current === index) {
                   onActiveIndexChange(null);
                 }
               },
               onLeaveBack: () => {
-                if (!hasScrolled) return;
                 if (activeIndexRef.current === index) {
                   onActiveIndexChange(null);
                 }

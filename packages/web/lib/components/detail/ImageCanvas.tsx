@@ -128,11 +128,11 @@ export function ImageCanvas({
     };
   };
 
-  // Pre-set initial transforms to avoid first-scroll layout computation jank
+  // Pre-set initial transforms with GPU acceleration to avoid first-scroll jank
   useEffect(() => {
-    if (imageRef.current) gsap.set(imageRef.current, { scale: 1, x: 0, y: 0 });
-    if (boxesRef.current) gsap.set(boxesRef.current, { scale: 1, x: 0, y: 0 });
-    if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0 });
+    if (imageRef.current) gsap.set(imageRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
+    if (boxesRef.current) gsap.set(boxesRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
+    if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0, force3D: true, willChange: "transform" });
   }, []);
 
   // Pan & Zoom effect: Calculate scale and translation
@@ -153,6 +153,7 @@ export function ImageCanvas({
             duration: 0.5,
             ease: "power2.out",
             overwrite: true,
+            force3D: true,
           };
 
           gsap.to(imageRef.current, resetVars);
@@ -205,6 +206,7 @@ export function ImageCanvas({
             duration: 0.5,
             ease: "power2.out",
             overwrite: true,
+            force3D: true,
           };
 
           gsap.to(imageRef.current, animVars);
