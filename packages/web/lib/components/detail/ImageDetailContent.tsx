@@ -46,6 +46,7 @@ type Props = {
   hideImage?: boolean;
   onHeroClick?: () => void;
   variant?: "full" | "explore-preview";
+  artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
 };
 
 /**
@@ -68,6 +69,7 @@ export function ImageDetailContent({
   hideImage = false,
   onHeroClick,
   variant = "full",
+  artistProfiles,
 }: Props) {
   const isExplorePreview = variant === "explore-preview";
   const hasMagazine = !!magazineLayout;
@@ -280,6 +282,33 @@ export function ImageDetailContent({
           />
         )}
 
+        {/* Artist/Group profile — explore-preview only */}
+        {isExplorePreview && (() => {
+          const artistKey = (imageWithOwner.artist_name || imageWithOwner.group_name || "").toLowerCase();
+          const profile = artistProfiles?.[artistKey];
+          const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
+          if (!displayName) return null;
+          return (
+            <div className="flex items-center gap-3 px-6 py-3">
+              {profile?.profileImageUrl ? (
+                <img
+                  src={profile.profileImageUrl}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover border border-white/10"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/50">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-foreground">{displayName}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Artist</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
         {!isExplorePreview && (
           <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none select-none">
@@ -310,6 +339,33 @@ export function ImageDetailContent({
             )}
           </>
         )}
+
+        {/* Artist/Group profile — full page and magazine mode */}
+        {!isExplorePreview && (() => {
+          const artistKey = (imageWithOwner.artist_name || imageWithOwner.group_name || "").toLowerCase();
+          const profile = artistProfiles?.[artistKey];
+          const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
+          if (!displayName) return null;
+          return (
+            <div className="flex items-center gap-3 px-6 py-3">
+              {profile?.profileImageUrl ? (
+                <img
+                  src={profile.profileImageUrl}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover border border-white/10"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/50">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-foreground">{displayName}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Artist</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* AI Summary Section — only rendered when summary exists */}
         {aiSummary && !isExplorePreview && (
