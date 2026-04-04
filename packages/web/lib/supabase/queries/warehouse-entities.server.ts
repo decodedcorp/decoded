@@ -136,7 +136,7 @@ export async function buildArtistProfileMap(): Promise<Map<string, ArtistProfile
  * @param limit - Maximum number of brands to fetch (default: 100)
  * @returns Array of BrandRow, empty on error
  */
-export async function fetchWarehouseBrands(limit = 100): Promise<BrandRow[]> {
+export async function fetchWarehouseBrands(limit = 500): Promise<BrandRow[]> {
   try {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
@@ -175,7 +175,7 @@ export async function buildBrandProfileMap(): Promise<Map<string, BrandProfileEn
   const map = new Map<string, BrandProfileEntry>();
 
   try {
-    const brands = await fetchWarehouseBrands(100);
+    const brands = await fetchWarehouseBrands();
 
     for (const brand of brands) {
       const displayName = brand.name_en || brand.name_ko || "";
