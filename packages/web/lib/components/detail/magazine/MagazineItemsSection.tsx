@@ -119,8 +119,13 @@ export function MagazineItemsSection({
         // Ignore initial ScrollTrigger fire — only activate after user scrolls
         let hasScrolled = false;
         const scrollerTarget = scroller instanceof Window ? window : scroller;
-        const markScrolled = () => { hasScrolled = true; };
-        scrollerTarget.addEventListener("scroll", markScrolled, { once: true, passive: true });
+        const markScrolled = () => {
+          hasScrolled = true;
+          scrollerTarget.removeEventListener("scroll", markScrolled);
+          // Re-evaluate triggers now that hasScrolled is true
+          ScrollTrigger.update();
+        };
+        scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
 
         const initScrollTriggers = () => {
           if (cancelled) return;

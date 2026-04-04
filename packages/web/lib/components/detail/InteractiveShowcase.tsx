@@ -90,7 +90,12 @@ export function InteractiveShowcase({
       // Ignore initial ScrollTrigger fire — only activate after user scrolls
       let hasScrolled = false;
       const scrollerTarget = scroller instanceof Window ? window : scroller;
-      scrollerTarget.addEventListener("scroll", () => { hasScrolled = true; }, { once: true, passive: true });
+      const markScrolled = () => {
+        hasScrolled = true;
+        scrollerTarget.removeEventListener("scroll", markScrolled);
+        ScrollTrigger.update();
+      };
+      scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
 
       cards.forEach((card, index) => {
         ScrollTrigger.create({
