@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { DesktopFooter } from "@/lib/design-system";
+import { DesktopFooter } from "@/lib/design-system/desktop-footer";
 
 /**
  * ConditionalFooter - Conditionally renders footer based on route

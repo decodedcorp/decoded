@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { MobileHeader } from "@/lib/design-system";
+import { MobileHeader } from "@/lib/design-system/mobile-header";
 import { MobileNavBar } from "./MobileNavBar";
 import { SmartNav } from "./main-renewal/SmartNav";
 

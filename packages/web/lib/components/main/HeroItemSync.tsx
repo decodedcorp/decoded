@@ -1,10 +1,8 @@
 "use client";
 
-import { MainHero } from "@/lib/components/main-renewal";
-import type {
-  FloatingHeroImage,
-  HeroSpotAnnotation,
-} from "@/lib/components/main-renewal";
+import { MainHero } from "@/lib/components/main-renewal/MainHero";
+import type { FloatingHeroImage } from "@/lib/components/main-renewal/types";
+import type { HeroSpotAnnotation } from "@/lib/components/main-renewal/types";
 
 /** A post that can become a floating hero image */
 export interface HeroPostEntry {
