@@ -286,8 +286,9 @@ export function ImageDetailContent({
 
         {/* Artist/Group profile — explore-preview only */}
         {isExplorePreview && (() => {
-          const artistKey = (imageWithOwner.artist_name || imageWithOwner.group_name || "").toLowerCase();
-          const profile = artistProfiles?.[artistKey];
+          const profile =
+            artistProfiles?.[imageWithOwner.artist_name?.toLowerCase() ?? ""] ||
+            artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
           const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
           if (!displayName) return null;
           return (
@@ -344,8 +345,9 @@ export function ImageDetailContent({
 
         {/* Artist/Group profile — full page and magazine mode */}
         {!isExplorePreview && (() => {
-          const artistKey = (imageWithOwner.artist_name || imageWithOwner.group_name || "").toLowerCase();
-          const profile = artistProfiles?.[artistKey];
+          const profile =
+            artistProfiles?.[imageWithOwner.artist_name?.toLowerCase() ?? ""] ||
+            artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
           const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
           if (!displayName) return null;
           return (
