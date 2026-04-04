@@ -10,6 +10,7 @@ import { normalizeItem } from "./types";
 import type { UiItem } from "./types";
 import type { Json } from "@/lib/supabase/types";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
+import { useShallow } from "zustand/react/shallow";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
 import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
@@ -30,7 +31,9 @@ export function ImageDetailModal({ imageId, variant = "full", artistProfiles, br
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
   const { data: magazine } = usePostMagazine(magazineId);
-  const { originRect, reset, imgSrc } = useTransitionStore();
+  const { originRect, reset, imgSrc } = useTransitionStore(
+    useShallow((s) => ({ originRect: s.originRect, reset: s.reset, imgSrc: s.imgSrc }))
+  );
   const track = useTrackEvent();
 
   // Refs for animation targets

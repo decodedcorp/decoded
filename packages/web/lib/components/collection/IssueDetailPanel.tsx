@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useStudioStore } from "@/lib/stores/studioStore";
 import { useMagazineStore } from "@/lib/stores/magazineStore";
+import { useShallow } from "zustand/react/shallow";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { CollectionShareSheet } from "./CollectionShareSheet";
 
@@ -18,8 +19,12 @@ import { CollectionShareSheet } from "./CollectionShareSheet";
  */
 export function IssueDetailPanel() {
   const router = useRouter();
-  const { cameraState, focusedIssueId, unfocus } = useStudioStore();
-  const { collectionIssues, removeFromCollection } = useMagazineStore();
+  const { cameraState, focusedIssueId, unfocus } = useStudioStore(
+    useShallow((s) => ({ cameraState: s.cameraState, focusedIssueId: s.focusedIssueId, unfocus: s.unfocus }))
+  );
+  const { collectionIssues, removeFromCollection } = useMagazineStore(
+    useShallow((s) => ({ collectionIssues: s.collectionIssues, removeFromCollection: s.removeFromCollection }))
+  );
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const [showShareSheet, setShowShareSheet] = useState(false);

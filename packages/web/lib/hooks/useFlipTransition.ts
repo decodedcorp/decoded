@@ -4,6 +4,7 @@ import { useEffect, useRef, RefObject } from "react";
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
+import { useShallow } from "zustand/react/shallow";
 
 // Register GSAP Flip plugin
 if (typeof window !== "undefined") {
@@ -20,7 +21,9 @@ export function useFlipEnter(
   targetRef: RefObject<HTMLElement>,
   imageId: string
 ) {
-  const { originState, originRect } = useTransitionStore();
+  const { originState, originRect } = useTransitionStore(
+    useShallow((s) => ({ originState: s.originState, originRect: s.originRect }))
+  );
 
   useEffect(() => {
     if (!targetRef.current) return;
@@ -82,7 +85,9 @@ export function useFlipExit(
   targetRef: RefObject<HTMLElement>,
   onComplete?: () => void
 ) {
-  const { originState, originRect, reset } = useTransitionStore();
+  const { originState, originRect, reset } = useTransitionStore(
+    useShallow((s) => ({ originState: s.originState, originRect: s.originRect, reset: s.reset }))
+  );
 
   const playExitAnimation = async (): Promise<void> => {
     if (!targetRef.current) {
