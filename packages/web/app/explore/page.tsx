@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ExploreClient } from "./ExploreClient";
+import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
@@ -28,9 +29,24 @@ function ExploreSkeleton() {
 
 export default async function ExplorePage({ searchParams }: Props) {
   const { q } = await searchParams;
+
+  // Fetch artist/group profile images from warehouse (server-side)
+  const artistProfileMap = await buildArtistProfileMap();
+  const artistProfiles: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  > = {};
+  artistProfileMap.forEach((value, key) => {
+    artistProfiles[key] = value;
+  });
+
   return (
     <Suspense fallback={<ExploreSkeleton />}>
-      <ExploreClient hasMagazine initialQuery={q ?? ""} />
+      <ExploreClient
+        hasMagazine
+        initialQuery={q ?? ""}
+        artistProfiles={artistProfiles}
+      />
     </Suspense>
   );
 }

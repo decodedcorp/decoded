@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
@@ -44,7 +45,12 @@ function HighlightText({
   );
 }
 
-export type ExploreCardCellProps = ItemConfig;
+export type ExploreCardCellProps = ItemConfig & {
+  artistProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
+};
 
 /**
  * ExploreCardCell Component
@@ -55,6 +61,7 @@ export type ExploreCardCellProps = ItemConfig;
 export const ExploreCardCell = memo(function ExploreCardCell({
   gridIndex,
   item,
+  artistProfiles,
 }: ExploreCardCellProps) {
   const [imageError, setImageError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -137,6 +144,30 @@ export const ExploreCardCell = memo(function ExploreCardCell({
               </p>
             </div>
           )}
+          {/* Artist profile avatar — when no highlight but profile data exists */}
+          {(() => {
+            if (item?.highlight || !item?.postAccount) return null;
+            const profile = artistProfiles?.[item.postAccount.toLowerCase()];
+            if (!profile) return null;
+            return (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2.5 pb-2 pt-6">
+                <div className="flex items-center gap-1.5">
+                  {profile.profileImageUrl && (
+                    <Image
+                      src={profile.profileImageUrl}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="rounded-full object-cover border border-white/20 flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-[10px] font-medium text-white/80 truncate max-w-[80px]">
+                    {profile.name}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </article>
       </Card>
     </Link>
