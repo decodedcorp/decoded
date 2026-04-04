@@ -139,7 +139,11 @@ pub async fn list_candidates(
     // Step 3: Paginate in-memory
     let total = eligible.len() as u64;
     let offset = ((page - 1) * per_page) as usize;
-    let data: Vec<EditorialCandidateItem> = eligible.into_iter().skip(offset).take(per_page as usize).collect();
+    let data: Vec<EditorialCandidateItem> = eligible
+        .into_iter()
+        .skip(offset)
+        .take(per_page as usize)
+        .collect();
 
     Ok(Json(EditorialCandidateListResponse {
         data,
@@ -167,7 +171,10 @@ mod tests {
     use super::*;
 
     fn meets_editorial_criteria(spot_count: usize, solutions_per_spot: &[u64]) -> bool {
-        spot_count >= MIN_SPOTS && solutions_per_spot.iter().all(|&c| c >= MIN_SOLUTIONS_PER_SPOT)
+        spot_count >= MIN_SPOTS
+            && solutions_per_spot
+                .iter()
+                .all(|&c| c >= MIN_SOLUTIONS_PER_SPOT)
     }
 
     #[test]

@@ -51,7 +51,7 @@ export function PostsGrid({ userId, posts, className }: PostsGridProps) {
       rows.map((row) => ({
         id: row.id,
         imageUrl: row.image_url || "",
-        title: row.media_title || row.artist_name || "Untitled",
+        title: row.title || row.artist_name || "Untitled",
         itemCount: 0,
       })),
   });

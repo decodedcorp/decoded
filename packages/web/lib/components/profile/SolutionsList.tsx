@@ -46,7 +46,7 @@ export function SolutionsList({
         itemName: row.title,
         brand: row.description || "",
         price: row.price_amount
-          ? formatPrice(row.price_amount, row.price_currency)
+          ? formatPrice(row.price_amount, row.price_currency ?? "KRW")
           : undefined,
         verified: row.is_verified,
       })),

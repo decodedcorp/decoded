@@ -110,7 +110,9 @@ pub async fn update_post_status(
         )));
     }
 
-    let post = service::admin_update_post_status(&state.search_client, &state.db, post_id, &dto.status).await?;
+    let post =
+        service::admin_update_post_status(&state.search_client, &state.db, post_id, &dto.status)
+            .await?;
     Ok(Json(post))
 }
 

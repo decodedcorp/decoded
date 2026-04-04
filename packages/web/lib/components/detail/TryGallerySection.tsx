@@ -114,7 +114,7 @@ export function TryGallerySection({ postId, items = [] }: Props) {
                   "unknown"
                 }
                 avatarUrl={tryPost.user.avatar_url}
-                comment={tryPost.media_title}
+                comment={tryPost.title}
                 onClick={() => handleTryClick(tryPost.id)}
               />
             ))}

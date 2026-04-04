@@ -389,7 +389,7 @@ export function usePostDetailForImage(postId: string) {
             {
               id: post.id,
               account: post.artist_name ?? post.group_name ?? "",
-              article: post.media_title ?? null,
+              article: post.title ?? null,
               created_at: post.created_at,
               item_ids: null,
               metadata: [],
@@ -401,7 +401,7 @@ export function usePostDetailForImage(postId: string) {
               post: {
                 id: post.id,
                 account: post.artist_name ?? post.group_name ?? "",
-                article: post.media_title ?? null,
+                article: post.title ?? null,
                 created_at: post.created_at,
               } as any,
               created_at: post.created_at,

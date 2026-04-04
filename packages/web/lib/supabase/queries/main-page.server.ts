@@ -146,7 +146,7 @@ function toPostData(row: PostRow): PostData {
     imageUrl: row.image_url,
     artistName: row.artist_name,
     groupName: row.group_name,
-    mediaTitle: row.media_title,
+    mediaTitle: row.title,
     mediaType: row.media_type,
     context: row.context,
     viewCount: row.view_count,

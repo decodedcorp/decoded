@@ -282,7 +282,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { error } = await supabaseBrowserClient
         .from("users")
-        .update(updates)
+        .update(updates as Record<string, unknown>)
         .eq("id", user.id);
 
       if (error) {

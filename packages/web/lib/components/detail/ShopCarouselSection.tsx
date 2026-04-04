@@ -35,8 +35,9 @@ function formatPrice(amount: number | null, currency: string): string {
  * Extract brand from solution
  */
 function extractBrand(solution: SolutionRow): string {
-  if (solution.keywords && solution.keywords.length > 0) {
-    return solution.keywords[0].toUpperCase();
+  const kw = solution.keywords as string[] | null;
+  if (kw && kw.length > 0) {
+    return kw[0].toUpperCase();
   }
   if (solution.title) {
     const firstWord = solution.title.split(" ")[0];
@@ -166,7 +167,7 @@ export function ShopCarouselSection({ solutions }: Props) {
             const brand = extractBrand(solution);
             const price = formatPrice(
               solution.price_amount,
-              solution.price_currency
+              solution.price_currency ?? "KRW"
             );
             const shopUrl =
               solution.affiliate_url || solution.original_url || "#";
