@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkIsAdmin } from "@/lib/supabase/admin";
 import { AdminLayoutClient } from "@/lib/components/admin/AdminLayoutClient";
@@ -6,16 +5,16 @@ import { AdminLayoutClient } from "@/lib/components/admin/AdminLayoutClient";
 /**
  * Admin Layout - Server component
  *
- * Double-checks admin status server-side (middleware is the first check;
- * this is the second check at layout level as specified by AAUTH-03).
+ * Auth strategy:
+ * - proxy.ts is the first line of defense: redirects unauthenticated/non-admin
+ *   users to /admin/login (except /admin/login itself which is exempt).
+ * - This layout is the second check (AAUTH-03): if no user or not admin,
+ *   renders children WITHOUT the admin chrome (sidebar) instead of redirecting.
+ *   This avoids redirect loops for /admin/login while keeping the security check.
  *
- * - No session → redirect to /
- * - Not admin → redirect to /
+ * - No session → render children only (login page shows without admin chrome)
+ * - Not admin → render children only
  * - Is admin → render AdminLayoutClient with sidebar + content
- *
- * This layout is completely separate from the main app layout:
- * ConditionalNav, ConditionalFooter, and MainContentWrapper are hidden
- * on /admin/* routes (handled in their respective components).
  */
 export default async function AdminLayout({
   children,
@@ -28,13 +27,15 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // No user: render children directly (proxy.ts handles redirecting
+  // non-login admin routes to /admin/login)
   if (!user) {
-    redirect("/admin/login");
+    return <>{children}</>;
   }
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
-    redirect("/admin/login");
+    return <>{children}</>;
   }
 
   // Extract display name from user metadata
