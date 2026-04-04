@@ -120,7 +120,7 @@ export function spotToItemRow(spot: SpotRow, solution?: SolutionRow): ItemRow {
     id: parseInt(spot.id.substring(0, 8), 16) || 0,
     image_id: spot.post_id,
     spot_id: spot.id,
-    brand: null, // SolutionRow doesn't have brand field
+    brand: (solution?.metadata as Record<string, unknown>)?.brand as string ?? null,
     product_name: solution?.title || null, // Use title as product_name
     cropped_image_path: solution?.thumbnail_url || null,
     price: solution?.price_amount?.toString() || null,
