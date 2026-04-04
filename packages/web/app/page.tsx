@@ -298,6 +298,32 @@ export default async function Home({
     ? [...popularPosts].sort(() => Math.random() - 0.5)
     : [];
   const editorialMain = editorialPool[0];
+
+  // Fetch spots + solutions for the editorial post
+  let editorialSolutionItems: { id: string; label: string; name: string; brand: string; imageUrl: string }[] = [];
+  if (editorialMain) {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data: spots } = await supabase
+        .from("spots")
+        .select("*, solutions(*)")
+        .eq("post_id", editorialMain.id);
+      if (spots) {
+        editorialSolutionItems = spots.flatMap((spot: any) =>
+          (spot.solutions || [])
+            .filter((sol: any) => sol.thumbnail_url)
+            .map((sol: any) => ({
+              id: sol.id,
+              label: sol.title,
+              name: sol.title,
+              brand: (sol.metadata as any)?.brand || "",
+              imageUrl: proxyImg(sol.thumbnail_url),
+            }))
+        ).slice(0, 4);
+      }
+    } catch { /* solutions fetch failed — show without items */ }
+  }
+
   const editorialStyle: StyleCardData | undefined = editorialMain
     ? {
         id: editorialMain.id,
@@ -306,13 +332,15 @@ export default async function Home({
         artistName: enrichArtistName(editorialMain.artist_name).displayName || "Unknown",
         imageUrl: proxyImg(editorialMain.image_url),
         link: `/posts/${editorialMain.id}`,
-        items: editorialPool.slice(1, 4).map((p) => ({
-          id: p.id,
-          label: enrichArtistName(p.artist_name).displayName || "Item",
-          name: enrichArtistName(p.artist_name).displayName || "Item",
-          brand: p.group_name || "",
-          imageUrl: proxyImg(p.image_url),
-        })),
+        items: editorialSolutionItems.length > 0
+          ? editorialSolutionItems
+          : editorialPool.slice(1, 4).map((p) => ({
+              id: p.id,
+              label: enrichArtistName(p.artist_name).displayName || "Item",
+              name: enrichArtistName(p.artist_name).displayName || "Item",
+              brand: p.group_name || "",
+              imageUrl: proxyImg(p.image_url),
+            })),
       }
     : undefined;
 
