@@ -158,6 +158,7 @@ export interface MagazineCard {
 /** Data for the editorial magazine section */
 export interface EditorialMagazineData {
   cards: MagazineCard[];
+  featuredArtist?: string;
 }
 
 /** Personalize banner -- soft wall CTA */

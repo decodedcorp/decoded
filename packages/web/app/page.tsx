@@ -201,11 +201,10 @@ export default async function Home({
   //     };
   //   });
 
-  // --- Magazine ---
+  // --- Magazine (artist-specific) ---
 
-  const magazineCards = magazinePosts
+  const allMagazineCards = magazinePosts
     .filter((mp) => mp.post_magazine_title)
-    .slice(0, 8)
     .map((mp) => {
       const { displayName } = enrichArtistName(mp.artist_name || mp.group_name);
       return {
@@ -216,7 +215,19 @@ export default async function Home({
       };
     });
 
-  const editorialMagazineData: EditorialMagazineData = { cards: magazineCards };
+  const magazineArtists = [...new Set(allMagazineCards.map((c) => c.artistName))];
+  const featuredArtist = magazineArtists.length > 0
+    ? magazineArtists[Math.floor(Math.random() * magazineArtists.length)]
+    : undefined;
+
+  const magazineCards = featuredArtist
+    ? allMagazineCards.filter((c) => c.artistName === featuredArtist)
+    : allMagazineCards.slice(0, 8);
+
+  const editorialMagazineData: EditorialMagazineData = {
+    cards: magazineCards,
+    featuredArtist,
+  };
 
   // --- Decoded Pick --- (#91: temporarily disabled)
 
