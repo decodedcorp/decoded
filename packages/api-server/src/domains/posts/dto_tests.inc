@@ -18,6 +18,8 @@ fn sample_post(m: &str) -> PostModel {
         media_metadata: None,
         group_name: None,
         artist_name: None,
+        artist_id: None,
+        group_id: None,
         context: None,
         view_count: 3,
         status: "active".into(),
@@ -73,6 +75,7 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         description: None,
         comment: None,
         thumbnail_url: None,
+        brand_id: None,
     }
     .validate()
     .is_err());
@@ -83,6 +86,7 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         description: None,
         comment: None,
         thumbnail_url: None,
+        brand_id: None,
     };
     assert!(sol.validate().is_ok());
     let sj = serde_json::to_value(&sol).unwrap();
@@ -118,7 +122,9 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         },
         metadata: None,
         group_name: None,
+        group_id: None,
         artist_name: None,
+        artist_id: None,
         context: None,
         spots: vec![spot_ok()],
     }
@@ -129,7 +135,9 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         media_source: ms_ok(),
         metadata: None,
         group_name: None,
+        group_id: None,
         artist_name: None,
+        artist_id: None,
         context: None,
         spots: vec![],
     }
@@ -140,7 +148,9 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         media_source: ms_ok(),
         metadata: None,
         group_name: None,
+        group_id: None,
         artist_name: None,
+        artist_id: None,
         context: None,
         spots: vec![spot_ok()],
     }

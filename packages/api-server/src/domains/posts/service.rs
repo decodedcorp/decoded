@@ -45,9 +45,11 @@ async fn create_post_transaction(
             let mut solution_infos = Vec::new();
             let mut spot_ids = Vec::new();
 
-            // dto에서 직접 전달된 group_name, artist_name, context 사용
+            // dto에서 직접 전달된 group_name, artist_name, context 및 optional warehouse FK 사용
             let group_name = dto.group_name;
+            let group_id = dto.group_id;
             let artist_name = dto.artist_name;
+            let artist_id = dto.artist_id;
             let context = dto.context;
 
             // ActiveModel 생성
@@ -59,7 +61,9 @@ async fn create_post_transaction(
                 title: Set(None),          // AI가 description에서 추출할 예정
                 media_metadata: Set(None), // AI가 description에서 추출할 예정
                 group_name: Set(group_name),
+                group_id: Set(group_id),
                 artist_name: Set(artist_name),
+                artist_id: Set(artist_id),
                 context: Set(context),
                 view_count: Set(0),
                 status: Set(crate::constants::post_status::ACTIVE.to_string()),
@@ -108,6 +112,7 @@ async fn create_post_transaction(
                         description: solution_dto.description.clone(),
                         comment: solution_dto.comment.clone(),
                         thumbnail_url: solution_dto.thumbnail_url.clone(),
+                        brand_id: solution_dto.brand_id,
                     };
 
                     let solution = create_solution_dto.into_active_model(created_spot.id, user_id);
@@ -1149,11 +1154,7 @@ pub async fn admin_update_post_status(
     match status {
         "hidden" | "deleted" => {
             if let Err(e) = search_client.delete("posts", &post_id.to_string()).await {
-                tracing::warn!(
-                    "Failed to delete post {} from Meilisearch: {}",
-                    post_id,
-                    e
-                );
+                tracing::warn!("Failed to delete post {} from Meilisearch: {}", post_id, e);
             }
         }
         "active" => {
@@ -1165,11 +1166,7 @@ pub async fn admin_update_post_status(
                 .update_document("posts", &post_id.to_string(), doc)
                 .await
             {
-                tracing::warn!(
-                    "Failed to update post {} in Meilisearch: {}",
-                    post_id,
-                    e
-                );
+                tracing::warn!("Failed to update post {} in Meilisearch: {}", post_id, e);
             }
         }
         _ => {}
