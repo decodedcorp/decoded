@@ -789,6 +789,7 @@ pub async fn list_posts(
     } else {
         PostMagazines::find()
             .filter(MagazineColumn::Id.is_in(magazine_ids))
+            .filter(MagazineColumn::Status.eq("published"))
             .all(db)
             .await
             .map_err(AppError::DatabaseError)?
@@ -1076,6 +1077,7 @@ pub async fn admin_list_posts(
     } else {
         PostMagazines::find()
             .filter(MagazineColumn::Id.is_in(magazine_ids))
+            .filter(MagazineColumn::Status.eq("published"))
             .all(db)
             .await
             .map_err(AppError::DatabaseError)?
