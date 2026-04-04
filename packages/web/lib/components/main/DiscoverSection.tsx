@@ -139,7 +139,7 @@ export function DiscoverItemsSection({
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8"
           >
             {displayItems.slice(0, 6).map((item, index) => (
-              <ItemCard key={index} data={item} index={index} />
+              <ItemCard key={item.id} data={item} index={index} />
             ))}
           </motion.div>
         </AnimatePresence>
@@ -204,7 +204,7 @@ export function DiscoverProductsSection({
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8"
           >
             {items.slice(0, 6).map((item, index) => (
-              <ItemCard key={index} data={item} index={index} />
+              <ItemCard key={item.id} data={item} index={index} />
             ))}
           </motion.div>
         </AnimatePresence>
