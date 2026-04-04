@@ -29,6 +29,7 @@ export type GridItem = {
   postCreatedAt: string;
   editorialTitle?: string | null;
   spotCount?: number;
+  highlight?: Record<string, string> | null;
 };
 
 type GridItemInternal = { position: Position; gridIndex: number };

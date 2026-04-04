@@ -56,10 +56,11 @@ See: .planning/PROJECT.md
 | 260402-pqz | post 상세 페이지 뱃지 삭제 | 2026-04-02 | ba54f977 | [260402-pqz-post](./quick/260402-pqz-post/) |
 | 260402-qix | explore 페이지 필터 제거 | 2026-04-02 | - | [260402-qix-explore](./quick/260402-qix-explore/) |
 | 260402-qhu | post 상세페이지 및 오른쪽 모달 패널 컴포넌트 크기 조정 | 2026-04-02 | 890374ce | [260402-qhu-post](./quick/260402-qhu-post/) |
+| 260403-kp5 | 헤더 ASCII 로고 오른쪽 밀림/잘림 수정 | 2026-04-03 | - | [260403-kp5](./quick/260403-kp5-fix-header-ascii-logo-shifting-right-and/) |
 
 ---
 
-Last activity: 2026-04-02 - Completed quick task 260402-qhu: post 상세페이지 및 오른쪽 모달 패널 컴포넌트 크기 조정
+Last activity: 2026-04-03 - Completed quick task 260403-kp5: 헤더 ASCII 로고 오른쪽 밀림/잘림 수정
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_

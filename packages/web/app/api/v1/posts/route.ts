@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { API_BASE_URL } from "@/lib/server-env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/v1/posts
@@ -43,17 +44,114 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Return the response preserving the backend's status code
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Posts GET proxy error:", error);
+    // Backend succeeded → return as-is
+    if (response.ok) {
+      return NextResponse.json(data, { status: response.status });
     }
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : "Proxy error",
+
+    // Backend failed → fall back to Supabase
+    console.warn(`[Posts GET] Backend returned ${response.status}, falling back to Supabase`);
+    return supabaseFallback(searchParams);
+  } catch (error) {
+    // Backend unreachable → fall back to Supabase
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Posts GET proxy error, falling back to Supabase:", error);
+    }
+    const { searchParams } = new URL(request.url);
+    return supabaseFallback(searchParams);
+  }
+}
+
+/**
+ * Supabase fallback for GET /api/v1/posts
+ * Returns PaginatedResponsePostListItem-compatible shape
+ */
+async function supabaseFallback(searchParams: URLSearchParams) {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const page = Math.max(Number(searchParams.get("page")) || 1, 1);
+    const perPage = Math.min(Number(searchParams.get("per_page")) || 40, 100);
+    const sort = searchParams.get("sort") || "recent";
+    const artistName = searchParams.get("artist_name");
+    const groupName = searchParams.get("group_name");
+    const context = searchParams.get("context");
+    const hasMagazine = searchParams.get("has_magazine") === "true";
+
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+
+    let query = supabase
+      .from("posts")
+      .select("*, users:user_id(id, username, avatar_url, rank), post_magazines:post_magazine_id(title)", { count: "exact" })
+      .eq("status", "active")
+      .not("image_url", "is", null);
+
+    if (hasMagazine) {
+      query = query.not("post_magazine_id", "is", null);
+    }
+    if (artistName) {
+      query = query.ilike("artist_name", `%${artistName}%`);
+    }
+    if (groupName) {
+      query = query.ilike("group_name", `%${groupName}%`);
+    }
+    if (context) {
+      query = query.eq("context", context);
+    }
+
+    // Sort
+    if (sort === "popular") {
+      query = query.order("view_count", { ascending: false });
+    } else if (sort === "trending") {
+      query = query.order("trending_score", { ascending: false });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
+
+    query = query.range(from, to);
+
+    const { data: posts, count, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
+    const totalItems = count ?? 0;
+    const totalPages = Math.ceil(totalItems / perPage);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (posts ?? []).map((post: any) => ({
+      id: post.id,
+      image_url: post.image_url,
+      artist_name: post.artist_name ?? null,
+      group_name: post.group_name ?? null,
+      context: post.context ?? null,
+      created_at: post.created_at,
+      view_count: post.view_count ?? 0,
+      spot_count: 0,
+      comment_count: 0,
+      title: post.post_magazines?.title ?? null,
+      post_magazine_title: post.post_magazines?.title ?? null,
+      media_source: { type: post.media_type ?? "unknown", description: null },
+      user: post.users
+        ? { id: post.users.id, username: post.users.username ?? "", avatar_url: post.users.avatar_url ?? null, rank: post.users.rank ?? "member" }
+        : { id: post.user_id, username: "", avatar_url: null, rank: "member" },
+    }));
+
+    return NextResponse.json({
+      data,
+      pagination: {
+        current_page: page,
+        per_page: perPage,
+        total_items: totalItems,
+        total_pages: totalPages,
       },
-      { status: 502 }
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { message: error instanceof Error ? error.message : "Supabase fallback error" },
+      { status: 500 }
     );
   }
 }

@@ -16,13 +16,14 @@ import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
 
 type Props = {
   imageId: string;
+  variant?: "full" | "explore-preview";
 };
 
 /**
  * Side Drawer version of image detail page
  * Used when navigating from grid (intercepting route)
  */
-export function ImageDetailModal({ imageId }: Props) {
+export function ImageDetailModal({ imageId, variant = "full" }: Props) {
   const router = useRouter();
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
@@ -203,6 +204,7 @@ export function ImageDetailModal({ imageId }: Props) {
           magazineLayout={publishedMagazineLayout}
           relatedEditorials={magazine?.related_editorials ?? []}
           isModal
+          variant={variant}
           scrollContainerRef={
             scrollContainerRef as React.RefObject<HTMLElement>
           }
@@ -220,6 +222,7 @@ export function ImageDetailModal({ imageId }: Props) {
         relatedEditorials={[]}
         isModal
         hideImage
+        variant={variant}
         scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
         activeIndex={activeIndex}
         onActiveIndexChange={setActiveIndex}

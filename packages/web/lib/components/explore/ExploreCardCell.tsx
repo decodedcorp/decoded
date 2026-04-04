@@ -14,6 +14,36 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(Flip);
 }
 
+/** Parse Meilisearch <em> highlight into React nodes */
+function HighlightText({
+  html,
+  fallback,
+}: {
+  html?: string;
+  fallback: string;
+}) {
+  if (!html) return <>{fallback}</>;
+  const parts = html.split(/(<em>.*?<\/em>)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/^<em>(.*)<\/em>$/);
+        if (match) {
+          return (
+            <mark
+              key={i}
+              className="bg-primary/30 text-white rounded-sm px-0.5"
+            >
+              {match[1]}
+            </mark>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export type ExploreCardCellProps = ItemConfig;
 
 /**
@@ -71,7 +101,7 @@ export const ExploreCardCell = memo(function ExploreCardCell({
 
   return (
     <Link
-      href={`/posts/${imageId}`}
+      href={`/posts/${imageId}?from=explore`}
       scroll={false}
       onClick={handleClick}
       className="absolute inset-1"
@@ -96,6 +126,17 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             onLoad={() => setIsLoaded(true)}
             onError={() => setImageError(true)}
           />
+          {/* Artist name overlay — search mode only (when highlight exists) */}
+          {item?.highlight && item.postAccount && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-6">
+              <p className="text-[11px] font-medium text-white/90 truncate">
+                <HighlightText
+                  html={item.highlight?.["artist_name"]}
+                  fallback={item.postAccount}
+                />
+              </p>
+            </div>
+          )}
         </article>
       </Card>
     </Link>
