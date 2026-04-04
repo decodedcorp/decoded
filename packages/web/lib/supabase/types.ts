@@ -17,6 +17,7 @@
  * - user_events - Behavioral event tracking (30-day TTL)
  * - user_tryon_history - VTON history
  * - user_social_accounts - OAuth SNS connections
+ * - decoded_picks - Editor/AI curated daily picks for homepage
  */
 
 export type Json =
@@ -41,6 +42,47 @@ export type Database = {
       // =================================================================
       // CORE CONTENT
       // =================================================================
+
+      /**
+       * Decoded Picks - Editor/AI curated daily picks for homepage
+       */
+      decoded_picks: {
+        Row: {
+          id: string;
+          post_id: string;
+          pick_date: string;
+          note: string | null;
+          curated_by: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          pick_date?: string;
+          note?: string | null;
+          curated_by?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          pick_date?: string;
+          note?: string | null;
+          curated_by?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "decoded_picks_post_id_fkey";
+            columns: ["post_id"];
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
 
       /**
        * Posts - Main content with images

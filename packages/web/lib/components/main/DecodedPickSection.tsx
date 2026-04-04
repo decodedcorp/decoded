@@ -69,11 +69,22 @@ const sampleStyleData: StyleCardData = {
 interface DecodedPickSectionProps {
   styleData?: StyleCardData;
   items?: ItemCardData[];
+  pickDate?: string | null;
+  curatedBy?: string | null;
+  note?: string | null;
+}
+
+function formatPickDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric" }) + " Pick";
 }
 
 export function DecodedPickSection({
   styleData = sampleStyleData,
   items,
+  pickDate,
+  curatedBy,
+  note,
 }: DecodedPickSectionProps) {
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
 
@@ -215,13 +226,23 @@ export function DecodedPickSection({
           <div className="max-w-2xl">
             <div ref={headerRef} style={{ opacity: 0 }}>
               <span className="text-primary font-sans font-bold tracking-[0.4em] text-[10px] md:text-xs uppercase mb-6 block">
-                Editor's Choice
+                {curatedBy === "editor" ? "Editor\u2019s Choice" : "AI Curated"}
               </span>
               <h2 className="text-6xl md:text-8xl font-serif font-bold italic tracking-tighter leading-[0.85]">
-                Decoded's
+                Decoded&apos;s
                 <br />
                 Pick
               </h2>
+              {pickDate && (
+                <p className="mt-6 text-sm font-sans tracking-[0.2em] text-white/40 uppercase">
+                  {formatPickDate(pickDate)}
+                </p>
+              )}
+              {note && (
+                <p className="mt-4 text-sm md:text-base font-sans text-white/50 italic max-w-md leading-relaxed">
+                  &ldquo;{note}&rdquo;
+                </p>
+              )}
             </div>
           </div>
           <Link
