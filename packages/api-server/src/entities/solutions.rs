@@ -21,6 +21,9 @@ pub struct Model {
     pub title: String,
 
     #[sea_orm(nullable)]
+    pub brand_id: Option<Uuid>,
+
+    #[sea_orm(nullable)]
     pub original_url: Option<String>,
 
     #[sea_orm(nullable)]

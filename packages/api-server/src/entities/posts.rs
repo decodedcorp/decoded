@@ -23,6 +23,12 @@ pub struct Model {
 
     pub artist_name: Option<String>,
 
+    #[sea_orm(nullable)]
+    pub artist_id: Option<Uuid>,
+
+    #[sea_orm(nullable)]
+    pub group_id: Option<Uuid>,
+
     pub context: Option<String>,
 
     pub view_count: i32,
