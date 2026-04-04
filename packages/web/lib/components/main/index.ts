@@ -1,5 +1,4 @@
 // Layout components
-export { MainFooter } from "./MainFooter";
 export { HomeAnimatedContent } from "./HomeAnimatedContent";
 
 // Section components
