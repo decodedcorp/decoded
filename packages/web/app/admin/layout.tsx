@@ -29,12 +29,12 @@ export default async function AdminLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/admin/login");
   }
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
-    redirect("/");
+    redirect("/admin/login");
   }
 
   // Extract display name from user metadata

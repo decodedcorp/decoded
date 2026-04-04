@@ -35,15 +35,20 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
-  // Admin: require session + admin role — silently redirect to home on failure
+  // Allow /admin/login through without auth
+  if (pathname === "/admin/login") {
+    return res;
+  }
+
+  // Admin: require session + admin role — redirect to login on failure
   if (!session) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
   const isAdmin = await checkIsAdmin(supabase, session.user.id);
 
   if (!isAdmin) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
   // Admin confirmed — allow request through with refreshed session cookies
