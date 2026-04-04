@@ -87,6 +87,16 @@ export function InteractiveShowcase({
         sectionRef.current.querySelectorAll("[data-item-index]")
       );
 
+      // Ignore initial ScrollTrigger fire — only activate after user scrolls
+      let hasScrolled = false;
+      const scrollerTarget = scroller instanceof Window ? window : scroller;
+      const markScrolled = () => {
+        hasScrolled = true;
+        scrollerTarget.removeEventListener("scroll", markScrolled);
+        ScrollTrigger.update();
+      };
+      scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
+
       cards.forEach((card, index) => {
         ScrollTrigger.create({
           scroller,
@@ -94,15 +104,15 @@ export function InteractiveShowcase({
           start: "top 70%",
           end: "bottom center",
           invalidateOnRefresh: true,
-          onEnter: () => handleActiveIndexChange(index),
-          onEnterBack: () => handleActiveIndexChange(index),
+          onEnter: () => { if (hasScrolled) handleActiveIndexChange(index); },
+          onEnterBack: () => { if (hasScrolled) handleActiveIndexChange(index); },
           onLeave: () => {
-            if (activeIndexRef.current === index) {
+            if (hasScrolled && activeIndexRef.current === index) {
               handleActiveIndexChange(null);
             }
           },
           onLeaveBack: () => {
-            if (activeIndexRef.current === index) {
+            if (hasScrolled && activeIndexRef.current === index) {
               handleActiveIndexChange(null);
             }
           },

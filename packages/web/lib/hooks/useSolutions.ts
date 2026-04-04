@@ -89,9 +89,6 @@ export function useAllSolutionsForSpots(spotIds: string[]) {
       queryFn: () => listSolutions(spotId),
       enabled: !!spotId,
       staleTime: 1000 * 60,
-      retry: false,
-      refetchOnWindowFocus: false,
-      placeholderData: [] as GeneratedSolutionListItem[],
     })),
   });
   const isLoading = results.some((r) => r.isLoading);
