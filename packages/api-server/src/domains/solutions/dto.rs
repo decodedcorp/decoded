@@ -129,6 +129,10 @@ pub struct SolutionResponse {
     /// Spot ID
     pub spot_id: Uuid,
 
+    /// 브랜드 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand_id: Option<Uuid>,
+
     /// 사용자 정보
     pub user: UserResponse,
 
@@ -195,6 +199,10 @@ pub struct SolutionResponse {
 pub struct SolutionListItem {
     /// Solution ID
     pub id: Uuid,
+
+    /// 브랜드 ID (warehouse FK, nullable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand_id: Option<Uuid>,
 
     /// 사용자 정보
     pub user: UserResponse,
