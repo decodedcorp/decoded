@@ -1945,6 +1945,26 @@
             }
           },
           {
+            "name": "artist_id",
+            "in": "query",
+            "description": "아티스트 ID 필터 (warehouse FK)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "그룹 ID 필터 (warehouse FK)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "description": "정렬: recent | popular | trending",
