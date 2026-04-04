@@ -134,6 +134,11 @@ export function ImageCanvas({
       if (!imageRef.current || activeIndex === null) {
         // Reset to default state
         if (imageRef.current) {
+          // Kill any running tweens before reset
+          gsap.killTweensOf(imageRef.current);
+          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
+          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
+
           const resetVars = {
             scale: 1,
             x: 0,
@@ -176,6 +181,11 @@ export function ImageCanvas({
         const rect = getDisplayedRect();
 
         if (rect) {
+          // Kill any running tweens before pan/zoom
+          gsap.killTweensOf(imageRef.current);
+          if (boxesRef.current) gsap.killTweensOf(boxesRef.current);
+          if (overlayRef.current) gsap.killTweensOf(overlayRef.current);
+
           // Calculate offset needed to center the item based on displayed dimensions
           const offsetX = (center.x - 0.5) * (scale - 1) * rect.width;
           const offsetY = (center.y - 0.5) * (scale - 1) * rect.height;
