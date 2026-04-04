@@ -31,6 +31,7 @@ import {
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Shorthand for post list item from REST API */
 type ApiPost = PaginatedResponsePostListItemDataItem;
@@ -293,15 +294,19 @@ export default async function Home({
       image: proxyImg(image),
     }));
 
-  const editorialStyle: StyleCardData | undefined = popularPosts[0]
+  const editorialPool = popularPosts.length > 0
+    ? [...popularPosts].sort(() => Math.random() - 0.5)
+    : [];
+  const editorialMain = editorialPool[0];
+  const editorialStyle: StyleCardData | undefined = editorialMain
     ? {
-        id: popularPosts[0].id,
-        title: enrichArtistName(popularPosts[0].artist_name).displayName || "Featured",
-        description: popularPosts[0].context || popularPosts[0].title || "",
-        artistName: enrichArtistName(popularPosts[0].artist_name).displayName || "Unknown",
-        imageUrl: proxyImg(popularPosts[0].image_url),
-        link: `/posts/${popularPosts[0].id}`,
-        items: popularPosts.slice(1, 4).map((p) => ({
+        id: editorialMain.id,
+        title: enrichArtistName(editorialMain.artist_name).displayName || "Featured",
+        description: editorialMain.context || editorialMain.title || "",
+        artistName: enrichArtistName(editorialMain.artist_name).displayName || "Unknown",
+        imageUrl: proxyImg(editorialMain.image_url),
+        link: `/posts/${editorialMain.id}`,
+        items: editorialPool.slice(1, 4).map((p) => ({
           id: p.id,
           label: enrichArtistName(p.artist_name).displayName || "Item",
           name: enrichArtistName(p.artist_name).displayName || "Item",
