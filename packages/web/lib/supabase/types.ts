@@ -1,23 +1,12 @@
 /**
- * Supabase Database Types
+ * Supabase Database Types (public schema)
  *
- * Auto-generated from actual database schema inspection.
- * Last updated: 2026-03-18
+ * Auto-generated via `supabase gen types typescript`.
+ * Last updated: 2026-04-04
  *
- * Tables:
- * - posts - Main content posts with images
- * - users - User profiles and stats
- * - categories - Item categories (i18n)
- * - subcategories - Item subcategories (i18n)
- * - badges - Achievement badges
- * - user_badges - User-badge assignments
- * - spots - Item locations in images
- * - solutions - Product matches for spots
- * - comments - Post comments
- * - user_events - Behavioral event tracking (30-day TTL)
- * - user_tryon_history - VTON history
- * - user_social_accounts - OAuth SNS connections
- * - decoded_picks - Editor/AI curated daily picks for homepage
+ * Regenerate: npx supabase gen types typescript --project-id fvxchskblyhuswzlcmql --schema public
+ *
+ * DO NOT manually edit the Database type below. Edit custom aliases at the bottom of this file.
  */
 
 export type Json =
@@ -26,7 +15,1971 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      agent_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          keywords: Json | null
+          last_message_at: string | null
+          magazine_id: string | null
+          message_count: number | null
+          metadata: Json | null
+          status: string
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keywords?: Json | null
+          last_message_at?: string | null
+          magazine_id?: string | null
+          message_count?: number | null
+          metadata?: Json | null
+          status?: string
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keywords?: Json | null
+          last_message_at?: string | null
+          magazine_id?: string | null
+          message_count?: number | null
+          metadata?: Json | null
+          status?: string
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_sessions_magazine_id_fkey"
+            columns: ["magazine_id"]
+            isOneToOne: false
+            referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      badges: {
+        Row: {
+          created_at: string
+          criteria: Json
+          description: string | null
+          icon_url: string | null
+          id: string
+          name: string
+          rarity: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criteria: Json
+          description?: string | null
+          icon_url?: string | null
+          id: string
+          name: string
+          rarity?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criteria?: Json
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          name?: string
+          rarity?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          code: string
+          color_hex: string | null
+          created_at: string
+          description: Json | null
+          display_order: number
+          icon_url: string | null
+          id: string
+          is_active: boolean
+          name: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color_hex?: string | null
+          created_at?: string
+          description?: Json | null
+          display_order?: number
+          icon_url?: string | null
+          id: string
+          is_active?: boolean
+          name: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color_hex?: string | null
+          created_at?: string
+          description?: Json | null
+          display_order?: number
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          name?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      checkpoint_blobs: {
+        Row: {
+          blob: string | null
+          channel: string
+          checkpoint_ns: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Insert: {
+          blob?: string | null
+          channel: string
+          checkpoint_ns?: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Update: {
+          blob?: string | null
+          channel?: string
+          checkpoint_ns?: string
+          thread_id?: string
+          type?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      checkpoint_migrations: {
+        Row: {
+          v: number
+        }
+        Insert: {
+          v: number
+        }
+        Update: {
+          v?: number
+        }
+        Relationships: []
+      }
+      checkpoint_writes: {
+        Row: {
+          blob: string
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns: string
+          idx: number
+          task_id: string
+          task_path: string
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          blob: string
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns?: string
+          idx: number
+          task_id: string
+          task_path?: string
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          blob?: string
+          channel?: string
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          idx?: number
+          task_id?: string
+          task_path?: string
+          thread_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
+      checkpoints: {
+        Row: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns: string
+          metadata: Json
+          parent_checkpoint_id: string | null
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          checkpoint?: Json
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
+      click_logs: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string
+          referrer: string | null
+          solution_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          ip_address: string
+          referrer?: string | null
+          solution_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string
+          referrer?: string | null
+          solution_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_click_logs_solution_id"
+            columns: ["solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_click_logs_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id: string
+          parent_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_comments_parent_id"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_comments_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_comments_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_comments_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          resolution: string | null
+          reviewed_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          resolution?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id: string
+          target_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          resolution?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          action_type: string
+          amount: number
+          created_at: string
+          id: string
+          reference_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          amount: number
+          created_at?: string
+          id: string
+          reference_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          reference_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curation_posts: {
+        Row: {
+          curation_id: string
+          display_order: number
+          post_id: string
+        }
+        Insert: {
+          curation_id: string
+          display_order?: number
+          post_id: string
+        }
+        Update: {
+          curation_id?: string
+          display_order?: number
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_curation_posts_curation_id"
+            columns: ["curation_id"]
+            isOneToOne: false
+            referencedRelation: "curations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_curation_posts_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_curation_posts_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curations: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at: string
+          description?: string | null
+          display_order?: number
+          id: string
+          is_active?: boolean
+          title: string
+          updated_at: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      decoded_picks: {
+        Row: {
+          created_at: string
+          curated_by: string
+          id: string
+          is_active: boolean
+          note: string | null
+          pick_date: string
+          post_id: string
+        }
+        Insert: {
+          created_at?: string
+          curated_by?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          pick_date?: string
+          post_id: string
+        }
+        Update: {
+          created_at?: string
+          curated_by?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          pick_date?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decoded_picks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decoded_picks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      earnings: {
+        Row: {
+          affiliate_platform: string | null
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          solution_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_platform?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          id: string
+          solution_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_platform?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          solution_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_earnings_solution_id"
+            columns: ["solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_earnings_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      embeddings: {
+        Row: {
+          content_text: string
+          created_at: string | null
+          embedding: string
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          content_text: string
+          created_at?: string | null
+          embedding: string
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          content_text?: string
+          created_at?: string | null
+          embedding?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      failed_batch_items: {
+        Row: {
+          batch_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          item_id: string
+          next_retry_at: string
+          retry_count: number
+          status: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          error_message?: string | null
+          id: string
+          item_id: string
+          next_retry_at: string
+          retry_count?: number
+          status: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          item_id?: string
+          next_retry_at?: string
+          retry_count?: number
+          status?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      magazine_posts: {
+        Row: {
+          magazine_id: string
+          post_id: string
+          section_index: number
+        }
+        Insert: {
+          magazine_id: string
+          post_id: string
+          section_index?: number
+        }
+        Update: {
+          magazine_id?: string
+          post_id?: string
+          section_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "magazine_posts_magazine_id_fkey"
+            columns: ["magazine_id"]
+            isOneToOne: false
+            referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magazine_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magazine_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      magazines: {
+        Row: {
+          agent_version: string | null
+          artists: Json | null
+          cover_image_url: string | null
+          created_at: string
+          generation_log: Json | null
+          id: string
+          keywords: Json
+          published_at: string | null
+          published_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          spec: Json
+          status: string
+          subtitle: string | null
+          theme: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_version?: string | null
+          artists?: Json | null
+          cover_image_url?: string | null
+          created_at?: string
+          generation_log?: Json | null
+          id?: string
+          keywords?: Json
+          published_at?: string | null
+          published_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spec?: Json
+          status?: string
+          subtitle?: string | null
+          theme?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_version?: string | null
+          artists?: Json | null
+          cover_image_url?: string | null
+          created_at?: string
+          generation_log?: Json | null
+          id?: string
+          keywords?: Json
+          published_at?: string | null
+          published_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spec?: Json
+          status?: string
+          subtitle?: string | null
+          theme?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "magazines_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magazines_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      point_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          points: number
+          ref_id: string | null
+          ref_type: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id: string
+          points: number
+          ref_id?: string | null
+          ref_type?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          ref_id?: string | null
+          ref_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_point_logs_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_post_likes_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_post_likes_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_post_likes_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_magazines: {
+        Row: {
+          created_at: string
+          error_log: Json | null
+          id: string
+          keyword: string | null
+          layout_json: Json | null
+          published_at: string | null
+          review_summary: string | null
+          status: string
+          subtitle: string | null
+          thread_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          keyword?: string | null
+          layout_json?: Json | null
+          published_at?: string | null
+          review_summary?: string | null
+          status?: string
+          subtitle?: string | null
+          thread_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          keyword?: string | null
+          layout_json?: Json | null
+          published_at?: string | null
+          review_summary?: string | null
+          status?: string
+          subtitle?: string | null
+          thread_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          ai_summary: string | null
+          artist_id: string | null
+          artist_name: string | null
+          context: string | null
+          created_at: string
+          created_with_solutions: boolean | null
+          group_id: string | null
+          group_name: string | null
+          id: string
+          image_url: string
+          media_metadata: Json | null
+          media_type: string
+          post_magazine_id: string | null
+          status: string
+          title: string | null
+          trending_score: number | null
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          ai_summary?: string | null
+          artist_id?: string | null
+          artist_name?: string | null
+          context?: string | null
+          created_at?: string
+          created_with_solutions?: boolean | null
+          group_id?: string | null
+          group_name?: string | null
+          id: string
+          image_url: string
+          media_metadata?: Json | null
+          media_type: string
+          post_magazine_id?: string | null
+          status?: string
+          title?: string | null
+          trending_score?: number | null
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          ai_summary?: string | null
+          artist_id?: string | null
+          artist_name?: string | null
+          context?: string | null
+          created_at?: string
+          created_with_solutions?: boolean | null
+          group_id?: string | null
+          group_name?: string | null
+          id?: string
+          image_url?: string
+          media_metadata?: Json | null
+          media_type?: string
+          post_magazine_id?: string | null
+          status?: string
+          title?: string | null
+          trending_score?: number | null
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_posts_post_magazine_id"
+            columns: ["post_magazine_id"]
+            isOneToOne: false
+            referencedRelation: "post_magazines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_posts_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processed_batches: {
+        Row: {
+          batch_id: string
+          created_at: string
+          failed_count: number
+          partial_count: number
+          processing_time_ms: number
+          processing_timestamp: string
+          success_count: number
+          total_count: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          failed_count: number
+          partial_count: number
+          processing_time_ms: number
+          processing_timestamp: string
+          success_count: number
+          total_count: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          failed_count?: number
+          partial_count?: number
+          processing_time_ms?: number
+          processing_timestamp?: string
+          success_count?: number
+          total_count?: number
+        }
+        Relationships: []
+      }
+      saved_posts: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_saved_posts_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_saved_posts_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_saved_posts_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seaql_migrations: {
+        Row: {
+          applied_at: number
+          version: string
+        }
+        Insert: {
+          applied_at: number
+          version: string
+        }
+        Update: {
+          applied_at?: number
+          version?: string
+        }
+        Relationships: []
+      }
+      search_logs: {
+        Row: {
+          created_at: string
+          filters: Json | null
+          id: string
+          query: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json | null
+          id: string
+          query: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          filters?: Json | null
+          id?: string
+          query?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_search_logs_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlements: {
+        Row: {
+          amount: number
+          bank_info: Json | null
+          created_at: string
+          currency: string
+          id: string
+          processed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_info?: Json | null
+          created_at?: string
+          currency?: string
+          id: string
+          processed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_info?: Json | null
+          created_at?: string
+          currency?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_settlements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solutions: {
+        Row: {
+          accurate_count: number
+          adopted_at: string | null
+          affiliate_url: string | null
+          brand_id: string | null
+          click_count: number
+          comment: string | null
+          created_at: string
+          description: string | null
+          different_count: number
+          id: string
+          is_adopted: boolean
+          is_verified: boolean
+          keywords: Json | null
+          link_type: string | null
+          match_type: string | null
+          metadata: Json | null
+          original_url: string | null
+          price_amount: number | null
+          price_currency: string | null
+          purchase_count: number
+          qna: Json | null
+          spot_id: string
+          status: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accurate_count?: number
+          adopted_at?: string | null
+          affiliate_url?: string | null
+          brand_id?: string | null
+          click_count?: number
+          comment?: string | null
+          created_at?: string
+          description?: string | null
+          different_count?: number
+          id: string
+          is_adopted?: boolean
+          is_verified?: boolean
+          keywords?: Json | null
+          link_type?: string | null
+          match_type?: string | null
+          metadata?: Json | null
+          original_url?: string | null
+          price_amount?: number | null
+          price_currency?: string | null
+          purchase_count?: number
+          qna?: Json | null
+          spot_id: string
+          status?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accurate_count?: number
+          adopted_at?: string | null
+          affiliate_url?: string | null
+          brand_id?: string | null
+          click_count?: number
+          comment?: string | null
+          created_at?: string
+          description?: string | null
+          different_count?: number
+          id?: string
+          is_adopted?: boolean
+          is_verified?: boolean
+          keywords?: Json | null
+          link_type?: string | null
+          match_type?: string | null
+          metadata?: Json | null
+          original_url?: string | null
+          price_amount?: number | null
+          price_currency?: string | null
+          purchase_count?: number
+          qna?: Json | null
+          spot_id?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_solutions_spot_id"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "spots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_solutions_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spots: {
+        Row: {
+          created_at: string
+          id: string
+          position_left: string
+          position_top: string
+          post_id: string
+          status: string
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          position_left: string
+          position_top: string
+          post_id: string
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position_left?: string
+          position_top?: string
+          post_id?: string
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_spots_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "explore_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_spots_post_id"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_spots_subcategory_id"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_spots_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          code: string
+          created_at: string
+          description: Json | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: Json
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          code: string
+          created_at?: string
+          description?: Json | null
+          display_order?: number
+          id: string
+          is_active?: boolean
+          name: Json
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          code?: string
+          created_at?: string
+          description?: Json | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_subcategories_category_id"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      synonyms: {
+        Row: {
+          canonical: string
+          created_at: string
+          id: string
+          is_active: boolean
+          synonyms: string[]
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          canonical: string
+          created_at?: string
+          id: string
+          is_active?: boolean
+          synonyms: string[]
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          canonical?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          synonyms?: string[]
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_badges_badge_id"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_badges_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_collections: {
+        Row: {
+          created_at: string
+          id: string
+          is_pinned: boolean
+          magazine_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_pinned?: boolean
+          magazine_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          magazine_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_collections_magazine_id_fkey"
+            columns: ["magazine_id"]
+            isOneToOne: false
+            referencedRelation: "user_magazines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_collections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_events: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          page_path: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          page_path: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: []
+      }
+      user_magazines: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          layout_json: Json | null
+          magazine_type: string
+          theme_palette: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id: string
+          layout_json?: Json | null
+          magazine_type: string
+          theme_palette?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          layout_json?: Json | null
+          magazine_type?: string
+          theme_palette?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_magazines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_social_accounts: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          provider: string
+          provider_user_id: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id: string
+          last_synced_at?: string | null
+          provider: string
+          provider_user_id: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          provider_user_id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_social_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_tryon_history: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          style_combination: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          style_combination?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          style_combination?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tryon_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          ink_credits: number
+          is_admin: boolean
+          rank: string
+          studio_config: Json | null
+          style_dna: Json | null
+          total_points: number
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id: string
+          ink_credits?: number
+          is_admin?: boolean
+          rank?: string
+          studio_config?: Json | null
+          style_dna?: Json | null
+          total_points?: number
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          ink_credits?: number
+          is_admin?: boolean
+          rank?: string
+          studio_config?: Json | null
+          style_dna?: Json | null
+          total_points?: number
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      view_logs: {
+        Row: {
+          created_at: string
+          id: string
+          reference_id: string
+          reference_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          reference_id: string
+          reference_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reference_id?: string
+          reference_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_view_logs_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      votes: {
+        Row: {
+          created_at: string
+          id: string
+          solution_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          solution_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          solution_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_votes_solution_id"
+            columns: ["solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_votes_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      explore_posts: {
+        Row: {
+          ai_summary: string | null
+          artist_id: string | null
+          artist_name: string | null
+          context: string | null
+          created_at: string | null
+          created_with_solutions: boolean | null
+          group_id: string | null
+          group_name: string | null
+          id: string | null
+          image_url: string | null
+          media_metadata: Json | null
+          media_type: string | null
+          post_magazine_id: string | null
+          post_magazine_title: string | null
+          status: string | null
+          title: string | null
+          trending_score: number | null
+          updated_at: string | null
+          user_id: string | null
+          view_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_posts_post_magazine_id"
+            columns: ["post_magazine_id"]
+            isOneToOne: false
+            referencedRelation: "post_magazines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_posts_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Functions: {
+      search_similar: {
+        Args: {
+          filter_type?: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          content_text: string
+          entity_id: string
+          entity_type: string
+          similarity: number
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
+// =============================================================================
+// CUSTOM TYPE ALIASES (manually maintained)
+// =============================================================================
 
 /**
  * Internationalized text (Korean/English)
@@ -35,751 +1988,6 @@ export interface I18nText {
   ko: string;
   en: string;
 }
-
-export type Database = {
-  public: {
-    Tables: {
-      // =================================================================
-      // CORE CONTENT
-      // =================================================================
-
-      /**
-       * Decoded Picks - Editor/AI curated daily picks for homepage
-       */
-      decoded_picks: {
-        Row: {
-          id: string;
-          post_id: string;
-          pick_date: string;
-          note: string | null;
-          curated_by: string;
-          is_active: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          post_id: string;
-          pick_date?: string;
-          note?: string | null;
-          curated_by?: string;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          post_id?: string;
-          pick_date?: string;
-          note?: string | null;
-          curated_by?: string;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "decoded_picks_post_id_fkey";
-            columns: ["post_id"];
-            referencedRelation: "posts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      /**
-       * Posts - Main content with images
-       * 591 records
-       */
-      posts: {
-        Row: {
-          id: string;
-          user_id: string;
-          image_url: string | null;
-          media_type: string | null; // 'event', 'paparazzi', etc.
-          media_title: string | null;
-          media_metadata: Json;
-          group_name: string | null;
-          artist_name: string | null;
-          context: string | null; // 'street style', 'street', etc.
-          view_count: number;
-          status: string; // 'active', 'inactive', etc.
-          created_at: string;
-          updated_at: string;
-          trending_score: number | null;
-          post_magazine_id: string | null;
-          ai_summary: string | null;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          image_url?: string | null;
-          media_type?: string | null;
-          media_title?: string | null;
-          media_metadata?: Json;
-          group_name?: string | null;
-          artist_name?: string | null;
-          context?: string | null;
-          view_count?: number;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-          trending_score?: number | null;
-          post_magazine_id?: string | null;
-          ai_summary?: string | null;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          image_url?: string | null;
-          media_type?: string | null;
-          media_title?: string | null;
-          media_metadata?: Json;
-          group_name?: string | null;
-          artist_name?: string | null;
-          context?: string | null;
-          view_count?: number;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-          trending_score?: number | null;
-          post_magazine_id?: string | null;
-          ai_summary?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "posts_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "fk_posts_post_magazine_id";
-            columns: ["post_magazine_id"];
-            referencedRelation: "post_magazines";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      /**
-       * Post Magazines - Editorial magazine content
-       */
-      post_magazines: {
-        Row: {
-          id: string;
-          title: string;
-          subtitle: string | null;
-          keyword: string | null;
-          layout_json: Json | null;
-          status: string;
-          review_summary: string | null;
-          thread_id: string | null;
-          error_log: Json | null;
-          created_at: string;
-          updated_at: string;
-          published_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-          subtitle?: string | null;
-          keyword?: string | null;
-          layout_json?: Json | null;
-          status?: string;
-          review_summary?: string | null;
-          thread_id?: string | null;
-          error_log?: Json | null;
-          created_at?: string;
-          updated_at?: string;
-          published_at?: string | null;
-        };
-        Update: {
-          title?: string;
-          subtitle?: string | null;
-          keyword?: string | null;
-          layout_json?: Json | null;
-          status?: string;
-          review_summary?: string | null;
-          thread_id?: string | null;
-          error_log?: Json | null;
-          updated_at?: string;
-          published_at?: string | null;
-        };
-        Relationships: [];
-      };
-
-      /**
-       * Comments - Post comments
-       * 0 records (empty)
-       */
-      comments: {
-        Row: {
-          id: string;
-          post_id: string;
-          user_id: string;
-          content: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          post_id: string;
-          user_id: string;
-          content: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          post_id?: string;
-          user_id?: string;
-          content?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "comments_post_id_fkey";
-            columns: ["post_id"];
-            referencedRelation: "posts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "comments_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      // =================================================================
-      // USER MANAGEMENT
-      // =================================================================
-
-      /**
-       * Users - User profiles and stats
-       * 3 records
-       */
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          username: string | null;
-          display_name: string | null;
-          avatar_url: string | null;
-          bio: string | null;
-          rank: string | null; // 'Member', etc.
-          total_points: number;
-          is_admin: boolean;
-          ink_credits: number;
-          style_dna: Record<string, unknown> | null;
-          studio_config: Record<string, unknown> | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          email: string;
-          username?: string | null;
-          display_name?: string | null;
-          avatar_url?: string | null;
-          bio?: string | null;
-          rank?: string | null;
-          total_points?: number;
-          is_admin?: boolean;
-          ink_credits?: number;
-          style_dna?: Record<string, unknown> | null;
-          studio_config?: Record<string, unknown> | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          username?: string | null;
-          display_name?: string | null;
-          avatar_url?: string | null;
-          bio?: string | null;
-          rank?: string | null;
-          total_points?: number;
-          is_admin?: boolean;
-          ink_credits?: number;
-          style_dna?: Record<string, unknown> | null;
-          studio_config?: Record<string, unknown> | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-
-      /**
-       * User Social Accounts - OAuth SNS connections
-       */
-      user_social_accounts: {
-        Row: {
-          id: string;
-          user_id: string;
-          provider: string;
-          provider_user_id: string;
-          access_token: string;
-          refresh_token: string | null;
-          last_synced_at: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          provider: string;
-          provider_user_id: string;
-          access_token: string;
-          refresh_token?: string | null;
-          last_synced_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          provider_user_id?: string;
-          access_token?: string;
-          refresh_token?: string | null;
-          last_synced_at?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-
-      /**
-       * User Try-on History - VTON history
-       */
-      user_tryon_history: {
-        Row: {
-          id: string;
-          user_id: string;
-          image_url: string;
-          style_combination: Record<string, unknown> | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          image_url: string;
-          style_combination?: Record<string, unknown> | null;
-          created_at?: string;
-        };
-        Update: {
-          image_url?: string;
-          style_combination?: Record<string, unknown> | null;
-        };
-        Relationships: [];
-      };
-
-      /**
-       * User Events - Behavioral event tracking
-       * Immutable (insert-only), 30-day TTL via pg_cron
-       */
-      user_events: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_type: string; // post_click, post_view, spot_click, search_query, category_filter, dwell_time, scroll_depth
-          entity_id: string | null;
-          session_id: string;
-          page_path: string;
-          metadata: Json | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_type: string;
-          entity_id?: string | null;
-          session_id: string;
-          page_path: string;
-          metadata?: Json | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_type?: string;
-          entity_id?: string | null;
-          session_id?: string;
-          page_path?: string;
-          metadata?: Json | null;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "user_events_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      /**
-       * User Badges - Badge assignments
-       */
-      user_badges: {
-        Row: {
-          user_id: string;
-          badge_id: string;
-          earned_at: string;
-        };
-        Insert: {
-          user_id: string;
-          badge_id: string;
-          earned_at?: string;
-        };
-        Update: {
-          user_id?: string;
-          badge_id?: string;
-          earned_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "user_badges_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "user_badges_badge_id_fkey";
-            columns: ["badge_id"];
-            referencedRelation: "badges";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      // =================================================================
-      // CATEGORIES & CLASSIFICATION
-      // =================================================================
-
-      /**
-       * Categories - Item categories (i18n)
-       * 5 records: wearables, accessories, beauty, lifestyle, other
-       */
-      categories: {
-        Row: {
-          id: string;
-          code: string; // 'wearables', 'accessories', etc.
-          name: I18nText; // { ko: '패션 아이템', en: 'Wearables' }
-          icon_url: string | null;
-          color_hex: string | null;
-          description: string | null;
-          display_order: number;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          code: string;
-          name: I18nText;
-          icon_url?: string | null;
-          color_hex?: string | null;
-          description?: string | null;
-          display_order?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          code?: string;
-          name?: I18nText;
-          icon_url?: string | null;
-          color_hex?: string | null;
-          description?: string | null;
-          display_order?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-
-      /**
-       * Subcategories - Item subcategories (i18n)
-       * 23 records: headwear, eyewear, tops, bottoms, etc.
-       */
-      subcategories: {
-        Row: {
-          id: string;
-          category_id: string;
-          code: string; // 'headwear', 'eyewear', etc.
-          name: I18nText; // { ko: '모자', en: 'Headwear' }
-          description: string | null;
-          display_order: number;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          category_id: string;
-          code: string;
-          name: I18nText;
-          description?: string | null;
-          display_order?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          category_id?: string;
-          code?: string;
-          name?: I18nText;
-          description?: string | null;
-          display_order?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "subcategories_category_id_fkey";
-            columns: ["category_id"];
-            referencedRelation: "categories";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      /**
-       * Badges - Achievement badges
-       * 20 records
-       */
-      badges: {
-        Row: {
-          id: string;
-          type: string; // 'achievement', etc.
-          name: string;
-          description: string;
-          icon_url: string | null;
-          criteria: Json; // { type: 'count', threshold: 1 }
-          rarity: string; // 'common', 'rare', 'epic', 'legendary'
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          type: string;
-          name: string;
-          description: string;
-          icon_url?: string | null;
-          criteria?: Json;
-          rarity?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          type?: string;
-          name?: string;
-          description?: string;
-          icon_url?: string | null;
-          criteria?: Json;
-          rarity?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-
-      // =================================================================
-      // SPOTS & SOLUTIONS (Item Detection/Matching)
-      // =================================================================
-
-      /**
-       * Spots - Item locations in images
-       * 2 records
-       */
-      spots: {
-        Row: {
-          id: string;
-          post_id: string;
-          user_id: string;
-          position_left: string; // Percentage (e.g., "26.26788036410923")
-          position_top: string; // Percentage (e.g., "30.54806828391734")
-          subcategory_id: string;
-          status: string; // 'open', 'solved', etc.
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          post_id: string;
-          user_id: string;
-          position_left: string;
-          position_top: string;
-          subcategory_id: string;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          post_id?: string;
-          user_id?: string;
-          position_left?: string;
-          position_top?: string;
-          subcategory_id?: string;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "spots_post_id_fkey";
-            columns: ["post_id"];
-            referencedRelation: "posts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "spots_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "spots_subcategory_id_fkey";
-            columns: ["subcategory_id"];
-            referencedRelation: "subcategories";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      /**
-       * Solutions - Product matches for spots
-       * 12 records
-       */
-      solutions: {
-        Row: {
-          id: string;
-          spot_id: string;
-          user_id: string;
-          match_type: string | null;
-          title: string;
-
-          price_amount: number | null;
-          price_currency: string; // 'KRW', 'USD', etc.
-          original_url: string;
-          affiliate_url: string | null;
-          thumbnail_url: string | null;
-          description: string;
-          accurate_count: number;
-          different_count: number;
-          is_verified: boolean;
-          is_adopted: boolean;
-          adopted_at: string | null;
-          click_count: number;
-          purchase_count: number;
-          status: string; // 'active', 'inactive', etc.
-          created_at: string;
-          updated_at: string;
-          metadata: Json | null;
-          comment: string | null;
-          qna: Json | null;
-          keywords: string[] | null;
-        };
-        Insert: {
-          id?: string;
-          spot_id: string;
-          user_id: string;
-          match_type?: string | null;
-          title: string;
-
-          price_amount?: number | null;
-          price_currency?: string;
-          original_url: string;
-          affiliate_url?: string | null;
-          thumbnail_url?: string | null;
-          description?: string;
-          accurate_count?: number;
-          different_count?: number;
-          is_verified?: boolean;
-          is_adopted?: boolean;
-          adopted_at?: string | null;
-          click_count?: number;
-          purchase_count?: number;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-          metadata?: Json | null;
-          comment?: string | null;
-          qna?: Json | null;
-          keywords?: string[] | null;
-        };
-        Update: {
-          id?: string;
-          spot_id?: string;
-          user_id?: string;
-          match_type?: string | null;
-          title?: string;
-
-          price_amount?: number | null;
-          price_currency?: string;
-          original_url?: string;
-          affiliate_url?: string | null;
-          thumbnail_url?: string | null;
-          description?: string;
-          accurate_count?: number;
-          different_count?: number;
-          is_verified?: boolean;
-          is_adopted?: boolean;
-          adopted_at?: string | null;
-          click_count?: number;
-          purchase_count?: number;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-          metadata?: Json | null;
-          comment?: string | null;
-          qna?: Json | null;
-          keywords?: string[] | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "solutions_spot_id_fkey";
-            columns: ["spot_id"];
-            referencedRelation: "spots";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "solutions_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      [_ in never]: never;
-    };
-    Enums: {
-      // Note: These are inferred from data, not from actual DB enums
-      post_status: "active" | "inactive" | "pending" | "deleted";
-      spot_status: "open" | "solved" | "closed";
-      solution_status: "active" | "inactive" | "pending" | "deleted";
-      badge_rarity: "common" | "rare" | "epic" | "legendary";
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
-
-// =============================================================================
-// TYPE ALIASES
-// =============================================================================
 
 // Core content
 export type PostRow = Database["public"]["Tables"]["posts"]["Row"];
@@ -813,7 +2021,8 @@ export type UserTryonHistoryRow =
   Database["public"]["Tables"]["user_tryon_history"]["Row"];
 
 // Post Magazines
-export type PostMagazineRow = Database["public"]["Tables"]["post_magazines"]["Row"];
+export type PostMagazineRow =
+  Database["public"]["Tables"]["post_magazines"]["Row"];
 
 // Spots & Solutions
 export type SpotRow = Database["public"]["Tables"]["spots"]["Row"];
@@ -825,34 +2034,6 @@ export type SolutionInsert =
   Database["public"]["Tables"]["solutions"]["Insert"];
 export type SolutionUpdate =
   Database["public"]["Tables"]["solutions"]["Update"];
-
-// =============================================================================
-// UTILITY TYPES
-// =============================================================================
-
-/**
- * Generic table row type extractor
- */
-export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
-
-/**
- * Generic table insert type extractor
- */
-export type TablesInsert<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"];
-
-/**
- * Generic table update type extractor
- */
-export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Update"];
-
-/**
- * Enum type extractor
- */
-export type Enums<T extends keyof Database["public"]["Enums"]> =
-  Database["public"]["Enums"][T];
 
 // =============================================================================
 // LEGACY COMPATIBILITY (deprecated, will be removed)
