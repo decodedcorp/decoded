@@ -292,21 +292,21 @@ export function ImageDetailContent({
           const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
           if (!displayName) return null;
           return (
-            <div className="flex items-center gap-3 px-6 py-3">
+            <div className="flex flex-col items-center gap-2 px-6 py-5">
               {profile?.profileImageUrl ? (
                 <img
                   src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-white/10"
+                  className="w-12 h-12 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/50">
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div>
-                <p className="text-sm font-semibold text-foreground">{displayName}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Artist</p>
+              <div className="text-center">
+                <p className="text-lg font-semibold text-foreground">{displayName}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Artist</p>
               </div>
             </div>
           );
@@ -351,21 +351,21 @@ export function ImageDetailContent({
           const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
           if (!displayName) return null;
           return (
-            <div className="flex items-center gap-3 px-6 py-3">
+            <div className="flex flex-col items-center gap-2 px-6 py-5">
               {profile?.profileImageUrl ? (
                 <img
                   src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-white/10"
+                  className="w-12 h-12 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/50">
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div>
-                <p className="text-sm font-semibold text-foreground">{displayName}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Artist</p>
+              <div className="text-center">
+                <p className="text-lg font-semibold text-foreground">{displayName}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Artist</p>
               </div>
             </div>
           );

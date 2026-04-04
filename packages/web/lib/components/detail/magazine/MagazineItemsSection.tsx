@@ -195,7 +195,7 @@ export function MagazineItemsSection({
                 className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
               >
                 {/* Item Image */}
-                <div className={`w-full shrink-0 ${compact ? "md:w-36 lg:w-40" : "md:w-60 lg:w-64"}`}>
+                <div className={`w-full shrink-0 ${compact ? "md:w-48 lg:w-52" : "md:w-60 lg:w-64"}`}>
                   {item.image_url ? (
                     <ItemImage
                       src={item.image_url}
@@ -254,11 +254,11 @@ export function MagazineItemsSection({
                           <img
                             src={`/api/v1/image-proxy?url=${encodeURIComponent(bp.profileImageUrl)}`}
                             alt={bp.name}
-                            className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                           />
                         );
                       })()}
-                      <p className={`typography-overline text-muted-foreground ${compact ? "text-[10px]" : ""}`}>
+                      <p className="typography-overline text-muted-foreground">
                         {item.brand}
                       </p>
                     </div>
