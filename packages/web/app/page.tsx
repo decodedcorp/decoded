@@ -13,15 +13,18 @@ import {
   HeroItemSync,
   // TrendingPostsSection,  // #88: temporarily disabled
   // HelpFindSection,        // #88: temporarily disabled
-  DecodedPickSection,
+  EditorialSection,
+  TrendingListSection,
+  // DecodedPickSection,  // #91: temporarily disabled
 } from "@/lib/components/main";
 import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
+import type { TrendingKeywordItem } from "@/lib/components/main/TrendingListSection";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 import type { PaginatedResponsePostListItemDataItem } from "@/lib/api/generated/models";
 import { serverApiGet } from "@/lib/api/server-instance";
 import {
-  fetchDecodedPickServer,
+  // fetchDecodedPickServer,  // #91: temporarily disabled
   fetchWeeklyBestPostsServer,
   fetchWhatsNewPostsServer,
   fetchMagazinePostsServer,
@@ -78,7 +81,7 @@ export default async function Home({
     popularPosts,
     recentPosts,
     magazinePosts,
-    decodedPick,
+    // decodedPick,  // #91: temporarily disabled
     artistProfileMap,
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30", async () =>
@@ -90,7 +93,7 @@ export default async function Home({
     fetchPosts("has_magazine=true&per_page=8", async () =>
       (await fetchMagazinePostsServer(8)).map(magazineToApiPost)
     ),
-    fetchDecodedPickServer(),
+    // fetchDecodedPickServer(),  // #91: temporarily disabled
     buildArtistProfileMap(),
   ]);
 
@@ -231,32 +234,74 @@ export default async function Home({
 
   const editorialMagazineData: EditorialMagazineData = { cards: magazineCards };
 
-  // --- Decoded Pick ---
+  // --- Decoded Pick --- (#91: temporarily disabled)
 
-  const pickStyleData: StyleCardData | undefined =
-    decodedPick && decodedPick.post.imageUrl
-      ? {
-          id: decodedPick.post.id,
-          title: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Decoded Pick",
-          description: decodedPick.post.context || "",
-          artistName: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Unknown",
-          imageUrl: proxyImg(decodedPick.post.imageUrl),
-          link: `/posts/${decodedPick.post.id}`,
-          spots: decodedPick.spots?.map((s) => ({
-            id: s.id, x: parseFloat(s.position_left) || 50, y: parseFloat(s.position_top) || 50,
-            label: s.solutions?.[0]?.title || "Item",
-          })),
-        }
-      : undefined;
+  // const pickStyleData: StyleCardData | undefined =
+  //   decodedPick && decodedPick.post.imageUrl
+  //     ? {
+  //         id: decodedPick.post.id,
+  //         title: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Decoded Pick",
+  //         description: decodedPick.post.context || "",
+  //         artistName: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Unknown",
+  //         imageUrl: proxyImg(decodedPick.post.imageUrl),
+  //         link: `/posts/${decodedPick.post.id}`,
+  //         spots: decodedPick.spots?.map((s) => ({
+  //           id: s.id, x: parseFloat(s.position_left) || 50, y: parseFloat(s.position_top) || 50,
+  //           label: s.solutions?.[0]?.title || "Item",
+  //         })),
+  //       }
+  //     : undefined;
 
-  const pickItems: ItemCardData[] | undefined = decodedPick
-    ? decodedPick.items.map((item) => ({
-        id: String(item.id),
-        brand: item.brand || "Unknown",
-        name: item.name || item.label,
-        imageUrl: item.imageUrl,
-        link: `/items/${item.id}`,
-      }))
+  // const pickItems: ItemCardData[] | undefined = decodedPick
+  //   ? decodedPick.items.map((item) => ({
+  //       id: String(item.id),
+  //       brand: item.brand || "Unknown",
+  //       name: item.name || item.label,
+  //       imageUrl: item.imageUrl,
+  //       link: `/items/${item.id}`,
+  //     }))
+  //   : undefined;
+
+  // --- Editorial + Trending 2-column (#89) ---
+
+  const artistCounts = new Map<string, { count: number; image: string }>();
+  for (const p of [...popularPosts, ...recentPosts]) {
+    const key = p.artist_name || p.group_name || "";
+    if (!key) continue;
+    const existing = artistCounts.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      artistCounts.set(key, { count: 1, image: p.image_url });
+    }
+  }
+
+  const trendingKeywords: TrendingKeywordItem[] = [...artistCounts.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 8)
+    .map(([name, { image }]) => ({
+      id: `artist-${name}`,
+      label: enrichArtistName(name).displayName || name,
+      href: `/search?q=${encodeURIComponent(name)}`,
+      image: proxyImg(image),
+    }));
+
+  const editorialStyle: StyleCardData | undefined = popularPosts[0]
+    ? {
+        id: popularPosts[0].id,
+        title: enrichArtistName(popularPosts[0].artist_name).displayName || "Featured",
+        description: popularPosts[0].context || popularPosts[0].title || "",
+        artistName: enrichArtistName(popularPosts[0].artist_name).displayName || "Unknown",
+        imageUrl: proxyImg(popularPosts[0].image_url),
+        link: `/posts/${popularPosts[0].id}`,
+        items: popularPosts.slice(1, 4).map((p) => ({
+          id: p.id,
+          label: enrichArtistName(p.artist_name).displayName || "Item",
+          name: enrichArtistName(p.artist_name).displayName || "Item",
+          brand: p.group_name || "",
+          imageUrl: proxyImg(p.image_url),
+        })),
+      }
     : undefined;
 
   // --- MasonryGrid ---
@@ -283,19 +328,24 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      {/* #88: temporarily disabled */}
-      {/* <TrendingPostsSection posts={trendingPostCards} /> */}
-      {/* <HelpFindSection posts={helpFindCards} /> */}
+      {/* #89: 2-column Editorial + Trending */}
+      <section className="py-10 lg:py-14 px-6 md:px-12 lg:px-20">
+        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6">
+          <EditorialSection style={editorialStyle} embedded />
+          <TrendingListSection keywords={trendingKeywords} embedded />
+        </div>
+      </section>
 
       <EditorialMagazine data={editorialMagazineData} />
 
-      <DecodedPickSection
+      {/* #91: Decoded's Pick temporarily disabled */}
+      {/* <DecodedPickSection
         styleData={pickStyleData}
         items={pickItems}
         pickDate={decodedPick?.pickDate ?? null}
         curatedBy={decodedPick?.curatedBy ?? null}
         note={decodedPick?.note ?? null}
-      />
+      /> */}
 
       <section className="relative">
         <MasonryGrid items={gridItems as GridItemData[]} />
