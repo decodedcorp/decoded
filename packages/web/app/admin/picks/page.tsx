@@ -11,7 +11,7 @@ import {
 } from "@/lib/hooks/admin/useAdminPicks";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
 import type { DecodedPickListItem } from "@/lib/api/admin/picks";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createBrowserClient } from "@supabase/supabase-js";
 
 // ─── Post search hook (Supabase direct for autocomplete) ────────────────────
 

@@ -3,6 +3,7 @@
 //! 인덱스별 searchable/filterable attributes 설정
 
 use meilisearch_sdk::client::Client;
+use meilisearch_sdk::settings::LocalizedAttributes;
 
 use super::config::{IndexName, SearchError};
 
@@ -64,6 +65,22 @@ impl IndexConfig {
             .await
             .map_err(|e| {
                 SearchError::ConfigError(format!("Failed to set sortable attributes: {}", e))
+            })?;
+
+        // Localized attributes 설정 (한국어 검색 지원)
+        let localized_attrs = vec![LocalizedAttributes {
+            locales: vec!["kor".to_string(), "eng".to_string()],
+            attribute_patterns: vec![
+                "artist_name".to_string(),
+                "group_name".to_string(),
+                "title".to_string(),
+            ],
+        }];
+        index
+            .set_localized_attributes(&localized_attrs)
+            .await
+            .map_err(|e| {
+                SearchError::ConfigError(format!("Failed to set localized attributes: {}", e))
             })?;
 
         Ok(())

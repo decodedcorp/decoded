@@ -123,12 +123,16 @@ export default function EditorialMagazine({
           Editorial
         </p>
         <h2 className="text-3xl md:text-5xl font-bold text-[var(--mag-text)]">
-          The <span className="text-[var(--mag-accent)]">Magazine</span>
+          {data.featuredArtist ? (
+            <>{data.featuredArtist}&apos;s <span className="text-[var(--mag-accent)]">Magazine</span></>
+          ) : (
+            <>Artist&apos;s <span className="text-[var(--mag-accent)]">Magazine</span></>
+          )}
         </h2>
       </div>
 
       {/* Horizontal track — this element is translated on scroll */}
-      <div className="relative h-[80vh] overflow-visible">
+      <div className="relative h-[85vh] overflow-visible">
         <div
           ref={trackRef}
           className="flex gap-6 px-6 h-full items-center will-change-transform"
@@ -139,7 +143,7 @@ export default function EditorialMagazine({
               <Link
                 key={`${card.id}-${idx}`}
                 href={card.link || "#"}
-                className="flex-none w-[70vw] md:w-[40vw] lg:w-[30vw] h-[65vh] rounded-2xl overflow-hidden
+                className="flex-none w-[70vw] md:w-[40vw] lg:w-[32vw] h-[70vh] rounded-2xl overflow-hidden
                            bg-neutral-900 border border-neutral-800 relative group will-change-transform block"
                 ref={(el) => {
                   cardRefs.current[idx] = el;

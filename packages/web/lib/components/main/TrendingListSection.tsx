@@ -225,7 +225,7 @@ export function TrendingListSection({
       <div
         className="relative rounded-xl overflow-hidden bg-[#0a0a0a] border border-white/[0.06]"
         style={{
-          height: embedded ? "calc(100% - 52px)" : "clamp(320px, 50vh, 500px)",
+          height: embedded ? "calc(100% - 52px)" : "clamp(420px, 60vh, 600px)",
         }}
       >
         <nav className="flex flex-col h-full">

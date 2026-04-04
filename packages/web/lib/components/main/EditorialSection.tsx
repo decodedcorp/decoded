@@ -19,9 +19,9 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
 
   const content = (
     <Link href={style.link} className="group block h-full">
-      <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_260px] rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/[0.06]">
+      <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_280px] rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/[0.06]">
         {/* Left: Editorial image — full image with blur bg */}
-        <div className="relative aspect-[16/10] lg:aspect-auto overflow-hidden isolate">
+        <div className="relative aspect-[4/3] lg:aspect-auto overflow-hidden isolate">
           <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
             {style.imageUrl ? (
               <PostImage
@@ -60,7 +60,7 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
         {/* Right: Trending items */}
         <div className="bg-[#1a1a1a] p-5 flex flex-col">
           <h3 className="text-base font-bold uppercase tracking-[0.12em] text-white mb-5">
-            Trending
+            Items
           </h3>
 
           <div className="flex flex-col gap-4 flex-1 justify-center">
@@ -78,13 +78,13 @@ export function EditorialSection({ style, embedded }: EditorialSectionProps) {
                 className="flex items-center gap-3"
               >
                 {/* Thumbnail */}
-                <div className="relative w-[72px] h-[72px] shrink-0 rounded-lg overflow-hidden bg-neutral-800">
+                <div className="relative w-[80px] h-[80px] shrink-0 rounded-lg overflow-hidden bg-neutral-800">
                   {item.imageUrl && (
                     <Image
                       src={item.imageUrl}
                       alt={item.name}
                       fill
-                      sizes="72px"
+                      sizes="80px"
                       className="object-cover"
                     />
                   )}
