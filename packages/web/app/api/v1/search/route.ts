@@ -72,13 +72,42 @@ async function supabaseSearchFallback(searchParams: URLSearchParams) {
       .not("image_url", "is", null);
 
     // Text search: match against artist_name, group_name, or context
+    // Expand query using synonyms table for cross-language matching (e.g. 제니 → Jennie)
     // Sanitize to prevent PostgREST filter injection via special chars
     if (q.trim()) {
       const sanitized = q.replace(/[%.,()"'\\]/g, "");
       if (sanitized) {
-        query = query.or(
-          `artist_name.ilike.%${sanitized}%,group_name.ilike.%${sanitized}%,context.ilike.%${sanitized}%`
-        );
+        // Look up synonym expansions
+        const searchTerms = [sanitized];
+        try {
+          const { data: synonymRows } = await supabase
+            .from("synonyms")
+            .select("canonical, synonyms")
+            .eq("is_active", true)
+            .or(
+              `canonical.ilike.%${sanitized}%,synonyms.cs.{${sanitized}}`
+            );
+          if (synonymRows?.length) {
+            for (const row of synonymRows) {
+              if (row.canonical && !searchTerms.includes(row.canonical)) {
+                searchTerms.push(row.canonical);
+              }
+              for (const syn of row.synonyms ?? []) {
+                if (!searchTerms.includes(syn)) searchTerms.push(syn);
+              }
+            }
+          }
+        } catch {
+          // Synonym lookup failed — continue with original term only
+        }
+
+        const orClauses = searchTerms
+          .map(
+            (t) =>
+              `artist_name.ilike.%${t}%,group_name.ilike.%${t}%,context.ilike.%${t}%`
+          )
+          .join(",");
+        query = query.or(orClauses);
       }
     }
 
