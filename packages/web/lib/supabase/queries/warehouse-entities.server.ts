@@ -15,7 +15,7 @@ import type { ArtistRow, GroupRow, BrandRow } from "@/lib/supabase/warehouse-typ
  * @param limit - Maximum number of artists to fetch (default: 50)
  * @returns Array of ArtistRow, empty on error
  */
-export async function fetchWarehouseArtists(limit = 50): Promise<ArtistRow[]> {
+export async function fetchWarehouseArtists(limit = 500): Promise<ArtistRow[]> {
   try {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
@@ -42,7 +42,7 @@ export async function fetchWarehouseArtists(limit = 50): Promise<ArtistRow[]> {
  * @param limit - Maximum number of groups to fetch (default: 50)
  * @returns Array of GroupRow, empty on error
  */
-export async function fetchWarehouseGroups(limit = 50): Promise<GroupRow[]> {
+export async function fetchWarehouseGroups(limit = 500): Promise<GroupRow[]> {
   try {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
