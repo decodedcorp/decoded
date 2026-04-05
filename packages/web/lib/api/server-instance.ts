@@ -17,11 +17,12 @@ interface ServerFetchOptions {
 }
 
 function getBaseUrl(): string {
-  // Explicit backend URL (recommended)
+  // Explicit backend URL (recommended for production with Rust backend)
   if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
-  // Vercel/production — use Next.js proxy
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   // Local dev — default Rust backend port
+  // NOTE: Do NOT fall back to NEXT_PUBLIC_SITE_URL — that causes self-referencing
+  // requests on Vercel (server component → own serverless function → deadlock).
+  // When no backend is configured, serverApiGet will throw → Supabase fallback.
   return "http://localhost:8000";
 }
 
