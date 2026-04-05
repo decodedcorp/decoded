@@ -243,10 +243,14 @@ export function useInfinitePosts(params: {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
-      // explore_posts is a DB view not yet in generated Supabase types
-      let query = (supabaseBrowserClient as any)
-        .from("explore_posts")
-        .select("*", { count: "exact" });
+      // Query posts directly with same filters as the old explore_posts view
+      let query = supabaseBrowserClient
+        .from("posts")
+        .select("*, post_magazines!inner(title)", { count: "exact" })
+        .eq("status", "active")
+        .not("image_url", "is", null)
+        .eq("created_with_solutions", true)
+        .eq("post_magazines.status", "published");
 
       // category filter (flat) — skip if contextType is set (hierarchical takes precedence)
       if (category && category !== "all" && !contextType) {
