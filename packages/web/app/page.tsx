@@ -181,6 +181,48 @@ export default async function Home({
     }
   }
 
+  // Enrich hero posts with spots/solutions for item overlay
+  try {
+    const supabase = await createSupabaseServerClient();
+    const heroPostIds = heroPosts.map((hp) => hp.id);
+    const { data: heroSpots } = await supabase
+      .from("spots")
+      .select("id, post_id, position_top, position_left, solutions(id, title, thumbnail_url, metadata)")
+      .in("post_id", heroPostIds);
+
+    if (heroSpots) {
+      const spotsByPost = new Map<string, typeof heroSpots>();
+      for (const spot of heroSpots) {
+        const existing = spotsByPost.get(spot.post_id) ?? [];
+        existing.push(spot);
+        spotsByPost.set(spot.post_id, existing);
+      }
+      for (const hp of heroPosts) {
+        const spots = spotsByPost.get(hp.id) ?? [];
+        hp.items = spots.flatMap((spot: any) =>
+          (spot.solutions || [])
+            .filter((sol: any) => sol.thumbnail_url)
+            .map((sol: any) => ({
+              id: sol.id,
+              label: sol.title,
+              name: sol.title,
+              brand: (sol.metadata as any)?.brand || "",
+              imageUrl: proxyImg(sol.thumbnail_url),
+            }))
+        ).slice(0, 4);
+        if (hp.items.length > 0) {
+          const post = recentPosts.find((p) => p.id === hp.id) ?? popularPosts.find((p) => p.id === hp.id);
+          if (post) {
+            hp.heroData = buildHeroFromApiPost(
+              post,
+              buildSpots(hp.items.map((it) => ({ ...it, label: it.name })))
+            );
+          }
+        }
+      }
+    }
+  } catch { /* hero spots enrichment failed — show without items */ }
+
   // --- Trending on Decoded --- (#88: temporarily disabled)
   // const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
   //   const { displayName } = enrichArtistName(p.artist_name || p.group_name);
