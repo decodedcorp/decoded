@@ -29,6 +29,7 @@ import type {
   MetadataResponse,
   AffiliateLinkResponse,
 } from "@/lib/api/generated/models";
+import { supabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
  * Cache Invalidation Boundaries (MIG-09)
@@ -82,11 +83,38 @@ export function useSolutions(
 // ============================================================
 
 /** Solutions grouped by spot ID */
+/** Fetch solutions for a spot via Supabase (no Rust backend needed) */
+async function fetchSolutionsFromSupabase(spotId: string): Promise<GeneratedSolutionListItem[]> {
+  const { data, error } = await supabaseBrowserClient
+    .from("solutions")
+    .select("*, profiles:user_id(id, username, avatar_url)")
+    .eq("spot_id", spotId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title ?? "",
+    thumbnail_url: row.thumbnail_url,
+    original_url: row.original_url,
+    affiliate_url: row.affiliate_url,
+    link_type: row.link_type,
+    metadata: row.metadata,
+    brand_id: row.brand_id,
+    match_type: row.match_type,
+    is_verified: row.is_verified ?? false,
+    is_adopted: row.is_adopted ?? false,
+    created_at: row.created_at,
+    vote_stats: { accurate: 0, different: 0 },
+    user: { id: row.user_id, username: "", email: "", rank: "Member", total_points: 0, followers_count: 0, following_count: 0, is_admin: false },
+  } as GeneratedSolutionListItem));
+}
+
 export function useAllSolutionsForSpots(spotIds: string[]) {
   const results = useQueries({
     queries: spotIds.map((spotId) => ({
       queryKey: solutionKeys.list(spotId),
-      queryFn: () => listSolutions(spotId),
+      queryFn: () => fetchSolutionsFromSupabase(spotId),
       enabled: !!spotId,
       staleTime: 1000 * 60,
     })),
