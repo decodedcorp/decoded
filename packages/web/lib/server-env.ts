@@ -1,8 +1,9 @@
-function requireEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) throw new Error(`Missing required env var: ${name}`);
-  return val;
+function getEnvOrEmpty(name: string): string {
+  return process.env[name] ?? "";
 }
 
-/** Evaluated at module load — fails fast if missing */
-export const API_BASE_URL = requireEnv("API_BASE_URL");
+/**
+ * Backend API base URL. Empty when no Rust backend is configured —
+ * API routes will return 502 and clients fall back to Supabase.
+ */
+export const API_BASE_URL = getEnvOrEmpty("API_BASE_URL");
