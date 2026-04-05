@@ -33,10 +33,17 @@ export async function GET(request: NextRequest) {
       } catch {
         data = { message: `Backend error: ${response.status}` };
       }
-      return NextResponse.json(data, { status: response.status });
+      // If backend returns empty results for a non-empty query, fall through
+      // to Supabase which has synonym expansion (한글→영문 매핑)
+      const q = searchParams.get("q")?.trim();
+      const hasResults = Array.isArray(data?.data) && data.data.length > 0;
+      if (hasResults || !q) {
+        return NextResponse.json(data, { status: response.status });
+      }
+      console.warn(`[Search GET] Backend returned empty for "${q}", trying Supabase synonyms`);
+    } else {
+      console.warn(`[Search GET] Backend returned ${response.status}, falling back to Supabase`);
     }
-
-    console.warn(`[Search GET] Backend returned ${response.status}, falling back to Supabase`);
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.warn("Search proxy error, falling back to Supabase:", error);
@@ -67,9 +74,11 @@ async function supabaseSearchFallback(searchParams: URLSearchParams) {
 
     let query = supabase
       .from("posts")
-      .select("*", { count: "exact" })
+      .select("*, post_magazines!inner(status)", { count: "exact" })
       .eq("status", "active")
-      .not("image_url", "is", null);
+      .not("image_url", "is", null)
+      .eq("created_with_solutions", true)
+      .eq("post_magazines.status", "published");
 
     // Text search: match against artist_name, group_name, or context
     // Expand query using synonyms table for cross-language matching (e.g. 제니 → Jennie)
