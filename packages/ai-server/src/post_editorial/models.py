@@ -46,6 +46,7 @@ class SpotItemWithEditorial(BaseModel):
     solution_id: str | None = None
     title: str
     brand: str | None = None
+    brand_logo_url: str | None = None
     image_url: str | None = None
     original_url: str | None = None
     metadata: dict = {}

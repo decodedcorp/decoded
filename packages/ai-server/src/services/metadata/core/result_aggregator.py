@@ -5,20 +5,21 @@ import json
 import time
 from src.database.models.batch import ProcessedDataBatch, BatchStatistics
 from src.database.models.content import LinkProcessingResult, ImageProcessingResult, ProcessingStatus
-from src.grpc.client.backend_client import GRPCBackendClient
 from src.managers.redis._manager import RedisManager
 from src.config._environment import Environment
 
 
 class ResultAggregator:
     """Aggregates and sends processing results to backend"""
-    
+
     def __init__(self, environment: Environment, redis_manager: RedisManager):
         self.environment = environment
         self.redis_manager = redis_manager
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize gRPC backend client
+
+        # Lazy import to avoid circular dependency
+        from src.grpc.client.backend_client import GRPCBackendClient
+
         self.grpc_backend_client = GRPCBackendClient(
             host=environment.grpc_backend_host,
             port=environment.grpc_backend_port,

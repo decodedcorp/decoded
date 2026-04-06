@@ -12,6 +12,7 @@ class SolutionData(BaseModel):
     id: str
     spot_id: str
     title: str
+    brand_id: str | None = None
     link_type: str | None = None
     original_url: str | None = None
     affiliate_url: str | None = None
@@ -49,7 +50,9 @@ class PostData(BaseModel):
     media_type: str = "image"
     title: str | None = None
     artist_name: str | None = None
+    artist_id: str | None = None
     group_name: str | None = None
+    group_id: str | None = None
     context: str | None = None
     view_count: int = 0
     trending_score: float | None = None
