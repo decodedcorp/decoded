@@ -27,10 +27,30 @@ pub async fn generate_post_magazine(
         .await?
         .ok_or_else(|| AppError::not_found(format!("Post {} not found", post_id)))?;
 
-    if post.post_magazine_id.is_some() {
-        return Err(AppError::bad_request(
-            "Post already has a magazine associated",
-        ));
+    if let Some(existing_magazine_id) = post.post_magazine_id {
+        let existing = PostMagazines::find_by_id(existing_magazine_id)
+            .one(db)
+            .await?;
+
+        match existing.as_ref().map(|m| m.status.as_str()) {
+            Some("published") => {
+                return Err(AppError::bad_request(
+                    "Post already has a published magazine",
+                ));
+            }
+            Some("generating") => {
+                if let Some(ref mag) = existing {
+                    let age = chrono::Utc::now()
+                            - mag.updated_at.with_timezone(&chrono::Utc);
+                    if age.num_minutes() < 30 {
+                        return Err(AppError::bad_request(
+                            "Magazine is currently being generated",
+                        ));
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     let spots_with_solutions = Spots::find()
@@ -53,6 +73,7 @@ pub async fn generate_post_magazine(
                 id: s.id.to_string(),
                 spot_id: s.spot_id.to_string(),
                 title: s.title,
+                brand_id: s.brand_id.map(|id| id.to_string()),
                 link_type: s.link_type,
                 original_url: s.original_url,
                 affiliate_url: s.affiliate_url,
@@ -82,7 +103,9 @@ pub async fn generate_post_magazine(
         media_type: post.media_type.clone(),
         title: post.title.clone(),
         artist_name: post.artist_name.clone(),
+        artist_id: post.artist_id.map(|id| id.to_string()),
         group_name: post.group_name.clone(),
+        group_id: post.group_id.map(|id| id.to_string()),
         context: post.context.clone(),
         view_count: post.view_count,
         trending_score: post.trending_score,

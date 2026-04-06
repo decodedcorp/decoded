@@ -18,6 +18,8 @@ fn sample_post(m: &str) -> PostModel {
         media_metadata: None,
         group_name: None,
         artist_name: None,
+        artist_id: None,
+        group_id: None,
         context: None,
         view_count: 3,
         status: "active".into(),

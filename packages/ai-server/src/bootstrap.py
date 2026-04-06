@@ -7,12 +7,11 @@ from src.api.metadata_controller import router as metadata_router
 from src.config import Application
 from src.middleware import global_exception_handler, logging_middleware
 
-from .app import _init_sentry
-
 
 def create_app(application: Application) -> FastAPI:
     """기본 FastAPI 앱 생성 및 동기적 설정"""
     # Sentry는 FastAPI 인스턴스 생성 전에 초기화해야 한다
+    from .app import _init_sentry
     _init_sentry()
     environment = application.environment()
 

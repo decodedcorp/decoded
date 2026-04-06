@@ -24,9 +24,6 @@ pub struct Model {
     #[sea_orm(nullable)]
     pub review_summary: Option<String>,
 
-    #[sea_orm(nullable)]
-    pub thread_id: Option<String>,
-
     #[sea_orm(nullable, column_type = "JsonBinary")]
     pub error_log: Option<Json>,
 
