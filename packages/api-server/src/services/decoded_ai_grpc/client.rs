@@ -8,8 +8,8 @@ use crate::error::AppError;
 use crate::grpc::inbound::{
     queue_client::QueueClient, AnalyzeImageRequest, AnalyzeImageResponse,
     AnalyzeLinkDirectResponse, AnalyzeLinkRequest, AnalyzeLinkResponse, CategoryRule,
-    ExtractOgDataRequest, ExtractOgDataResponse, ProcessPostEditorialRequest,
-    ProcessPostEditorialResponse,
+    ExtractOgDataRequest, ExtractOgDataResponse, ExtractPostContextRequest,
+    ExtractPostContextResponse, ProcessPostEditorialRequest, ProcessPostEditorialResponse,
 };
 use crate::observability::grpc::record_decoded_ai_call;
 
@@ -220,5 +220,26 @@ impl DecodedAIGrpcClient {
             context: response.context,
             items,
         })
+    }
+
+    /// 포스트 이미지에서 context/style_tags를 추출합니다 (Ollama local inference).
+    pub async fn extract_post_context(
+        &self,
+        post_id: String,
+        image_url: String,
+    ) -> Result<ExtractPostContextResponse, Box<dyn std::error::Error>> {
+        let start = Instant::now();
+        let mut client = self.client.clone();
+        let request = tonic::Request::new(ExtractPostContextRequest {
+            post_id,
+            image_url,
+        });
+        let res = async {
+            let response = client.extract_post_context(request).await?;
+            Ok::<_, Box<dyn std::error::Error>>(response.into_inner())
+        }
+        .await;
+        record_decoded_ai_call("extract_post_context", res.is_ok(), start.elapsed());
+        res
     }
 }

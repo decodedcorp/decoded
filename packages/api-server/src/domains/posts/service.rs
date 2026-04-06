@@ -144,6 +144,35 @@ async fn create_post_transaction(
 }
 
 /// Post 생성 (Solution 없이, 이미지 업로드 포함)
+/// 포스트 이미지에서 context/style_tags 자동 추출 (fire-and-forget)
+fn spawn_extract_post_context(state: &AppState, post_id: Uuid, image_url: String) {
+    let ai_client = state.decoded_ai_client.clone();
+    tokio::spawn(async move {
+        match ai_client
+            .extract_post_context(post_id.to_string(), image_url)
+            .await
+        {
+            Ok(resp) if resp.success => {
+                tracing::info!(
+                    "Post {} context extracted: {}",
+                    post_id,
+                    resp.context
+                );
+            }
+            Ok(resp) => {
+                tracing::warn!(
+                    "Post {} context extraction failed: {}",
+                    post_id,
+                    resp.error_message
+                );
+            }
+            Err(e) => {
+                tracing::warn!("Post {} context extraction gRPC error: {}", post_id, e);
+            }
+        }
+    });
+}
+
 pub async fn create_post_without_solutions(
     state: &AppState,
     user_id: Uuid,
@@ -202,6 +231,9 @@ pub async fn create_post_without_solutions(
     if let Err(e) = search_result {
         tracing::warn!("Failed to index post {} to Meilisearch: {}", post.id, e);
     }
+
+    // AI context/style_tags 추출 (비동기, fire-and-forget)
+    spawn_extract_post_context(state, post.id, upload_response.image_url);
 
     Ok(post)
 }
@@ -291,6 +323,9 @@ pub async fn create_post_with_solutions(
     if let Err(e) = search_result {
         tracing::warn!("Failed to index post {} to Meilisearch: {}", post.id, e);
     }
+
+    // AI context/style_tags 추출 (비동기, fire-and-forget)
+    spawn_extract_post_context(state, post.id, upload_response.image_url.clone());
 
     Ok(CreatePostWithSolutionsResponse {
         post,

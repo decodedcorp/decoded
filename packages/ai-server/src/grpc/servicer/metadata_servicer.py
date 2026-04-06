@@ -1,11 +1,13 @@
 import grpc
 import base64
+import os
 from typing import Optional
 from src.grpc.proto.inbound import inbound_pb2, inbound_pb2_grpc
 from src.config._logger import LoggerService
 from src.managers.redis._manager import RedisManager
 from src.database.models.content import ProcessingStatus
 from src.services.metadata.core import MetadataExtractService
+from src.services.post_context import PostContextService
 
 
 class MetadataServicer(inbound_pb2_grpc.QueueServicer):
@@ -416,4 +418,47 @@ class MetadataServicer(inbound_pb2_grpc.QueueServicer):
                 subject="",
                 title="",
                 error_message=str(e)
+            )
+
+    async def ExtractPostContext(
+        self,
+        request: inbound_pb2.ExtractPostContextRequest,
+        context,
+    ) -> inbound_pb2.ExtractPostContextResponse:
+        """Extract context and style_tags from post image using Ollama vision."""
+        try:
+            post_id = request.post_id
+            image_url = request.image_url
+
+            if not post_id or not image_url:
+                raise ValueError("post_id and image_url are required")
+
+            self.logger.info(f"ExtractPostContext for post {post_id}")
+
+            service = PostContextService()
+            supabase_url = os.environ.get("SUPABASE_URL", "")
+            supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+            result = await service.extract_and_update(
+                post_id, image_url, supabase_url, supabase_key
+            )
+
+            return inbound_pb2.ExtractPostContextResponse(
+                success=True,
+                context=result.get("context", ""),
+                style_tags=result.get("style_tags", []),
+                mood=result.get("mood", ""),
+                setting=result.get("setting", ""),
+                error_message="",
+            )
+
+        except Exception as e:
+            self.logger.error(f"ExtractPostContext failed: {str(e)}", exc_info=True)
+            return inbound_pb2.ExtractPostContextResponse(
+                success=False,
+                context="",
+                style_tags=[],
+                mood="",
+                setting="",
+                error_message=str(e),
             )

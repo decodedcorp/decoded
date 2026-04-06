@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-from src.grpc.proto.inbound import inbound_pb2 as inbound_dot_inbound__pb2
+from . import inbound_pb2 as inbound__pb2
 
-GRPC_GENERATED_VERSION = '1.76.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in inbound/inbound_pb2_grpc.py depends on'
+        + ' but the generated code in inbound_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,52 +34,68 @@ class QueueStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.ProcessDataBatch = channel.unary_unary(
+                '/inbound.Queue/ProcessDataBatch',
+                request_serializer=inbound__pb2.ProcessDataBatchRequest.SerializeToString,
+                response_deserializer=inbound__pb2.ProcessDataBatchResponse.FromString,
+                _registered_method=True)
         self.ExtractOGData = channel.unary_unary(
                 '/inbound.Queue/ExtractOGData',
-                request_serializer=inbound_dot_inbound__pb2.ExtractOGDataRequest.SerializeToString,
-                response_deserializer=inbound_dot_inbound__pb2.ExtractOGDataResponse.FromString,
+                request_serializer=inbound__pb2.ExtractOGDataRequest.SerializeToString,
+                response_deserializer=inbound__pb2.ExtractOGDataResponse.FromString,
                 _registered_method=True)
         self.AnalyzeLink = channel.unary_unary(
                 '/inbound.Queue/AnalyzeLink',
-                request_serializer=inbound_dot_inbound__pb2.AnalyzeLinkRequest.SerializeToString,
-                response_deserializer=inbound_dot_inbound__pb2.AnalyzeLinkResponse.FromString,
+                request_serializer=inbound__pb2.AnalyzeLinkRequest.SerializeToString,
+                response_deserializer=inbound__pb2.AnalyzeLinkResponse.FromString,
                 _registered_method=True)
         self.AnalyzeLinkDirect = channel.unary_unary(
                 '/inbound.Queue/AnalyzeLinkDirect',
-                request_serializer=inbound_dot_inbound__pb2.AnalyzeLinkRequest.SerializeToString,
-                response_deserializer=inbound_dot_inbound__pb2.AnalyzeLinkDirectResponse.FromString,
+                request_serializer=inbound__pb2.AnalyzeLinkRequest.SerializeToString,
+                response_deserializer=inbound__pb2.AnalyzeLinkDirectResponse.FromString,
                 _registered_method=True)
         self.AnalyzeImage = channel.unary_unary(
                 '/inbound.Queue/AnalyzeImage',
-                request_serializer=inbound_dot_inbound__pb2.AnalyzeImageRequest.SerializeToString,
-                response_deserializer=inbound_dot_inbound__pb2.AnalyzeImageResponse.FromString,
+                request_serializer=inbound__pb2.AnalyzeImageRequest.SerializeToString,
+                response_deserializer=inbound__pb2.AnalyzeImageResponse.FromString,
                 _registered_method=True)
         self.ProcessPostEditorial = channel.unary_unary(
                 '/inbound.Queue/ProcessPostEditorial',
-                request_serializer=inbound_dot_inbound__pb2.ProcessPostEditorialRequest.SerializeToString,
-                response_deserializer=inbound_dot_inbound__pb2.ProcessPostEditorialResponse.FromString,
+                request_serializer=inbound__pb2.ProcessPostEditorialRequest.SerializeToString,
+                response_deserializer=inbound__pb2.ProcessPostEditorialResponse.FromString,
+                _registered_method=True)
+        self.ExtractPostContext = channel.unary_unary(
+                '/inbound.Queue/ExtractPostContext',
+                request_serializer=inbound__pb2.ExtractPostContextRequest.SerializeToString,
+                response_deserializer=inbound__pb2.ExtractPostContextResponse.FromString,
                 _registered_method=True)
 
 
 class QueueServicer(object):
     """Missing associated documentation comment in .proto file."""
 
+    def ProcessDataBatch(self, request, context):
+        """Existing batch processing
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ExtractOGData(self, request, context):
-        """OG metadata extraction (synchronous)
+        """New separated flow methods
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def AnalyzeLink(self, request, context):
-        """AI analysis - enqueue to job queue (asynchronous)
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def AnalyzeLinkDirect(self, request, context):
-        """AI analysis - direct response (synchronous, for testing)
+        """Direct Analysis (Synchronous/No-Batch) for Testing/Immediate updates
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -99,33 +115,50 @@ class QueueServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ExtractPostContext(self, request, context):
+        """Extract context and style tags from post image (synchronous, Ollama local inference)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_QueueServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'ProcessDataBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.ProcessDataBatch,
+                    request_deserializer=inbound__pb2.ProcessDataBatchRequest.FromString,
+                    response_serializer=inbound__pb2.ProcessDataBatchResponse.SerializeToString,
+            ),
             'ExtractOGData': grpc.unary_unary_rpc_method_handler(
                     servicer.ExtractOGData,
-                    request_deserializer=inbound_dot_inbound__pb2.ExtractOGDataRequest.FromString,
-                    response_serializer=inbound_dot_inbound__pb2.ExtractOGDataResponse.SerializeToString,
+                    request_deserializer=inbound__pb2.ExtractOGDataRequest.FromString,
+                    response_serializer=inbound__pb2.ExtractOGDataResponse.SerializeToString,
             ),
             'AnalyzeLink': grpc.unary_unary_rpc_method_handler(
                     servicer.AnalyzeLink,
-                    request_deserializer=inbound_dot_inbound__pb2.AnalyzeLinkRequest.FromString,
-                    response_serializer=inbound_dot_inbound__pb2.AnalyzeLinkResponse.SerializeToString,
+                    request_deserializer=inbound__pb2.AnalyzeLinkRequest.FromString,
+                    response_serializer=inbound__pb2.AnalyzeLinkResponse.SerializeToString,
             ),
             'AnalyzeLinkDirect': grpc.unary_unary_rpc_method_handler(
                     servicer.AnalyzeLinkDirect,
-                    request_deserializer=inbound_dot_inbound__pb2.AnalyzeLinkRequest.FromString,
-                    response_serializer=inbound_dot_inbound__pb2.AnalyzeLinkDirectResponse.SerializeToString,
+                    request_deserializer=inbound__pb2.AnalyzeLinkRequest.FromString,
+                    response_serializer=inbound__pb2.AnalyzeLinkDirectResponse.SerializeToString,
             ),
             'AnalyzeImage': grpc.unary_unary_rpc_method_handler(
                     servicer.AnalyzeImage,
-                    request_deserializer=inbound_dot_inbound__pb2.AnalyzeImageRequest.FromString,
-                    response_serializer=inbound_dot_inbound__pb2.AnalyzeImageResponse.SerializeToString,
+                    request_deserializer=inbound__pb2.AnalyzeImageRequest.FromString,
+                    response_serializer=inbound__pb2.AnalyzeImageResponse.SerializeToString,
             ),
             'ProcessPostEditorial': grpc.unary_unary_rpc_method_handler(
                     servicer.ProcessPostEditorial,
-                    request_deserializer=inbound_dot_inbound__pb2.ProcessPostEditorialRequest.FromString,
-                    response_serializer=inbound_dot_inbound__pb2.ProcessPostEditorialResponse.SerializeToString,
+                    request_deserializer=inbound__pb2.ProcessPostEditorialRequest.FromString,
+                    response_serializer=inbound__pb2.ProcessPostEditorialResponse.SerializeToString,
+            ),
+            'ExtractPostContext': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExtractPostContext,
+                    request_deserializer=inbound__pb2.ExtractPostContextRequest.FromString,
+                    response_serializer=inbound__pb2.ExtractPostContextResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -137,6 +170,33 @@ def add_QueueServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class Queue(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def ProcessDataBatch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/inbound.Queue/ProcessDataBatch',
+            inbound__pb2.ProcessDataBatchRequest.SerializeToString,
+            inbound__pb2.ProcessDataBatchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def ExtractOGData(request,
@@ -153,8 +213,8 @@ class Queue(object):
             request,
             target,
             '/inbound.Queue/ExtractOGData',
-            inbound_dot_inbound__pb2.ExtractOGDataRequest.SerializeToString,
-            inbound_dot_inbound__pb2.ExtractOGDataResponse.FromString,
+            inbound__pb2.ExtractOGDataRequest.SerializeToString,
+            inbound__pb2.ExtractOGDataResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -180,8 +240,8 @@ class Queue(object):
             request,
             target,
             '/inbound.Queue/AnalyzeLink',
-            inbound_dot_inbound__pb2.AnalyzeLinkRequest.SerializeToString,
-            inbound_dot_inbound__pb2.AnalyzeLinkResponse.FromString,
+            inbound__pb2.AnalyzeLinkRequest.SerializeToString,
+            inbound__pb2.AnalyzeLinkResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -207,8 +267,8 @@ class Queue(object):
             request,
             target,
             '/inbound.Queue/AnalyzeLinkDirect',
-            inbound_dot_inbound__pb2.AnalyzeLinkRequest.SerializeToString,
-            inbound_dot_inbound__pb2.AnalyzeLinkDirectResponse.FromString,
+            inbound__pb2.AnalyzeLinkRequest.SerializeToString,
+            inbound__pb2.AnalyzeLinkDirectResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -234,8 +294,8 @@ class Queue(object):
             request,
             target,
             '/inbound.Queue/AnalyzeImage',
-            inbound_dot_inbound__pb2.AnalyzeImageRequest.SerializeToString,
-            inbound_dot_inbound__pb2.AnalyzeImageResponse.FromString,
+            inbound__pb2.AnalyzeImageRequest.SerializeToString,
+            inbound__pb2.AnalyzeImageResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -261,8 +321,35 @@ class Queue(object):
             request,
             target,
             '/inbound.Queue/ProcessPostEditorial',
-            inbound_dot_inbound__pb2.ProcessPostEditorialRequest.SerializeToString,
-            inbound_dot_inbound__pb2.ProcessPostEditorialResponse.FromString,
+            inbound__pb2.ProcessPostEditorialRequest.SerializeToString,
+            inbound__pb2.ProcessPostEditorialResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExtractPostContext(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/inbound.Queue/ExtractPostContext',
+            inbound__pb2.ExtractPostContextRequest.SerializeToString,
+            inbound__pb2.ExtractPostContextResponse.FromString,
             options,
             channel_credentials,
             insecure,

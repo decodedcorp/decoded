@@ -464,6 +464,10 @@ pub struct PostDetailResponse {
     /// AI가 생성한 포스트 요약 (1-2문장)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ai_summary: Option<String>,
+
+    /// AI가 추출한 스타일 태그 (JSONB 배열)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style_tags: Option<serde_json::Value>,
 }
 
 impl PostDetailResponse {
@@ -493,6 +497,7 @@ impl PostDetailResponse {
             created_with_solutions: post.created_with_solutions,
             post_magazine_id: post.post_magazine_id,
             ai_summary: post.ai_summary.clone(),
+            style_tags: post.style_tags.clone(),
             user: PostUserInfo {
                 id: user.id,
                 username: user.username,
