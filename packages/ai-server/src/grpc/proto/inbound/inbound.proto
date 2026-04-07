@@ -3,26 +3,30 @@ syntax = "proto3";
 package inbound;
 
 service Queue {
-  // OG metadata extraction (synchronous)
+  // Existing batch processing
+  rpc ProcessDataBatch (ProcessDataBatchRequest) returns (ProcessDataBatchResponse);
+  
+  // New separated flow methods
   rpc ExtractOGData (ExtractOGDataRequest) returns (ExtractOGDataResponse);
-
-  // AI analysis - enqueue to job queue (asynchronous)
   rpc AnalyzeLink (AnalyzeLinkRequest) returns (AnalyzeLinkResponse);
-
-  // AI analysis - direct response (synchronous, for testing)
+  
+  // Direct Analysis (Synchronous/No-Batch) for Testing/Immediate updates
   rpc AnalyzeLinkDirect (AnalyzeLinkRequest) returns (AnalyzeLinkDirectResponse);
-
+  
   // Image analysis - direct response (synchronous)
   rpc AnalyzeImage (AnalyzeImageRequest) returns (AnalyzeImageResponse);
 
   // Post editorial - enqueue to job queue (asynchronous)
   rpc ProcessPostEditorial (ProcessPostEditorialRequest) returns (ProcessPostEditorialResponse);
+
+  // Extract context and style tags from post image (synchronous, Ollama local inference)
+  rpc ExtractPostContext (ExtractPostContextRequest) returns (ExtractPostContextResponse);
 }
 
 // Post Editorial messages (Asynchronous)
 message ProcessPostEditorialRequest {
   string post_magazine_id = 1;
-  string post_data_json = 2;  // JSON serialized PostData from Backend
+  string post_data_json = 2;
 }
 
 message ProcessPostEditorialResponse {
@@ -31,9 +35,37 @@ message ProcessPostEditorialResponse {
   string batch_id = 3;
 }
 
+// Batch processing messages
+message DataItem {
+  string item_id = 1;
+  string type = 2; // "link" or "image"
+  string url = 3;
+  optional string post_id = 4; // Added for backend integration
+}
+
+message ProcessDataBatchRequest {
+  repeated DataItem items = 1;
+}
+
+message ProcessDataBatchResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+}
+
 // OG Extraction messages (Synchronous)
 message ExtractOGDataRequest {
   string url = 1;
+}
+
+message LinkMetadata {
+  optional string price = 1;
+  optional string currency = 2;
+  optional string brand = 3;
+  repeated string material = 4;
+  optional string origin = 5;
+  optional string category = 6;
+  optional string sub_category = 7;
 }
 
 message ExtractOGDataResponse {
@@ -49,7 +81,7 @@ message ExtractOGDataResponse {
 // AI Analysis messages (Asynchronous)
 message AnalyzeLinkRequest {
   string url = 1;
-  string post_id = 2; 
+  string post_id = 2; // Required for backend callback
   string title = 3;
   string description = 4;
   string site_name = 5;
@@ -151,4 +183,19 @@ message AnalyzeImageResponse {
   optional string context = 6;
   map<string, ItemList> items = 7;  // category -> items
   string error_message = 8;
+}
+
+// Post Context Extraction messages (Synchronous, Ollama local inference)
+message ExtractPostContextRequest {
+  string post_id = 1;
+  string image_url = 2;
+}
+
+message ExtractPostContextResponse {
+  bool success = 1;
+  string context = 2;
+  repeated string style_tags = 3;
+  string mood = 4;
+  string setting = 5;
+  string error_message = 6;
 }

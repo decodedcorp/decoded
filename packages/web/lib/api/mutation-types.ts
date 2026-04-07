@@ -87,7 +87,11 @@ export type ContextType =
   | "daily"
   | "photoshoot"
   | "event"
-  | "other";
+  | "brand_campaign"
+  | "sns"
+  | "street"
+  | "fan_meeting"
+  | "interview";
 
 export interface MediaMetadataItem {
   key: string; // e.g., "platform", "season", "episode"

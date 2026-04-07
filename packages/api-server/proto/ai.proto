@@ -18,6 +18,9 @@ service Queue {
 
   // Post editorial - enqueue to job queue (asynchronous)
   rpc ProcessPostEditorial (ProcessPostEditorialRequest) returns (ProcessPostEditorialResponse);
+
+  // Extract context and style tags from post image (synchronous, Ollama local inference)
+  rpc ExtractPostContext (ExtractPostContextRequest) returns (ExtractPostContextResponse);
 }
 
 // Post Editorial messages (Asynchronous)
@@ -180,4 +183,19 @@ message AnalyzeImageResponse {
   optional string context = 6;
   map<string, ItemList> items = 7;  // category -> items
   string error_message = 8;
+}
+
+// Post Context Extraction messages (Synchronous, Ollama local inference)
+message ExtractPostContextRequest {
+  string post_id = 1;
+  string image_url = 2;
+}
+
+message ExtractPostContextResponse {
+  bool success = 1;
+  string context = 2;
+  repeated string style_tags = 3;
+  string mood = 4;
+  string setting = 5;
+  string error_message = 6;
 }

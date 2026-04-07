@@ -27,6 +27,7 @@ fn sample_post(m: &str) -> PostModel {
         created_with_solutions: Some(true),
         post_magazine_id: None,
         ai_summary: None,
+        style_tags: None,
         created_at: t,
         updated_at: t,
     }

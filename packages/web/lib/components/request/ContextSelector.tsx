@@ -11,15 +11,21 @@ interface ContextSelectorProps {
 
 const CONTEXT_OPTIONS: { value: ContextType; label: string; emoji: string }[] =
   [
+    { value: "daily", label: "Daily", emoji: "👕" },
+    { value: "street", label: "Street", emoji: "🚶" },
     { value: "airport", label: "Airport", emoji: "✈️" },
     { value: "stage", label: "Stage", emoji: "🎤" },
+    { value: "photoshoot", label: "Photoshoot", emoji: "📸" },
+    { value: "brand_campaign", label: "Campaign", emoji: "💎" },
+    { value: "event", label: "Event", emoji: "🎉" },
     { value: "drama", label: "Drama", emoji: "🎬" },
     { value: "variety", label: "Variety", emoji: "📺" },
-    { value: "daily", label: "Daily", emoji: "👕" },
-    { value: "photoshoot", label: "Photoshoot", emoji: "📸" },
-    { value: "event", label: "Event", emoji: "🎉" },
-    { value: "other", label: "Other", emoji: "✨" },
+    { value: "sns", label: "SNS", emoji: "📱" },
+    { value: "fan_meeting", label: "Fan Meeting", emoji: "🤝" },
+    { value: "interview", label: "Interview", emoji: "🎙️" },
   ];
+
+export { CONTEXT_OPTIONS };
 
 export function ContextSelector({
   value,
@@ -33,10 +39,15 @@ export function ContextSelector({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-semibold text-foreground">Context</h3>
-        <span className="text-xs text-muted-foreground">(Optional)</span>
+        {aiRecommendedContext && !value && (
+          <span className="flex items-center gap-1 text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+            <Sparkles className="w-2.5 h-2.5" />
+            AI
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {CONTEXT_OPTIONS.map(({ value: optionValue, label, emoji }) => {
           const isSelected = value === optionValue;
           const isRecommended = isAiRecommended(optionValue);
@@ -47,35 +58,23 @@ export function ContextSelector({
               type="button"
               onClick={() => onChange(isSelected ? null : optionValue)}
               className={`
-                relative flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                text-xs font-medium transition-all
+                relative flex items-center gap-1 px-2.5 py-1 rounded-full
+                text-xs font-medium transition-all duration-150
                 ${
                   isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+                    ? "bg-foreground text-background shadow-sm"
+                    : isRecommended
+                      ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                      : "bg-foreground/5 text-foreground/60 hover:bg-foreground/10 hover:text-foreground/80"
                 }
               `}
             >
-              <span>{emoji}</span>
+              <span className="text-[11px]">{emoji}</span>
               <span>{label}</span>
-              {isRecommended && !isSelected && (
-                <Sparkles className="w-3 h-3 text-primary ml-0.5" />
-              )}
             </button>
           );
         })}
       </div>
-
-      {aiRecommendedContext && !value && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-primary" />
-          <span>
-            AI suggests:{" "}
-            {CONTEXT_OPTIONS.find((o) => o.value === aiRecommendedContext)
-              ?.label || aiRecommendedContext}
-          </span>
-        </p>
-      )}
     </div>
   );
 }
