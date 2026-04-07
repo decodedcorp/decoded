@@ -144,6 +144,14 @@ export interface CommunityLeaderboardData {
 
 // ─── EditorialMagazine: Horizontal scroll magazine section ───
 
+/** A single item shown in the Related Product panel */
+export interface MagazineCardItem {
+  title: string;
+  brand: string | null;
+  imageUrl: string | null;
+  originalUrl: string | null;
+}
+
 /** A magazine-style card in the horizontal feed */
 export interface MagazineCard {
   id: string;
@@ -153,6 +161,7 @@ export interface MagazineCard {
   artistName: string;
   category?: string;
   link: string;
+  items?: MagazineCardItem[];
 }
 
 /** Data for the editorial magazine section */

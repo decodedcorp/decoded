@@ -15,6 +15,16 @@ export const DynamicMasonryGrid = dynamic(
   { ssr: false, loading: () => <div className="min-h-[600px]" /> }
 );
 
+export const DynamicStyleMoods = dynamic(
+  () => import("@/lib/components/main-renewal/StyleMoods"),
+  { ssr: false, loading: () => <div className="min-h-[600px]" /> }
+);
+
+export const DynamicEditorPicks = dynamic(
+  () => import("@/lib/components/main-renewal/EditorPicks"),
+  { ssr: false, loading: () => <div className="min-h-[400px]" /> }
+);
+
 export const DynamicDomeGallerySection = dynamic(
   () =>
     import("@/lib/components/main/DynamicHomeFeed").then((m) => ({

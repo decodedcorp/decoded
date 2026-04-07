@@ -9,13 +9,14 @@ import type {
 } from "@/lib/components/main-renewal";
 import {
   HeroItemSync,
-  EditorialSection,
+  EditorialCarousel,
 } from "@/lib/components/main";
 import {
-  DynamicTrendingListSection as TrendingListSection,
-  DynamicMasonryGrid as MasonryGrid,
+  DynamicStyleMoods as StyleMoods,
+  DynamicEditorPicks as EditorPicks,
   DynamicDomeGallerySection as DomeGallerySection,
 } from "./home-dynamic-sections";
+import { TrendingListSection } from "@/lib/components/main/TrendingListSection";
 import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
 import type { TrendingKeywordItem } from "@/lib/components/main/TrendingListSection";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
@@ -27,6 +28,7 @@ import {
   fetchWeeklyBestPostsServer,
   fetchWhatsNewPostsServer,
   fetchMagazinePostsServer,
+  fetchEditorPicksServer,
 } from "@/lib/supabase/queries/main-page.server";
 import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
@@ -49,13 +51,14 @@ function toApiPost(p: { id: string; imageUrl: string | null; artistName: string 
 }
 
 /** Convert MagazinePostData to ApiPost shape */
-function magazineToApiPost(p: { id: string; imageUrl: string | null; artistName: string | null; groupName: string | null; context: string | null; magazineTitle: string; magazineKeyword: string | null }): ApiPost {
+function magazineToApiPost(p: import("@/lib/supabase/queries/main-page.server").MagazinePostData): ApiPost {
   return {
     id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
     group_name: p.groupName, context: p.context, title: p.magazineTitle,
     post_magazine_title: p.magazineTitle, view_count: 0, created_at: "", status: "published" as const,
     comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
-  };
+    _magazineItems: p.items,
+  } as any;
 }
 
 /** REST API fetch with Supabase fallback when backend unavailable */
@@ -80,9 +83,10 @@ export default async function Home({
   const [
     popularPosts,
     recentPosts,
-    magazinePosts,
+    rawMagazinePosts,
     // decodedPick,  // #91: temporarily disabled
     artistProfileMap,
+    editorPicks,
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30", async () =>
       (await fetchWeeklyBestPostsServer(30)).map(toApiPost)
@@ -90,11 +94,10 @@ export default async function Home({
     fetchPosts("sort=recent&per_page=50", async () =>
       (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
     ),
-    fetchPosts("has_magazine=true&per_page=30", async () =>
-      (await fetchMagazinePostsServer(30)).map(magazineToApiPost)
-    ),
+    fetchMagazinePostsServer(50),  // Supabase direct — includes layout_json items
     // fetchDecodedPickServer(),  // #91: temporarily disabled
     buildArtistProfileMap(),
+    fetchEditorPicksServer(),
   ]);
 
   // --- Helpers ---
@@ -246,44 +249,40 @@ export default async function Home({
   //     };
   //   });
 
-  // --- Magazine (artist-specific) ---
+  // --- Magazine ---
 
-  const allMagazineCards = magazinePosts
-    .filter((mp) => mp.post_magazine_title)
+  const allMagazineCards = rawMagazinePosts
+    .filter((mp) => mp.magazineTitle && mp.items.length > 0)
     .map((mp) => {
-      const { displayName } = enrichArtistName(mp.artist_name || mp.group_name);
+      const { displayName } = enrichArtistName(mp.artistName || mp.groupName);
       return {
-        id: `mag-${mp.id}`, imageUrl: proxyImg(mp.image_url),
-        title: mp.post_magazine_title!, subtitle: mp.context || "",
-        artistName: displayName || "Unknown", category: "Editorial",
+        id: `mag-${mp.id}`,
+        imageUrl: proxyImg(mp.imageUrl ?? ""),
+        title: mp.magazineTitle,
+        subtitle: mp.context || "",
+        artistName: displayName || "Unknown",
+        category: "Editorial",
         link: `/posts/${mp.id}?from=explore`,
+        items: mp.items,
       };
     });
 
-  const magazineArtistCounts = new Map<string, { count: number; displayName: string }>();
+  // Deduplicate by artist — pick at most 2 cards per artist for variety
+  const seenArtists = new Map<string, number>();
+  const diverseCards: typeof allMagazineCards = [];
   for (const c of allMagazineCards) {
     const key = c.artistName.toLowerCase();
-    const existing = magazineArtistCounts.get(key);
-    if (existing) {
-      existing.count++;
-    } else {
-      magazineArtistCounts.set(key, { count: 1, displayName: c.artistName });
+    const count = seenArtists.get(key) ?? 0;
+    if (count < 2) {
+      diverseCards.push(c);
+      seenArtists.set(key, count + 1);
     }
+    if (diverseCards.length >= 12) break;
   }
-  const eligibleArtists = [...magazineArtistCounts.values()]
-    .filter(({ count }) => count >= 3)
-    .map(({ displayName }) => displayName);
-  const featuredArtist = eligibleArtists.length > 0
-    ? eligibleArtists[Math.floor(Math.random() * eligibleArtists.length)]
-    : undefined;
-
-  const magazineCards = featuredArtist
-    ? allMagazineCards.filter((c) => c.artistName.toLowerCase() === featuredArtist.toLowerCase())
-    : allMagazineCards.slice(0, 8);
 
   const editorialMagazineData: EditorialMagazineData = {
-    cards: magazineCards,
-    featuredArtist,
+    cards: diverseCards,
+    featuredArtist: undefined,
   };
 
   // --- Decoded Pick --- (#91: temporarily disabled)
@@ -338,61 +337,57 @@ export default async function Home({
       image: proxyImg(image),
     }));
 
+  // Pick up to 4 diverse editorial posts (deduplicate by artist)
   const editorialPool = popularPosts.length > 0
     ? [...popularPosts].sort(() => Math.random() - 0.5)
     : [];
-  const editorialMain = editorialPool[0];
-
-  // Fetch spots + solutions for the editorial post
-  let editorialSolutionItems: { id: string; label: string; name: string; brand: string; imageUrl: string }[] = [];
-  if (editorialMain) {
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data: spots } = await supabase
-        .from("spots")
-        .select("*, solutions(*)")
-        .eq("post_id", editorialMain.id);
-      if (spots) {
-        editorialSolutionItems = spots.flatMap((spot: any) =>
-          (spot.solutions || [])
-            .filter((sol: any) => sol.thumbnail_url)
-            .map((sol: any) => ({
-              id: sol.id,
-              label: sol.title,
-              name: sol.title,
-              brand: (sol.metadata as any)?.brand || "",
-              imageUrl: proxyImg(sol.thumbnail_url),
-            }))
-        ).slice(0, 4);
-      }
-    } catch { /* solutions fetch failed — show without items */ }
+  const editorialPosts: typeof editorialPool = [];
+  const seenEditorialArtists = new Set<string>();
+  for (const p of editorialPool) {
+    const key = (p.artist_name || p.group_name || "").toLowerCase();
+    if (!seenEditorialArtists.has(key)) {
+      editorialPosts.push(p);
+      seenEditorialArtists.add(key);
+    }
+    if (editorialPosts.length >= 10) break;
   }
 
-  const editorialStyle: StyleCardData | undefined = editorialMain
-    ? (() => {
-        const { displayName: editorialName } = enrichArtistName(editorialMain.artist_name);
-        return {
-          id: editorialMain.id,
-          title: editorialName || "Featured",
-          description: editorialMain.context || editorialMain.title || "",
-          artistName: editorialName || "Unknown",
-          imageUrl: proxyImg(editorialMain.image_url),
-          link: `/posts/${editorialMain.id}`,
-          items: editorialSolutionItems.length > 0
-            ? editorialSolutionItems
-            : editorialPool.slice(1, 4).map((p) => {
-                const { displayName } = enrichArtistName(p.artist_name);
-                return {
-                  id: p.id,
-                  label: displayName || "Item",
-                  name: displayName || "Item",
-                  brand: p.group_name || "",
-                  imageUrl: proxyImg(p.image_url),
-                };
-              }),
-        };
-      })()
-    : undefined;
+  // Fetch spots+solutions for all 4 posts in parallel
+  const editorialItems: StyleCardData[] = await Promise.all(
+    editorialPosts.map(async (post) => {
+      const { displayName } = enrichArtistName(post.artist_name);
+      let items: StyleCardData["items"] = [];
+      try {
+        const supabase = await createSupabaseServerClient();
+        const { data: spots } = await supabase
+          .from("spots")
+          .select("*, solutions(*)")
+          .eq("post_id", post.id);
+        if (spots) {
+          items = spots.flatMap((spot: any) =>
+            (spot.solutions || [])
+              .filter((sol: any) => sol.thumbnail_url)
+              .map((sol: any) => ({
+                id: sol.id,
+                label: sol.title,
+                name: sol.title,
+                brand: (sol.metadata as any)?.brand || "",
+                imageUrl: proxyImg(sol.thumbnail_url),
+              }))
+          ).slice(0, 3);
+        }
+      } catch { /* ignore */ }
+      return {
+        id: post.id,
+        title: displayName || "Featured",
+        description: post.context || "",
+        artistName: displayName || "Unknown",
+        imageUrl: proxyImg(post.image_url),
+        link: `/posts/${post.id}`,
+        items,
+      };
+    })
+  );
 
   // --- MasonryGrid ---
 
@@ -402,7 +397,7 @@ export default async function Home({
       id: post.id, imageUrl: post.image_url,
       title: displayName || "Unknown",
       subtitle: post.context || post.title || undefined,
-      category: "Style", link: `/posts/${post.id}`,
+      category: post.context || "other", link: `/posts/${post.id}`,
       aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
     };
   });
@@ -418,13 +413,7 @@ export default async function Home({
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       <HeroItemSync posts={heroPosts} />
 
-      {/* #89: 2-column Editorial + Trending */}
-      <section className="py-14 lg:py-20 px-6 md:px-12 lg:px-20">
-        <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-8 lg:min-h-[520px]">
-          <EditorialSection style={editorialStyle} embedded />
-          <TrendingListSection keywords={trendingKeywords} embedded />
-        </div>
-      </section>
+      <EditorialCarousel items={editorialItems} />
 
       <EditorialMagazine data={editorialMagazineData} />
 
@@ -438,8 +427,12 @@ export default async function Home({
       /> */}
 
       <section className="relative">
-        <MasonryGrid items={gridItems as GridItemData[]} />
+        <StyleMoods items={gridItems} />
       </section>
+
+      {editorPicks.length > 0 && <EditorPicks items={editorPicks} />}
+
+      <TrendingListSection keywords={trendingKeywords} />
 
       {domeImages.length > 0 && (
         <DomeGallerySection images={domeImages} />
