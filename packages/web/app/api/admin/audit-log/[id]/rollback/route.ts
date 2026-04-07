@@ -46,8 +46,9 @@ export async function POST(
   }
 
   // Get current state before applying rollback
-  const { data: currentState } = await supabase
-    .schema("warehouse")
+  // Dynamic table name requires type assertion
+  const warehouseClient = supabase.schema("warehouse");
+  const { data: currentState } = await (warehouseClient as any)
     .from(logEntry.target_table)
     .select("*")
     .eq("id", logEntry.target_id)
@@ -58,8 +59,7 @@ export async function POST(
     string,
     unknown
   >;
-  const { error: updateError } = await supabase
-    .schema("warehouse")
+  const { error: updateError } = await (warehouseClient as any)
     .from(logEntry.target_table)
     .update(restoreData)
     .eq("id", logEntry.target_id);

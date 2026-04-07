@@ -1,0 +1,71 @@
+{
+  "agents": [
+    {
+      "agent_id": "a439d69f29d283a31",
+      "agent_type": "coder",
+      "started_at": "2026-04-02T07:54:45.278Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-02T07:55:27.496Z",
+      "duration_ms": 42218
+    },
+    {
+      "agent_id": "ad6d3a2e2ec717294",
+      "agent_type": "coder",
+      "started_at": "2026-04-02T07:54:53.657Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-02T07:55:26.288Z",
+      "duration_ms": 32631
+    },
+    {
+      "agent_id": "a8e8da7f07ac9bf5a",
+      "agent_type": "coder",
+      "started_at": "2026-04-02T07:55:06.736Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-02T07:56:53.932Z",
+      "duration_ms": 107196
+    },
+    {
+      "agent_id": "a64d50a75da167e4c",
+      "agent_type": "coder",
+      "started_at": "2026-04-02T10:01:23.333Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-02T10:03:08.779Z",
+      "duration_ms": 105446
+    },
+    {
+      "agent_id": "a1bc1d153a44591d6",
+      "agent_type": "Explore",
+      "started_at": "2026-04-03T07:14:49.258Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-03T07:15:28.110Z",
+      "duration_ms": 38852
+    },
+    {
+      "agent_id": "ab9a900bb20338593",
+      "agent_type": "Explore",
+      "started_at": "2026-04-04T13:57:25.979Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-04T13:58:09.565Z",
+      "duration_ms": 43586
+    },
+    {
+      "agent_id": "a53bd89618814e608",
+      "agent_type": "oh-my-claudecode:code-reviewer",
+      "started_at": "2026-04-04T14:14:53.335Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-04T14:18:23.983Z",
+      "duration_ms": 210648
+    }
+  ],
+  "total_spawned": 7,
+  "total_completed": 7,
+  "total_failed": 0,
+  "last_updated": "2026-04-04T14:18:24.086Z"
+}

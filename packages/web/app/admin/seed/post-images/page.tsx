@@ -61,7 +61,7 @@ function PostImagesPageContent() {
       key: "image_url",
       label: "Image",
       render: (row) => (
-        <AdminImagePreview src={row.image_url ?? undefined} alt="post image" size="sm" />
+        row.image_url ? <AdminImagePreview src={row.image_url} alt="post image" size="sm" /> : <span className="text-gray-400 text-xs">N/A</span>
       ),
     },
     {

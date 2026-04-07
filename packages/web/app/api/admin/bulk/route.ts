@@ -42,18 +42,18 @@ export async function POST(req: NextRequest) {
   }
 
   const results: { id: string; success: boolean; error?: string }[] = [];
+  // Dynamic table name requires type assertion
+  const wh = supabase.schema("warehouse") as any;
 
   for (const id of ids) {
     try {
       if (action === "delete") {
-        const { data: before } = await supabase
-          .schema("warehouse")
+        const { data: before } = await wh
           .from(table)
           .select("*")
           .eq("id", id)
           .single();
-        const { error } = await supabase
-          .schema("warehouse")
+        const { error } = await wh
           .from(table)
           .delete()
           .eq("id", id);
@@ -67,14 +67,12 @@ export async function POST(req: NextRequest) {
         });
         results.push({ id, success: true });
       } else if (ACTION_MAP[action]) {
-        const { data: before } = await supabase
-          .schema("warehouse")
+        const { data: before } = await wh
           .from(table)
           .select("*")
           .eq("id", id)
           .single();
-        const { error } = await supabase
-          .schema("warehouse")
+        const { error } = await wh
           .from(table)
           .update(ACTION_MAP[action])
           .eq("id", id);

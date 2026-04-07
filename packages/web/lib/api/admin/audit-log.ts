@@ -5,25 +5,25 @@ interface AuditLogEntry {
   action: string;
   targetTable: string;
   targetId?: string;
-  beforeState?: Record<string, unknown>;
-  afterState?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export async function writeAuditLog(entry: AuditLogEntry) {
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase
-    .schema("warehouse")
+  // Dynamic warehouse schema insert requires type assertion
+  const { error } = await (supabase.schema("warehouse") as any)
     .from("admin_audit_log")
     .insert({
       admin_user_id: entry.adminUserId,
       action: entry.action,
       target_table: entry.targetTable,
       target_id: entry.targetId,
-      before_state: entry.beforeState,
-      after_state: entry.afterState,
-      metadata: entry.metadata,
+      before_state: entry.beforeState ?? undefined,
+      after_state: entry.afterState ?? undefined,
+      metadata: entry.metadata ?? undefined,
     });
 
   if (error) {

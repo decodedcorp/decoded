@@ -1,0 +1,132 @@
+<h2>Component-Level Changes</h2>
+<p class="subtitle">Single strategy: actual ratio + clamp. Zero crop everywhere.</p>
+
+<div class="section">
+  <h3>Core: useImageDimensions Hook</h3>
+  <div class="mockup">
+    <div class="mockup-header">packages/web/lib/hooks/useImageDimensions.ts</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:12px;line-height:1.6;color:#e0e0e0;background:#0d1117;padding:16px;white-space:pre">
+// Global cache (survives re-renders)
+const cache = new Map&lt;string, {w:number, h:number}&gt;()
+
+function useImageDimensions(url: string | null) {
+  // 1. Check memory cache → instant
+  // 2. Check localStorage → fast
+  // 3. Create Image() → onload → save to both
+  // Returns: { width, height, ratio, loading }
+}
+
+// Clamp: min 0.5 (2:1 landscape) ~ max 2.0 (1:2 portrait)
+function clampRatio(ratio: number): number {
+  return Math.min(2.0, Math.max(0.5, ratio))
+}
+
+// CSS-ready output
+function getAspectStyle(w, h, fallback = "3/4") {
+  if (!w || !h) return { aspectRatio: fallback }
+  const r = clampRatio(h / w)
+  return { aspectRatio: `${1} / ${r}` }
+}</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Per-Component Changes</h3>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+    <!-- Before -->
+    <div style="background:#1a0000;border:1px solid #4a1111;border-radius:8px;padding:16px">
+      <div style="color:#ff6b6b;font-size:11px;font-weight:600;margin-bottom:8px">BEFORE (fixed ratio, crop)</div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:#888;margin-bottom:4px">FeedCard</div>
+        <div style="font-family:monospace;font-size:11px;color:#ff9999;background:#0d0d0d;padding:8px;border-radius:4px">
+          &lt;div className="aspect-[4/5]"&gt;<br>
+          &nbsp;&nbsp;&lt;img style={{ objectFit: "cover" }}/&gt;<br>
+          &lt;/div&gt;
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:#888;margin-bottom:4px">ExploreCardCell</div>
+        <div style="font-family:monospace;font-size:11px;color:#ff9999;background:#0d0d0d;padding:8px;border-radius:4px">
+          &lt;div className="aspect-[3/4]"&gt;<br>
+          &nbsp;&nbsp;&lt;Image fill objectFit="cover"/&gt;<br>
+          &lt;/div&gt;
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;color:#888;margin-bottom:4px">MasonryGridItem</div>
+        <div style="font-family:monospace;font-size:11px;color:#ff9999;background:#0d0d0d;padding:8px;border-radius:4px">
+          height = clampHeight(<br>
+          &nbsp;&nbsp;fakeRatio, index // cycling<br>
+          )
+        </div>
+      </div>
+    </div>
+
+    <!-- After -->
+    <div style="background:#001a00;border:1px solid #114a11;border-radius:8px;padding:16px">
+      <div style="color:#6bff6b;font-size:11px;font-weight:600;margin-bottom:8px">AFTER (real ratio, zero crop)</div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:#888;margin-bottom:4px">FeedCard</div>
+        <div style="font-family:monospace;font-size:11px;color:#99ff99;background:#0d0d0d;padding:8px;border-radius:4px">
+          &lt;div style={getAspectStyle(w,h,"4/5")}&gt;<br>
+          &nbsp;&nbsp;&lt;img style={{ objectFit: "cover" }}/&gt;<br>
+          &lt;/div&gt;
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:#888;margin-bottom:4px">ExploreCardCell</div>
+        <div style="font-family:monospace;font-size:11px;color:#99ff99;background:#0d0d0d;padding:8px;border-radius:4px">
+          &lt;div style={getAspectStyle(w,h,"3/4")}&gt;<br>
+          &nbsp;&nbsp;&lt;Image fill objectFit="cover"/&gt;<br>
+          &lt;/div&gt;
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;color:#888;margin-bottom:4px">MasonryGridItem</div>
+        <div style="font-family:monospace;font-size:11px;color:#99ff99;background:#0d0d0d;padding:8px;border-radius:4px">
+          height = clampHeight(<br>
+          &nbsp;&nbsp;realRatio, index // actual<br>
+          )
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Edge Cases & Clamping</h3>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
+    <div style="background:#1a1a2e;border-radius:8px;padding:12px;text-align:center">
+      <div style="aspect-ratio:1/2;max-height:120px;background:linear-gradient(180deg,#e94560,#533483);border-radius:4px;margin:0 auto 8px;width:60px"></div>
+      <div style="font-size:10px;color:#e94560">1:2 (too tall)</div>
+      <div style="font-size:9px;color:#888;margin-top:2px">→ clamped to 1:2</div>
+    </div>
+    <div style="background:#1a1a2e;border-radius:8px;padding:12px;text-align:center">
+      <div style="aspect-ratio:3/4;max-height:120px;background:linear-gradient(180deg,#533483,#0f3460);border-radius:4px;margin:0 auto 8px;width:70px"></div>
+      <div style="font-size:10px;color:#6bff6b">3:4 (normal)</div>
+      <div style="font-size:9px;color:#888;margin-top:2px">→ as-is</div>
+    </div>
+    <div style="background:#1a1a2e;border-radius:8px;padding:12px;text-align:center">
+      <div style="aspect-ratio:1/1;max-height:120px;background:linear-gradient(135deg,#0f3460,#16213e);border-radius:4px;margin:0 auto 8px;width:90px"></div>
+      <div style="font-size:10px;color:#6bff6b">1:1 (normal)</div>
+      <div style="font-size:9px;color:#888;margin-top:2px">→ as-is</div>
+    </div>
+    <div style="background:#1a1a2e;border-radius:8px;padding:12px;text-align:center">
+      <div style="aspect-ratio:2/1;max-height:120px;background:linear-gradient(90deg,#e94560,#0f3460);border-radius:4px;margin:0 auto 8px;width:120px"></div>
+      <div style="font-size:10px;color:#e94560">2:1 (too wide)</div>
+      <div style="font-size:9px;color:#888;margin-top:2px">→ clamped to 2:1</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font-size:12px;color:#aaa">
+    <strong>Clamp range:</strong> 0.5 (2:1 landscape) ~ 2.0 (1:2 portrait)<br>
+    <strong>Dimension 미확보 시:</strong> 기존 fallback 비율 유지 (FeedCard→4:5, Explore→3:4)<br>
+    <strong>Transition:</strong> fallback → real ratio, opacity+scale micro-animation (0.15s)
+  </div>
+</div>
