@@ -330,6 +330,7 @@ export interface PostMagazineResponse {
   updated_at: string;
   published_at: string | null;
   related_editorials?: RelatedEditorialItem[];
+  news_references: PostMagazineNewsReference[];
 }
 
 // ============================================================
