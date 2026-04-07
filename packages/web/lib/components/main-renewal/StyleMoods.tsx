@@ -25,11 +25,11 @@ export default function StyleMoods({ items }: StyleMoodsProps) {
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-mag-bg px-6 py-16 md:py-24 md:px-12 lg:px-20">
-      <div className="mx-auto max-w-7xl">
+    <section className="bg-mag-bg py-16 md:py-24">
+      <div className="px-6 md:px-12 lg:px-20">
         {/* Section header */}
-        <div className="mb-8">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">By Context</p>
+        <div className="mb-6">
+          <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>By Context</p>
           <h2
             className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -47,7 +47,7 @@ export default function StyleMoods({ items }: StyleMoodsProps) {
               onClick={() => setActiveTab(cat)}
               className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-widest transition-colors ${
                 activeTab === cat
-                  ? "bg-white text-black"
+                  ? "bg-[#eafd67] text-black"
                   : "bg-white/10 text-white/60 hover:bg-white/20"
               }`}
             >

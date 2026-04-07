@@ -206,13 +206,13 @@ export function TrendingListSection({
       {/* Section Header */}
       <div className="flex items-end justify-between px-6 md:px-12 lg:px-20 py-8 md:py-10">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Discover</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>Discover</p>
           <h2
             className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
           >
             Trending{" "}
-            <span className="italic font-normal text-white/60">Now</span>
+            <span className="italic font-normal text-white/60">Keywords</span>
           </h2>
         </div>
         <Link
