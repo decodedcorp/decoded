@@ -63,6 +63,20 @@ class RelatedItem(BaseModel):
     for_spot_id: str | None = None
 
 
+class NewsReference(BaseModel):
+    title: str
+    url: str
+    source: str
+    summary: str
+    og_title: str | None = None
+    og_description: str | None = None
+    og_image: str | None = None
+    og_site_name: str | None = None
+    relevance_score: float
+    credibility_score: float
+    matched_item: str | None = None
+
+
 class PostMagazineLayout(BaseModel):
     schema_version: str = "1.0"
     title: str
@@ -71,6 +85,7 @@ class PostMagazineLayout(BaseModel):
     celeb_list: list[CelebWithItem] = []
     items: list[SpotItemWithEditorial] = []
     related_items: list[RelatedItem] = []
+    news_references: list[NewsReference] = []
     design_spec: DesignSpec
 
 

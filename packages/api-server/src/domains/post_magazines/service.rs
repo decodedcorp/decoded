@@ -15,7 +15,10 @@ use crate::{
     error::{AppError, AppResult},
 };
 
-use super::dto::{PostData, PostMagazineResponse, RelatedEditorialItem, SolutionData, SpotData};
+use super::dto::{
+    NewsReferenceResponse, PostData, PostMagazineResponse, RelatedEditorialItem, SolutionData,
+    SpotData,
+};
 
 pub async fn generate_post_magazine(
     db: &DatabaseConnection,
@@ -40,8 +43,7 @@ pub async fn generate_post_magazine(
             }
             Some("generating") => {
                 if let Some(ref mag) = existing {
-                    let age = chrono::Utc::now()
-                            - mag.updated_at.with_timezone(&chrono::Utc);
+                    let age = chrono::Utc::now() - mag.updated_at.with_timezone(&chrono::Utc);
                     if age.num_minutes() < 30 {
                         return Err(AppError::bad_request(
                             "Magazine is currently being generated",
@@ -198,6 +200,31 @@ pub async fn get_post_magazine(
     let related_editorials =
         find_related_editorials(db, magazine_id, magazine.layout_json.as_ref()).await?;
 
+    let news_refs = crate::entities::post_magazine_news_references::Entity::find()
+        .filter(
+            crate::entities::post_magazine_news_references::Column::PostMagazineId.eq(magazine_id),
+        )
+        .all(db)
+        .await?;
+
+    let news_references: Vec<NewsReferenceResponse> = news_refs
+        .into_iter()
+        .map(|r| NewsReferenceResponse {
+            id: r.id,
+            title: r.title,
+            url: r.url,
+            source: r.source,
+            summary: r.summary,
+            og_title: r.og_title,
+            og_description: r.og_description,
+            og_image: r.og_image,
+            og_site_name: r.og_site_name,
+            relevance_score: r.relevance_score,
+            credibility_score: r.credibility_score,
+            matched_item: r.matched_item,
+        })
+        .collect();
+
     Ok(PostMagazineResponse {
         id: magazine.id,
         title: magazine.title,
@@ -211,6 +238,7 @@ pub async fn get_post_magazine(
         updated_at: magazine.updated_at.to_string(),
         published_at: magazine.published_at.map(|t| t.to_string()),
         related_editorials,
+        news_references,
     })
 }
 

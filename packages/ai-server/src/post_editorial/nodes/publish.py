@@ -99,6 +99,8 @@ async def publish_node(state: PostEditorialState) -> dict:
                     "editorial_paragraphs": item_editorial_texts.get(spot.id, []),
                 })
 
+        news_references = state.get("news_references") or []
+
         layout = PostMagazineLayout(
             title=state.get("title", "Untitled"),
             subtitle=state.get("subtitle"),
@@ -106,6 +108,7 @@ async def publish_node(state: PostEditorialState) -> dict:
             celeb_list=state.get("celeb_list", []),
             items=items,
             related_items=state.get("related_items", []),
+            news_references=news_references,
             design_spec=design_spec,
         )
         layout_dict = layout.model_dump()
@@ -132,6 +135,33 @@ async def publish_node(state: PostEditorialState) -> dict:
             .eq("id", post_magazine_id)
             .execute()
         )
+
+        # Save news references to dedicated table
+        if news_references:
+            for ref in news_references:
+                try:
+                    await (
+                        client.table("post_magazine_news_references")
+                        .insert({
+                            "post_magazine_id": post_magazine_id,
+                            "title": ref.get("title", ""),
+                            "url": ref.get("url", ""),
+                            "source": ref.get("source", ""),
+                            "summary": ref.get("summary"),
+                            "og_title": ref.get("og_title"),
+                            "og_description": ref.get("og_description"),
+                            "og_image": ref.get("og_image"),
+                            "og_site_name": ref.get("og_site_name"),
+                            "relevance_score": ref.get("relevance_score", 0),
+                            "credibility_score": ref.get("credibility_score", 0),
+                            "matched_item": ref.get("matched_item"),
+                        })
+                        .execute()
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to save news reference: %s", ref.get("url"), exc_info=True
+                    )
 
         ai_summary = state.get("ai_summary")
         if ai_summary:

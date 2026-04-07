@@ -291,6 +291,20 @@ export interface RelatedEditorialItem {
   bg_color?: string | null;
 }
 
+export interface PostMagazineNewsReference {
+  title: string;
+  url: string;
+  source: string;
+  summary: string;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  og_site_name: string | null;
+  relevance_score: number;
+  credibility_score: number;
+  matched_item: string | null;
+}
+
 export interface PostMagazineLayout {
   schema_version: string;
   title: string;
@@ -299,6 +313,7 @@ export interface PostMagazineLayout {
   celeb_list: PostMagazineCelebWithItem[];
   items: PostMagazineSpotItem[];
   related_items: PostMagazineRelatedItem[];
+  news_references: PostMagazineNewsReference[];
   design_spec: PostMagazineDesignSpec;
 }
 

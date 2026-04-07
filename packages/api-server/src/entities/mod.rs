@@ -18,6 +18,7 @@ pub mod earnings;
 pub mod failed_batch_items;
 pub mod point_logs;
 pub mod post_likes;
+pub mod post_magazine_news_references;
 pub mod post_magazines;
 pub mod posts;
 pub mod processed_batches;

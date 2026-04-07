@@ -28,6 +28,7 @@ import {
   MagazineEditorialSection,
   MagazineCelebSection,
   MagazineItemsSection,
+  MagazineNewsSection,
   MagazineRelatedSection,
 } from "./magazine";
 import { MagazineTitleSection } from "./magazine/MagazineTitleSection";
@@ -440,6 +441,17 @@ export function ImageDetailContent({
               onActiveIndexChange={onActiveIndexChange}
               brandProfiles={brandProfiles}
             />
+
+            {/* Magazine: News References */}
+            {!isExplorePreview &&
+              magazineLayout.news_references &&
+              magazineLayout.news_references.length > 0 && (
+                <MagazineNewsSection
+                  newsReferences={magazineLayout.news_references}
+                  accentColor={accentColor}
+                  isModal={isModal}
+                />
+              )}
           </>
         )}
 
