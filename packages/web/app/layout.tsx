@@ -10,6 +10,7 @@ import { LazyOnboardingSheet } from "@/lib/components/auth/LazyOnboardingSheet";
 import { LazyVtonModal } from "@/lib/components/vton/LazyVtonModal";
 import { ThemeScript } from "@/lib/theme/theme-script";
 import { EventFlushProvider } from "./EventFlushProvider";
+import { JsonLdOrganization } from "@/lib/seo/json-ld";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
@@ -23,6 +24,8 @@ const inter = Inter({
   display: "swap",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://decoded.style";
+
 export const metadata: Metadata = {
   title: {
     default: "Decoded — The Style Search Engine",
@@ -30,16 +33,26 @@ export const metadata: Metadata = {
   },
   description:
     "The style search engine — AI-powered item detection, editorial magazines, and virtual try-on.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://decoded.style"
-  ),
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
     type: "website",
     siteName: "Decoded",
     locale: "en_US",
+    images: [
+      {
+        url: `${SITE_URL}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: "Decoded — The Style Search Engine",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: [`${SITE_URL}/api/og`],
   },
   robots: {
     index: true,
@@ -58,6 +71,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <ThemeScript />
+        <JsonLdOrganization />
       </head>
       <body
         className={`${playfairDisplay.variable} ${inter.variable} font-sans`}
