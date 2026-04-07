@@ -54,7 +54,7 @@ export function EditorialCarousel({ items }: EditorialCarouselProps) {
       {/* Header */}
       <div className="px-6 md:px-12 lg:px-20 mb-8 flex items-end justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Trending</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>Trending</p>
           <h2
             className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -123,15 +123,15 @@ export function EditorialCarousel({ items }: EditorialCarouselProps) {
                 ) : (
                   <div className="absolute inset-0 bg-neutral-800" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent z-10" />
                 {item.description && (
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute top-3 left-3 z-20">
                     <span className="text-[9px] uppercase tracking-[0.15em] text-white/70 bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10">
                       {item.description}
                     </span>
                   </div>
                 )}
-                <div className="absolute bottom-3 left-3 right-3">
+                <div className="absolute bottom-3 left-3 right-3 z-20">
                   <p className="text-sm font-bold text-white uppercase tracking-wide line-clamp-1">
                     {item.artistName}
                   </p>

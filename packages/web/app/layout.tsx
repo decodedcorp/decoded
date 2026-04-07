@@ -25,11 +25,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Decoded — AI-Powered Celebrity Fashion Discovery",
+    default: "Decoded — The Style Search Engine",
     template: "%s | Decoded",
   },
   description:
-    "Discover what your favorite celebrities are wearing. AI-powered item detection, editorial magazines, and virtual try-on.",
+    "The style search engine — AI-powered item detection, editorial magazines, and virtual try-on.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://decoded.style"
   ),

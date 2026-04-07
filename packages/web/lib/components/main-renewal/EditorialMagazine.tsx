@@ -64,12 +64,12 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
       {/* Header */}
       <div
         ref={headerRef}
-        className="mx-auto max-w-7xl px-6 md:px-12 lg:px-20 pt-16 md:pt-24 pb-8 md:pb-10"
+        className="px-6 md:px-12 lg:px-20 pt-16 md:pt-24 pb-8"
         style={{ opacity: 0 }}
       >
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Editorial</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>Editorial</p>
             <h2
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -272,7 +272,7 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
                 onClick={() => setActiveIdx(i)}
                 className={`rounded-full transition-all duration-300 ${
                   i === activeIdx
-                    ? "w-5 h-1.5 bg-white"
+                    ? "w-5 h-1.5 bg-[#eafd67]"
                     : "w-1.5 h-1.5 bg-white/20 hover:bg-white/40"
                 }`}
               />
