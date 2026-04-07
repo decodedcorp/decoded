@@ -22,8 +22,7 @@ interface MasonryGridProps {
 export default function MasonryGrid({ items, className }: MasonryGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const accentRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -45,23 +44,7 @@ export default function MasonryGrid({ items, className }: MasonryGridProps) {
         }
       );
 
-      // Accent bar: width expand
-      gsap.fromTo(
-        accentRef.current,
-        { scaleX: 0, transformOrigin: "left" },
-        {
-          scaleX: 1,
-          ease: "none",
-          scrollTrigger: {
-            trigger: headerRef.current,
-            start: "top 80%",
-            end: "top 50%",
-            scrub: 0.6,
-          },
-        }
-      );
-
-      // Grid container: subtle fade up
+// Grid container: subtle fade up
       gsap.fromTo(
         gridRef.current,
         { opacity: 0, y: 40 },
@@ -84,22 +67,20 @@ export default function MasonryGrid({ items, className }: MasonryGridProps) {
   return (
     <section
       ref={sectionRef}
-      className={`bg-mag-bg px-4 py-16 sm:px-6 lg:px-8 ${className ?? ""}`}
+      className={`bg-mag-bg px-6 py-16 md:py-24 md:px-12 lg:px-20 ${className ?? ""}`}
     >
       {/* Section header */}
-      <div className="mx-auto mb-10 max-w-7xl">
-        <h2
-          ref={headerRef}
-          className="text-2xl font-bold uppercase tracking-widest text-mag-text sm:text-3xl"
-          style={{ opacity: 0 }}
-        >
-          DECODED PICKS
-        </h2>
-        <div
-          ref={accentRef}
-          className="mt-2 h-0.5 w-12 bg-mag-accent"
-          style={{ transform: "scaleX(0)" }}
-        />
+      <div className="mx-auto mb-8 max-w-7xl">
+        <div ref={headerRef} style={{ opacity: 0 }}>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Curated</p>
+          <h2
+            className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+          >
+            Decoded{" "}
+            <span className="italic font-normal text-white/60">Picks</span>
+          </h2>
+        </div>
       </div>
 
       {/* Masonry grid */}

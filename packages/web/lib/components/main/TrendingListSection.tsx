@@ -145,7 +145,7 @@ function FlowingMenuItem({
       {/* Static label */}
       <Link
         href={item.href}
-        className="flex items-center h-full min-h-[44px] relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em] px-6"
+        className="flex items-center h-full min-h-[80px] relative cursor-pointer uppercase no-underline font-semibold text-[3vh] md:text-[3.5vh] text-white/90 tracking-[0.05em] px-6 md:px-12 lg:px-20"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -202,43 +202,39 @@ export function TrendingListSection({
   const displayItems = keywords.slice(0, 5);
 
   return (
-    <section
-      className={embedded ? "h-full" : "py-16 lg:py-24 px-6 md:px-12 lg:px-20"}
-    >
+    <section className={embedded ? "h-full" : "py-8"}>
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-[2px] bg-[#eafd67]" />
-          <h2 className="text-xs uppercase tracking-[0.2em] text-white/50 font-sans font-medium">
-            Trending
+      <div className="flex items-end justify-between px-6 md:px-12 lg:px-20 py-8 md:py-10">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Discover</p>
+          <h2
+            className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+          >
+            Trending{" "}
+            <span className="italic font-normal text-white/60">Now</span>
           </h2>
         </div>
         <Link
           href="/explore"
-          className="text-[10px] uppercase tracking-[0.2em] text-white/30 hover:text-[#eafd67] transition-colors py-3 px-2 -my-3 -mx-2"
+          className="text-[10px] uppercase tracking-[0.2em] text-white/40 hover:text-white/70 transition-colors"
         >
           View All
         </Link>
       </div>
 
-      {/* Flowing menu list */}
-      <div
-        className="relative rounded-xl overflow-hidden bg-[#0a0a0a] border border-white/[0.06]"
-        style={{
-          height: embedded ? "calc(100% - 52px)" : "clamp(420px, 60vh, 600px)",
-        }}
-      >
-        <nav className="flex flex-col h-full">
-          {displayItems.map((item, index) => (
-            <FlowingMenuItem
-              key={item.id}
-              item={item}
-              index={index}
-              isFirst={index === 0}
-            />
-          ))}
-        </nav>
-      </div>
+      {/* Flowing menu list — frameless, full-width */}
+      <nav className="flex flex-col">
+        {displayItems.map((item, index) => (
+          <FlowingMenuItem
+            key={item.id}
+            item={item}
+            index={index}
+            isFirst={index === 0}
+          />
+        ))}
+      </nav>
+
     </section>
   );
 }
