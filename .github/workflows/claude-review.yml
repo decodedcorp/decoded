@@ -23,3 +23,6 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            Review this PR. Focus on bugs, security issues, and performance problems.
+            Write your review as PR comments in Korean.
