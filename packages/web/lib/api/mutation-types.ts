@@ -91,7 +91,8 @@ export type ContextType =
   | "sns"
   | "street"
   | "fan_meeting"
-  | "interview";
+  | "interview"
+  | "other";
 
 export interface MediaMetadataItem {
   key: string; // e.g., "platform", "season", "episode"
