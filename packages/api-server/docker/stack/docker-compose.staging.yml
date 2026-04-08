@@ -1,5 +1,5 @@
 # Staging: api + ai + Meilisearch + Redis + SearXNG
-# Env: packages/api-server/.env.staging + packages/ai-server/.staging.env
+# Env: .env.backend.staging (repo root, unified)
 # From repo root: bash scripts/deploy-backend.sh staging up
 
 name: decoded-backend-staging
@@ -14,10 +14,11 @@ services:
     ports:
       - "8081:8080"
     env_file:
-      - ../../.env.staging
+      - ../../../../.env.backend.staging
     environment:
       PORT: "8080"
       HOST: "0.0.0.0"
+      LOG_FORMAT: text
       MEILISEARCH_URL: http://meilisearch:7700
       AI_SERVER_GRPC_URL: http://ai:50051
       API_SERVER_GRPC_PORT: "50052"
@@ -43,8 +44,9 @@ services:
     expose:
       - "50051"
     env_file:
-      - ../../../ai-server/.staging.env
+      - ../../../../.env.backend.staging
     environment:
+      LOG_FORMAT: json
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       SEARXNG_API_URL: http://searxng:8080
@@ -52,7 +54,7 @@ services:
       API_SERVER_GRPC_HOST: api
       API_SERVER_GRPC_PORT: "50052"
       AI_GRPC_LISTEN_PORT: "50051"
-      APP_ENV: prod
+      APP_ENV: staging
       ENV: staging
     depends_on:
       api:
@@ -98,7 +100,7 @@ services:
     networks:
       - decoded-backend-staging
     env_file:
-      - ../../../ai-server/.staging.env
+      - ../../../../.env.backend.staging
     command:
       - /bin/sh
       - -c

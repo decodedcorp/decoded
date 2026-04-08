@@ -5,6 +5,9 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.backend.dev
+.env.backend.staging
+.env.backend.prod
 
 # Next.js
 .next/
