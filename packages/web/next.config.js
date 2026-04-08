@@ -6,7 +6,8 @@ const nextConfig = {
   // Transpile shared package from monorepo
   transpilePackages: ["@decoded/shared"],
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    localPatterns: [{ pathname: "/**" }],
+    loaderFile: "./lib/image-loader.ts",
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 1080, 1920],
     imageSizes: [16, 32, 64, 128, 256],

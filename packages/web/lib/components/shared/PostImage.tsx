@@ -7,7 +7,11 @@ import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
 
 /** Generate a tiny thumbnail URL via Next.js image optimizer for blur background */
 function getBlurSrc(src: string): string {
-  return `/_next/image?url=${encodeURIComponent(src)}&w=32&q=1`;
+  const target =
+    src.startsWith("http://") || src.startsWith("https://")
+      ? `/api/v1/image-proxy?url=${encodeURIComponent(src)}`
+      : src;
+  return `/_next/image?url=${encodeURIComponent(target)}&w=32&q=1`;
 }
 
 interface PostImageProps {
