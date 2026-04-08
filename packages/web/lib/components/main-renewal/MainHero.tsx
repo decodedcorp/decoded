@@ -29,6 +29,17 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
   const glowRef = useRef<HTMLDivElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const [coverDone, setCoverDone] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("hero-cover-seen") === "1") {
+      setCoverDone(true);
+    }
+  }, []);
+
+  const handleCoverRevealed = useCallback(() => {
+    setCoverDone(true);
+    sessionStorage.setItem("hero-cover-seen", "1");
+  }, []);
   const { focusedId, toggleFocus, clearFocus, isFocused, isDimmed, bumpZ } =
     useHeroFocus();
 
@@ -153,7 +164,7 @@ export function MainHero({ images, className = "" }: MainHeroProps) {
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-[46] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
       {/* Intro cover — animated sequence before hero is revealed */}
-      {!coverDone && <HeroCover onRevealed={() => setCoverDone(true)} />}
+      {!coverDone && <HeroCover onRevealed={handleCoverRevealed} />}
     </section>
   );
 }

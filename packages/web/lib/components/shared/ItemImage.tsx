@@ -4,6 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+/** Generate a tiny thumbnail URL via Next.js image optimizer for blur background */
+function getBlurSrc(src: string): string {
+  const target =
+    src.startsWith("http://") || src.startsWith("https://")
+      ? `/api/v1/image-proxy?url=${encodeURIComponent(src)}`
+      : src;
+  return `/_next/image?url=${encodeURIComponent(target)}&w=32&q=1`;
+}
+
 const SIZE_CONFIG = {
   thumbnail: {
     aspectRatio: "1/1",
@@ -67,7 +76,10 @@ export function ItemImage({
   if (hasError || !src) {
     return (
       <div
-        className={cn("w-full overflow-hidden border border-border/20 bg-muted", className)}
+        className={cn(
+          "w-full overflow-hidden border border-border/20 bg-muted",
+          className
+        )}
         style={{ aspectRatio: config.aspectRatio }}
       />
     );
@@ -82,12 +94,12 @@ export function ItemImage({
       )}
       style={{ aspectRatio: config.aspectRatio }}
     >
-      {/* Blur background for card/detail/hero */}
+      {/* Blur background — loads tiny 32px thumbnail instead of full image */}
       {config.blur && (
         <div
           className="absolute inset-0 z-0"
           style={{
-            backgroundImage: `url(${src})`,
+            backgroundImage: `url(${getBlurSrc(src)})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             filter: "blur(24px) brightness(0.7)",
