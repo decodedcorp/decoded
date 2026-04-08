@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
+
+/** Generate a tiny thumbnail URL via Next.js image optimizer for blur background */
+function getBlurSrc(src: string): string {
+  return `/_next/image?url=${encodeURIComponent(src)}&w=32&q=1`;
+}
 
 interface PostImageProps {
   src: string;
@@ -42,14 +48,6 @@ export function PostImage({
 }: PostImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Handle already-cached images that won't fire onLoad
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
-      setIsLoaded(true);
-    }
-  }, [src]);
 
   const useDynamic = FEATURE_FLAGS.dynamicImageRatio[flagKey];
 
@@ -64,21 +62,34 @@ export function PostImage({
   };
 
   if (hasError || !src) {
-    return <div className={cn("w-full bg-neutral-900", className)} style={{ aspectRatio: "3/4" }} />;
+    return (
+      <div
+        className={cn("w-full bg-neutral-900", className)}
+        style={{ aspectRatio: "3/4" }}
+      />
+    );
   }
 
   if (!useDynamic) {
     // Fallback: original object-cover behavior
     return (
-      <div className={cn("relative overflow-hidden bg-muted min-h-[200px]", className)}>
-        <img
-          ref={imgRef}
+      <div
+        className={cn(
+          "relative overflow-hidden bg-muted min-h-[200px]",
+          className
+        )}
+        style={{ maxHeight }}
+      >
+        <Image
           src={src}
           alt={alt}
+          fill
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
+          priority={priority}
+          sizes="(max-width: 768px) 100vw, 50vw"
           className={cn(
-            "h-full w-full object-cover transition-opacity duration-200 ease-out",
+            "object-cover transition-opacity duration-200 ease-out",
             isLoaded ? "opacity-100" : "opacity-0",
             imgClassName
           )}
@@ -89,32 +100,36 @@ export function PostImage({
     );
   }
 
-  // Dynamic: blur background + object-contain
+  // Dynamic: blur background (tiny thumbnail) + object-contain
   return (
-    <div className={cn("relative overflow-hidden bg-black", className)}>
-      {/* Blurred background fills letterbox space */}
+    <div
+      className={cn("relative overflow-hidden bg-black", className)}
+      style={{ maxHeight }}
+    >
+      {/* Blurred background — loads tiny 32px thumbnail instead of full image */}
       <div
         className="absolute inset-0 z-0"
         style={{
-          backgroundImage: `url(${src})`,
+          backgroundImage: `url(${getBlurSrc(src)})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           filter: "blur(24px) brightness(0.7)",
           transform: "scale(1.15)",
         }}
       />
-      <img
-        ref={imgRef}
+      <Image
         src={src}
         alt={alt}
+        fill
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
+        priority={priority}
+        sizes="(max-width: 768px) 100vw, 50vw"
         className={cn(
-          "relative z-10 h-full w-full object-contain transition-opacity duration-200 ease-out",
+          "relative z-10 object-contain transition-opacity duration-200 ease-out",
           isLoaded ? "opacity-100" : "opacity-0",
           imgClassName
         )}
-        style={{ maxHeight }}
         onLoad={handleLoad}
         onError={handleError}
       />
