@@ -90,12 +90,25 @@ def _build_items_section(state: PostEditorialState) -> str:
     return "\n".join(lines) if lines else "(아이템 없음)"
 
 
+def _build_news_section(state: PostEditorialState) -> str:
+    refs = state.get("news_references")
+    if not refs:
+        return "(관련 뉴스 없음)"
+    lines = []
+    for ref in refs:
+        item = ref.get("matched_item", "")
+        item_tag = f" [아이템: {item}]" if item else ""
+        lines.append(f"- {ref['title']} ({ref['source']}): {ref['summary']}{item_tag}")
+    return "\n".join(lines)
+
+
 def _build_editorial_prompt(state: PostEditorialState) -> str:
     post_data = state["post_data"]
     artist_info = " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
     vision_section = _build_vision_section(state)
     artist_brand_ctx, raw_research = _build_research_section(state)
     items_section = _build_items_section(state)
+    news_section = _build_news_section(state)
 
     feedback_section = ""
     feedback_history = state.get("feedback_history") or []
@@ -128,12 +141,16 @@ def _build_editorial_prompt(state: PostEditorialState) -> str:
 [아이템 상세]
 {items_section}
 
+[관련 뉴스 및 기사]
+{news_section}
+
 작성 조건:
 - title: 흥미를 끄는 에디토리얼 제목 (한국어).
 - subtitle: 부제목 (한국어, 1문장).
 - editorial_paragraphs: 3~4개 단락 (각 200~350자, 한국어).
 - pull_quote: 인상적인 한 줄 인용문.
 - item_editorials: 각 spot별 piece-by-piece 해설. {{"spot_id": "...", "paragraphs": ["..."]}} 형태.
+- 관련 뉴스가 있으면 에디토리얼 본문에서 자연스럽게 언급하되, 출처를 밝히세요 (예: "Hypebeast에 따르면...").
 
 반드시 유효한 JSON만 출력하세요."""
 

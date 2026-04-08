@@ -78,6 +78,8 @@ class PostEditorialState(TypedDict):
     celeb_list: list[dict]
     related_items: list[dict]
 
+    news_references: list[dict] | None
+
     review_result: dict | None
     revision_count: int
     feedback_history: Annotated[list[dict], operator.add]

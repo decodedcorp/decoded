@@ -21,6 +21,22 @@ pub struct RelatedEditorialItem {
 }
 
 #[derive(Debug, Serialize)]
+pub struct NewsReferenceResponse {
+    pub id: Uuid,
+    pub title: String,
+    pub url: String,
+    pub source: String,
+    pub summary: Option<String>,
+    pub og_title: Option<String>,
+    pub og_description: Option<String>,
+    pub og_image: Option<String>,
+    pub og_site_name: Option<String>,
+    pub relevance_score: f64,
+    pub credibility_score: f64,
+    pub matched_item: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PostMagazineResponse {
     pub id: Uuid,
     pub title: String,
@@ -34,6 +50,7 @@ pub struct PostMagazineResponse {
     pub updated_at: String,
     pub published_at: Option<String>,
     pub related_editorials: Vec<RelatedEditorialItem>,
+    pub news_references: Vec<NewsReferenceResponse>,
 }
 
 #[derive(Debug, Serialize)]
@@ -132,6 +149,7 @@ mod tests {
             updated_at: "2025-01-02T00:00:00Z".to_string(),
             published_at: None,
             related_editorials: vec![],
+            news_references: vec![],
         };
         let v: serde_json::Value = serde_json::to_value(&r).unwrap();
         assert_eq!(v["title"], "T");
@@ -142,6 +160,7 @@ mod tests {
         assert_eq!(v["error_log"], serde_json::Value::Null);
         assert_eq!(v["published_at"], serde_json::Value::Null);
         assert_eq!(v["related_editorials"], serde_json::json!([]));
+        assert_eq!(v["news_references"], serde_json::json!([]));
         assert_eq!(v["status"], "draft");
     }
 
@@ -165,6 +184,7 @@ mod tests {
                 image_url: Some("https://i.example/x.png".to_string()),
                 bg_color: None,
             }],
+            news_references: vec![],
         };
         let v: serde_json::Value = serde_json::to_value(&r).unwrap();
         assert_eq!(v["subtitle"], "Sub");
