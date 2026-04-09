@@ -14,7 +14,7 @@ export function initSupabase(
   if (!supabaseClient) {
     supabaseClient = createClient<Database>(url, anonKey, {
       auth: {
-        flowType: "pkce",
+        detectSessionInUrl: true,
       },
     });
   }

@@ -146,7 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { error } = await supabaseBrowserClient.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(sessionStorage.getItem("post_login_redirect") || "/")}`,
+          redirectTo: `${window.location.origin}/${sessionStorage.getItem("post_login_redirect")?.replace(/^\//, "") || ""}`,
         },
       });
 
