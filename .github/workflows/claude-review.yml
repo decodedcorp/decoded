@@ -40,8 +40,6 @@ jobs:
             exit 0
           fi
 
-          esc() { echo "$1" | sed 's/[_*[\]()~`>#+\-=|{}.!\\]/\\&/g'; }
-
           PR_NUM="${{ github.event.pull_request.number || github.event.issue.number }}"
           PR_TITLE="${{ github.event.pull_request.title || github.event.issue.title }}"
           STATUS="${{ job.status }}"
@@ -49,42 +47,29 @@ jobs:
           URL="${{ github.server_url }}/${REPO}/pull/${PR_NUM}"
 
           if [ "$STATUS" = "success" ]; then
-            MSG_TEXT="$(cat <<MSGEOF
-          🤖 *DECODED \\| Code Review Complete*
-
-          ✅ PR \\#${PR_NUM} 리뷰 완료
-          📋 *$(esc "$PR_TITLE")*
-          🔗 [PR 보기]($(esc "$URL"))
-          MSGEOF
-          )"
+            ICON="🤖✅"
+            LABEL="리뷰 완료"
           else
-            MSG_TEXT="$(cat <<MSGEOF
-          🤖 *DECODED \\| Code Review Failed*
-
-          ❌ PR \\#${PR_NUM} 리뷰 실패
-          📋 *$(esc "$PR_TITLE")*
-          🔗 [PR 보기]($(esc "$URL"))
-          MSGEOF
-          )"
+            ICON="🤖❌"
+            LABEL="리뷰 실패"
           fi
 
-          MSG_TEXT=$(echo "$MSG_TEXT" | sed 's/^[[:space:]]*//')
+          MSG="${ICON} decoded code review — ${LABEL}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          PR #${PR_NUM}: ${PR_TITLE}
+
+          ${URL}"
+
+          MSG=$(echo "$MSG" | sed 's/^[[:space:]]*//')
 
           PAYLOAD=$(jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --arg text "$MSG_TEXT" \
-            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), parse_mode: "MarkdownV2", disable_web_page_preview: true}')
+            --arg text "$MSG" \
+            '{chat_id: $chat_id, text: $text, disable_web_page_preview: true}')
 
           RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
 
           echo "$RESP" | jq .
-
-          if ! echo "$RESP" | jq -e '.ok == true' >/dev/null 2>&1; then
-            echo "MarkdownV2 failed, retrying as plain text..."
-            PLAIN="$(echo "$MSG_TEXT" | sed 's/\\//g; s/\*//g; s/`//g; s/\[//g; s/\]//g; s/(//g; s/)//g')"
-            PAYLOAD=$(jq -n --arg chat_id "$TELEGRAM_CHAT_ID" --arg text "$PLAIN" '{chat_id: $chat_id, text: $text}')
-            curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -H "Content-Type: application/json" -d "$PAYLOAD" | jq .
-          fi
+          echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1

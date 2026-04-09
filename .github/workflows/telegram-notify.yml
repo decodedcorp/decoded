@@ -1,4 +1,4 @@
-# Sends repository events to Telegram with MarkdownV2 formatting.
+# Sends repository events to Telegram with clean formatting.
 # Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: Telegram notify
 
@@ -31,26 +31,15 @@ jobs:
             exit 1
           fi
 
-          # MarkdownV2 escape helper
-          esc() { echo "$1" | sed 's/[_*[\]()~`>#+\-=|{}.!\\]/\\&/g'; }
-
           REPO="${{ github.repository }}"
           SERVER="${{ github.server_url }}"
           ACTOR="${{ github.actor }}"
           SHA="${{ github.sha }}"
           REF="${{ github.ref }}"
-          RUN_URL="${SERVER}/${REPO}/actions/runs/${{ github.run_id }}"
-          PARSE_MODE="MarkdownV2"
 
           case "$EVENT_NAME" in
             workflow_dispatch)
-              MSG_TEXT="$(cat <<MSGEOF
-          🔧 *DECODED \\| Manual Trigger*
-
-          👤 $(esc "$ACTOR")
-          🔗 [Actions Run]($(esc "$RUN_URL"))
-          MSGEOF
-          )"
+              MSG="🔧 decoded — manual trigger by ${ACTOR}"
               ;;
 
             push)
@@ -58,15 +47,12 @@ jobs:
               BRANCH="${REF#refs/heads/}"
               COMMIT_MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 200)
               COMMIT_URL="${SERVER}/${REPO}/commit/${SHA}"
-              MSG_TEXT="$(cat <<MSGEOF
-          📦 *DECODED \\| Push*
+              MSG="📦 decoded push → ${BRANCH}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${SHORT} ${COMMIT_MSG}
+          by ${ACTOR}
 
-          🌿 \`$(esc "$BRANCH")\`
-          📝 \`$(esc "$SHORT")\` $(esc "$COMMIT_MSG")
-          👤 $(esc "$ACTOR")
-          🔗 [커밋 보기]($(esc "$COMMIT_URL"))
-          MSGEOF
-          )"
+          ${COMMIT_URL}"
               ;;
 
             pull_request)
@@ -79,16 +65,14 @@ jobs:
               ADDITIONS=$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")
               DELETIONS=$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")
               CHANGED=$(jq -r '.pull_request.changed_files // 0' "$GITHUB_EVENT_PATH")
-              MSG_TEXT="$(cat <<MSGEOF
-          🔀 *DECODED \\| New PR \\#${NUM}*
+              MSG="🔀 decoded PR #${NUM}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${TITLE}
+          ${HEAD} → ${BASE}
+          +${ADDITIONS} -${DELETIONS} (${CHANGED} files)
+          by ${AUTHOR}
 
-          📋 *$(esc "$TITLE")*
-          🌿 \`$(esc "$HEAD")\` → \`$(esc "$BASE")\`
-          👤 $(esc "$AUTHOR")
-          📊 \`\\+${ADDITIONS}\` \`\\-${DELETIONS}\` \\(${CHANGED} files\\)
-          🔗 [PR 보기]($(esc "$URL"))
-          MSGEOF
-          )"
+          ${URL}"
               ;;
 
             issues)
@@ -97,15 +81,13 @@ jobs:
               AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
               URL=$(jq -r '.issue.html_url' "$GITHUB_EVENT_PATH")
               LABELS=$(jq -r '[.issue.labels[].name] | join(", ")' "$GITHUB_EVENT_PATH")
-              MSG_TEXT="$(cat <<MSGEOF
-          📌 *DECODED \\| New Issue \\#${NUM}*
+              MSG="📌 decoded issue #${NUM}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${TITLE}
+          ${LABELS:-no labels}
+          by ${AUTHOR}
 
-          📋 *$(esc "$TITLE")*
-          👤 $(esc "$AUTHOR")
-          🏷️ \`$(esc "${LABELS:-none}")\`
-          🔗 [이슈 보기]($(esc "$URL"))
-          MSGEOF
-          )"
+          ${URL}"
               ;;
 
             deployment_status)
@@ -120,27 +102,19 @@ jobs:
               fi
 
               if [ "$STATE" = "success" ]; then
-                HEADER="🚀 *DECODED \\| Deploy Success*"
-                STATUS_LINE="✅ *$(esc "$ENV_NAME")* 배포 완료"
+                ICON="🚀"
+                LABEL="배포 완료"
               else
-                HEADER="💥 *DECODED \\| Deploy Failed*"
-                STATUS_LINE="❌ *$(esc "$ENV_NAME")* 배포 실패"
+                ICON="💥"
+                LABEL="배포 실패"
               fi
 
-              LINK_LINE=""
-              if [ -n "$TARGET_URL" ] && [ "$TARGET_URL" != "null" ]; then
-                LINK_LINE="🔗 [배포 확인]($(esc "$TARGET_URL"))"
-              fi
+              MSG="${ICON} decoded deploy — ${LABEL}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          env: ${ENV_NAME}
+          ref: ${DEPLOY_REF}
 
-              MSG_TEXT="$(cat <<MSGEOF
-          ${HEADER}
-
-          ${STATUS_LINE}
-          🌿 \`$(esc "$DEPLOY_REF")\`
-          👤 $(esc "$ACTOR")
-          ${LINK_LINE}
-          MSGEOF
-          )"
+          ${TARGET_URL}"
               ;;
 
             *)
@@ -149,32 +123,16 @@ jobs:
               ;;
           esac
 
-          # Remove leading whitespace from heredoc
-          MSG_TEXT=$(echo "$MSG_TEXT" | sed 's/^[[:space:]]*//')
+          MSG=$(echo "$MSG" | sed 's/^[[:space:]]*//')
 
           PAYLOAD=$(jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --arg text "$MSG_TEXT" \
-            --arg parse_mode "$PARSE_MODE" \
-            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), parse_mode: $parse_mode, disable_web_page_preview: true}')
+            --arg text "$MSG" \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), disable_web_page_preview: true}')
 
           RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
 
           echo "$RESP" | jq .
-
-          # If MarkdownV2 fails, retry as plain text
-          if ! echo "$RESP" | jq -e '.ok == true' >/dev/null 2>&1; then
-            echo "MarkdownV2 failed, retrying as plain text..."
-            PLAIN_TEXT=$(echo "$MSG_TEXT" | sed 's/\\//g; s/\*//g; s/`//g; s/\[//g; s/\]//g; s/(//g; s/)//g')
-            PAYLOAD=$(jq -n \
-              --arg chat_id "$TELEGRAM_CHAT_ID" \
-              --arg text "$PLAIN_TEXT" \
-              '{chat_id: $chat_id, text: $text}')
-            RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD")
-            echo "$RESP" | jq .
-            echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1
-          fi
+          echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1
