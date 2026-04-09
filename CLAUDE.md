@@ -71,7 +71,7 @@ When adding a new API endpoint:
 
 ## Git workflow
 
-요약: `main` 직접 push 금지, PR로만 머지. 브랜치 접두사·커밋·리뷰 절차는 **[docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md)**.
+요약: `feature/*` → `dev` → `main` 플로우. `main` 직접 push 금지, `dev`→`main` PR 머지만 허용. 긴급 시 `hotfix/*`→`main` 예외. 상세는 **[docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md)**.
 
 ## Codebase documentation
 
