@@ -21,10 +21,7 @@ const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
-  // 1st release: Upload hidden (GH #35)
-  // { href: "/request/upload", label: "Upload", isUpload: true },
-  // 1st release: Lab hidden (GH #35)
-  // { href: "/lab", label: "Lab" },
+  { href: "/request/upload", label: "Upload" },
 ] as const;
 
 interface SmartNavProps {
