@@ -6,15 +6,11 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .alter_table(
-                Table::alter()
-                    .table(Alias::new("posts"))
-                    .add_column(ColumnDef::new(Alias::new("image_width")).integer().null())
-                    .add_column(ColumnDef::new(Alias::new("image_height")).integer().null())
-                    .to_owned(),
-            )
-            .await
+        let db = manager.get_connection();
+        db.execute_unprepared(
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_width integer, ADD COLUMN IF NOT EXISTS image_height integer"
+        ).await?;
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
