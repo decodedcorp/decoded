@@ -28,7 +28,7 @@ export async function uploadToSupabaseStorage(file: File): Promise<string> {
   const { error: uploadError } = await supabaseBrowserClient.storage
     .from(BUCKET_NAME)
     .upload(filePath, file, {
-      cacheControl: "3600",
+      cacheControl: "31536000, immutable",
       upsert: false,
     });
 

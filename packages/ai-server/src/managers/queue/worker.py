@@ -6,32 +6,34 @@ from typing import Dict, Any
 from arq import create_pool
 from arq.connections import RedisSettings
 from arq.worker import Worker, func
-from src.services.metadata.core.metadata_extract_service import MetadataExtractService
-from src.services.post_editorial.post_editorial_service import PostEditorialService
 
 logger = logging.getLogger(__name__)
+
+
+def _get_functions():
+    """Lazy-load job functions to avoid circular imports."""
+    from src.services.metadata.core.metadata_extract_service import MetadataExtractService
+    from src.services.post_editorial.post_editorial_service import PostEditorialService
+
+    return [
+        func(MetadataExtractService.analyze_link_job, name="analyze_link_job"),
+        func(
+            PostEditorialService.post_editorial_job,
+            name="post_editorial_job",
+            max_tries=1,
+        ),
+    ]
 
 
 class WorkerSettings:
     """
     ARQ Worker settings configuration
-    
+
     This class defines the ARQ worker configuration including:
     - Redis connection settings
     - Job functions to register
     - Worker behavior (max_jobs, timeout, etc.)
     """
-    
-    # Job functions - explicitly declare which jobs this worker can execute
-    # Use func() wrapper to explicitly specify function name for ARQ
-    functions = [
-        func(MetadataExtractService.analyze_link_job, name="analyze_link_job"),
-        func(
-            PostEditorialService.post_editorial_job,
-            name="post_editorial_job",
-            max_tries=1,  # No ARQ retry: job fails/timeouts → leave queue (avoid retry loop on 429)
-        ),
-    ]
     
     # Worker behavior settings
     # max_jobs=1: post_editorial jobs call Gemini/Perplexity heavily; concurrent runs hit API rate limits
@@ -102,7 +104,7 @@ async def create_worker(environment, metadata_container) -> Worker:
         
         # Create worker with settings
         worker = Worker(
-            functions=WorkerSettings.functions,
+            functions=_get_functions(),
             redis_settings=redis_settings,
             max_jobs=WorkerSettings.max_jobs,
             job_timeout=WorkerSettings.job_timeout,

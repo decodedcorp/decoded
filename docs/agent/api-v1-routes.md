@@ -6,7 +6,7 @@
 
 | Route              | Methods | Description                                                              |
 | ------------------ | ------- | ------------------------------------------------------------------------ |
-| `/api/v1/search`   | GET     | Unified search — proxies to backend Meilisearch; Supabase ilike fallback |
+| `/api/v1/search/[[...path]]` | GET | Unified search — catch-all proxy to Rust backend (Meilisearch); Supabase ilike fallback |
 
 Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 
@@ -95,5 +95,27 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 | Route                    | Methods | Description                                      |
 | ------------------------ | ------- | ------------------------------------------------ |
 | `/api/v1/image-proxy`    | GET     | Proxy external image URLs (avoids CORS/hotlink)  |
+
+## Admin API (`/api/admin/`)
+
+> `/api/v1/` 프리픽스가 아닌 `/api/admin/` 경로. Seed 파이프라인, 엔티티 관리, 감사 로그 등 어드민 전용.
+
+| Route | Methods | Description |
+| ----- | ------- | ----------- |
+| `/api/admin/entities/brands` | GET/POST | 브랜드 목록/생성 |
+| `/api/admin/entities/brands/[id]` | GET/PATCH/DELETE | 개별 브랜드 |
+| `/api/admin/entities/artists` | GET/POST | 아티스트 목록/생성 |
+| `/api/admin/entities/artists/[id]` | GET/PATCH/DELETE | 개별 아티스트 |
+| `/api/admin/entities/group-members` | GET | 그룹 멤버 목록 |
+| `/api/admin/candidates` | GET/POST | 시드 후보 목록/생성 |
+| `/api/admin/candidates/[id]` | GET/PATCH | 개별 후보 |
+| `/api/admin/candidates/[id]/approve` | POST | 후보 승인 |
+| `/api/admin/candidates/[id]/reject` | POST | 후보 거절 |
+| `/api/admin/bulk` | POST | 벌크 작업 (approve/reject/delete) |
+| `/api/admin/audit-log` | GET | 감사 로그 목록 |
+| `/api/admin/audit-log/[id]/rollback` | POST | 감사 로그 롤백 |
+| `/api/admin/post-images` | POST | 포스트 이미지 업로드 |
+| `/api/admin/post-spots` | POST | 포스트 스팟 관리 |
+| `/api/admin/review` | GET/POST | 콘텐츠 리뷰 |
 
 Rust REST API와의 관계는 [`.planning/codebase/INTEGRATIONS.md`](../../.planning/codebase/INTEGRATIONS.md) 및 `packages/api-server` 문서를 참고합니다.

@@ -42,7 +42,7 @@ export function HeroCard({
   const wasFocusedRef = useRef(false);
   const preFocusPosRef = useRef({ x: 0, y: 0 });
   const currentZRef = useRef(position.zIndex);
-  const imageLoadedRef = useRef(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [showSpots, setShowSpots] = useState(false);
 
   const onToggleFocusRef = useRef(onToggleFocus);
@@ -124,7 +124,7 @@ export function HeroCard({
   // Entry animation — triggered when cover is done AND image is loaded
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || !coverDone || !imageLoadedRef.current) return;
+    if (!el || !coverDone || !imageLoaded) return;
 
     // Random direction from outside viewport
     const directions = [
@@ -157,7 +157,7 @@ export function HeroCard({
         onComplete: () => startFloat(el),
       }
     );
-  }, [coverDone]);
+  }, [coverDone, imageLoaded]);
 
   // Sync showSpots
   useEffect(() => {
@@ -343,7 +343,7 @@ export function HeroCard({
                 floatRef.current?.kill();
                 return;
               }
-              imageLoadedRef.current = true;
+              setImageLoaded(true);
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />

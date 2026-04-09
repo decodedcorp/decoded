@@ -1,0 +1,487 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775462177168,
+  "projectRoot": "/Users/kiyeol/development/decoded/decoded-monorepo",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "19.2.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.2.0",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "turbo run dev",
+      "dev:web": "bun run --filter @decoded/web dev",
+      "dev:api-server": "cd packages/api-server && cargo watch -x run",
+      "dev:ai-server": "cd packages/ai-server && uv run python -m src.main",
+      "dev:local-fe": "bun run dev:web",
+      "dev:local-be": "bash scripts/local-be.sh",
+      "dev:local-deps": "bash scripts/local-deps-up.sh",
+      "dev:local-deps-down": "bash scripts/local-deps-down.sh",
+      "dev:backend": "bun run dev:api-server",
+      "build": "turbo run build",
+      "build:web": "bun run --filter @decoded/web build",
+      "build:api-server": "cd packages/api-server && cargo build --release",
+      "build:backend": "bun run build:api-server",
+      "lint": "turbo run lint",
+      "test": "turbo run test",
+      "ci:local": "bash scripts/git-pre-push.sh",
+      "generate:api": "turbo run generate:api",
+      "deploy:backend": "bash scripts/deploy-backend.sh"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": true,
+    "workspaces": [
+      "packages/web",
+      "packages/shared",
+      "packages/mobile",
+      "packages/api-server",
+      "packages/ai-server"
+    ],
+    "mainDirectories": [
+      "__tests__",
+      "docs",
+      "scripts"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "__tests__": {
+      "path": "__tests__",
+      "purpose": "Test files",
+      "fileCount": 0,
+      "lastAccessed": 1775462177135,
+      "keyFiles": []
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 9,
+      "lastAccessed": 1775462177136,
+      "keyFiles": [
+        "BACKEND-ONBOARDING.md",
+        "GIT-WORKFLOW.md",
+        "README.md",
+        "backend-frontend-status.md",
+        "gstack-guide.md"
+      ]
+    },
+    "nginx": {
+      "path": "nginx",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775462177141,
+      "keyFiles": [
+        "decoded.dev.conf",
+        "preview.decoded.style.conf"
+      ]
+    },
+    "packages": {
+      "path": "packages",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775462177142,
+      "keyFiles": []
+    },
+    "plans": {
+      "path": "plans",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1775462177142,
+      "keyFiles": [
+        "partitioned-roaming-pine.md",
+        "whimsical-questing-rainbow-agent-a724aa4104b0d2aa9.md",
+        "whimsical-questing-rainbow.md"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 11,
+      "lastAccessed": 1775462177142,
+      "keyFiles": [
+        "deploy-backend.sh",
+        "git-pre-push.sh",
+        "list-posts-with-spots.mjs",
+        "local-be.sh",
+        "local-deps-down.sh"
+      ]
+    },
+    "specs": {
+      "path": "specs",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775462177143,
+      "keyFiles": [
+        "README.md"
+      ]
+    },
+    "supabase": {
+      "path": "supabase",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775462177143,
+      "keyFiles": []
+    },
+    "docs/api": {
+      "path": "docs/api",
+      "purpose": "API routes",
+      "fileCount": 15,
+      "lastAccessed": 1775462177143,
+      "keyFiles": [
+        "README.md",
+        "SPEC-CHANGE-PROCESS.md",
+        "admin.md"
+      ]
+    },
+    "supabase/migrations": {
+      "path": "supabase/migrations",
+      "purpose": "Database migrations",
+      "fileCount": 4,
+      "lastAccessed": 1775462177144,
+      "keyFiles": [
+        "20260305113700_enhance_handle_new_user.sql",
+        "20260305204300_profile_dashboard_schema.sql",
+        "20260312120000_create_user_events_table.sql"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "packages/web/app/page.tsx",
+      "accessCount": 142,
+      "lastAccessed": 1775351834130,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail/ImageDetailModal.tsx",
+      "accessCount": 131,
+      "lastAccessed": 1775312915615,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail/ImageDetailContent.tsx",
+      "accessCount": 125,
+      "lastAccessed": 1775351233775,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/explore/ExploreClient.tsx",
+      "accessCount": 119,
+      "lastAccessed": 1775351371220,
+      "type": "file"
+    },
+    {
+      "path": "packages/web",
+      "accessCount": 117,
+      "lastAccessed": 1775351465859,
+      "type": "directory"
+    },
+    {
+      "path": "packages/web/lib/hooks/useImages.ts",
+      "accessCount": 81,
+      "lastAccessed": 1775351487172,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 63,
+      "lastAccessed": 1775530249928,
+      "type": "directory"
+    },
+    {
+      "path": "packages/web/lib/components/explore/ExploreCardCell.tsx",
+      "accessCount": 62,
+      "lastAccessed": 1775312539833,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/main-renewal/DecodeShowcase.tsx",
+      "accessCount": 48,
+      "lastAccessed": 1775286286895,
+      "type": "file"
+    },
+    {
+      "path": ".planning/STATE.md",
+      "accessCount": 40,
+      "lastAccessed": 1775529452651,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/supabase/types.ts",
+      "accessCount": 32,
+      "lastAccessed": 1775351362105,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/explore/page.tsx",
+      "accessCount": 31,
+      "lastAccessed": 1775351370516,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail",
+      "accessCount": 29,
+      "lastAccessed": 1775351227845,
+      "type": "directory"
+    },
+    {
+      "path": "packages/web/lib/components/detail/ShopGrid.tsx",
+      "accessCount": 27,
+      "lastAccessed": 1775351219788,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail/ImageDetailPage.tsx",
+      "accessCount": 24,
+      "lastAccessed": 1775351476966,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/@modal/(.)posts/[id]/page.tsx",
+      "accessCount": 23,
+      "lastAccessed": 1775312047601,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/posts/[id]/page.tsx",
+      "accessCount": 22,
+      "lastAccessed": 1775312062316,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components",
+      "accessCount": 22,
+      "lastAccessed": 1775312519091,
+      "type": "directory"
+    },
+    {
+      "path": "packages/web/lib/components/main-renewal/SmartNav.tsx",
+      "accessCount": 17,
+      "lastAccessed": 1775311964278,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app",
+      "accessCount": 15,
+      "lastAccessed": 1775312515911,
+      "type": "directory"
+    },
+    {
+      "path": "packages/web/app/layout.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1775311515909,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/main/HeroItemSync.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1775351778903,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/explore/ExploreFilterBar.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1775201417090,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/supabase/queries/posts.ts",
+      "accessCount": 9,
+      "lastAccessed": 1775351358617,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/generated/models/listPostsParams.ts",
+      "accessCount": 8,
+      "lastAccessed": 1775200129055,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail/DecodedItemsSection.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1775295363914,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/ConditionalNav.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1775312924349,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/stores/hierarchicalFilterStore.ts",
+      "accessCount": 7,
+      "lastAccessed": 1775201418208,
+      "type": "file"
+    },
+    {
+      "path": "docs/agent/web-routes-and-features.md",
+      "accessCount": 7,
+      "lastAccessed": 1775351366145,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/globals.css",
+      "accessCount": 6,
+      "lastAccessed": 1775296288189,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/design-system/mobile-header.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1775311961484,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/design-system/nav-item.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775116176401,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/tests/hasMagazine-filter.test.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775116418914,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/detail/ImageDetailPreview.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775199808859,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/generated/models/postListItem.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775199991876,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/generated/models/postDetailResponse.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775199992937,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/HomeClient.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775311511026,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/explore/ExploreHeader.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775312926316,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/main-renewal/MainHero.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775351639770,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/design-system",
+      "accessCount": 3,
+      "lastAccessed": 1775121718547,
+      "type": "directory"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 3,
+      "lastAccessed": 1775294799760,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/MobileNavBar.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775312535279,
+      "type": "file"
+    },
+    {
+      "path": ".planning/quick/260402-mls-github-35-1-upload-lab-try-on-notice-pro/260402-mls-PLAN.md",
+      "accessCount": 2,
+      "lastAccessed": 1775114956016,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/design-system/nav-bar.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775115363568,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/mutation-types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775194738458,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/hooks/admin/useEditorialCandidates.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775351363435,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/tests/navigation.spec.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775114275131,
+      "type": "file"
+    },
+    {
+      "path": ".planning/quick/260402-mls-github-35-1-upload-lab-try-on-notice-pro/260402-mls-SUMMARY.md",
+      "accessCount": 1,
+      "lastAccessed": 1775114967867,
+      "type": "file"
+    },
+    {
+      "path": ".planning/quick/260402-mym-explore-editorial-post/260402-mym-PLAN.md",
+      "accessCount": 1,
+      "lastAccessed": 1775115416671,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/app/posts",
+      "accessCount": 1,
+      "lastAccessed": 1775115763009,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

@@ -22,6 +22,7 @@ export { TopItemsSection } from "./TopItemsSection";
 export { HeroItemSync } from "./HeroItemSync";
 export type { HeroPostEntry } from "./HeroItemSync";
 export { EditorialSection } from "./EditorialSection";
+export { EditorialCarousel } from "./EditorialCarousel";
 export { TrendingListSection } from "./TrendingListSection";
 export { WhatsHappeningSection } from "./WhatsHappeningSection";
 export type { LatestPostCardData } from "./LatestPostsScroll";

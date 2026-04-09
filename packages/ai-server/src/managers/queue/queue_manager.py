@@ -5,9 +5,10 @@ This module provides a generic queue management infrastructure that can be used
 by any service in the application. It abstracts ARQ pool management and provides
 a simple interface for enqueueing jobs.
 """
+from __future__ import annotations
+
 import logging
 from typing import Optional, Dict, Any
-from .worker import get_arq_pool
 
 
 class QueueManager:
@@ -51,6 +52,7 @@ class QueueManager:
             return
         
         try:
+            from .worker import get_arq_pool
             self.pool = await get_arq_pool(self.environment)
             self.logger.info("QueueManager initialized successfully")
         except Exception as e:

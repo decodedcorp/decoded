@@ -75,7 +75,7 @@
 - Spline 4.1 - 3D scene integration
 
 **Charts & Visualization:**
-- Recharts 3.7 - Composable chart components
+- Recharts 3.7.0 - Composable chart components
 - Rough.js 4.6 - Hand-drawn style graphics
 
 **UI Components & Icons:**
@@ -87,7 +87,7 @@
 - shadcn 4.1.0 - Component library generator
 
 **HTTP Client:**
-- Axios 1.13 - HTTP requests
+- Axios 1.13.6 - HTTP requests
 
 **Utilities:**
 - clsx 2.1.1 - Classname builder
@@ -134,7 +134,7 @@
   - Settings: semi true, trailingComma es5, singleQuote false, printWidth 80, tabWidth 2, useTabs false, arrowParens always
 
 **Testing:**
-- Playwright 1.58 - E2E testing
+- Playwright 1.58.1 - E2E testing
 - Vitest 4.1 - Unit testing
 
 **TypeScript Configuration (tsconfig.json):**

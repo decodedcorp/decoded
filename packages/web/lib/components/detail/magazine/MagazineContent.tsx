@@ -8,6 +8,7 @@ import { MagazineTitleSection } from "./MagazineTitleSection";
 import { MagazineEditorialSection } from "./MagazineEditorialSection";
 import { MagazineCelebSection } from "./MagazineCelebSection";
 import { MagazineItemsSection } from "./MagazineItemsSection";
+import { MagazineNewsSection } from "./MagazineNewsSection";
 import { MagazineRelatedSection } from "./MagazineRelatedSection";
 
 type Props = {
@@ -51,6 +52,14 @@ export function MagazineContent({ layout, relatedEditorials }: Props) {
         relatedItems={layout.related_items}
         accentColor={accentColor}
       />
+
+      {/* Section 5: News References */}
+      {layout.news_references && layout.news_references.length > 0 && (
+        <MagazineNewsSection
+          newsReferences={layout.news_references}
+          accentColor={accentColor}
+        />
+      )}
 
       {/* Section 6: Related Editorials */}
       {relatedEditorials && relatedEditorials.length > 0 && (

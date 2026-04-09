@@ -370,6 +370,31 @@ PR #69 / SeaORM migration `m20260402_000001_add_warehouse_fk_posts_solutions`에
 
 ---
 
+## Public 스키마 참조 테이블
+
+> warehouse가 아닌 `public` 스키마이지만, Seed/큐레이션 파이프라인과 밀접한 테이블.
+
+### `decoded_picks`
+
+Daily Decoded Pick 큐레이션 테이블. 홈페이지 `DecodedPickSection`에서 표시.
+
+| Column | Type | Note |
+|--------|------|------|
+| `id` | uuid PK | |
+| `post_id` | uuid FK → public.posts | 큐레이션된 포스트 |
+| `pick_date` | date UNIQUE | 날짜별 1개 pick |
+| `note` | text | 큐레이션 노트 |
+| `curated_by` | text (default 'ai') | 큐레이터 (ai / admin 등) |
+| `is_active` | boolean | 활성 여부 |
+| `created_at` | timestamptz | |
+
+**RLS:**
+- Public read (is_active = true)
+- Authenticated: full access
+- service_role: full access
+
+---
+
 ## Type Aliases
 
 `warehouse-types.ts`에서 export하는 편의 타입:

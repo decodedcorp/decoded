@@ -13,6 +13,14 @@ import {
   Sparkles,
   Star,
   LogOut,
+  Users,
+  Image,
+  MapPin,
+  CheckCircle,
+  Mic2,
+  Tag,
+  UsersRound,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/stores/authStore";
@@ -24,11 +32,40 @@ interface NavItem {
   exact?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+type SidebarEntry = NavItem | NavGroup;
+
+function isNavGroup(entry: SidebarEntry): entry is NavGroup {
+  return "items" in entry;
+}
+
+const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/content", label: "Content", icon: FileText },
   { href: "/admin/editorial-candidates", label: "Editorial", icon: Sparkles },
   { href: "/admin/picks", label: "Decoded Pick", icon: Star },
+  {
+    label: "Seed Pipeline",
+    items: [
+      { href: "/admin/seed/candidates", label: "Candidates", icon: Users },
+      { href: "/admin/seed/post-images", label: "Post Images", icon: Image },
+      { href: "/admin/seed/post-spots", label: "Post Spots", icon: MapPin },
+      { href: "/admin/review", label: "Review Queue", icon: CheckCircle },
+    ],
+  },
+  {
+    label: "Entities",
+    items: [
+      { href: "/admin/entities/artists", label: "Artists", icon: Mic2 },
+      { href: "/admin/entities/brands", label: "Brands", icon: Tag },
+      { href: "/admin/entities/group-members", label: "Groups", icon: UsersRound },
+    ],
+  },
+  { href: "/admin/audit-log", label: "Audit Log", icon: History },
   { href: "/admin/ai-audit", label: "AI Audit", icon: ScanSearch },
   { href: "/admin/ai-cost", label: "AI Cost", icon: DollarSign },
   { href: "/admin/pipeline-logs", label: "Pipeline Logs", icon: GitBranch },
@@ -41,12 +78,33 @@ interface AdminSidebarProps {
   adminName: string;
 }
 
+function NavLink({ item, pathname, onClose }: { item: NavItem; pathname: string; onClose: () => void }) {
+  const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
+        active
+          ? "bg-gray-800 text-white border-blue-500 font-medium"
+          : "text-gray-400 border-transparent hover:bg-gray-800/60 hover:text-gray-200"
+      )}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon className="w-4 h-4 flex-shrink-0" />
+      {item.label}
+    </Link>
+  );
+}
+
 /**
  * AdminSidebar - Dark theme sidebar for admin navigation
  *
  * Width: 220px (compact, maximizes content area)
  * Theme: Dark (bg-gray-900) with light text
- * Features: Active route detection, logout, back-to-app link
+ * Features: Active route detection, logout, back-to-app link, grouped nav sections
  */
 export function AdminSidebar({
   isOpen,
@@ -55,13 +113,6 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
-
-  function isActive(item: NavItem): boolean {
-    if (item.exact) {
-      return pathname === item.href;
-    }
-    return pathname.startsWith(item.href);
-  }
 
   function handleLogout() {
     logout();
@@ -109,26 +160,26 @@ export function AdminSidebar({
           aria-label="Admin navigation"
         >
           <ul className="space-y-0.5 px-2">
-            {NAV_ITEMS.map((item) => {
-              const active = isActive(item);
-              const Icon = item.icon;
+            {SIDEBAR_ENTRIES.map((entry, idx) => {
+              if (isNavGroup(entry)) {
+                return (
+                  <li key={entry.label} className="mt-4 first:mt-0">
+                    <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+                      {entry.label}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {entry.items.map((item) => (
+                        <li key={item.href}>
+                          <NavLink item={item} pathname={pathname} onClose={onClose} />
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                );
+              }
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
-                      "border-l-2",
-                      active
-                        ? "bg-gray-800 text-white border-blue-500 font-medium"
-                        : "text-gray-400 border-transparent hover:bg-gray-800/60 hover:text-gray-200"
-                    )}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {item.label}
-                  </Link>
+                <li key={entry.href}>
+                  <NavLink item={entry} pathname={pathname} onClose={onClose} />
                 </li>
               );
             })}

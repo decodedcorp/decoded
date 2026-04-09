@@ -127,7 +127,7 @@ export function DesktopHeader({
     >
       <div className="w-full flex items-center justify-between h-full px-6 md:px-8">
         {/* Left Section: Logo - flex-1 for equal width with right */}
-        <div className="flex-1 flex items-center">
+        <div className="flex-1 flex items-center gap-3">
           <Link
             href="/"
             className="relative w-48 h-16 flex items-center justify-center hover:opacity-80 transition-opacity"

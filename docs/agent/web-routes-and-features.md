@@ -20,6 +20,15 @@ App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트
 | `/admin/content`     | Content management — post visibility, status control                               |
 | `/admin/editorial-candidates` | Posts eligible for editorial promotion (spot ≥ 4, solution ≥ 1/spot)   |
 | `/admin/picks`       | Decoded Pick curation — create/edit daily curated picks                            |
+| `/admin/audit-log`   | 감사 로그 뷰어                                                                     |
+| `/admin/review`      | 콘텐츠 리뷰                                                                        |
+| `/admin/seed/candidates` | 시드 후보 목록                                                                 |
+| `/admin/seed/candidates/[id]` | 개별 후보 상세                                                           |
+| `/admin/seed/post-images` | 시드 포스트 이미지                                                            |
+| `/admin/seed/post-spots`  | 시드 포스트 스팟                                                              |
+| `/admin/entities/artists` | 아티스트 관리 (CRUD, paginated, searchable)                                   |
+| `/admin/entities/brands`  | 브랜드 관리 (CRUD)                                                            |
+| `/admin/entities/group-members` | 그룹 멤버 관리                                                          |
 | `/request/upload`    | Image upload with DropZone                                                         |
 | `/request/detect`    | AI detection results with item spotting                                            |
 | `/login`             | OAuth authentication (Kakao, Google, Apple)                                        |
@@ -52,5 +61,20 @@ Sections rendered in order:
 - **Admin Dashboard**: AI cost tracking, audit logs, pipeline monitoring, server logs streaming, editorial candidates, picks management
 - **Error Handling**: `app/error.tsx` (route-level 500, inside layout, reports to Sentry), `app/global-error.tsx` (top-level fallback)
 - **Design System v2.0**: 36 components with comprehensive token system
+
+## SEO
+
+| File | Description |
+| ---- | ----------- |
+| `app/sitemap.ts` | 동적 XML sitemap (active posts + 정적 페이지) |
+| `app/robots.ts` | robots.txt 규칙 |
+| `app/api/og/route.tsx` | OG image 동적 생성 |
+
+## Auth
+
+| File | Description |
+| ---- | ----------- |
+| `app/api/auth/callback/route.ts` | OAuth 콜백 핸들러 |
+| `app/api/auth/session/route.ts` | 서버 세션 설정 |
 
 Next.js API proxy 목록은 [api-v1-routes.md](api-v1-routes.md)를 참고합니다.

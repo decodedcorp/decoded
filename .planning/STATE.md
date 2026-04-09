@@ -58,10 +58,11 @@ See: .planning/PROJECT.md
 | 260402-qix | explore 페이지 필터 제거 | 2026-04-02 | - | [260402-qix-explore](./quick/260402-qix-explore/) |
 | 260402-qhu | post 상세페이지 및 오른쪽 모달 패널 컴포넌트 크기 조정 | 2026-04-02 | 890374ce | [260402-qhu-post](./quick/260402-qhu-post/) |
 | 260403-kp5 | 헤더 ASCII 로고 오른쪽 밀림/잘림 수정 | 2026-04-03 | - | [260403-kp5](./quick/260403-kp5-fix-header-ascii-logo-shifting-right-and/) |
+| 260404-vco | Editorial+Trending 메인페이지 섹션 키우기 | 2026-04-04 | - | [260404-vco-editorial-trending](./quick/260404-vco-editorial-trending/) |
 
 ---
 
-Last activity: 2026-04-03 - Completed quick task 260403-kp5: 헤더 ASCII 로고 오른쪽 밀림/잘림 수정
+Last activity: 2026-04-04 - Completed quick task 260404-vco: Editorial+Trending 메인페이지 섹션 키우기
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_

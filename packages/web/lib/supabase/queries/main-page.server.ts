@@ -71,6 +71,13 @@ export interface TrendingKeyword {
 /**
  * Magazine post data — post with a published editorial magazine
  */
+export interface MagazinePostItem {
+  title: string;
+  brand: string | null;
+  imageUrl: string | null;
+  originalUrl: string | null;
+}
+
 export interface MagazinePostData {
   id: string;
   imageUrl: string | null;
@@ -79,6 +86,7 @@ export interface MagazinePostData {
   context: string | null;
   magazineTitle: string;
   magazineKeyword: string | null;
+  items: MagazinePostItem[];
 }
 
 /**
@@ -92,7 +100,7 @@ export async function fetchMagazinePostsServer(
   // First: get published magazine IDs
   const { data: magazines, error: magError } = await supabase
     .from("post_magazines")
-    .select("id, title, keyword")
+    .select("id, title, keyword, layout_json")
     .eq("status", "published")
     .limit(limit);
 
@@ -119,12 +127,21 @@ export async function fetchMagazinePostsServer(
   }
 
   const magazineMap = new Map(
-    magazines.map((m) => [m.id, { title: m.title, keyword: m.keyword }])
+    magazines.map((m) => [m.id, { title: m.title, keyword: m.keyword, layout_json: m.layout_json }])
   );
 
   return posts
     .map((row) => {
       const mag = magazineMap.get(row.post_magazine_id!);
+      const layout = mag?.layout_json as { items?: { title: string; brand: string | null; image_url: string | null; original_url: string | null }[] } | null;
+      const items: MagazinePostItem[] = (layout?.items ?? [])
+        .filter((it) => it.image_url)
+        .map((it) => ({
+          title: it.title,
+          brand: it.brand,
+          imageUrl: it.image_url,
+          originalUrl: it.original_url,
+        }));
       return {
         id: row.id,
         imageUrl: row.image_url,
@@ -133,6 +150,7 @@ export async function fetchMagazinePostsServer(
         context: row.context,
         magazineTitle: mag?.title || row.context || "Editorial",
         magazineKeyword: mag?.keyword ?? null,
+        items,
       };
     });
 }
@@ -761,4 +779,32 @@ export async function fetchItemsByAccountServer(
 ): Promise<ItemWithImage[]> {
   // Items not available, return empty
   return [];
+}
+
+export async function fetchEditorPicksServer(): Promise<Array<{
+  id: string;
+  imageUrl: string;
+  title: string;
+  link: string;
+  artistName: string;
+}>> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("curation_posts")
+    .select(`
+      post_id,
+      posts!inner(id, image_url, title, context, artist_name, group_name)
+    `)
+    .order("order_index", { ascending: true })
+    .limit(8);
+
+  if (!data || data.length === 0) return [];
+
+  return data.map((cp: any) => ({
+    id: cp.posts.id,
+    imageUrl: cp.posts.image_url,
+    title: cp.posts.title || cp.posts.context || "",
+    link: `/posts/${cp.posts.id}`,
+    artistName: cp.posts.artist_name || cp.posts.group_name || "",
+  }));
 }

@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__supabase__apply_migration",
+  "tool_input_preview": "{\"name\":\"rls_user_scoped_tables\",\"query\":\"\\n-- User-scoped Tables: owner-only CRUD\\n\\n-- CRITICAL: token protection\\nALTER TABLE public.user_social_accounts ENABLE ROW LEVEL SECURITY;\\nCREATE POLICY \\...",
+  "error": "{\"error\":{\"name\":\"HttpException\",\"message\":\"Failed to apply database migration: ERROR:  42703: column \\\"user_id\\\" does not exist\\n\"}}",
+  "timestamp": "2026-04-04T09:49:48.363Z",
+  "retry_count": 1
+}

@@ -18,6 +18,8 @@ fn sample_post(m: &str) -> PostModel {
         media_metadata: None,
         group_name: None,
         artist_name: None,
+        artist_id: None,
+        group_id: None,
         context: None,
         view_count: 3,
         status: "active".into(),
@@ -25,6 +27,7 @@ fn sample_post(m: &str) -> PostModel {
         created_with_solutions: Some(true),
         post_magazine_id: None,
         ai_summary: None,
+        style_tags: None,
         created_at: t,
         updated_at: t,
     }

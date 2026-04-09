@@ -11,11 +11,10 @@ from dependency_injector.providers import (
 )
 from ._environment import Environment
 from ._logger import LoggerService, get_logger
-from src.managers import (
-    RedisManager,
-)
+from src.managers.redis._manager import RedisManager
 from src.managers.queue.queue_manager import QueueManager
-from src.services.metadata.core import MetadataExtractService, ResultBatchService
+from src.services.metadata.core.metadata_extract_service import MetadataExtractService
+from src.services.metadata.core.result_batch_service import ResultBatchService
 from src.services.metadata.management.failed_items_manager import FailedItemsManager
 from src.services.metadata.management import tasks
 from src.grpc.client.backend_client import GRPCBackendClient

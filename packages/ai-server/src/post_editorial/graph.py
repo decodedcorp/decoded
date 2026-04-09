@@ -10,6 +10,7 @@ from .state import PostEditorialState
 from .nodes.design_spec import design_spec_node
 from .nodes.image_analysis import image_analysis_node
 from .nodes.item_research import item_research_node
+from .nodes.news_research import news_research_node
 from .nodes.summary import summary_node
 from .nodes.editorial import editorial_node
 from .nodes.celeb_search import celeb_search_node
@@ -37,6 +38,7 @@ def create_post_editorial_graph(checkpointer=None):
     builder.add_node("DesignSpec", design_spec_node)
     builder.add_node("ImageAnalysis", image_analysis_node)
     builder.add_node("ItemResearch", item_research_node)
+    builder.add_node("NewsResearch", news_research_node)
     builder.add_node("Summary", summary_node)
     builder.add_node("Editorial", editorial_node)
     builder.add_node("CelebSearch", celeb_search_node)
@@ -47,9 +49,11 @@ def create_post_editorial_graph(checkpointer=None):
     builder.add_edge(START, "DesignSpec")
     builder.add_edge(START, "ImageAnalysis")
     builder.add_edge(START, "ItemResearch")
+    builder.add_edge(START, "NewsResearch")
     builder.add_edge("DesignSpec", "Editorial")
     builder.add_edge("ImageAnalysis", "Editorial")
     builder.add_edge("ItemResearch", "Editorial")
+    builder.add_edge("NewsResearch", "Editorial")
 
     builder.add_edge("Editorial", "CelebSearch")
     builder.add_edge("Editorial", "ItemSearch")

@@ -21,6 +21,22 @@ pub struct RelatedEditorialItem {
 }
 
 #[derive(Debug, Serialize)]
+pub struct NewsReferenceResponse {
+    pub id: Uuid,
+    pub title: String,
+    pub url: String,
+    pub source: String,
+    pub summary: Option<String>,
+    pub og_title: Option<String>,
+    pub og_description: Option<String>,
+    pub og_image: Option<String>,
+    pub og_site_name: Option<String>,
+    pub relevance_score: f64,
+    pub credibility_score: f64,
+    pub matched_item: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PostMagazineResponse {
     pub id: Uuid,
     pub title: String,
@@ -34,6 +50,7 @@ pub struct PostMagazineResponse {
     pub updated_at: String,
     pub published_at: Option<String>,
     pub related_editorials: Vec<RelatedEditorialItem>,
+    pub news_references: Vec<NewsReferenceResponse>,
 }
 
 #[derive(Debug, Serialize)]
@@ -41,6 +58,7 @@ pub struct SolutionData {
     pub id: String,
     pub spot_id: String,
     pub title: String,
+    pub brand_id: Option<String>,
     pub link_type: Option<String>,
     pub original_url: Option<String>,
     pub affiliate_url: Option<String>,
@@ -70,7 +88,9 @@ pub struct PostData {
     pub media_type: String,
     pub title: Option<String>,
     pub artist_name: Option<String>,
+    pub artist_id: Option<String>,
     pub group_name: Option<String>,
+    pub group_id: Option<String>,
     pub context: Option<String>,
     pub view_count: i32,
     pub trending_score: Option<f64>,
@@ -129,6 +149,7 @@ mod tests {
             updated_at: "2025-01-02T00:00:00Z".to_string(),
             published_at: None,
             related_editorials: vec![],
+            news_references: vec![],
         };
         let v: serde_json::Value = serde_json::to_value(&r).unwrap();
         assert_eq!(v["title"], "T");
@@ -139,6 +160,7 @@ mod tests {
         assert_eq!(v["error_log"], serde_json::Value::Null);
         assert_eq!(v["published_at"], serde_json::Value::Null);
         assert_eq!(v["related_editorials"], serde_json::json!([]));
+        assert_eq!(v["news_references"], serde_json::json!([]));
         assert_eq!(v["status"], "draft");
     }
 
@@ -162,6 +184,7 @@ mod tests {
                 image_url: Some("https://i.example/x.png".to_string()),
                 bg_color: None,
             }],
+            news_references: vec![],
         };
         let v: serde_json::Value = serde_json::to_value(&r).unwrap();
         assert_eq!(v["subtitle"], "Sub");
@@ -195,6 +218,7 @@ mod tests {
             id: "sol-1".to_string(),
             spot_id: "spot-1".to_string(),
             title: "Solution".to_string(),
+            brand_id: Some("brand-1".to_string()),
             link_type: Some("external".to_string()),
             original_url: Some("https://o.example".to_string()),
             affiliate_url: None,
@@ -216,7 +240,9 @@ mod tests {
             media_type: "image".to_string(),
             title: Some("Post".to_string()),
             artist_name: None,
+            artist_id: None,
             group_name: None,
+            group_id: None,
             context: None,
             view_count: 42,
             trending_score: Some(1.5),
@@ -246,7 +272,9 @@ mod tests {
             media_type: "image".to_string(),
             title: None,
             artist_name: None,
+            artist_id: None,
             group_name: None,
+            group_id: None,
             context: None,
             view_count: 0,
             trending_score: None,
@@ -280,7 +308,9 @@ mod tests {
                 media_type: "image".to_string(),
                 title: None,
                 artist_name: None,
+                artist_id: None,
                 group_name: None,
+                group_id: None,
                 context: None,
                 view_count: 0,
                 trending_score: None,

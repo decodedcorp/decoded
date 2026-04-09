@@ -1,9 +1,39 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ExploreClient } from "./ExploreClient";
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
 };
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://decoded.style";
+
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const { q } = await searchParams;
+
+  if (q) {
+    const title = `"${q}" — Search Results`;
+    const description = `Search results for "${q}" on Decoded — discover styles, outfits, and fashion items.`;
+    return {
+      title,
+      description,
+      alternates: {
+        canonical: `${SITE_URL}/explore?q=${encodeURIComponent(q)}`,
+      },
+      openGraph: { title, description },
+      robots: { index: false, follow: true }, // Don't index search result pages
+    };
+  }
+
+  return {
+    title: "Explore Styles",
+    description:
+      "Explore trending styles, outfits, and fashion items — AI-powered style search engine.",
+    alternates: { canonical: `${SITE_URL}/explore` },
+  };
+}
 
 function ExploreSkeleton() {
   return (
@@ -31,9 +61,7 @@ export default async function ExplorePage({ searchParams }: Props) {
 
   return (
     <Suspense fallback={<ExploreSkeleton />}>
-      <ExploreClient
-        initialQuery={q ?? ""}
-      />
+      <ExploreClient initialQuery={q ?? ""} />
     </Suspense>
   );
 }

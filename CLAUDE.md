@@ -4,7 +4,7 @@
 
 ## Overview
 
-Monorepo for the decoded platform — image/item discovery and curation with behavioral intelligence, editorial magazine system, virtual try-on (VTON), admin dashboard, and design system (v2.0). AI-powered item detection, social actions, personalization, collection/studio.
+Monorepo for the decoded platform — image/item discovery and curation with behavioral intelligence, editorial magazine system (news-referenced), virtual try-on (VTON), admin dashboard (seed pipeline, entity management), SEO infrastructure, and design system (v2.0). AI-powered item detection (Ollama vision auto-tagging), social actions, personalization, collection/studio.
 
 ## Monorepo (summary)
 

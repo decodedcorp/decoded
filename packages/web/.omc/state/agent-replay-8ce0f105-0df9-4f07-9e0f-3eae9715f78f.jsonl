@@ -1,0 +1,7 @@
+{"t":0,"agent":"a439d69","agent_type":"coder","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ad6d3a2","agent_type":"coder","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a8e8da7","agent_type":"coder","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ad6d3a2","agent_type":"coder","event":"agent_stop","success":true,"duration_ms":32631}
+{"t":0,"agent":"a439d69","agent_type":"coder","event":"agent_stop","success":true,"duration_ms":42218}
+{"t":0,"agent":"a8e8da7","agent_type":"coder","event":"agent_stop","success":true,"duration_ms":107196}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"commit"}

@@ -48,6 +48,9 @@ pub struct Model {
     #[sea_orm(column_type = "Text", nullable)]
     pub ai_summary: Option<String>,
 
+    #[sea_orm(nullable, column_type = "JsonBinary")]
+    pub style_tags: Option<Json>,
+
     pub created_at: DateTimeWithTimeZone,
 
     pub updated_at: DateTimeWithTimeZone,
