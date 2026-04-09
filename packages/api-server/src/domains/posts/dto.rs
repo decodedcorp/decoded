@@ -54,6 +54,10 @@ pub struct CreateSolutionInlineDto {
     /// og metadata image
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
+
+    /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_id: Option<Uuid>,
 }
 
 /// Spot 생성 요청 (Post 생성 시 포함)
@@ -95,9 +99,17 @@ pub struct CreatePostDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_name: Option<String>,
 
+    /// `warehouse.groups.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<Uuid>,
+
     /// 아티스트명 (옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_name: Option<String>,
+
+    /// `warehouse.artists.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<Uuid>,
 
     /// 상황 정보 (옵션)
     #[serde(skip_serializing_if = "Option::is_none")]

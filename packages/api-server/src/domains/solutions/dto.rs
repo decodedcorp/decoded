@@ -73,6 +73,10 @@ pub struct CreateSolutionDto {
     /// og metadata image
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
+
+    /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_id: Option<Uuid>,
 }
 
 impl CreateSolutionDto {
@@ -88,6 +92,7 @@ impl CreateSolutionDto {
             thumbnail_url: Set(self.thumbnail_url),
             description: Set(self.description),
             comment: Set(self.comment),
+            brand_id: Set(self.brand_id),
             accurate_count: Set(0),
             different_count: Set(0),
             is_verified: Set(false),
@@ -352,6 +357,7 @@ mod tests {
             description: None,
             comment: None,
             thumbnail_url: None,
+            brand_id: None,
         };
 
         assert!(dto.validate().is_err());
@@ -369,6 +375,7 @@ mod tests {
             description: Some("desc".to_string()),
             comment: None,
             thumbnail_url: None,
+            brand_id: None,
         };
 
         let am = dto.into_active_model(spot_id, user_id);
@@ -380,6 +387,7 @@ mod tests {
             am.original_url,
             ActiveValue::Set(Some("https://shop.example/p/1".to_string()))
         );
+        assert_eq!(am.brand_id, ActiveValue::Set(None));
         assert_eq!(am.is_verified, ActiveValue::Set(false));
         assert_eq!(am.status, ActiveValue::Set("active".to_string()));
     }
@@ -394,10 +402,29 @@ mod tests {
             description: None,
             comment: None,
             thumbnail_url: None,
+            brand_id: None,
         }
         .into_active_model(Uuid::new_v4(), Uuid::new_v4());
 
         assert_eq!(am.title, ActiveValue::Set("Custom".to_string()));
+    }
+
+    #[test]
+    fn create_solution_dto_into_active_model_preserves_brand_id() {
+        let bid = Uuid::new_v4();
+        let am = CreateSolutionDto {
+            original_url: "https://a.com".to_string(),
+            affiliate_url: None,
+            title: None,
+            metadata: None,
+            description: None,
+            comment: None,
+            thumbnail_url: None,
+            brand_id: Some(bid),
+        }
+        .into_active_model(Uuid::new_v4(), Uuid::new_v4());
+
+        assert_eq!(am.brand_id, ActiveValue::Set(Some(bid)));
     }
 
     #[test]

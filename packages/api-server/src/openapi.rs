@@ -96,6 +96,7 @@ use utoipa::OpenApi;
         crate::domains::admin::categories::update_category_status,
         crate::domains::admin::posts::list_posts,
         crate::domains::admin::posts::update_post_status,
+        crate::domains::admin::posts::admin_update_post,
         crate::domains::admin::spots::list_spots,
         crate::domains::admin::spots::update_spot_subcategory,
         crate::domains::admin::solutions::list_solutions,

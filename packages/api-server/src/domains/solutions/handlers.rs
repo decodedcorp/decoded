@@ -404,6 +404,7 @@ pub async fn test_full_integration_flow(
         affiliate_url: None,
         thumbnail_url: og_data.image.clone(),
         comment: None,
+        brand_id: None,
     };
 
     let solution_id = service::create_solution(&state.db, spot.id, user.id, create_dto).await?;
