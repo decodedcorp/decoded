@@ -7,7 +7,7 @@ export { BadgeModal } from "./BadgeModal";
 export { ActivityItemCard } from "./ActivityItemCard";
 export { ProfileEditModal } from "./ProfileEditModal";
 export { ProfileDesktopLayout } from "./ProfileDesktopLayout";
-export { ActivityTabs, type ActivityTab } from "./ActivityTabs";
+export { ActivityTabs, PUBLIC_TABS, type ActivityTab } from "./ActivityTabs";
 export { ActivityContent } from "./ActivityContent";
 export { EmptyState } from "./EmptyState";
 export { ProfileBio } from "./ProfileBio";

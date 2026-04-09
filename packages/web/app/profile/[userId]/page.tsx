@@ -14,20 +14,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { data: user } = await supabase
     .from("users")
-    .select("display_name, bio")
+    .select("display_name, bio, avatar_url, username")
     .eq("id", userId)
     .single();
 
-  const displayName = user?.display_name || "User";
-  const title = `${displayName}'s Profile`;
+  const displayName = user?.display_name || user?.username || "User";
+  const title = `${displayName} | DECODED`;
   const description =
-    user?.bio || `View ${displayName}'s style collection on Decoded.`;
+    user?.bio || `${displayName}의 스타일 컬렉션을 확인하세요.`;
 
   return {
     title,
     description,
     alternates: { canonical: `${SITE_URL}/profile/${userId}` },
-    openGraph: { title, description },
+    openGraph: {
+      title,
+      description,
+      ...(user?.avatar_url && {
+        images: [{ url: user.avatar_url, width: 200, height: 200 }],
+      }),
+    },
     robots: { index: true, follow: true },
   };
 }

@@ -16,11 +16,12 @@ import {
   ProfileDesktopLayout,
   ActivityTabs,
   ActivityContent,
-  EmptyState,
-  ActivityItemCard,
   type ActivityTab,
   ProfileBio,
   FollowStats,
+  PostsGrid,
+  SpotsList,
+  SolutionsList,
   SavedGrid,
   TriesGrid,
   StyleDNACard,
@@ -32,7 +33,6 @@ import {
   useUserStats,
   useMyBadges,
   useMyRanking,
-  useUserActivities,
   useProfileExtras,
   useTryOnCount,
 } from "@/lib/hooks/useProfile";
@@ -200,30 +200,6 @@ export function ProfileClient() {
   const { data: profileExtras } = useProfileExtras(userId);
   const { data: tryOnCount } = useTryOnCount(userId);
 
-  // Activities from API (saved 탭은 미구현) - 반드시 early return 전에 호출
-  const activitiesTypeMap: Record<
-    ActivityTab,
-    "post" | "spot" | "solution" | undefined
-  > = {
-    posts: "post",
-    spots: "spot",
-    solutions: "solution",
-    tries: undefined,
-    saved: undefined,
-  };
-  const activitiesType = activitiesTypeMap[activeTab];
-  const {
-    data: activitiesData,
-    isLoading: isActivitiesLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useUserActivities({
-    type: activitiesType ?? undefined,
-    perPage: 20,
-    enabled: activeTab !== "saved" && activeTab !== "tries",
-  });
-
   // Sync API data to store
   const setUserFromApi = useProfileStore((state) => state.setUserFromApi);
   const setStatsFromApi = useProfileStore((state) => state.setStatsFromApi);
@@ -295,43 +271,21 @@ export function ProfileClient() {
     return <ProfileError error={error} onRetry={handleRetry} />;
   }
 
-  const activityItems = activitiesData?.pages.flatMap((p) => p.data) ?? [];
-  const hasActivityContent = activityItems.length > 0;
-
   const renderTabContent = () => {
-    if (activeTab === "tries") {
-      return <TriesGrid />;
+    switch (activeTab) {
+      case "posts":
+        return <PostsGrid userId={userId} />;
+      case "spots":
+        return <SpotsList userId={userId} />;
+      case "solutions":
+        return <SolutionsList userId={userId} />;
+      case "tries":
+        return <TriesGrid />;
+      case "saved":
+        return <SavedGrid />;
+      default:
+        return null;
     }
-    if (activeTab === "saved") {
-      return <SavedGrid />;
-    }
-    if (isActivitiesLoading && !activitiesData) {
-      return (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      );
-    }
-    if (!hasActivityContent) {
-      return <EmptyState tab={activeTab} />;
-    }
-
-    return (
-      <div className="space-y-4">
-        {activityItems.map((item) => (
-          <ActivityItemCard key={item.id} item={item} />
-        ))}
-        {hasNextPage && (
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="w-full py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            {isFetchingNextPage ? "로딩 중..." : "더 보기"}
-          </button>
-        )}
-      </div>
-    );
   };
 
   return (
