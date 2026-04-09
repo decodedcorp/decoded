@@ -73,34 +73,18 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
-    // Initialize GSAP context
+    // Initialize GSAP context — start visible to avoid flash
     ctxRef.current = gsap.context(() => {
-      // Initial States
-      gsap.set(backdropRef.current, { opacity: 0 });
-      gsap.set(modalRef.current, { opacity: 0, scale: 0.95 });
-
-      // Animate in
-      const tl = gsap.timeline();
-
-      tl.to(
+      gsap.fromTo(
         backdropRef.current,
-        {
-          opacity: 1,
-          duration: 0.3,
-          ease: "power2.out",
-        },
-        0
+        { opacity: 0 },
+        { opacity: 1, duration: 0.2, ease: "power2.out", immediateRender: true }
       );
 
-      tl.to(
+      gsap.fromTo(
         modalRef.current,
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 0.3,
-          ease: "power2.out",
-        },
-        0.1
+        { opacity: 0, scale: 0.97, y: 8 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: "power2.out", delay: 0.05, immediateRender: true }
       );
     }, containerRef);
 
@@ -125,7 +109,7 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[10000] flex items-center justify-center"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60"
       role="dialog"
       aria-modal="true"
     >

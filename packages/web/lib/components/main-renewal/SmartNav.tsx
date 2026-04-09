@@ -1,17 +1,20 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   useAuthStore,
   selectIsLoggedIn,
   selectUser,
   selectProfile,
+  selectLogout,
 } from "@/lib/stores/authStore";
+import { RequestModal } from "@/lib/components/request/RequestModal";
 
 const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
   ssr: false,
@@ -21,10 +24,6 @@ const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
-  // 1st release: Upload hidden (GH #35)
-  // { href: "/request/upload", label: "Upload", isUpload: true },
-  // 1st release: Lab hidden (GH #35)
-  // { href: "/lab", label: "Lab" },
 ] as const;
 
 interface SmartNavProps {
@@ -46,9 +45,37 @@ export function SmartNav({ className }: SmartNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
 
   const pathname = usePathname();
+  const router = useRouter();
   const isLoggedIn = useAuthStore(selectIsLoggedIn);
   const user = useAuthStore(selectUser);
   const profile = useAuthStore(selectProfile);
+  const logout = useAuthStore(selectLogout);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileOpen]);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setIsProfileOpen(false);
+  }, [pathname]);
+
+  const handleLogout = useCallback(async () => {
+    setIsProfileOpen(false);
+    await logout();
+    router.push("/");
+  }, [logout, router]);
 
   // Scroll-responsive hide/show
   useEffect(() => {
@@ -96,6 +123,7 @@ export function SmartNav({ className }: SmartNavProps) {
     : "bg-[#050505] border-b border-white/5";
 
   return (
+    <>
     <header
       ref={navRef}
       className={[
@@ -143,26 +171,78 @@ export function SmartNav({ className }: SmartNavProps) {
           );
         })}
 
-        {/* Auth: Login / Profile */}
+        {/* Upload — opens modal without URL change */}
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className={[
+            "text-xs tracking-[0.2em] uppercase transition-colors",
+            isUploadModalOpen ? "text-white" : "text-white/60 hover:text-white",
+          ].join(" ")}
+        >
+          Upload
+        </button>
+
+        {/* Auth: Login / Profile Dropdown */}
         {isLoggedIn ? (
-          <Link
-            href="/profile"
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-          >
-            {user?.avatarUrl ? (
-              <Image
-                src={user.avatarUrl}
-                alt={profile?.display_name || user.name}
-                className="w-7 h-7 rounded-full object-cover border border-white/20"
-                width={28}
-                height={28}
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-medium text-white">
-                {(user?.name?.[0] || "U").toUpperCase()}
+          <div ref={profileRef} className="relative">
+            <button
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+              aria-expanded={isProfileOpen}
+              aria-haspopup="true"
+            >
+              {user?.avatarUrl ? (
+                <Image
+                  src={user.avatarUrl}
+                  alt={profile?.display_name || user.name}
+                  className="w-7 h-7 rounded-full object-cover border border-white/20"
+                  width={28}
+                  height={28}
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-medium text-white">
+                  {(user?.name?.[0] || "U").toUpperCase()}
+                </div>
+              )}
+            </button>
+
+            {isProfileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#1a1a1a] border border-white/10 shadow-xl overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-150">
+                <div className="px-4 py-3 border-b border-white/10">
+                  <p className="text-sm font-medium text-white truncate">
+                    {profile?.display_name || user?.name}
+                  </p>
+                  <p className="text-xs text-white/50 truncate">
+                    @{profile?.username || user?.email}
+                  </p>
+                </div>
+                <div className="py-1">
+                  <Link
+                    href="/profile"
+                    className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    프로필 보기
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsUploadModalOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    업로드
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
+                  >
+                    로그아웃
+                  </button>
+                </div>
               </div>
             )}
-          </Link>
+          </div>
         ) : (
           <Link
             href="/login"
@@ -173,5 +253,12 @@ export function SmartNav({ className }: SmartNavProps) {
         )}
       </div>
     </header>
+
+      {/* Upload Modal — rendered outside header to avoid z-index issues */}
+      <RequestModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
+    </>
   );
 }
