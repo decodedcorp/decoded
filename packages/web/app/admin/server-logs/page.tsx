@@ -13,6 +13,7 @@ import {
 } from "@/lib/components/admin/server-logs/LogTable";
 import { LogStream } from "@/lib/components/admin/server-logs/LogStream";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,8 @@ function ServerLogsContent() {
     ? Math.max(1, Math.ceil(logsQuery.data.total / PAGE_SIZE))
     : 1;
 
+  const isEmpty = !logsQuery.isLoading && logsQuery.data?.total === 0;
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -108,63 +111,80 @@ function ServerLogsContent() {
         </p>
       </div>
 
-      {/* ── Section 1: API Request Logs ─────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">
-          API Request Logs
-        </h2>
+      {isEmpty ? (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+                />
+              </svg>
+            }
+            title="No server logs available"
+            description="Server request logs will appear here when the logging infrastructure is connected."
+          />
+        </div>
+      ) : (
+        <>
+          {/* ── Section 1: API Request Logs ─────────────────────────────────── */}
+          <section className="space-y-4">
+            <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">
+              API Request Logs
+            </h2>
 
-        {/* Filters */}
-        <LogFilters
-          level={levelParam}
-          search={searchParam}
-          timeRange={timeRange}
-          onLevelChange={handleLevelChange}
-          onSearchChange={handleSearchChange}
-          onTimeRangeChange={handleTimeRangeChange}
-        />
+            {/* Filters */}
+            <LogFilters
+              level={levelParam}
+              search={searchParam}
+              timeRange={timeRange}
+              onLevelChange={handleLevelChange}
+              onSearchChange={handleSearchChange}
+              onTimeRangeChange={handleTimeRangeChange}
+            />
 
-        {/* Table with skeleton fallback on loading or error */}
-        {logsQuery.isLoading || logsQuery.isError ? (
-          <LogTableSkeleton />
-        ) : logsQuery.data ? (
-          <>
-            <LogTable data={logsQuery.data.data} />
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
+            {/* Table with skeleton fallback on loading or error */}
+            {logsQuery.isLoading || logsQuery.isError ? (
+              <LogTableSkeleton />
+            ) : logsQuery.data ? (
+              <>
+                <LogTable data={logsQuery.data.data} />
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
+            ) : (
+              <LogTableSkeleton />
             )}
-          </>
-        ) : (
-          <LogTableSkeleton />
-        )}
-      </section>
+          </section>
 
-      {/* ── Section 2: Live Stream ──────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">
-          Live Stream
-        </h2>
-        <LogStream />
-      </section>
+          {/* ── Section 2: Live Stream ──────────────────────────────────────── */}
+          <section className="space-y-4">
+            <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">
+              Live Stream
+            </h2>
+            <LogStream />
+          </section>
+        </>
+      )}
     </div>
   );
 }
 
 // ─── Page export ──────────────────────────────────────────────────────────────
 
-/**
- * Server Logs admin page.
- *
- * Two sections:
- * 1. Filterable, paginated API request log table (URL-synced filters)
- * 2. Terminal-style live log streaming console (independent, self-contained)
- *
- * URL params: ?level=info|warn|error|debug&search=text&timeRange=1h|6h|24h|7d|all&page=N
- */
 export default function ServerLogsPage() {
   return (
     <Suspense fallback={<LogTableSkeleton />}>

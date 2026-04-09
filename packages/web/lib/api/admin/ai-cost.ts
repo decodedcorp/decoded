@@ -1,60 +1,62 @@
 /**
  * AI cost monitoring data fetching layer (server-side only).
  *
- * All data is pure mock — no AI cost tracking tables exist in the database.
- * Uses deterministic generators so the same date always produces the same values.
+ * No AI cost tracking tables exist in the database yet.
+ * Returns empty data — UI shows an empty state placeholder.
  */
 
-import {
-  generateAiCostMetrics,
-  generateAiCostKPI,
-  generateModelCostBreakdown,
-  type AiCostDailyMetric,
-  type AiCostKPI,
-  type ModelCostBreakdown,
-} from "./ai-cost-mock-data";
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-// Re-export types so UI consumers only need one import
-export type { AiCostDailyMetric, AiCostKPI, ModelCostBreakdown };
+export interface AiCostDailyMetric {
+  date: string;
+  apiCalls: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+}
 
-// ─── Response types ────────────────────────────────────────────────────────────
+export interface AiCostKPI {
+  totalCalls: number;
+  totalCallsDelta?: number;
+  totalTokens: number;
+  totalTokensDelta?: number;
+  totalCost: number;
+  totalCostDelta?: number;
+  avgCostPerCall: number;
+}
 
-/**
- * Combined chart response: daily time-series + per-model breakdown.
- * Bundled so the UI page can fetch both in a single request.
- */
+export interface ModelCostBreakdown {
+  model: string;
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+}
+
 export interface AiCostChartResponse {
   daily: AiCostDailyMetric[];
   modelBreakdown: ModelCostBreakdown[];
 }
 
-// ─── Data fetchers ─────────────────────────────────────────────────────────────
+// ─── Data fetchers (empty — no tables yet) ───────────────────────────────────
 
-/**
- * Fetches KPI summary statistics for the AI cost overview cards.
- *
- * Returns total calls, tokens, cost, and average cost per call for the period,
- * along with percentage deltas vs the previous period of equal length.
- *
- * @param days - Number of days in the period (default 30)
- */
-export async function fetchAiCostKPI(days: number = 30): Promise<AiCostKPI> {
-  return generateAiCostKPI(days);
+export async function fetchAiCostKPI(_days: number = 30): Promise<AiCostKPI> {
+  return {
+    totalCalls: 0,
+    totalCallsDelta: 0,
+    totalTokens: 0,
+    totalTokensDelta: 0,
+    totalCost: 0,
+    totalCostDelta: 0,
+    avgCostPerCall: 0,
+  };
 }
 
-/**
- * Fetches daily AI cost time-series and per-model cost breakdown.
- *
- * Returns both datasets in a single response to minimize API calls from the UI.
- * The daily array is sorted chronologically (oldest first).
- *
- * @param days - Number of days to include (default 30)
- */
 export async function fetchAiCostChart(
-  days: number = 30
+  _days: number = 30
 ): Promise<AiCostChartResponse> {
   return {
-    daily: generateAiCostMetrics(days),
-    modelBreakdown: generateModelCostBreakdown(days),
+    daily: [],
+    modelBreakdown: [],
   };
 }

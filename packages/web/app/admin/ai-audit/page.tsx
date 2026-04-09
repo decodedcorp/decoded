@@ -8,6 +8,7 @@ import { AuditTableSkeleton } from "@/lib/components/admin/audit/AuditTableSkele
 import { StatusFilter } from "@/lib/components/admin/audit/StatusFilter";
 import { AuditDetailModal } from "@/lib/components/admin/audit/AuditDetailModal";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 import type { AuditStatus } from "@/lib/api/admin/audit";
 
 // ─── Inner component (needs Suspense boundary for useSearchParams) ────────────
@@ -55,7 +56,6 @@ function AiAuditContent() {
 
   const handleStatusChange = useCallback(
     (status: AuditStatus | undefined) => {
-      // Reset to page 1 when changing filter
       updateUrl({ status, page: "1" });
     },
     [updateUrl]
@@ -67,6 +67,11 @@ function AiAuditContent() {
     },
     [updateUrl]
   );
+
+  const isEmpty =
+    !listQuery.isLoading &&
+    listQuery.data?.data.length === 0 &&
+    !currentStatus;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -82,40 +87,66 @@ function AiAuditContent() {
         </p>
       </div>
 
-      {/* Status filter */}
-      <StatusFilter
-        currentStatus={currentStatus}
-        onStatusChange={handleStatusChange}
-      />
-
-      {/* Table with skeleton fallback */}
-      {listQuery.isLoading ? (
-        <AuditTableSkeleton />
-      ) : listQuery.data ? (
+      {isEmpty ? (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                />
+              </svg>
+            }
+            title="No audit requests"
+            description="AI analysis audit records will appear here when images are submitted for detection review."
+          />
+        </div>
+      ) : (
         <>
-          <AuditTable
-            data={listQuery.data.data}
-            onRowClick={setSelectedRequestId}
+          {/* Status filter */}
+          <StatusFilter
+            currentStatus={currentStatus}
+            onStatusChange={handleStatusChange}
           />
 
-          {listQuery.data.totalPages > 1 && (
-            <Pagination
-              currentPage={listQuery.data.page}
-              totalPages={listQuery.data.totalPages}
-              onPageChange={handlePageChange}
+          {/* Table with skeleton fallback */}
+          {listQuery.isLoading ? (
+            <AuditTableSkeleton />
+          ) : listQuery.data ? (
+            <>
+              <AuditTable
+                data={listQuery.data.data}
+                onRowClick={setSelectedRequestId}
+              />
+
+              {listQuery.data.totalPages > 1 && (
+                <Pagination
+                  currentPage={listQuery.data.page}
+                  totalPages={listQuery.data.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </>
+          ) : (
+            <AuditTableSkeleton />
+          )}
+
+          {/* Detail modal */}
+          {selectedRequestId && (
+            <AuditDetailModal
+              requestId={selectedRequestId}
+              onClose={() => setSelectedRequestId(null)}
             />
           )}
         </>
-      ) : (
-        <AuditTableSkeleton />
-      )}
-
-      {/* Detail modal (portal-like, mounted when a row is selected) */}
-      {selectedRequestId && (
-        <AuditDetailModal
-          requestId={selectedRequestId}
-          onClose={() => setSelectedRequestId(null)}
-        />
       )}
     </div>
   );
@@ -123,13 +154,6 @@ function AiAuditContent() {
 
 // ─── Page export ──────────────────────────────────────────────────────────────
 
-/**
- * AI Audit page — lists all AI analysis requests with status filtering and
- * pagination. Clicking a row opens a detail modal with image hotspots and
- * inline item editing.
- *
- * URL params: ?page=N&status=pending|completed|error|modified
- */
 export default function AiAuditPage() {
   return (
     <Suspense fallback={<AuditTableSkeleton />}>
