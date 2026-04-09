@@ -87,7 +87,10 @@ def fetch_dimensions(url: str) -> Optional[tuple[int, int]]:
     Tries a partial read (Range header) first; falls back to full download
     if PIL cannot decode the truncated data.
     """
-    headers = {"User-Agent": "decoded-backfill/1.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (decoded-backfill/1.0)",
+        "Referer": "https://decoded.style/",
+    }
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
