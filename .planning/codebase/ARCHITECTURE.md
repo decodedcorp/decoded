@@ -126,6 +126,18 @@ tokens.ts → Tailwind config → globals.css → components
 - Depends on: Environment variables
 - Used by: All layers
 
+**SEO Layer:**
+- Purpose: Search engine optimization and social sharing metadata
+- Location: `app/sitemap.ts`, `app/robots.ts`, `app/api/og/`, per-page metadata exports
+- Contains:
+  - `sitemap.ts`: Dynamic sitemap generated from Supabase data
+  - `robots.ts`: Robots.txt configuration
+  - `api/og/`: OG image generation via Edge Runtime
+  - Per-page `metadata` / `generateMetadata` exports
+  - JSON-LD structured data on post pages
+- Depends on: Supabase server client, environment variables
+- Used by: Search engines, social media crawlers
+
 ## Data Flow
 
 **User Authentication Flow:**
@@ -181,9 +193,22 @@ tokens.ts → Tailwind config → globals.css → components
 3. **Cache**: Redis caches responses to avoid duplicate LLM calls
 4. **Search**: SearXNG (self-hosted) used for web search augmentation
 
+**News Reference Pipeline:**
+
+1. **Fetch**: News articles fetched as context for AI-generated editorial content
+2. **Enrich**: News references integrated into editorial generation workflow (#117)
+3. **Generate**: AI server uses news context to produce richer, more timely editorial pieces
+
+**AI Vision Pipeline:**
+
+1. **Image Input**: Post images submitted for automated context extraction
+2. **Vision Model**: Ollama Gemma4 vision model analyzes images (#106)
+3. **Output**: Auto-extracted post context and `style_tags` from image content
+4. **Storage**: Extracted metadata stored alongside posts in Supabase
+
 **Editorial/Magazine Flow:**
 
-1. **Curation**: AI server generates editorial content stored via Rust API → Supabase
+1. **Curation**: AI server generates editorial content (enriched by news reference pipeline) stored via Rust API → Supabase
 2. **Page Load**: Magazine detail page server-renders `MagazineContent`, `MagazineCelebSection`
 3. **Decoding Ritual**: Client-side animation (GSAP) plays "decoding ritual" on magazine open
 4. **Bookshelf State**: `magazineStore` tracks which issues are in the user's personal collection
@@ -292,6 +317,8 @@ tokens.ts → Tailwind config → globals.css → components
 - Responsibilities:
   - Protected by `isAdmin` flag on user profile
   - Surfaces AI cost metrics, audit logs, pipeline status, server logs
+  - **Entity Management** (migrated from decoded-seed-ops): Pages under `/admin/entities/` and `/admin/seed/`. API routes under `/api/admin/`. Features: entity CRUD (artists, brands, group-members), seed candidate pipeline (approve/reject), bulk operations, audit logging with rollback.
+  - **decoded_picks**: AI/editor curated daily picks system. Table: `public.decoded_picks`. Admin UI at `/admin/picks`.
 
 **Search Page:**
 - Location: `app/search/page.tsx` (server) + `SearchPageClient.tsx` (client)
@@ -375,6 +402,7 @@ tokens.ts → Tailwind config → globals.css → components
 
 **Authentication:**
 - Approach: Supabase OAuth (Kakao, Google, Apple) with session-based auth
+- Auth Flow: OAuth callback (`/api/auth/callback`) + server session (`/api/auth/session`) pattern. Supabase Auth with server-side session management.
 - Token Injection: `getAuthToken()` in `lib/api/client.ts` retrieves JWT from session
 - RLS: Supabase RLS policies on tables (users, posts, items) enforce authorization
 - Guest Mode: `authStore.guestLogin()` allows browsing without authentication

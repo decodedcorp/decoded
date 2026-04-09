@@ -42,11 +42,35 @@ packages/web/
 ├── app/                      # Next.js App Router pages and API routes
 │   ├── @modal/              # Parallel routes for modals (layout slots)
 │   ├── api/v1/              # Next.js API proxy routes (/api/v1/posts, /users, etc)
+│   ├── api/admin/           # Admin API routes
+│   │   ├── entities/        # Entity CRUD routes (artists, brands, group-members with [id])
+│   │   ├── candidates/      # Candidate management (with [id]/approve, [id]/reject)
+│   │   ├── audit-log/       # Audit log routes (with [id]/rollback)
+│   │   ├── bulk/            # Bulk operations
+│   │   ├── post-images/     # Post image management
+│   │   ├── post-spots/      # Post spot management
+│   │   └── review/          # Content review
+│   ├── api/auth/            # Auth routes
+│   │   ├── callback/        # OAuth callback
+│   │   └── session/         # Server session
+│   ├── api/og/              # OG image generation (Edge Runtime)
 │   ├── admin/               # Admin dashboard (auth-gated)
 │   │   ├── ai-audit/        # AI model audit logs
 │   │   ├── ai-cost/         # AI usage cost tracking
 │   │   ├── pipeline-logs/   # Data pipeline logs
-│   │   └── server-logs/     # Server error/access logs
+│   │   ├── server-logs/     # Server error/access logs
+│   │   ├── entities/        # Entity management pages
+│   │   │   ├── artists/     # Artist management
+│   │   │   ├── brands/      # Brand management
+│   │   │   └── group-members/ # Group member management
+│   │   ├── seed/            # Seed pipeline pages
+│   │   │   ├── candidates/  # Seed candidate pages (with [id])
+│   │   │   ├── post-images/ # Seed post images
+│   │   │   └── post-spots/  # Seed post spots
+│   │   ├── audit-log/       # Audit log page
+│   │   ├── review/          # Review page
+│   │   ├── picks/           # Decoded Picks page
+│   │   └── login/           # Admin login page
 │   ├── debug/               # Debug utilities (supabase debug pages)
 │   ├── editorial/           # Editorial view
 │   ├── examples/            # Feature examples (scroll-animation)
@@ -73,6 +97,9 @@ packages/web/
 │   ├── globals.css          # Global styles (Tailwind + custom CSS)
 │   ├── layout.tsx           # Root layout wrapping entire app
 │   ├── page.tsx             # Home page
+│   ├── home-dynamic-sections.tsx  # Dynamic home sections (split from page.tsx)
+│   ├── sitemap.ts           # Dynamic sitemap (generated from Supabase)
+│   ├── robots.ts            # Robots.txt configuration
 │   ├── providers.tsx        # App-level providers (QueryClient, Theme, Auth)
 │   └── not-found.tsx        # 404 page
 │
