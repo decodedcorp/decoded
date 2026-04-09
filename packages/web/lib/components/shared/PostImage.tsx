@@ -111,13 +111,15 @@ export function PostImage({
     );
   }
 
-  // Dynamic: blur background (tiny thumbnail) + object-contain
+  // Dynamic: Reddit-style blur background + object-contain
+  // Container height flows from image ratio, capped by maxHeight.
+  // When image fits naturally → no blur visible. When capped by maxHeight → blur fills gaps.
   return (
     <div
-      className={cn("relative overflow-hidden bg-black", className)}
-      style={{ maxHeight, ...(aspectRatio && { aspectRatio }) }}
+      className={cn("relative overflow-hidden bg-black flex items-center justify-center", className)}
+      style={{ maxHeight }}
     >
-      {/* Blurred background — loads tiny 32px thumbnail instead of full image */}
+      {/* Blurred background — fills container, visible when image doesn't fill */}
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -131,16 +133,18 @@ export function PostImage({
       <Image
         src={src}
         alt={alt}
-        fill
+        width={imageWidth || 800}
+        height={imageHeight || 1000}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
         priority={priority}
         sizes="(max-width: 768px) 100vw, 50vw"
         className={cn(
-          "relative z-10 object-contain transition-opacity duration-200 ease-out",
+          "relative z-10 w-full h-auto object-contain transition-opacity duration-200 ease-out",
           isLoaded ? "opacity-100" : "opacity-0",
           imgClassName
         )}
+        style={{ maxHeight }}
         onLoad={handleLoad}
         onError={handleError}
       />
