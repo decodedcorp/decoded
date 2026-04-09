@@ -8,7 +8,6 @@ import { useImageUpload } from "@/lib/hooks/useImageUpload";
 import { useCreateTryPost } from "@/lib/hooks/useTries";
 import { compressImage } from "@/lib/utils/imageCompression";
 import { DropZone } from "@/lib/components/request/DropZone";
-import { MobileUploadOptions } from "@/lib/components/request/MobileUploadOptions";
 import { SpotTagSelector } from "@/lib/components/request/SpotTagSelector";
 import { ArrowLeft, X, RefreshCw, Loader2 } from "lucide-react";
 import { useGetPost } from "@/lib/api/generated/posts/posts";
@@ -67,7 +66,7 @@ function TryUploadContent() {
       const compressed = await compressImage(selectedImage.file);
 
       await createTry.mutateAsync({
-        file: compressed,
+        file: compressed.file,
         parent_post_id: parentId,
         spot_ids:
           selectedSpotIds.length > 0 ? selectedSpotIds : undefined,
@@ -145,16 +144,10 @@ function TryUploadContent() {
 
         {/* Image Upload */}
         {!hasImage ? (
-          <>
-            <MobileUploadOptions
-              onFilesSelected={handleFilesSelected}
-              disabled={false}
-            />
-            <DropZone
-              onFilesSelected={handleFilesSelected}
-              disabled={false}
-            />
-          </>
+          <DropZone
+            onFilesSelected={handleFilesSelected}
+            disabled={false}
+          />
         ) : (
           <div className="space-y-2">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg">
