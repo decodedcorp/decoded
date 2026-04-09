@@ -1,7 +1,7 @@
 {
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"/Users/kiyeol/development/decoded/decoded-monorepo/packages/web/app/admin/seed/page.tsx\"}",
-  "error": "File does not exist. Note: your current working directory is /Users/kiyeol/development/decoded/decoded-monorepo.",
-  "timestamp": "2026-04-07T03:08:26.250Z",
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"supabase db pull --schema warehouse 2>&1\",\"timeout\":180000,\"description\":\"Pull warehouse schema from remote\"}",
+  "error": "Exit code 1\nInitialising login role...\nConnecting to remote database...\nCreating shadow database...\nInitialising schema...\nSeeding globals from roles.sql...\nApplying migration 20260409075040_remote_schema.sql...\nDiffing schemas: warehouse\nNo schema changes found\nTry rerunning the command with --debug to troubleshoot the error.",
+  "timestamp": "2026-04-09T07:52:58.845Z",
   "retry_count": 1
 }

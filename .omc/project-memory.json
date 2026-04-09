@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775462177168,
+  "lastScanned": 1775719061166,
   "projectRoot": "/Users/kiyeol/development/decoded/decoded-monorepo",
   "techStack": {
     "languages": [
@@ -85,14 +85,14 @@
       "path": "__tests__",
       "purpose": "Test files",
       "fileCount": 0,
-      "lastAccessed": 1775462177135,
+      "lastAccessed": 1775719061102,
       "keyFiles": []
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 9,
-      "lastAccessed": 1775462177136,
+      "lastAccessed": 1775719061108,
       "keyFiles": [
         "BACKEND-ONBOARDING.md",
         "GIT-WORKFLOW.md",
@@ -105,7 +105,7 @@
       "path": "nginx",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1775462177141,
+      "lastAccessed": 1775719061161,
       "keyFiles": [
         "decoded.dev.conf",
         "preview.decoded.style.conf"
@@ -115,14 +115,14 @@
       "path": "packages",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1775462177142,
+      "lastAccessed": 1775719061162,
       "keyFiles": []
     },
     "plans": {
       "path": "plans",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1775462177142,
+      "lastAccessed": 1775719061162,
       "keyFiles": [
         "partitioned-roaming-pine.md",
         "whimsical-questing-rainbow-agent-a724aa4104b0d2aa9.md",
@@ -133,7 +133,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 11,
-      "lastAccessed": 1775462177142,
+      "lastAccessed": 1775719061163,
       "keyFiles": [
         "deploy-backend.sh",
         "git-pre-push.sh",
@@ -146,7 +146,7 @@
       "path": "specs",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1775462177143,
+      "lastAccessed": 1775719061163,
       "keyFiles": [
         "README.md"
       ]
@@ -155,14 +155,14 @@
       "path": "supabase",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1775462177143,
+      "lastAccessed": 1775719061163,
       "keyFiles": []
     },
     "docs/api": {
       "path": "docs/api",
       "purpose": "API routes",
       "fileCount": 15,
-      "lastAccessed": 1775462177143,
+      "lastAccessed": 1775719061164,
       "keyFiles": [
         "README.md",
         "SPEC-CHANGE-PROCESS.md",
@@ -173,7 +173,7 @@
       "path": "supabase/migrations",
       "purpose": "Database migrations",
       "fileCount": 4,
-      "lastAccessed": 1775462177144,
+      "lastAccessed": 1775719061166,
       "keyFiles": [
         "20260305113700_enhance_handle_new_user.sql",
         "20260305204300_profile_dashboard_schema.sql",
@@ -196,14 +196,14 @@
     },
     {
       "path": "packages/web/lib/components/detail/ImageDetailContent.tsx",
-      "accessCount": 125,
-      "lastAccessed": 1775351233775,
+      "accessCount": 126,
+      "lastAccessed": 1775718543957,
       "type": "file"
     },
     {
       "path": "packages/web/app/explore/ExploreClient.tsx",
-      "accessCount": 119,
-      "lastAccessed": 1775351371220,
+      "accessCount": 121,
+      "lastAccessed": 1775721324201,
       "type": "file"
     },
     {
@@ -256,8 +256,8 @@
     },
     {
       "path": "packages/web/lib/components/detail",
-      "accessCount": 29,
-      "lastAccessed": 1775351227845,
+      "accessCount": 30,
+      "lastAccessed": 1775718543682,
       "type": "directory"
     },
     {
@@ -280,8 +280,8 @@
     },
     {
       "path": "packages/web/app/posts/[id]/page.tsx",
-      "accessCount": 22,
-      "lastAccessed": 1775312062316,
+      "accessCount": 23,
+      "lastAccessed": 1775718562180,
       "type": "file"
     },
     {
@@ -304,8 +304,8 @@
     },
     {
       "path": "packages/web/app/layout.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1775311515909,
+      "accessCount": 15,
+      "lastAccessed": 1775718536652,
       "type": "file"
     },
     {
@@ -369,6 +369,24 @@
       "type": "file"
     },
     {
+      "path": "CLAUDE.md",
+      "accessCount": 6,
+      "lastAccessed": 1775718117779,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/generated/models/postListItem.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775718532162,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/api/generated/models/postDetailResponse.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775718532734,
+      "type": "file"
+    },
+    {
       "path": "packages/web/lib/design-system/nav-item.tsx",
       "accessCount": 5,
       "lastAccessed": 1775116176401,
@@ -384,18 +402,6 @@
       "path": "packages/web/lib/components/detail/ImageDetailPreview.tsx",
       "accessCount": 5,
       "lastAccessed": 1775199808859,
-      "type": "file"
-    },
-    {
-      "path": "packages/web/lib/api/generated/models/postListItem.ts",
-      "accessCount": 5,
-      "lastAccessed": 1775199991876,
-      "type": "file"
-    },
-    {
-      "path": "packages/web/lib/api/generated/models/postDetailResponse.ts",
-      "accessCount": 5,
-      "lastAccessed": 1775199992937,
       "type": "file"
     },
     {
@@ -421,12 +427,6 @@
       "accessCount": 3,
       "lastAccessed": 1775121718547,
       "type": "directory"
-    },
-    {
-      "path": "CLAUDE.md",
-      "accessCount": 3,
-      "lastAccessed": 1775294799760,
-      "type": "file"
     },
     {
       "path": "packages/web/lib/components/MobileNavBar.tsx",
