@@ -5,13 +5,12 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { FEATURE_FLAGS } from "@/lib/config/feature-flags";
 
-/** Generate a tiny thumbnail URL via Next.js image optimizer for blur background */
+/** Blur background URL — uses image-proxy for external URLs (CORS), original for local */
 function getBlurSrc(src: string): string {
-  const target =
-    src.startsWith("http://") || src.startsWith("https://")
-      ? `/api/v1/image-proxy?url=${encodeURIComponent(src)}`
-      : src;
-  return `/_next/image?url=${encodeURIComponent(target)}&w=32&q=1`;
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return `/api/v1/image-proxy?url=${encodeURIComponent(src)}`;
+  }
+  return src;
 }
 
 interface PostImageProps {
