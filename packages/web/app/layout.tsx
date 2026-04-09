@@ -55,6 +55,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: [`${SITE_URL}/api/og`],
   },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
   robots: {
     index: true,
     follow: true,
@@ -69,7 +73,7 @@ export default function RootLayout({
   modal: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
       <head>
         <ThemeScript />
         <JsonLdOrganization />
