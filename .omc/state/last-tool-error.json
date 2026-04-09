@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"supabase db pull --schema warehouse 2>&1\",\"timeout\":180000,\"description\":\"Pull warehouse schema from remote\"}",
-  "error": "Exit code 1\nInitialising login role...\nConnecting to remote database...\nCreating shadow database...\nInitialising schema...\nSeeding globals from roles.sql...\nApplying migration 20260409075040_remote_schema.sql...\nDiffing schemas: warehouse\nNo schema changes found\nTry rerunning the command with --debug to troubleshoot the error.",
-  "timestamp": "2026-04-09T07:52:58.845Z",
+  "tool_input_preview": "{\"command\":\"git merge origin/feat/24-25-try-posts-spot-tagging --no-edit\",\"description\":\"Merge #57 try posts branch into dev\"}",
+  "error": "Exit code 1\n자동 병합: docs/agent/api-v1-routes.md\n자동 병합: packages/api-server/README.md\n충돌 (내용): packages/api-server/README.md에 병합 충돌\n자동 병합: packages/api-server/migration/src/lib.rs\n충돌 (내용): packages/api-server/migration/src/lib.rs에 병합 충돌\n자동 병합: packages/api-server/src/domains/posts/dto.rs\n충돌 (내용): packages/api-server/src/domains/posts/dto.rs에 병합 충돌\n자동 병합: packages/api-server/src/domains/posts/handlers.rs\n자동 병합: packages/api-server/src/domains/posts/service.rs\n자동 병합: packages/api-server/src/entities...",
+  "timestamp": "2026-04-09T08:06:08.546Z",
   "retry_count": 1
 }

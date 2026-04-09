@@ -57,6 +57,12 @@ pub struct Model {
     #[sea_orm(nullable)]
     pub image_height: Option<i32>,
 
+    #[sea_orm(nullable)]
+    pub parent_post_id: Option<Uuid>,
+
+    #[sea_orm(nullable)]
+    pub post_type: Option<String>,
+
     pub created_at: DateTimeWithTimeZone,
 
     pub updated_at: DateTimeWithTimeZone,
@@ -77,6 +83,13 @@ pub enum Relation {
         to = "super::post_magazines::Column::Id"
     )]
     PostMagazine,
+
+    #[sea_orm(
+        belongs_to = "Entity",
+        from = "Column::ParentPostId",
+        to = "Column::Id"
+    )]
+    ParentPost,
 }
 
 impl Related<super::users::Entity> for Entity {

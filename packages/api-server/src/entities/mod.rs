@@ -29,6 +29,7 @@ pub mod solutions;
 pub mod spots;
 pub mod subcategories;
 pub mod synonyms;
+pub mod try_spot_tags;
 pub mod user_badges;
 pub mod user_tryon_history;
 pub mod users;
@@ -138,6 +139,10 @@ pub use failed_batch_items::Model as FailedBatchItemsModel;
 pub use agent_sessions::ActiveModel as AgentSessionsActiveModel;
 pub use agent_sessions::Entity as AgentSessions;
 pub use agent_sessions::Model as AgentSessionsModel;
+
+pub use try_spot_tags::ActiveModel as TrySpotTagsActiveModel;
+pub use try_spot_tags::Entity as TrySpotTags;
+pub use try_spot_tags::Model as TrySpotTagsModel;
 
 pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
 pub use user_tryon_history::Entity as UserTryonHistory;

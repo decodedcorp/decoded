@@ -43,6 +43,8 @@ mod m20260318_000001_create_post_likes;
 mod m20260318_000002_create_saved_posts;
 mod m20260320_000001_add_system_uncategorized_subcategory;
 mod m20260402_000001_add_warehouse_fk_posts_solutions;
+mod m20260402_000001_add_try_fields_to_posts;
+mod m20260402_000002_create_try_spot_tags;
 mod m20260403_000001_backfill_created_with_solutions;
 mod m20260406_000001_drop_post_magazines_thread_id;
 mod m20260406_000002_add_style_tags_to_posts;
@@ -98,6 +100,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260318_000002_create_saved_posts::Migration),
             Box::new(m20260320_000001_add_system_uncategorized_subcategory::Migration),
             Box::new(m20260402_000001_add_warehouse_fk_posts_solutions::Migration),
+            Box::new(m20260402_000001_add_try_fields_to_posts::Migration),
+            Box::new(m20260402_000002_create_try_spot_tags::Migration),
             Box::new(m20260403_000001_backfill_created_with_solutions::Migration),
             Box::new(m20260406_000001_drop_post_magazines_thread_id::Migration),
             Box::new(m20260406_000002_add_style_tags_to_posts::Migration),
