@@ -120,6 +120,7 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `useSpots()` - Fetch spot data for images
 - `useComments()` - Fetch and manage comments
 - `useTries()` - Fetch try-on results
+- `useCreateTryPost()` - Try 포스트 생성 (`lib/hooks/useTries.ts`)
 - `useTrendingArtists()` - Fetch trending artist list
 - `useExploreData()` - Unified explore hook: switches between browse mode (Supabase) and search mode (Meilisearch via `/api/v1/search`); exposes `mode`, artist/context facets, multi-select artist filter, sort, and pagination
 
@@ -129,6 +130,7 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `useSavedPost()` - Save/unsave posts
 - `useReport()` - Submit content reports
 - `useAdoptDropdown()` - Adopt a solution from dropdown
+- `useVoting()` (`useVoteStats`, `useCreateVote`, `useDeleteVote`) — 솔루션 투표 조회·생성·삭제 (`lib/hooks/useVoting.ts`)
 
 ### Behavioral tracking
 

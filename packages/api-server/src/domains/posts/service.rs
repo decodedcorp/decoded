@@ -22,6 +22,10 @@ use super::dto::{
     TryListQuery, TryListResponse, TryPostListItem, UpdatePostDto,
 };
 
+#[allow(dead_code)]
+const POST_TYPE_POST: &str = "post";
+const POST_TYPE_TRY: &str = "try";
+
 /// Solution 정보 (AI 분석 트리거용)
 struct SolutionInfo {
     id: Uuid,
@@ -557,7 +561,7 @@ pub async fn get_post_detail(
     // 3. Spots이 없으면 빈 응답 반환
     if related_data.spots.is_empty() {
         let media_source = build_media_source_from_post(&post);
-        let try_count = if post.post_type.as_deref() != Some("try") {
+        let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
             let c = count_tries(db, post_id).await?;
             if c.count > 0 {
                 Some(c.count)
@@ -589,7 +593,7 @@ pub async fn get_post_detail(
     let media_source = build_media_source_from_post(&post);
 
     // 6. Try 개수 조회 (원본 포스트인 경우만)
-    let try_count = if post.post_type.as_deref() != Some("try") {
+    let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
         let count = count_tries(db, post_id).await?;
         if count.count > 0 {
             Some(count.count)
@@ -670,7 +674,7 @@ pub async fn list_posts(
     let mut select = Posts::find().filter(Column::Status.eq(crate::constants::post_status::ACTIVE));
 
     // Try 포스트는 일반 피드에서 제외
-    select = select.filter(Column::PostType.is_null().or(Column::PostType.ne("try")));
+    select = select.filter(Column::PostType.is_null().or(Column::PostType.ne(POST_TYPE_TRY)));
 
     // 필터 적용
     if let Some(ref artist_name) = query.artist_name {
@@ -1540,7 +1544,7 @@ pub async fn create_try_post(
 ) -> AppResult<PostResponse> {
     // 1. parent_post_id 검증
     let parent = get_post_by_id(&state.db, dto.parent_post_id).await?;
-    if parent.post_type.as_deref() == Some("try") {
+    if parent.post_type.as_deref() == Some(POST_TYPE_TRY) {
         return Err(AppError::BadRequest(
             "Cannot create a try on another try post".to_string(),
         ));
@@ -1580,7 +1584,7 @@ pub async fn create_try_post(
                     id: Set(Uuid::new_v4()),
                     user_id: Set(user_id),
                     image_url: Set(image_url),
-                    media_type: Set("try".to_string()),
+                    media_type: Set(POST_TYPE_TRY.to_string()),
                     title: Set(media_title),
                     media_metadata: Set(None),
                     group_name: Set(None),
@@ -1590,7 +1594,7 @@ pub async fn create_try_post(
                     status: Set(crate::constants::post_status::ACTIVE.to_string()),
                     created_with_solutions: Set(None),
                     parent_post_id: Set(Some(parent_post_id)),
-                    post_type: Set(Some("try".to_string())),
+                    post_type: Set(Some(POST_TYPE_TRY.to_string())),
                     ..Default::default()
                 };
 
@@ -1649,7 +1653,7 @@ pub async fn list_tries(
 
     let paginator = Posts::find()
         .filter(Column::ParentPostId.eq(parent_post_id))
-        .filter(Column::PostType.eq("try"))
+        .filter(Column::PostType.eq(POST_TYPE_TRY))
         .filter(Column::Status.eq(crate::constants::post_status::ACTIVE))
         .order_by_desc(Column::CreatedAt);
 
@@ -1736,7 +1740,7 @@ pub async fn count_tries(
 ) -> AppResult<TryCountResponse> {
     let count = Posts::find()
         .filter(Column::ParentPostId.eq(parent_post_id))
-        .filter(Column::PostType.eq("try"))
+        .filter(Column::PostType.eq(POST_TYPE_TRY))
         .filter(Column::Status.eq(crate::constants::post_status::ACTIVE))
         .count(db)
         .await
