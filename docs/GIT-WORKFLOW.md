@@ -105,20 +105,47 @@ bun run ci:local        # 전체 (push 훅과 동일)
 just ci-web             # web만
 ```
 
+## 브랜치 전략
+
+```
+feature/* ──PR──▶ dev ──PR──▶ main (production)
+fix/*     ──PR──▶ dev ──PR──▶ main
+hotfix/*  ──PR──▶ main (긴급 시에만)
+```
+
+| 브랜치 | 역할 | push 정책 |
+|--------|------|-----------|
+| `main` | 프로덕션. Vercel 자동 배포 | **직접 push 금지**, PR 머지만 허용 |
+| `dev` | 통합 개발 브랜치 | 팀원 push 허용, feature 브랜치 PR 머지 |
+| `feature/*`, `fix/*` 등 | 작업 브랜치 | dev에서 분기, dev로 PR |
+
+### 워크플로우
+
+1. `dev`에서 작업 브랜치 생성: `git checkout -b feat/xxx dev`
+2. 작업 완료 후 `dev`로 PR 생성
+3. 리뷰 통과 후 `dev`에 머지
+4. 릴리스 준비 시 `dev` → `main` PR 생성
+5. CI 체크 통과 + 리뷰 후 `main`에 머지 → Vercel 자동 배포
+
+### 긴급 핫픽스
+
+프로덕션 장애 시에만 `hotfix/*` → `main` 직접 PR 허용. 머지 후 `dev`에도 반영 필수.
+
 ## Main 브랜치 보호
 
 - **직접 push 금지**: pre-push 훅이 `main`/`master` push를 차단
-- **PR 머지만 허용**: 브랜치 → PR → 리뷰 → 머지
+- **PR 머지만 허용**: `dev` → `main` PR만 허용 (긴급 hotfix 제외)
+- **GitHub branch protection**: CI checks required
 
 ## 리뷰 프로세스
 
-1. 브랜치에서 작업 완료
+1. 작업 브랜치에서 개발 완료
 2. `/review` 실행 — Claude code-reviewer로 자동 리뷰
 3. P0(차단 이슈) 모두 해결
-4. PR 생성
-5. 팀원 리뷰
-6. 승인 후 머지
+4. `dev`로 PR 생성
+5. 팀원 리뷰 + 승인 후 머지
+6. 릴리스 시 `dev` → `main` PR 생성 및 머지
 
 ## 릴리스 플로우
 
-현재는 main 머지 시 자동 배포 (Vercel). 별도 릴리스 브랜치 없음.
+`dev` → `main` PR 머지 시 Vercel 자동 배포. 별도 릴리스 브랜치 없음.
