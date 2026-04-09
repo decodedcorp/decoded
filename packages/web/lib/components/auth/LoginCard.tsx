@@ -26,6 +26,7 @@ export function LoginCard() {
   const loadingProvider = useAuthStore(selectLoadingProvider);
   const isLoading = useAuthStore(selectIsLoading);
   const error = useAuthStore(selectError);
+  const urlError = searchParams.get("error");
 
   const handleLogin = async (provider: OAuthProvider) => {
     // Store redirect destination before OAuth round-trip (browser loses query params)
@@ -57,9 +58,9 @@ export function LoginCard() {
         </div>
 
         {/* Error Message */}
-        {error && (
+        {(error || urlError) && (
           <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-            <p className="text-sm text-red-400 text-center">{error}</p>
+            <p className="text-sm text-red-400 text-center">{error || urlError}</p>
           </div>
         )}
 

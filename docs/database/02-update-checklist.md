@@ -14,11 +14,12 @@ Use this checklist when:
 
 ---
 
-## 1. Verify Schema Changes (via MCP)
+## 1. Verify Schema Changes
 
-- [ ] **Run MCP Tool**: `mcp_supabase-decoded-ai_list_tables` for the relevant tables.
+- [ ] **Run CLI**: `supabase db diff --schema public` to detect changes.
 - [ ] **Snapshot**: Capture the new columns, changed enums, or modified types.
 - [ ] **Metadata**: Update the "Last updated" date in `docs/database/01-schema-usage.md`.
+- [ ] **Migration**: If using Supabase CLI track, run `supabase db diff --schema public -f change_name`.
 
 ---
 
@@ -26,9 +27,8 @@ Use this checklist when:
 
 - [ ] **Generate Types**: Run the type generation command.
   ```bash
-  supabase gen types typescript --project-id pdgvuwrxsfwrypadwdlu > lib/supabase/types.ts
+  supabase gen types typescript --linked > packages/shared/src/types/supabase/types.ts
   ```
-  _(Or `yarn typegen:dev` if configured in package.json)_
 - [ ] **Diff Check**: Open `lib/supabase/types.ts` and verify:
   - New columns appear in `Row` / `Insert` / `Update` interfaces.
   - New enum values are added to `Enums`.

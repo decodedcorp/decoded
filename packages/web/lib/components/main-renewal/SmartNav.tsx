@@ -5,6 +5,12 @@ import gsap from "gsap";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
+import {
+  useAuthStore,
+  selectIsLoggedIn,
+  selectUser,
+  selectProfile,
+} from "@/lib/stores/authStore";
 
 const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
   ssr: false,
@@ -39,6 +45,9 @@ export function SmartNav({ className }: SmartNavProps) {
   const [isAtTop, setIsAtTop] = useState(true);
 
   const pathname = usePathname();
+  const isLoggedIn = useAuthStore(selectIsLoggedIn);
+  const user = useAuthStore(selectUser);
+  const profile = useAuthStore(selectProfile);
 
   // Scroll-responsive hide/show
   useEffect(() => {
@@ -133,11 +142,32 @@ export function SmartNav({ className }: SmartNavProps) {
           );
         })}
 
-        {/* 1st release: Try On hidden (GH #35) */}
-
-        {/* 1st release: Search hidden (GH #35) */}
-
-        {/* 1st release: Admin, Notice, Profile, Login hidden (GH #35) */}
+        {/* Auth: Login / Profile */}
+        {isLoggedIn ? (
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+          >
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={profile?.display_name || user.name}
+                className="w-7 h-7 rounded-full object-cover border border-white/20"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-medium text-white">
+                {(user?.name?.[0] || "U").toUpperCase()}
+              </div>
+            )}
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="text-xs tracking-[0.2em] uppercase px-4 py-2 rounded-full bg-[#eafd67] text-black font-semibold hover:bg-[#d9fc69] transition-colors"
+          >
+            Login
+          </Link>
+        )}
       </div>
     </header>
   );

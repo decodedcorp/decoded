@@ -51,6 +51,12 @@ pub struct Model {
     #[sea_orm(nullable, column_type = "JsonBinary")]
     pub style_tags: Option<Json>,
 
+    #[sea_orm(nullable)]
+    pub image_width: Option<i32>,
+
+    #[sea_orm(nullable)]
+    pub image_height: Option<i32>,
+
     pub created_at: DateTimeWithTimeZone,
 
     pub updated_at: DateTimeWithTimeZone,

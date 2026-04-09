@@ -40,6 +40,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   needsOnboarding: boolean;
+  sessionExpired: boolean;
   loadingProvider: OAuthProvider | null;
   error: string | null;
 
@@ -50,6 +51,7 @@ interface AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   setUser: (supabaseUser: SupabaseUser | null) => Promise<void>;
+  setSessionExpired: (expired: boolean) => void;
   fetchProfile: () => Promise<void>;
   updateProfile: (
     updates: Partial<Pick<UserProfile, "username" | "display_name" | "bio">>
@@ -85,6 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   isInitialized: false,
   needsOnboarding: false,
+  sessionExpired: false,
   loadingProvider: null,
   error: null,
 
@@ -143,7 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { error } = await supabaseBrowserClient.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(sessionStorage.getItem("post_login_redirect") || "/")}`,
         },
       });
 
@@ -191,6 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isGuest: false,
         isLoading: false,
         needsOnboarding: false,
+        sessionExpired: false,
       });
     } catch (error) {
       const message =
@@ -207,6 +211,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    */
   clearError: () => {
     set({ error: null });
+  },
+
+  setSessionExpired: (expired: boolean) => {
+    set({ sessionExpired: expired });
   },
 
   /**
@@ -229,6 +237,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         loadingProvider: null,
         needsOnboarding: false,
+        sessionExpired: false,
       });
     }
   },
@@ -248,6 +257,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         .single();
 
       if (error) {
+        if (error.code === "PGRST116") {
+          console.log("[authStore] New user detected, needs onboarding");
+          set({ needsOnboarding: true, profile: null });
+          return;
+        }
         console.error("Failed to fetch profile:", error);
         return;
       }
@@ -321,4 +335,5 @@ export const selectIsLoading = (state: AuthState) => state.isLoading;
 export const selectIsInitialized = (state: AuthState) => state.isInitialized;
 export const selectLoadingProvider = (state: AuthState) => state.loadingProvider;
 export const selectError = (state: AuthState) => state.error;
+export const selectSessionExpired = (state: AuthState) => state.sessionExpired;
 export const selectLogout = (state: AuthState) => state.logout;
