@@ -74,7 +74,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
       }
 
       // 2. API를 통해 백엔드에 업로드 (30-95% 구간)
-      const { image_url } = await uploadImage({
+      const { image_url, image_width, image_height } = await uploadImage({
         file: compressedFile,
         onProgress: (uploadPercent) => {
           const weighted = 30 + Math.round(uploadPercent * 0.65);
@@ -82,8 +82,8 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
         },
       });
 
-      // 3. 업로드 완료
-      setImageUploadedUrl(id, image_url);
+      // 3. 업로드 완료 (dimension 포함)
+      setImageUploadedUrl(id, image_url, image_width, image_height);
       onUploadComplete?.(id, image_url);
       updateImageStatus(id, "uploaded", 100);
 
