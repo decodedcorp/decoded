@@ -15,6 +15,8 @@ if (typeof window !== "undefined") {
 type RelatedImage = {
   id: string;
   image_url: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
 };
 
 type Props = {
@@ -89,7 +91,7 @@ export function RelatedLooksSection({ images, displayName }: Props) {
               key={img.id}
               image={img}
               displayName={displayName}
-              heightClass={index === 0 ? "h-[200px]" : "h-[140px]"}
+              fallbackHeightClass={index === 0 ? "h-[200px]" : "h-[140px]"}
             />
           ))}
         </div>
@@ -101,7 +103,7 @@ export function RelatedLooksSection({ images, displayName }: Props) {
               key={img.id}
               image={img}
               displayName={displayName}
-              heightClass={index === 0 ? "h-[140px]" : "h-[200px]"}
+              fallbackHeightClass={index === 0 ? "h-[140px]" : "h-[200px]"}
             />
           ))}
         </div>
@@ -111,21 +113,29 @@ export function RelatedLooksSection({ images, displayName }: Props) {
 }
 
 /**
- * Individual related look card
+ * Individual related look card.
+ * Uses DB dimensions for aspect ratio when available, falls back to fixed height.
  */
 function RelatedLookCard({
   image,
   displayName,
-  heightClass,
+  fallbackHeightClass,
 }: {
   image: RelatedImage;
   displayName: string;
-  heightClass: string;
+  /** Fallback Tailwind height class when DB dimensions are absent */
+  fallbackHeightClass: string;
 }) {
+  const aspectRatio =
+    image.image_width && image.image_height
+      ? image.image_width / image.image_height
+      : undefined;
+
   return (
     <Link
       href={`/posts/${image.id}`}
-      className={`related-look-card block relative ${heightClass} rounded-xl overflow-hidden bg-muted group`}
+      className={`related-look-card block relative rounded-xl overflow-hidden bg-muted group ${aspectRatio ? "" : fallbackHeightClass}`}
+      style={aspectRatio ? { aspectRatio } : undefined}
     >
       {image.image_url ? (
         <Image

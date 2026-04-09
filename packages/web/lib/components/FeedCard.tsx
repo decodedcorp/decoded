@@ -67,6 +67,9 @@ export interface FeedCardItem {
   likeCount?: number;
   commentCount?: number;
   isLiked?: boolean;
+  // DB dimensions for CLS prevention
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 interface FeedCardProps {
@@ -97,7 +100,9 @@ export const FeedCard = memo(
       commentCount: item.commentCount ?? 0,
     });
 
-    const { id, imageUrl, hasItems } = item;
+    const { id, imageUrl, hasItems, imageWidth, imageHeight } = item;
+    const aspectRatio =
+      imageWidth && imageHeight ? imageWidth / imageHeight : undefined;
 
     // Fetch spots for cards with items
     const { data: spotsData } = useSpots(item.postId!, {
@@ -218,7 +223,10 @@ export const FeedCard = memo(
           )}
 
           {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
-          <div className="relative overflow-hidden">
+          <div
+            className="relative overflow-hidden"
+            style={aspectRatio ? { aspectRatio } : undefined}
+          >
             {imageUrl ? (
               <PostImage
                 src={imageUrl}

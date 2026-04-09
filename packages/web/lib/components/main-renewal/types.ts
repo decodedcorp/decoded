@@ -62,6 +62,9 @@ export interface GridItemData {
   link: string;
   spots?: GridItemSpot[]; // Optional item spots on the image
   aspectRatio?: number; // For masonry height variation (0.8-1.5)
+  /** DB-stored dimensions for CLS prevention */
+  image_width?: number | null;
+  image_height?: number | null;
 }
 
 /** Spot on a grid item image -- brand/price popup on hover */

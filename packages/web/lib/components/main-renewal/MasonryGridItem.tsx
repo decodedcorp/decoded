@@ -77,7 +77,12 @@ export default function MasonryGridItem({
   const cardRef = useRef<HTMLDivElement>(null);
   const spotsRef = useRef<HTMLDivElement>(null);
 
-  const aspectRatio = item.aspectRatio ?? 1;
+  // Prefer explicit aspectRatio, then compute from DB dimensions, fallback to 1
+  const aspectRatio =
+    item.aspectRatio ??
+    (item.image_width && item.image_height
+      ? item.image_width / item.image_height
+      : 1);
   const height = clampHeight(aspectRatio, index);
   const hasSpots = item.spots && item.spots.length > 0;
 

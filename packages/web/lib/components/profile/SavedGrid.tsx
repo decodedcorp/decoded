@@ -8,12 +8,66 @@ import Image from "next/image";
 import Link from "next/link";
 import { getMySaved } from "@/lib/api/generated/users/users";
 import type { SavedItem } from "@/lib/api/generated/models";
+import { useImageDimensions } from "@/lib/hooks/useImageDimensions";
 
 // ============================================================
 // Constants
 // ============================================================
 
 const PER_PAGE = 20;
+
+// ============================================================
+// Sub-components
+// ============================================================
+
+/**
+ * Individual saved post card.
+ * Uses useImageDimensions to set aspect ratio from DB dimensions,
+ * preventing CLS when the API response lacks width/height fields.
+ */
+function SavedGridItemCard({ item }: { item: SavedItem }) {
+  const { width, height } = useImageDimensions(item.post_thumbnail_url);
+  const aspectRatio = width && height ? width / height : undefined;
+
+  return (
+    <Link
+      href={`/images/${item.post_id}`}
+      className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/30 block"
+    >
+      <div
+        className="relative"
+        style={{ aspectRatio: aspectRatio ?? "3/4" }}
+      >
+        {item.post_thumbnail_url ? (
+          <Image
+            src={item.post_thumbnail_url}
+            alt={item.post_title ?? "Saved post"}
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, 33vw"
+          />
+        ) : (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <Bookmark className="h-8 w-8 text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+        <div className="flex items-end justify-between gap-1">
+          <span className="text-[11px] text-white/90 font-medium truncate">
+            {item.post_title ?? "Untitled"}
+          </span>
+          <span className="text-[10px] text-white/50 shrink-0">
+            {new Date(item.saved_at).toLocaleDateString("ko-KR", {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 // ============================================================
 // Component
@@ -116,40 +170,7 @@ export function SavedGrid({ className }: SavedGridProps) {
   return (
     <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-3", className)}>
       {items.map((item) => (
-        <Link
-          key={item.id}
-          href={`/images/${item.post_id}`}
-          className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/30 block"
-        >
-          <div className="relative aspect-[3/4]">
-            {item.post_thumbnail_url ? (
-              <Image
-                src={item.post_thumbnail_url}
-                alt={item.post_title ?? "Saved post"}
-                fill
-                className="object-cover transition-transform group-hover:scale-105"
-                sizes="(max-width: 768px) 50vw, 33vw"
-              />
-            ) : (
-              <div className="w-full h-full bg-muted flex items-center justify-center">
-                <Bookmark className="h-8 w-8 text-muted-foreground/40" />
-              </div>
-            )}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-            <div className="flex items-end justify-between gap-1">
-              <span className="text-[11px] text-white/90 font-medium truncate">
-                {item.post_title ?? "Untitled"}
-              </span>
-              <span className="text-[10px] text-white/50 shrink-0">
-                {new Date(item.saved_at).toLocaleDateString("ko-KR", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-          </div>
-        </Link>
+        <SavedGridItemCard key={item.id} item={item} />
       ))}
 
       {/* Sentinel for infinite scroll trigger */}

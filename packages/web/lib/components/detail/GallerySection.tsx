@@ -15,6 +15,8 @@ if (typeof window !== "undefined") {
 type GalleryImage = {
   id: string;
   image_url: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
 };
 
 type Props = {
@@ -97,7 +99,7 @@ export function GallerySection({ images }: Props) {
             <GalleryImageCard
               key={img.id}
               image={img}
-              heightClass="h-[140px] md:h-[400px]"
+              fallbackHeightClass="h-[140px] md:h-[400px]"
             />
           ))}
         </div>
@@ -113,7 +115,7 @@ export function GallerySection({ images }: Props) {
               <GalleryImageCard
                 key={img.id}
                 image={img}
-                heightClass="h-[140px] md:h-[300px]"
+                fallbackHeightClass="h-[140px] md:h-[300px]"
               />
             ))}
           </div>
@@ -127,18 +129,26 @@ export function GallerySection({ images }: Props) {
 }
 
 /**
- * Individual gallery image card
+ * Individual gallery image card.
+ * Uses DB dimensions for aspect ratio when available, falls back to fixed height.
  */
 function GalleryImageCard({
   image,
-  heightClass,
+  fallbackHeightClass,
 }: {
   image: GalleryImage;
-  heightClass: string;
+  /** Fallback Tailwind height class when DB dimensions are absent */
+  fallbackHeightClass: string;
 }) {
+  const aspectRatio =
+    image.image_width && image.image_height
+      ? image.image_width / image.image_height
+      : undefined;
+
   const content = (
     <div
-      className={`gallery-img relative ${heightClass} rounded-lg md:rounded-xl overflow-hidden bg-muted group`}
+      className={`gallery-img relative rounded-lg md:rounded-xl overflow-hidden bg-muted group ${aspectRatio ? "" : fallbackHeightClass}`}
+      style={aspectRatio ? { aspectRatio } : undefined}
     >
       {image.image_url ? (
         <Image
