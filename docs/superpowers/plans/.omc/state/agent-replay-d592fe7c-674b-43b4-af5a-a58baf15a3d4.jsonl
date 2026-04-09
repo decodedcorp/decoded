@@ -1,0 +1,6 @@
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"superpowers:brainstorm"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"superpowers:brainstorming"}
+{"t":0,"agent":"a1929a6","agent_type":"Explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a1929a6","agent_type":"Explore","event":"agent_stop","success":true,"duration_ms":93797}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"superpowers:writing-plans"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"superpowers:subagent-driven-development"}

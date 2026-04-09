@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd packages/web && ./node_modules/.bin/tsc --noEmit 2>&1 | head -5\",\"timeout\":120000,\"description\":\"Type check after fix\"}",
+  "error": "Exit code 1\n(eval):cd:1: no such file or directory: packages/web",
+  "timestamp": "2026-04-05T01:08:29.744Z",
+  "retry_count": 1
+}
