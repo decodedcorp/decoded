@@ -83,7 +83,7 @@ services:
       - decoded-backend-prod
     environment:
       MEILI_ENV: production
-      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?set MEILISEARCH_MASTER_KEY in packages/api-server/.env.prod (used with deploy-backend.sh --env-file)}
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?set MEILISEARCH_MASTER_KEY in .env.backend.prod (used with deploy-backend.sh --env-file)}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
       interval: 10s

@@ -19,6 +19,7 @@ services:
       PORT: "8080"
       HOST: "0.0.0.0"
       LOG_FORMAT: text
+      ENV: development
       MEILISEARCH_URL: http://meilisearch:7700
       AI_SERVER_GRPC_URL: http://ai:50051
       API_SERVER_GRPC_PORT: "50052"
