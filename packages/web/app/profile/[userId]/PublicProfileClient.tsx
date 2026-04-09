@@ -10,6 +10,7 @@ import { ProfileHeaderCard } from "@/lib/design-system";
 import {
   ProfileBio,
   FollowStats,
+  FollowButton,
   StyleDNACard,
   ProfileDesktopLayout,
   ActivityTabs,
@@ -231,6 +232,8 @@ export function PublicProfileClient({ userId }: { userId: string }) {
           stats={formattedStats}
         />
 
+        {me && <FollowButton userId={userId} className="w-full" />}
+
         <ProfileBio bio={userData.bio ?? undefined} className="px-4" />
 
         <FollowStats
@@ -269,6 +272,8 @@ export function PublicProfileClient({ userId }: { userId: string }) {
                 username={`@${userData.username}`}
                 stats={formattedStats}
               />
+
+              {me && <FollowButton userId={userId} />}
 
               <ProfileBio bio={userData.bio ?? undefined} />
 

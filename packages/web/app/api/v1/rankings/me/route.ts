@@ -1,8 +1,6 @@
 /**
- * Rankings Me Proxy API Route
- * GET /api/v1/rankings/me - 내 랭킹 상세 (인증 필요)
- *
- * Proxies requests to the backend API.
+ * My Ranking Proxy API Route
+ * GET /api/v1/rankings/me - Get my ranking detail (auth required)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -26,24 +24,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const responseText = await response.text();
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      data = {
-        message: `Backend error: ${response.status} ${response.statusText}`,
-      };
-    }
+    const data = await response.json().catch(() => ({
+      message: `Backend error: ${response.status}`,
+    }));
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Rankings/me GET proxy error:", error);
-    }
     return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : "Proxy error",
-      },
+      { message: error instanceof Error ? error.message : "Proxy error" },
       { status: 502 }
     );
   }

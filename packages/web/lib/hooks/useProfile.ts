@@ -218,6 +218,65 @@ export function useTryOnCount(userId: string | undefined) {
 }
 
 // ============================================================
+// Follow Hooks
+// ============================================================
+
+import { customInstance } from "@/lib/api/mutator/custom-instance";
+
+export function useFollowStatus(userId: string | undefined) {
+  return useQuery({
+    queryKey: [...profileKeys.all, "follow-status", userId] as const,
+    queryFn: () =>
+      customInstance<{ is_following: boolean }>({
+        url: `/api/v1/users/${userId}/follow-status`,
+        method: "GET",
+      }),
+    enabled: !!userId,
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useFollowUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      customInstance<void>({
+        url: `/api/v1/users/${userId}/follow`,
+        method: "POST",
+      }),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({
+        queryKey: [...profileKeys.all, "follow-status", userId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.user(userId),
+      });
+    },
+  });
+}
+
+export function useUnfollowUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      customInstance<void>({
+        url: `/api/v1/users/${userId}/follow`,
+        method: "DELETE",
+      }),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({
+        queryKey: [...profileKeys.all, "follow-status", userId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.user(userId),
+      });
+    },
+  });
+}
+
+// ============================================================
 // useUpdateProfile - Mutation for updating profile
 // ============================================================
 

@@ -87,6 +87,13 @@ pub struct UpdateUserDto {
     pub bio: Option<String>,
 }
 
+/// 팔로우 상태 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct FollowStatusResponse {
+    /// 팔로우 여부
+    pub is_following: bool,
+}
+
 /// 사용자 통계 응답
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserStatsResponse {

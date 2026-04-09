@@ -14,8 +14,8 @@ use crate::{
 };
 
 use super::dto::{
-    SavedItem, TryItem, UpdateUserDto, UserActivityItem, UserActivityType, UserResponse,
-    UserStatsResponse,
+    SavedItem, TryItem, UpdateUserDto, UserActivityItem, UserActivityPostMeta,
+    UserActivitySpotMeta, UserActivityType, UserResponse, UserStatsResponse,
 };
 
 /// 사용자 ID로 프로필 조회
@@ -58,32 +58,208 @@ pub async fn update_user_profile(
         .map_err(AppError::DatabaseError)
 }
 
+/// 사용자의 활성 포스트 수
+async fn count_user_posts(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.posts WHERE user_id = $1 AND status = 'active'",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0))
+}
+
+/// 사용자의 댓글 수
+async fn count_user_comments(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.comments WHERE user_id = $1",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0))
+}
+
+/// 사용자가 받은 좋아요 수
+async fn count_user_likes_received(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.post_likes pl JOIN public.posts p ON pl.post_id = p.id WHERE p.user_id = $1",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0))
+}
+
 /// 내 활동 통계 조회
 pub async fn get_user_stats(
     db: &DatabaseConnection,
     user_id: Uuid,
 ) -> AppResult<UserStatsResponse> {
     let user = get_user_by_id(db, user_id).await?;
+    let total_posts = count_user_posts(db, user_id).await?;
+    let total_comments = count_user_comments(db, user_id).await?;
+    let total_likes_received = count_user_likes_received(db, user_id).await?;
 
     Ok(UserStatsResponse {
         user_id,
-        total_posts: 0,
-        total_comments: 0,
-        total_likes_received: 0,
+        total_posts,
+        total_comments,
+        total_likes_received,
         total_points: user.total_points,
         rank: user.rank,
     })
 }
 
-/// 활동 내역 조회 (향후 Post/Spot/Solution 데이터 연동 예정)
+/// 활동 내역 조회 (posts, spots, solutions UNION)
 pub async fn list_user_activities(
-    _db: &DatabaseConnection,
-    _user_id: Uuid,
-    _activity_type: Option<UserActivityType>,
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    activity_type: Option<UserActivityType>,
     pagination: Pagination,
 ) -> AppResult<PaginatedResponse<UserActivityItem>> {
-    // TODO(Phase 6+): 실제 Post/Spot/Solution 데이터와 조인
-    Ok(PaginatedResponse::new(Vec::new(), pagination, 0))
+    let per_page = pagination.per_page.min(100);
+    let offset = (pagination.page.max(1) - 1) * per_page;
+
+    // Build type filter
+    let type_filter = match &activity_type {
+        Some(UserActivityType::Post) => "WHERE a.activity_type = 'post'",
+        Some(UserActivityType::Spot) => "WHERE a.activity_type = 'spot'",
+        Some(UserActivityType::Solution) => "WHERE a.activity_type = 'solution'",
+        None => "",
+    };
+
+    let count_sql = format!(
+        r#"SELECT COUNT(*)::BIGINT AS cnt FROM (
+            SELECT id, 'post' AS activity_type FROM public.posts WHERE user_id = $1 AND status = 'active'
+            UNION ALL
+            SELECT id, 'spot' AS activity_type FROM public.spots WHERE user_id = $1
+            UNION ALL
+            SELECT id, 'solution' AS activity_type FROM public.solutions WHERE user_id = $1 AND status = 'active'
+        ) a {type_filter}"#
+    );
+
+    let total_row = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            &count_sql,
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let total_items = total_row
+        .map(|r| r.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0) as u64;
+
+    let data_sql = format!(
+        r#"SELECT * FROM (
+            SELECT p.id, 'post' AS activity_type, p.title, NULL::text AS product_name,
+                   NULL::boolean AS is_adopted, NULL::boolean AS is_verified,
+                   NULL::uuid AS spot_id, NULL::uuid AS spot_post_id,
+                   p.image_url AS spot_post_image_url,
+                   p.artist_name AS spot_post_artist_name, p.group_name AS spot_post_group_name,
+                   p.created_at
+            FROM public.posts p WHERE p.user_id = $1 AND p.status = 'active'
+            UNION ALL
+            SELECT s.id, 'spot' AS activity_type, NULL AS title, NULL AS product_name,
+                   NULL AS is_adopted, NULL AS is_verified,
+                   s.id AS spot_id, s.post_id AS spot_post_id,
+                   sp.image_url AS spot_post_image_url,
+                   sp.artist_name AS spot_post_artist_name, sp.group_name AS spot_post_group_name,
+                   s.created_at
+            FROM public.spots s
+            LEFT JOIN public.posts sp ON s.post_id = sp.id
+            WHERE s.user_id = $1
+            UNION ALL
+            SELECT sol.id, 'solution' AS activity_type, sol.title, sol.product_name,
+                   sol.is_adopted, sol.is_verified,
+                   sol.spot_id AS spot_id, sp2.post_id AS spot_post_id,
+                   sp3.image_url AS spot_post_image_url,
+                   sp3.artist_name AS spot_post_artist_name, sp3.group_name AS spot_post_group_name,
+                   sol.created_at
+            FROM public.solutions sol
+            LEFT JOIN public.spots sp2 ON sol.spot_id = sp2.id
+            LEFT JOIN public.posts sp3 ON sp2.post_id = sp3.id
+            WHERE sol.user_id = $1 AND sol.status = 'active'
+        ) a {type_filter}
+        ORDER BY a.created_at DESC
+        LIMIT $2 OFFSET $3"#
+    );
+
+    let rows = db
+        .query_all(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            &data_sql,
+            [
+                user_id.into(),
+                (per_page as i64).into(),
+                (offset as i64).into(),
+            ],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let items: Vec<UserActivityItem> = rows
+        .iter()
+        .map(|row| {
+            let activity_type_str: String = row.try_get("", "activity_type").unwrap_or_default();
+            let activity_type = match activity_type_str.as_str() {
+                "spot" => UserActivityType::Spot,
+                "solution" => UserActivityType::Solution,
+                _ => UserActivityType::Post,
+            };
+
+            let spot = row
+                .try_get::<Uuid>("", "spot_id")
+                .ok()
+                .map(|spot_id| UserActivitySpotMeta {
+                    id: spot_id,
+                    post: row.try_get::<Uuid>("", "spot_post_id").ok().map(|pid| {
+                        UserActivityPostMeta {
+                            id: pid,
+                            image_url: row.try_get("", "spot_post_image_url").ok(),
+                            artist_name: row.try_get("", "spot_post_artist_name").ok(),
+                            group_name: row.try_get("", "spot_post_group_name").ok(),
+                        }
+                    }),
+                });
+
+            UserActivityItem {
+                id: row.try_get("", "id").unwrap_or_default(),
+                activity_type,
+                spot,
+                product_name: row.try_get("", "product_name").ok(),
+                title: row.try_get("", "title").ok(),
+                is_adopted: row.try_get("", "is_adopted").ok(),
+                is_verified: row.try_get("", "is_verified").ok(),
+                created_at: row
+                    .try_get::<chrono::DateTime<chrono::Utc>>("", "created_at")
+                    .unwrap_or_default(),
+            }
+        })
+        .collect();
+
+    Ok(PaginatedResponse::new(
+        items,
+        Pagination::new(pagination.page, per_page),
+        total_items,
+    ))
 }
 
 async fn count_followers(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
@@ -233,4 +409,65 @@ pub async fn get_user_with_follow_counts(
         following_count,
         ..UserResponse::from(user)
     })
+}
+
+/// 팔로우
+pub async fn follow_user(
+    db: &DatabaseConnection,
+    follower_id: Uuid,
+    following_id: Uuid,
+) -> AppResult<()> {
+    if follower_id == following_id {
+        return Err(AppError::BadRequest("자기 자신을 팔로우할 수 없습니다".to_string()));
+    }
+
+    // 대상 유저 존재 확인
+    get_user_by_id(db, following_id).await?;
+
+    db.execute(Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        "INSERT INTO public.user_follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [follower_id.into(), following_id.into()],
+    ))
+    .await
+    .map_err(AppError::DatabaseError)?;
+
+    Ok(())
+}
+
+/// 언팔로우
+pub async fn unfollow_user(
+    db: &DatabaseConnection,
+    follower_id: Uuid,
+    following_id: Uuid,
+) -> AppResult<()> {
+    db.execute(Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        "DELETE FROM public.user_follows WHERE follower_id = $1 AND following_id = $2",
+        [follower_id.into(), following_id.into()],
+    ))
+    .await
+    .map_err(AppError::DatabaseError)?;
+
+    Ok(())
+}
+
+/// 팔로우 여부 확인
+pub async fn check_is_following(
+    db: &DatabaseConnection,
+    follower_id: Uuid,
+    following_id: Uuid,
+) -> AppResult<bool> {
+    let result = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT EXISTS(SELECT 1 FROM public.user_follows WHERE follower_id = $1 AND following_id = $2) AS is_following",
+            [follower_id.into(), following_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(result
+        .map(|row| row.try_get::<bool>("", "is_following").unwrap_or(false))
+        .unwrap_or(false))
 }
