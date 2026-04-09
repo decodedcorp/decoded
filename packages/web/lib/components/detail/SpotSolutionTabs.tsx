@@ -47,8 +47,7 @@ export function SpotSolutionTabs({
   const adoptDropdown = useAdoptDropdown(activeSpotId);
 
   const activeSolutions = useMemo(
-    () =>
-      (activeSpotId ? spotSolutionsMap.get(activeSpotId) : undefined) ?? [],
+    () => (activeSpotId ? spotSolutionsMap.get(activeSpotId) : undefined) ?? [],
     [activeSpotId, spotSolutionsMap]
   ) as SolutionItem[];
 
@@ -66,19 +65,25 @@ export function SpotSolutionTabs({
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Spot Tabs */}
       {spots.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div
+          role="tablist"
+          className="flex items-center gap-2 overflow-x-auto pb-1"
+        >
           {spots.map((spot, i) => {
             const solutions = spotSolutionsMap.get(spot.spotId);
             const count = solutions?.length ?? 0;
+            const isActive = activeSpotIndex === i;
 
             return (
               <button
                 key={spot.spotId}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => handleTabClick(i)}
                 className={cn(
                   "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap",
-                  activeSpotIndex === i
+                  isActive
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
@@ -97,7 +102,7 @@ export function SpotSolutionTabs({
       )}
 
       {/* Active Spot Solutions */}
-      <div className="min-h-[80px]">
+      <div role="tabpanel" className="min-h-[80px]">
         {isLoading ? (
           <p className="text-sm text-muted-foreground py-4">로딩 중...</p>
         ) : activeSolutions.length === 0 ? (

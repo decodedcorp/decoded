@@ -1,6 +1,7 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -81,10 +82,12 @@ export function MobileHeader({
           {isLoggedIn ? (
             <Link href="/profile" aria-label="Profile">
               {user?.avatarUrl ? (
-                <img
+                <Image
                   src={user.avatarUrl}
                   alt={user.name}
                   className="w-7 h-7 rounded-full object-cover border border-white/20"
+                  width={28}
+                  height={28}
                 />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-medium text-white">

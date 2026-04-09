@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -149,10 +150,12 @@ export function SmartNav({ className }: SmartNavProps) {
             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
           >
             {user?.avatarUrl ? (
-              <img
+              <Image
                 src={user.avatarUrl}
                 alt={profile?.display_name || user.name}
                 className="w-7 h-7 rounded-full object-cover border border-white/20"
+                width={28}
+                height={28}
               />
             ) : (
               <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-medium text-white">

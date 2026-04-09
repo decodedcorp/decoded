@@ -14,6 +14,15 @@ import { LoadingSpinner } from "@/lib/design-system/loading-spinner";
 import { SearchSuggestions } from "@/lib/components/search/SearchSuggestions";
 import { cn } from "@/lib/utils";
 
+const POPULAR_SEARCH_TAGS = [
+  "BLACKPINK",
+  "NewJeans",
+  "Lisa",
+  "Jennie",
+  "Minji",
+  "Hanni",
+] as const;
+
 const SORT_OPTIONS = [
   { value: "relevant", label: "Relevant" },
   { value: "recent", label: "Recent" },
@@ -375,7 +384,8 @@ export function ExploreClient({
             )}
 
             {/* Empty/error state with search suggestions */}
-            {((!isError && !isLoading && items.length === 0) || (isError && mode === "search")) && (
+            {((!isError && !isLoading && items.length === 0) ||
+              (isError && mode === "search")) && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center max-w-md">
                   <div className="mb-4 text-4xl">
@@ -394,18 +404,16 @@ export function ExploreClient({
                   {debouncedQuery.trim().length > 0 && (
                     <>
                       <div className="flex flex-wrap justify-center gap-2 mb-4">
-                        {["BLACKPINK", "NewJeans", "Lisa", "Jennie", "Minji", "Hanni"].map(
-                          (tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => handleSuggestionSelect(tag)}
-                              className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:border-primary/30"
-                            >
-                              {tag}
-                            </button>
-                          )
-                        )}
+                        {POPULAR_SEARCH_TAGS.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => handleSuggestionSelect(tag)}
+                            className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:border-primary/30"
+                          >
+                            {tag}
+                          </button>
+                        ))}
                       </div>
                       <button
                         type="button"
@@ -425,11 +433,7 @@ export function ExploreClient({
               <div className="absolute inset-0 z-0">
                 <ThiingsGrid
                   gridSize={gridSize}
-                  renderItem={(config) => (
-                    <ExploreCardCell
-                      {...config}
-                    />
-                  )}
+                  renderItem={(config) => <ExploreCardCell {...config} />}
                   initialPosition={{ x: 0, y: 0 }}
                   items={gridItems}
                   onReachEnd={() => {

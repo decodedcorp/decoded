@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
 import { useCreateTryPost } from "@/lib/hooks/useTries";
-import { useSpots } from "@/lib/hooks/useSpots";
 import { compressImage } from "@/lib/utils/imageCompression";
 import { DropZone } from "@/lib/components/request/DropZone";
 import { MobileUploadOptions } from "@/lib/components/request/MobileUploadOptions";
@@ -17,7 +16,7 @@ import { useGetPost } from "@/lib/api/generated/posts/posts";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function TryUploadPage() {
+function TryUploadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const parentId = searchParams.get("parent") ?? "";
@@ -25,8 +24,15 @@ export default function TryUploadPage() {
   const [comment, setComment] = useState("");
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
 
-  // Validate parent param
   const isValidParent = UUID_REGEX.test(parentId);
+
+  // Invalid parent → side effect를 useEffect로 처리
+  useEffect(() => {
+    if (!isValidParent) {
+      toast.error("포스트를 찾을 수 없습니다.");
+      router.push("/");
+    }
+  }, [isValidParent, router]);
 
   // Fetch parent post
   const { data: parentPost, isLoading: isLoadingParent } = useGetPost(
@@ -87,10 +93,8 @@ export default function TryUploadPage() {
     router,
   ]);
 
-  // Invalid parent
+  // Invalid parent일 때는 useEffect redirect가 처리하므로 아무것도 렌더하지 않음
   if (!isValidParent) {
-    toast.error("포스트를 찾을 수 없습니다.");
-    router.push("/");
     return null;
   }
 
@@ -212,5 +216,29 @@ export default function TryUploadPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+function TryUploadFallback() {
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+      <header className="flex items-center justify-between border-b px-4 py-3">
+        <div className="h-7 w-7 rounded bg-muted" />
+        <div className="h-4 w-24 rounded bg-muted" />
+        <div className="h-7 w-7 rounded bg-muted" />
+      </header>
+      <div className="flex-1 animate-pulse space-y-4 p-4">
+        <div className="h-18 rounded-lg bg-muted" />
+        <div className="h-40 rounded-lg bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+export default function TryUploadPage() {
+  return (
+    <Suspense fallback={<TryUploadFallback />}>
+      <TryUploadContent />
+    </Suspense>
   );
 }

@@ -117,10 +117,12 @@ pub struct CreatePostDto {
 
     /// 이미지 가로 크기 (픽셀, 옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(range(min = 1, max = 20000))]
     pub image_width: Option<i32>,
 
     /// 이미지 세로 크기 (픽셀, 옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(range(min = 1, max = 20000))]
     pub image_height: Option<i32>,
 
     /// Spots (최소 1개 이상 필요, 유저가 직접 지정)
