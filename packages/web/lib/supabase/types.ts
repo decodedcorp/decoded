@@ -922,7 +922,9 @@ export type Database = {
           group_id: string | null
           group_name: string | null
           id: string
+          image_height: number | null
           image_url: string
+          image_width: number | null
           media_metadata: Json | null
           media_type: string
           post_magazine_id: string | null
@@ -944,7 +946,9 @@ export type Database = {
           group_id?: string | null
           group_name?: string | null
           id: string
+          image_height?: number | null
           image_url: string
+          image_width?: number | null
           media_metadata?: Json | null
           media_type: string
           post_magazine_id?: string | null
@@ -966,7 +970,9 @@ export type Database = {
           group_id?: string | null
           group_name?: string | null
           id?: string
+          image_height?: number | null
           image_url?: string
+          image_width?: number | null
           media_metadata?: Json | null
           media_type?: string
           post_magazine_id?: string | null

@@ -190,6 +190,8 @@ export interface Post {
   spot_count: number;
   view_count: number;
   comment_count: number;
+  image_width?: number | null;
+  image_height?: number | null;
   created_at: string;
 }
 

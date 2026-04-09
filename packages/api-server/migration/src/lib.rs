@@ -47,6 +47,7 @@ mod m20260403_000001_backfill_created_with_solutions;
 mod m20260406_000001_drop_post_magazines_thread_id;
 mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
+mod m20260409_add_image_dimensions;
 
 pub struct Migrator;
 
@@ -101,6 +102,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260406_000001_drop_post_magazines_thread_id::Migration),
             Box::new(m20260406_000002_add_style_tags_to_posts::Migration),
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
+            Box::new(m20260409_add_image_dimensions::Migration),
         ]
     }
 }

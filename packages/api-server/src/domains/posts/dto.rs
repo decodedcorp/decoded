@@ -103,6 +103,14 @@ pub struct CreatePostDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<String>,
 
+    /// 이미지 가로 크기 (픽셀, 옵션)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_width: Option<i32>,
+
+    /// 이미지 세로 크기 (픽셀, 옵션)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_height: Option<i32>,
+
     /// Spots (최소 1개 이상 필요, 유저가 직접 지정)
     #[validate(length(min = 1))]
     pub spots: Vec<CreateSpotDto>,
@@ -246,6 +254,14 @@ pub struct PostResponse {
     /// 상태
     pub status: String,
 
+    /// 이미지 가로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_width: Option<i32>,
+
+    /// 이미지 세로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_height: Option<i32>,
+
     /// 생성일시
     pub created_at: DateTime<Utc>,
 }
@@ -311,6 +327,14 @@ pub struct PostListItem {
     /// 포스트 생성 시 솔루션을 알고 등록했는지. true=with-solutions, false=without, null=기존 데이터
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_with_solutions: Option<bool>,
+
+    /// 이미지 가로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_width: Option<i32>,
+
+    /// 이미지 세로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_height: Option<i32>,
 }
 
 /// Post에 포함된 사용자 정보 (간소화)
@@ -468,6 +492,14 @@ pub struct PostDetailResponse {
     /// AI가 추출한 스타일 태그 (JSONB 배열)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub style_tags: Option<serde_json::Value>,
+
+    /// 이미지 가로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_width: Option<i32>,
+
+    /// 이미지 세로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_height: Option<i32>,
 }
 
 impl PostDetailResponse {
@@ -498,6 +530,8 @@ impl PostDetailResponse {
             post_magazine_id: post.post_magazine_id,
             ai_summary: post.ai_summary.clone(),
             style_tags: post.style_tags.clone(),
+            image_width: post.image_width,
+            image_height: post.image_height,
             user: PostUserInfo {
                 id: user.id,
                 username: user.username,
@@ -550,6 +584,8 @@ impl From<PostModel> for PostResponse {
             context: model.context,
             view_count: model.view_count,
             status: model.status,
+            image_width: model.image_width,
+            image_height: model.image_height,
             created_at: model.created_at.with_timezone(&chrono::Utc),
         }
     }

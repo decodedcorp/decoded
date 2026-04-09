@@ -5063,6 +5063,18 @@
               "$ref": "#/components/schemas/CreateSpotDto"
             },
             "description": "Spots (최소 1개 이상 필요, 유저가 직접 지정)"
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 가로 크기 (픽셀)",
+            "nullable": true
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 세로 크기 (픽셀)",
+            "nullable": true
           }
         }
       },
@@ -7051,6 +7063,18 @@
             "type": "integer",
             "format": "int32",
             "description": "조회수"
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 가로 크기 (픽셀)",
+            "nullable": true
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 세로 크기 (픽셀)",
+            "nullable": true
           }
         }
       },
@@ -7167,6 +7191,18 @@
             "type": "integer",
             "format": "int32",
             "description": "조회수"
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 가로 크기 (픽셀)",
+            "nullable": true
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 세로 크기 (픽셀)",
+            "nullable": true
           }
         }
       },
@@ -7242,6 +7278,18 @@
             "type": "integer",
             "format": "int32",
             "description": "조회수"
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 가로 크기 (픽셀)",
+            "nullable": true
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "이미지 세로 크기 (픽셀)",
+            "nullable": true
           }
         }
       },
