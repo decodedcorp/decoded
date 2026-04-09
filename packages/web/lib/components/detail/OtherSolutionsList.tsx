@@ -32,6 +32,7 @@ interface OtherSolutionsListProps {
   adoptDropdownRef: UseAdoptDropdownReturn["adoptDropdownRef"];
   adoptMutation: UseAdoptDropdownReturn["adoptMutation"];
   unadoptMutation: UseAdoptDropdownReturn["unadoptMutation"];
+  onLinkClick?: (solutionId: string, url: string) => void;
 }
 
 /**
@@ -49,6 +50,7 @@ export function OtherSolutionsList({
   adoptDropdownRef,
   adoptMutation,
   unadoptMutation,
+  onLinkClick,
 }: OtherSolutionsListProps) {
   const [othersExpanded, setOthersExpanded] = useState(false);
 
@@ -97,7 +99,8 @@ export function OtherSolutionsList({
                       href={linkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 w-10 h-10 rounded border border-border/20"
+                      onClick={() => onLinkClick?.(sol.id, linkUrl)}
+                      className="shrink-0 w-10 h-10 rounded overflow-hidden bg-muted/30 border border-border/20"
                     >
                       <ItemImage
                         src={sol.thumbnail_url}
@@ -126,6 +129,7 @@ export function OtherSolutionsList({
                         href={linkUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => onLinkClick?.(sol.id, linkUrl)}
                         className="group/link flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-primary"
                       >
                         {(() => {

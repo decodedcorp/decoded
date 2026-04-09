@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -34,11 +34,20 @@ import {
   MetadataInputForm,
   type MetadataFormValues,
 } from "@/lib/components/request/MetadataInputForm";
-import { Trash2, Plus, Loader2 } from "lucide-react";
+import { ImageEditor } from "@/lib/components/request/ImageEditor";
+import { Trash2, Plus, Loader2, RefreshCw, Crop } from "lucide-react";
+import {
+  saveDraft,
+  saveDraftThumbnail,
+  loadDraft,
+  clearDraft,
+} from "@/lib/utils/offlineDraft";
 
 export default function RequestUploadPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   // 상태만 구독 (렌더링에 필요한 것만)
   const currentStep = useRequestStore(selectCurrentStep);
@@ -52,8 +61,65 @@ export default function RequestUploadPage() {
   const context = useRequestStore(selectContext);
 
   // autoUpload: false, autoAnalyze: false - 자동 업로드/분석 비활성화
-  const { images, isMaxImages, handleFilesSelected, removeImage } =
+  const { images, isMaxImages, handleFilesSelected, removeImage, retryUpload } =
     useImageUpload({ autoUpload: false, autoAnalyze: false });
+
+  // Draft 복원 (마운트 시 1회)
+  useEffect(() => {
+    const draft = loadDraft();
+    if (!draft || draft.spots.length === 0) return;
+
+    toast("이전에 작성 중이던 요청이 있습니다.", {
+      action: {
+        label: "복원하기",
+        onClick: () => {
+          const actions = getRequestActions();
+          if (draft.userKnowsItems !== null) {
+            actions.setUserKnowsItems(draft.userKnowsItems);
+          }
+          for (const spot of draft.spots) {
+            actions.addSpot(spot.center.x, spot.center.y, spot.categoryCode);
+            if (spot.solution) {
+              actions.setSpotSolution(spot.id, spot.solution);
+            }
+          }
+          if (draft.mediaSource) actions.setMediaSource(draft.mediaSource);
+          if (draft.artistName) actions.setArtistName(draft.artistName);
+          if (draft.groupName) actions.setGroupName(draft.groupName);
+          if (draft.context) actions.setContext(draft.context);
+          toast.success("복원되었습니다. 이미지를 다시 선택해주세요.");
+        },
+      },
+      duration: 10000,
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save draft (spots/metadata 변경 시)
+  useEffect(() => {
+    if (detectedSpots.length === 0 && userKnowsItems === null) return;
+
+    saveDraft({
+      userKnowsItems,
+      spots: detectedSpots.map((s) => ({
+        id: s.id,
+        index: s.index,
+        center: s.center,
+        label: s.label,
+        categoryCode: s.categoryCode,
+        title: s.title,
+        description: s.description,
+        solution: s.solution,
+      })),
+      mediaSource: mediaSource ?? null,
+      artistName: artistName ?? "",
+      groupName: groupName ?? "",
+      context: context ?? null,
+    });
+
+    // 이미지 썸네일도 저장
+    const file = images[0]?.file;
+    if (file) saveDraftThumbnail(file);
+  }, [detectedSpots, userKnowsItems, mediaSource, artistName, groupName, context, images]);
 
   // canProceed: 모르는 유저는 spots만, 알고 있는 유저는 spots + 모든 스팟에 솔루션(링크)
   const canProceed =
@@ -110,6 +176,7 @@ export default function RequestUploadPage() {
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
       // 1. 이미지 압축
@@ -169,7 +236,8 @@ export default function RequestUploadPage() {
 
       toast.success("포스트가 생성되었습니다!");
 
-      // 4. 완료 후 리다이렉트
+      // 4. 완료 후 draft 삭제 + 리다이렉트
+      clearDraft();
       getRequestActions().resetRequestFlow();
       router.push(`/posts/${response.id}`);
     } catch (error) {
@@ -177,6 +245,7 @@ export default function RequestUploadPage() {
       toast.dismiss("create");
       const message =
         error instanceof Error ? error.message : "포스트 생성에 실패했습니다.";
+      setSubmitError(message);
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -211,6 +280,21 @@ export default function RequestUploadPage() {
   const handleCancelSolution = useCallback(() => {
     getRequestActions().selectSpot(null);
   }, []);
+
+  // Image editor save handler
+  const handleEditorSave = useCallback(
+    (editedFile: File) => {
+      const currentImage = images[0];
+      if (!currentImage) return;
+
+      // Replace the image in the store
+      const actions = getRequestActions();
+      actions.removeImage(currentImage.id);
+      actions.addImage(editedFile);
+      setShowEditor(false);
+    },
+    [images]
+  );
 
   // 로컬 프리뷰 이미지 사용 (previewUrl)
   const localImage = images[0];
@@ -276,7 +360,15 @@ export default function RequestUploadPage() {
           <div className="flex-1 min-h-0 flex flex-col space-y-4 max-w-6xl mx-auto w-full">
             <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4 overflow-hidden">
               {/* Image with spot markers */}
-              <div className="flex-1 min-h-0 flex items-center justify-center">
+              <div className="flex-1 min-h-0 flex items-center justify-center relative">
+                <button
+                  type="button"
+                  onClick={() => setShowEditor(true)}
+                  className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors"
+                  aria-label="Edit image"
+                >
+                  <Crop className="w-4 h-4" />
+                </button>
                 <DetectionView
                   image={{
                     ...localImage,
@@ -401,7 +493,21 @@ export default function RequestUploadPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-border flex-shrink-0">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border flex-shrink-0">
+              {submitError && (
+                <div className="flex items-center gap-2 mr-auto">
+                  <p className="text-sm text-destructive">{submitError}</p>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting}
+                    className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    재시도
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleNext}
@@ -423,6 +529,15 @@ export default function RequestUploadPage() {
           </div>
         )}
       </main>
+
+      {/* Image Editor Modal */}
+      {showEditor && localImage && (
+        <ImageEditor
+          imageUrl={localImage.previewUrl}
+          onSave={handleEditorSave}
+          onCancel={() => setShowEditor(false)}
+        />
+      )}
     </div>
   );
 }
