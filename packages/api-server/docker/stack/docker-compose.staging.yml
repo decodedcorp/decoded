@@ -83,7 +83,7 @@ services:
     networks:
       - decoded-backend-staging
     environment:
-      MEILI_ENV: development
+      MEILI_ENV: production
       MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-staging-meili-key}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
