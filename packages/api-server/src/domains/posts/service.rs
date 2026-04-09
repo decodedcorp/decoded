@@ -64,6 +64,8 @@ async fn create_post_transaction(
                 view_count: Set(0),
                 status: Set(crate::constants::post_status::ACTIVE.to_string()),
                 created_with_solutions: Set(Some(created_with_solutions)),
+                image_width: Set(dto.image_width),
+                image_height: Set(dto.image_height),
                 ..Default::default()
             };
 
@@ -153,11 +155,7 @@ fn spawn_extract_post_context(state: &AppState, post_id: Uuid, image_url: String
             .await
         {
             Ok(resp) if resp.success => {
-                tracing::info!(
-                    "Post {} context extracted: {}",
-                    post_id,
-                    resp.context
-                );
+                tracing::info!("Post {} context extracted: {}", post_id, resp.context);
             }
             Ok(resp) => {
                 tracing::warn!(
@@ -879,6 +877,8 @@ pub async fn list_posts(
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
                 created_with_solutions: post.created_with_solutions,
+                image_width: post.image_width,
+                image_height: post.image_height,
             }
         })
         .collect();
@@ -1167,6 +1167,8 @@ pub async fn admin_list_posts(
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
                 created_with_solutions: post.created_with_solutions,
+                image_width: post.image_width,
+                image_height: post.image_height,
             }
         })
         .collect();

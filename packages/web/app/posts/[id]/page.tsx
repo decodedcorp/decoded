@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data: post } = await supabase
     .from("posts")
     .select(
-      "id, title, context, artist_name, group_name, image_url, created_at, ai_summary"
+      "id, title, context, artist_name, group_name, image_url, image_width, image_height, created_at, ai_summary"
     )
     .eq("id", id)
     .single();
@@ -51,8 +51,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 630,
+          width: post.image_width || 1200,
+          height: post.image_height || 630,
           alt: title,
         },
       ],
@@ -83,7 +83,7 @@ export default async function PostDetailPageRoute({ params }: Props) {
   const { data: post } = await supabase
     .from("posts")
     .select(
-      "id, title, context, artist_name, group_name, image_url, created_at, ai_summary"
+      "id, title, context, artist_name, group_name, image_url, image_width, image_height, created_at, ai_summary"
     )
     .eq("id", id)
     .single();

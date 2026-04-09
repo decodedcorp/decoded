@@ -23,14 +23,27 @@ export function ImageCard({ post }: Props) {
   return (
     <Link href={`/posts/${post.id}`}>
       <article className="border border-border rounded-xl overflow-hidden relative shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-        {/* Image thumbnail */}
-        <div className="aspect-square bg-muted relative">
+        {/* Image thumbnail — dynamic aspect-ratio when dimensions known, square fallback */}
+        <div
+          className={
+            post.image_width && post.image_height
+              ? "bg-muted relative"
+              : "aspect-square bg-muted relative"
+          }
+          style={
+            post.image_width && post.image_height
+              ? { aspectRatio: `${post.image_width} / ${post.image_height}` }
+              : undefined
+          }
+        >
           {post.image_url && !imageError ? (
             <img
               src={post.image_url}
               alt={`Post by @${displayName}`}
               className="w-full h-full object-cover"
               loading="lazy"
+              width={post.image_width ?? undefined}
+              height={post.image_height ?? undefined}
               onError={() => setImageError(true)}
             />
           ) : (
