@@ -19,6 +19,9 @@ interface PostImageProps {
   alt: string;
   /** Max height CSS value, e.g. "80vh", "300px", "60vh" */
   maxHeight?: string;
+  /** DB image dimensions for CLS prevention — sets container aspectRatio */
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   /** Additional className on the container */
   className?: string;
   /** Additional className on the img element */
@@ -43,6 +46,8 @@ export function PostImage({
   src,
   alt,
   maxHeight = "80vh",
+  imageWidth,
+  imageHeight,
   className,
   imgClassName,
   priority = false,
@@ -54,6 +59,8 @@ export function PostImage({
   const [hasError, setHasError] = useState(false);
 
   const useDynamic = FEATURE_FLAGS.dynamicImageRatio[flagKey];
+  const aspectRatio =
+    imageWidth && imageHeight ? imageWidth / imageHeight : undefined;
 
   const handleLoad = () => {
     setIsLoaded(true);
@@ -82,7 +89,7 @@ export function PostImage({
           "relative overflow-hidden bg-muted min-h-[200px]",
           className
         )}
-        style={{ maxHeight }}
+        style={{ maxHeight, ...(aspectRatio && { aspectRatio }) }}
       >
         <Image
           src={src}
@@ -108,7 +115,7 @@ export function PostImage({
   return (
     <div
       className={cn("relative overflow-hidden bg-black", className)}
-      style={{ maxHeight }}
+      style={{ maxHeight, ...(aspectRatio && { aspectRatio }) }}
     >
       {/* Blurred background — loads tiny 32px thumbnail instead of full image */}
       <div
