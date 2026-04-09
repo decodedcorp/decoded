@@ -192,8 +192,14 @@ pub async fn create_post_without_solutions(
     let upload_response = upload_image(state, image_data, content_type, user_id).await?;
     let image_key = extract_key_from_url(&upload_response.image_url);
 
-    // 업로드된 이미지 URL을 dto에 설정
+    // 업로드된 이미지 URL과 dimension을 dto에 설정
     dto.image_url = upload_response.image_url.clone();
+    if dto.image_width.is_none() {
+        dto.image_width = upload_response.image_width;
+    }
+    if dto.image_height.is_none() {
+        dto.image_height = upload_response.image_height;
+    }
 
     // Post 생성 (트랜잭션 내에서 Post + Spots 생성)
     let (post, _spot_ids, _solution_infos) =
@@ -258,8 +264,14 @@ pub async fn create_post_with_solutions(
     let upload_response = upload_image(state, image_data, content_type, user_id).await?;
     let image_key = extract_key_from_url(&upload_response.image_url);
 
-    // 업로드된 이미지 URL을 dto에 설정
+    // 업로드된 이미지 URL과 dimension을 dto에 설정
     dto.image_url = upload_response.image_url.clone();
+    if dto.image_width.is_none() {
+        dto.image_width = upload_response.image_width;
+    }
+    if dto.image_height.is_none() {
+        dto.image_height = upload_response.image_height;
+    }
 
     // Post 생성 (트랜잭션 내에서 Post + Spots + Solutions 생성)
     let (post, spot_ids, solution_infos) = create_post_transaction(&state.db, user_id, dto, true)
@@ -1342,6 +1354,9 @@ pub async fn upload_image(
     content_type: &str,
     user_id: Uuid,
 ) -> AppResult<ImageUploadResponse> {
+    // 이미지 dimension 추출 (업로드 전에 메모리에서 읽기)
+    let (image_width, image_height) = extract_image_dimensions(&image_data);
+
     // 파일 키 생성 (user_id/timestamp_uuid.ext 형식)
     use chrono::Utc;
     let timestamp = Utc::now().timestamp();
@@ -1369,7 +1384,25 @@ pub async fn upload_image(
         .await
         .map_err(|e| AppError::ExternalService(format!("Failed to upload image: {}", e)))?;
 
-    Ok(ImageUploadResponse { image_url })
+    Ok(ImageUploadResponse {
+        image_url,
+        image_width,
+        image_height,
+    })
+}
+
+/// 이미지 바이트에서 width/height 추출 (실패 시 None 반환)
+fn extract_image_dimensions(data: &[u8]) -> (Option<i32>, Option<i32>) {
+    match image::load_from_memory(data) {
+        Ok(img) => {
+            let (w, h) = (img.width(), img.height());
+            (Some(w as i32), Some(h as i32))
+        }
+        Err(e) => {
+            tracing::warn!("Failed to extract image dimensions: {}", e);
+            (None, None)
+        }
+    }
 }
 
 /// AI 이미지 분석 (decoded-ai gRPC)
@@ -1575,6 +1608,8 @@ pub async fn create_try_post(
         .db
         .transaction::<_, PostResponse, AppError>(|txn| {
             let image_url = upload_response.image_url.clone();
+            let img_width = upload_response.image_width;
+            let img_height = upload_response.image_height;
             let spot_ids = dto.spot_ids.clone();
             let media_title = dto.media_title.clone();
             let parent_post_id = dto.parent_post_id;
@@ -1593,6 +1628,8 @@ pub async fn create_try_post(
                     view_count: Set(0),
                     status: Set(crate::constants::post_status::ACTIVE.to_string()),
                     created_with_solutions: Set(None),
+                    image_width: Set(img_width),
+                    image_height: Set(img_height),
                     parent_post_id: Set(Some(parent_post_id)),
                     post_type: Set(Some(POST_TYPE_TRY.to_string())),
                     ..Default::default()

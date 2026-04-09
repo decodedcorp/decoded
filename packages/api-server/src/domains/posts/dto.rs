@@ -704,6 +704,14 @@ impl From<PostModel> for PostResponse {
 pub struct ImageUploadResponse {
     /// 업로드된 이미지 URL
     pub image_url: String,
+
+    /// 이미지 가로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_width: Option<i32>,
+
+    /// 이미지 세로 크기 (픽셀)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_height: Option<i32>,
 }
 
 /// 이미지 분석 결과의 아이템 (좌표 정보 포함)

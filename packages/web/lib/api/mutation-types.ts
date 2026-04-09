@@ -22,6 +22,8 @@ export interface ApiError {
 
 export interface UploadResponse {
   image_url: string;
+  image_width?: number | null;
+  image_height?: number | null;
 }
 
 // ============================================================
