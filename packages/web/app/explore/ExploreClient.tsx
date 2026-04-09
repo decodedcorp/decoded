@@ -343,8 +343,8 @@ export function ExploreClient({
               </div>
             )}
 
-            {/* Error state */}
-            {isError && (
+            {/* Error state — browse mode only (search mode falls through to fallback) */}
+            {isError && mode !== "search" && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
                   <div className="mb-4 text-4xl">⚠️</div>
@@ -374,8 +374,8 @@ export function ExploreClient({
               </div>
             )}
 
-            {/* Empty state with search suggestions */}
-            {!isError && !isLoading && items.length === 0 && (
+            {/* Empty/error state with search suggestions */}
+            {((!isError && !isLoading && items.length === 0) || (isError && mode === "search")) && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center max-w-md">
                   <div className="mb-4 text-4xl">
