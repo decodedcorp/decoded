@@ -6,6 +6,8 @@ interface StyleDNACardProps {
   keywords: string[];
   colors: string[];
   progress: number;
+  editable?: boolean;
+  onEditClick?: () => void;
 }
 
 const DEFAULT_KEYWORDS = ["Minimal", "Monochrome", "Avant-Garde", "Urban"];
@@ -61,6 +63,8 @@ export function StyleDNACard({
   keywords = DEFAULT_KEYWORDS,
   colors = DEFAULT_COLORS,
   progress = DEFAULT_PROGRESS,
+  editable = false,
+  onEditClick,
 }: Partial<StyleDNACardProps>) {
   return (
     <motion.div
@@ -69,9 +73,19 @@ export function StyleDNACard({
       transition={{ duration: 0.5 }}
       className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 md:p-6"
     >
-      <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
-        Style DNA
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-400">
+          Style DNA
+        </h3>
+        {editable && onEditClick && (
+          <button
+            onClick={onEditClick}
+            className="text-xs text-neutral-400 hover:text-[#eafd67] transition-colors font-mono"
+          >
+            Edit
+          </button>
+        )}
+      </div>
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-4">

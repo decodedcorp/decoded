@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { X, User, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
+import { X, User, FileText, Camera, Loader2 } from "lucide-react";
 import { useMe, useUpdateProfile } from "@/lib/hooks/useProfile";
+import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 interface ProfileEditModalProps {
@@ -20,6 +21,8 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync form state when user data loads
   useEffect(() => {
@@ -30,10 +33,44 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
     }
   }, [user]);
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!user?.id) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `avatars/${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabaseBrowserClient.storage
+        .from("profile")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabaseBrowserClient.storage
+        .from("profile")
+        .getPublicUrl(path);
+
+      setAvatarUrl(urlData.publicUrl);
+      toast.success("Avatar uploaded");
+    } catch (error) {
+      toast.error("Failed to upload avatar");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
     if (displayName.trim().length < 2) {
       toast.error("Display name must be at least 2 characters");
       return;
@@ -103,9 +140,14 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
                 </div>
               ) : (
                 <>
-                  {/* Avatar Preview */}
+                  {/* Avatar Upload */}
                   <div className="flex justify-center">
-                    <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="relative w-20 h-20 rounded-full overflow-hidden bg-muted group cursor-pointer"
+                    >
                       {avatarUrl ? (
                         <Image
                           src={avatarUrl}
@@ -118,8 +160,28 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
                           {displayName.charAt(0).toUpperCase() || "?"}
                         </div>
                       )}
-                    </div>
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isUploading ? (
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        ) : (
+                          <Camera className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAvatarUpload(file);
+                      }}
+                    />
                   </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Click to change avatar
+                  </p>
 
                   {/* Display Name */}
                   <div className="space-y-2">
@@ -156,20 +218,6 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
                     </p>
                   </div>
 
-                  {/* Avatar URL */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <LinkIcon className="w-4 h-4" />
-                      Avatar URL
-                    </label>
-                    <input
-                      type="url"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
                 </>
               )}
 

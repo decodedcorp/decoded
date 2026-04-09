@@ -20,3 +20,5 @@ export { TriesGrid } from "./TriesGrid";
 export { StyleDNACard } from "./StyleDNACard";
 export { ArchiveStats } from "./ArchiveStats";
 export { InkEconomyCard } from "./InkEconomyCard";
+export { FollowButton } from "./FollowButton";
+export { StyleDNAEditModal } from "./StyleDNAEditModal";

@@ -28,6 +28,7 @@ import {
   ArchiveStats,
   InkEconomyCard,
 } from "@/lib/components/profile";
+import { StyleDNAEditModal } from "@/lib/components/profile/StyleDNAEditModal";
 import {
   useMe,
   useUserStats,
@@ -42,6 +43,7 @@ import {
   apiAvailableBadgeToStoreBadge,
 } from "@/lib/utils/badge-mapper";
 import { apiMyRankingDetailToStoreRankings } from "@/lib/utils/ranking-mapper";
+import { useAuthStore } from "@/lib/stores/authStore";
 
 function ProfileSkeleton() {
   return (
@@ -171,25 +173,27 @@ function ProfileError({
 export function ProfileClient() {
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isStyleDNAModalOpen, setIsStyleDNAModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActivityTab>("posts");
+  const isAuthReady = useAuthStore((s) => s.isInitialized);
 
-  // Fetch user data from API
+  // Fetch user data from API (wait for auth initialization)
   const {
     data: userData,
     isLoading: isUserLoading,
     isError: isUserError,
     error: userError,
     refetch: refetchUser,
-  } = useMe();
+  } = useMe({ enabled: isAuthReady });
 
-  // Fetch stats from API
+  // Fetch stats from API (wait for auth initialization)
   const {
     data: statsData,
     isLoading: isStatsLoading,
     isError: isStatsError,
     error: statsError,
     refetch: refetchStats,
-  } = useUserStats();
+  } = useUserStats({ enabled: isAuthReady });
 
   // Badges & Rankings (실제 API)
   const { data: badgesData, refetch: refetchBadges } = useMyBadges();
@@ -337,6 +341,8 @@ export function ProfileClient() {
           keywords={profileExtras?.style_dna?.keywords}
           colors={profileExtras?.style_dna?.colors}
           progress={profileExtras?.style_dna?.progress}
+          editable
+          onEditClick={() => setIsStyleDNAModalOpen(true)}
         />
         <ArchiveStats tryOnCount={tryOnCount} />
         <InkEconomyCard inkCredits={profileExtras?.ink_credits} />
@@ -390,6 +396,15 @@ export function ProfileClient() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
       />
+      {userId && (
+        <StyleDNAEditModal
+          isOpen={isStyleDNAModalOpen}
+          onClose={() => setIsStyleDNAModalOpen(false)}
+          userId={userId}
+          initialKeywords={profileExtras?.style_dna?.keywords}
+          initialColors={profileExtras?.style_dna?.colors}
+        />
+      )}
     </div>
   );
 }
