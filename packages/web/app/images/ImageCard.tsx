@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Post } from "@/lib/api/mutation-types";
 import { formatRelativeTime } from "@/lib/utils";
@@ -37,15 +38,24 @@ export function ImageCard({ post }: Props) {
           }
         >
           {post.image_url && !imageError ? (
-            <img
-              src={post.image_url}
-              alt={`Post by @${displayName}`}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              width={post.image_width ?? undefined}
-              height={post.image_height ?? undefined}
-              onError={() => setImageError(true)}
-            />
+            post.image_width && post.image_height ? (
+              <Image
+                src={post.image_url}
+                alt={`Post by @${displayName}`}
+                className="w-full h-full object-cover"
+                width={post.image_width}
+                height={post.image_height}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <Image
+                src={post.image_url}
+                alt={`Post by @${displayName}`}
+                className="object-cover"
+                fill
+                onError={() => setImageError(true)}
+              />
+            )
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-muted">
               <div className="text-2xl mb-1">📷</div>

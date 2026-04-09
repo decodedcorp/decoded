@@ -16,10 +16,15 @@ use crate::{
 };
 
 use super::dto::{
-    CreatePostDto, CreatePostWithSolutionsResponse, ImageAnalyzeResponse, ImageUploadResponse,
-    MediaSourceDto, PostDetailResponse, PostListItem, PostListQuery, PostResponse, PostUserInfo,
-    SpotWithTopSolution, TopSolutionSummary, UpdatePostDto,
+    CreatePostDto, CreatePostWithSolutionsResponse, CreateTryPostDto, ImageAnalyzeResponse,
+    ImageUploadResponse, MediaSourceDto, PostDetailResponse, PostListItem, PostListQuery,
+    PostResponse, PostUserInfo, SpotWithTopSolution, TopSolutionSummary, TryCountResponse,
+    TryListQuery, TryListResponse, TryPostListItem, UpdatePostDto,
 };
+
+#[allow(dead_code)]
+const POST_TYPE_POST: &str = "post";
+const POST_TYPE_TRY: &str = "try";
 
 /// Solution 정보 (AI 분석 트리거용)
 struct SolutionInfo {
@@ -45,9 +50,11 @@ async fn create_post_transaction(
             let mut solution_infos = Vec::new();
             let mut spot_ids = Vec::new();
 
-            // dto에서 직접 전달된 group_name, artist_name, context 사용
+            // dto에서 직접 전달된 group_name, artist_name, context 및 optional warehouse FK 사용
             let group_name = dto.group_name;
+            let group_id = dto.group_id;
             let artist_name = dto.artist_name;
+            let artist_id = dto.artist_id;
             let context = dto.context;
 
             // ActiveModel 생성
@@ -59,7 +66,9 @@ async fn create_post_transaction(
                 title: Set(None),          // AI가 description에서 추출할 예정
                 media_metadata: Set(None), // AI가 description에서 추출할 예정
                 group_name: Set(group_name),
+                group_id: Set(group_id),
                 artist_name: Set(artist_name),
+                artist_id: Set(artist_id),
                 context: Set(context),
                 view_count: Set(0),
                 status: Set(crate::constants::post_status::ACTIVE.to_string()),
@@ -110,6 +119,7 @@ async fn create_post_transaction(
                         description: solution_dto.description.clone(),
                         comment: solution_dto.comment.clone(),
                         thumbnail_url: solution_dto.thumbnail_url.clone(),
+                        brand_id: solution_dto.brand_id,
                     };
 
                     let solution = create_solution_dto.into_active_model(created_spot.id, user_id);
@@ -551,7 +561,17 @@ pub async fn get_post_detail(
     // 3. Spots이 없으면 빈 응답 반환
     if related_data.spots.is_empty() {
         let media_source = build_media_source_from_post(&post);
-        return Ok(PostDetailResponse::from_post_model(
+        let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
+            let c = count_tries(db, post_id).await?;
+            if c.count > 0 {
+                Some(c.count)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let mut response = PostDetailResponse::from_post_model(
             post,
             user,
             media_source,
@@ -560,7 +580,9 @@ pub async fn get_post_detail(
             like_stats.like_count as i64,
             Some(like_stats.user_has_liked),
             user_id.map(|_| user_has_saved),
-        ));
+        );
+        response.try_count = try_count;
+        return Ok(response);
     }
 
     // 4. Spot 목록 생성 (배치 로드된 데이터로부터)
@@ -570,8 +592,20 @@ pub async fn get_post_detail(
     let comment_count = count_comments_by_post_id(db, post_id).await? as i64;
     let media_source = build_media_source_from_post(&post);
 
-    // 6. PostDetailResponse 반환
-    Ok(PostDetailResponse::from_post_model(
+    // 6. Try 개수 조회 (원본 포스트인 경우만)
+    let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
+        let count = count_tries(db, post_id).await?;
+        if count.count > 0 {
+            Some(count.count)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // 7. PostDetailResponse 반환
+    let mut response = PostDetailResponse::from_post_model(
         post,
         user,
         media_source,
@@ -580,7 +614,10 @@ pub async fn get_post_detail(
         like_stats.like_count as i64,
         Some(like_stats.user_has_liked),
         user_id.map(|_| user_has_saved),
-    ))
+    );
+    response.try_count = try_count;
+
+    Ok(response)
 }
 
 /// 대표 Solution 선택 (우선순위: is_adopted > is_verified > vote score)
@@ -635,6 +672,9 @@ pub async fn list_posts(
     query: PostListQuery,
 ) -> AppResult<PaginatedResponse<PostListItem>> {
     let mut select = Posts::find().filter(Column::Status.eq(crate::constants::post_status::ACTIVE));
+
+    // Try 포스트는 일반 피드에서 제외
+    select = select.filter(Column::PostType.is_null().or(Column::PostType.ne(POST_TYPE_TRY)));
 
     // 필터 적용
     if let Some(ref artist_name) = query.artist_name {
@@ -1488,6 +1528,332 @@ fn convert_category_model_to_response(
         display_order: model.display_order,
         is_active: model.is_active,
     })
+}
+
+// ============================================================
+// Try Post Service Functions
+// ============================================================
+
+/// Try Post 생성 (이미지 업로드 포함, 경량 경로)
+pub async fn create_try_post(
+    state: &AppState,
+    user_id: Uuid,
+    image_data: Vec<u8>,
+    content_type: &str,
+    dto: CreateTryPostDto,
+) -> AppResult<PostResponse> {
+    // 1. parent_post_id 검증
+    let parent = get_post_by_id(&state.db, dto.parent_post_id).await?;
+    if parent.post_type.as_deref() == Some(POST_TYPE_TRY) {
+        return Err(AppError::BadRequest(
+            "Cannot create a try on another try post".to_string(),
+        ));
+    }
+
+    // 2. spot_ids 검증 (parent post 소속인지)
+    if !dto.spot_ids.is_empty() {
+        use crate::entities::spots::{Column as SpotColumn, Entity as Spots};
+        let valid_spots = Spots::find()
+            .filter(SpotColumn::PostId.eq(dto.parent_post_id))
+            .filter(SpotColumn::Id.is_in(dto.spot_ids.clone()))
+            .count(&state.db)
+            .await
+            .map_err(AppError::DatabaseError)?;
+        if valid_spots != dto.spot_ids.len() as u64 {
+            return Err(AppError::BadRequest(
+                "Some spot_ids do not belong to the parent post".to_string(),
+            ));
+        }
+    }
+
+    // 3. 이미지 업로드
+    let upload_response = upload_image(state, image_data, content_type, user_id).await?;
+    let image_key = extract_key_from_url(&upload_response.image_url);
+
+    // 4. Post + try_spot_tags 생성 (트랜잭션)
+    let result = state
+        .db
+        .transaction::<_, PostResponse, AppError>(|txn| {
+            let image_url = upload_response.image_url.clone();
+            let spot_ids = dto.spot_ids.clone();
+            let media_title = dto.media_title.clone();
+            let parent_post_id = dto.parent_post_id;
+
+            Box::pin(async move {
+                let post = ActiveModel {
+                    id: Set(Uuid::new_v4()),
+                    user_id: Set(user_id),
+                    image_url: Set(image_url),
+                    media_type: Set(POST_TYPE_TRY.to_string()),
+                    title: Set(media_title),
+                    media_metadata: Set(None),
+                    group_name: Set(None),
+                    artist_name: Set(None),
+                    context: Set(None),
+                    view_count: Set(0),
+                    status: Set(crate::constants::post_status::ACTIVE.to_string()),
+                    created_with_solutions: Set(None),
+                    parent_post_id: Set(Some(parent_post_id)),
+                    post_type: Set(Some(POST_TYPE_TRY.to_string())),
+                    ..Default::default()
+                };
+
+                let created_post = post.insert(txn).await.map_err(AppError::DatabaseError)?;
+
+                // try_spot_tags 생성
+                if !spot_ids.is_empty() {
+                    use crate::entities::try_spot_tags::ActiveModel as TagActiveModel;
+
+                    for spot_id in &spot_ids {
+                        let tag = TagActiveModel {
+                            id: Set(Uuid::new_v4()),
+                            try_post_id: Set(created_post.id),
+                            spot_id: Set(*spot_id),
+                            ..Default::default()
+                        };
+                        tag.insert(txn).await.map_err(AppError::DatabaseError)?;
+                    }
+                }
+
+                Ok(created_post.into())
+            })
+        })
+        .await
+        .map_err(|e| match e {
+            sea_orm::TransactionError::Transaction(err) => err,
+            sea_orm::TransactionError::Connection(err) => AppError::DatabaseError(err),
+        })
+        .inspect_err(|_| {
+            // 실패 시 업로드된 이미지 삭제
+            let image_key_clone = image_key.clone();
+            let storage_client = state.storage_client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = storage_client.delete(&image_key_clone).await {
+                    tracing::warn!(
+                        "Failed to delete orphaned try image {}: {}",
+                        image_key_clone,
+                        e
+                    );
+                }
+            });
+        })?;
+
+    // Meilisearch 인덱싱 생략 (Try는 검색에 포함하지 않음)
+
+    Ok(result)
+}
+
+/// Try 목록 조회 (원본 포스트의 Try 포스트들)
+pub async fn list_tries(
+    db: &DatabaseConnection,
+    parent_post_id: Uuid,
+    query: TryListQuery,
+) -> AppResult<TryListResponse> {
+    use crate::entities::users::{Column as UserColumn, Entity as Users};
+
+    let paginator = Posts::find()
+        .filter(Column::ParentPostId.eq(parent_post_id))
+        .filter(Column::PostType.eq(POST_TYPE_TRY))
+        .filter(Column::Status.eq(crate::constants::post_status::ACTIVE))
+        .order_by_desc(Column::CreatedAt);
+
+    let total = paginator
+        .clone()
+        .count(db)
+        .await
+        .map_err(AppError::DatabaseError)? as i64;
+
+    let offset = (query.page.saturating_sub(1)) * query.per_page;
+    let posts = paginator
+        .offset(offset)
+        .limit(query.per_page)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    // 유저 정보 배치 로드
+    let user_ids: Vec<Uuid> = posts.iter().map(|p| p.user_id).collect();
+    let users: Vec<crate::entities::users::Model> = if user_ids.is_empty() {
+        vec![]
+    } else {
+        Users::find()
+            .filter(UserColumn::Id.is_in(user_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+    };
+
+    // try_spot_tags 배치 로드
+    let post_ids: Vec<Uuid> = posts.iter().map(|p| p.id).collect();
+    let tags = if post_ids.is_empty() {
+        vec![]
+    } else {
+        use crate::entities::try_spot_tags::{Column as TagColumn, Entity as TrySpotTags};
+        TrySpotTags::find()
+            .filter(TagColumn::TryPostId.is_in(post_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+    };
+
+    let tries = posts
+        .into_iter()
+        .map(|post| {
+            let user = users.iter().find(|u| u.id == post.user_id);
+            let tagged_spot_ids: Vec<Uuid> = tags
+                .iter()
+                .filter(|t| t.try_post_id == post.id)
+                .map(|t| t.spot_id)
+                .collect();
+
+            TryPostListItem {
+                id: post.id,
+                user: user.map_or_else(
+                    || PostUserInfo {
+                        id: post.user_id,
+                        username: "unknown".to_string(),
+                        avatar_url: None,
+                        rank: "bronze".to_string(),
+                    },
+                    |u| PostUserInfo {
+                        id: u.id,
+                        username: u.username.clone(),
+                        avatar_url: u.avatar_url.clone(),
+                        rank: u.rank.clone(),
+                    },
+                ),
+                image_url: post.image_url,
+                media_title: post.title,
+                tagged_spot_ids,
+                created_at: post.created_at.with_timezone(&chrono::Utc),
+            }
+        })
+        .collect();
+
+    Ok(TryListResponse { tries, total })
+}
+
+/// Try 개수 조회
+pub async fn count_tries(
+    db: &DatabaseConnection,
+    parent_post_id: Uuid,
+) -> AppResult<TryCountResponse> {
+    let count = Posts::find()
+        .filter(Column::ParentPostId.eq(parent_post_id))
+        .filter(Column::PostType.eq(POST_TYPE_TRY))
+        .filter(Column::Status.eq(crate::constants::post_status::ACTIVE))
+        .count(db)
+        .await
+        .map_err(AppError::DatabaseError)? as i64;
+
+    Ok(TryCountResponse { count })
+}
+
+/// 특정 스팟을 태깅한 Try 목록 조회
+pub async fn list_tries_by_spot(
+    db: &DatabaseConnection,
+    spot_id: Uuid,
+    query: TryListQuery,
+) -> AppResult<TryListResponse> {
+    use crate::entities::try_spot_tags::{Column as TagColumn, Entity as TrySpotTags};
+    use crate::entities::users::{Column as UserColumn, Entity as Users};
+
+    // 1. 해당 spot을 태깅한 try_post_id 목록
+    let tag_post_ids: Vec<Uuid> = TrySpotTags::find()
+        .filter(TagColumn::SpotId.eq(spot_id))
+        .select_only()
+        .column(TagColumn::TryPostId)
+        .into_tuple::<Uuid>()
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    if tag_post_ids.is_empty() {
+        return Ok(TryListResponse {
+            tries: vec![],
+            total: 0,
+        });
+    }
+
+    // 2. 해당 포스트 조회
+    let paginator = Posts::find()
+        .filter(Column::Id.is_in(tag_post_ids.clone()))
+        .filter(Column::Status.eq(crate::constants::post_status::ACTIVE))
+        .order_by_desc(Column::CreatedAt);
+
+    let total = paginator
+        .clone()
+        .count(db)
+        .await
+        .map_err(AppError::DatabaseError)? as i64;
+
+    let offset = (query.page.saturating_sub(1)) * query.per_page;
+    let posts = paginator
+        .offset(offset)
+        .limit(query.per_page)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    // 유저 정보 배치 로드
+    let user_ids: Vec<Uuid> = posts.iter().map(|p| p.user_id).collect();
+    let users: Vec<crate::entities::users::Model> = if user_ids.is_empty() {
+        vec![]
+    } else {
+        Users::find()
+            .filter(UserColumn::Id.is_in(user_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+    };
+
+    // 모든 tags 로드
+    let post_ids: Vec<Uuid> = posts.iter().map(|p| p.id).collect();
+    let all_tags = if post_ids.is_empty() {
+        vec![]
+    } else {
+        TrySpotTags::find()
+            .filter(TagColumn::TryPostId.is_in(post_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+    };
+
+    let tries = posts
+        .into_iter()
+        .map(|post| {
+            let user = users.iter().find(|u| u.id == post.user_id);
+            let tagged_spot_ids: Vec<Uuid> = all_tags
+                .iter()
+                .filter(|t| t.try_post_id == post.id)
+                .map(|t| t.spot_id)
+                .collect();
+
+            TryPostListItem {
+                id: post.id,
+                user: user.map_or_else(
+                    || PostUserInfo {
+                        id: post.user_id,
+                        username: "unknown".to_string(),
+                        avatar_url: None,
+                        rank: "bronze".to_string(),
+                    },
+                    |u| PostUserInfo {
+                        id: u.id,
+                        username: u.username.clone(),
+                        avatar_url: u.avatar_url.clone(),
+                        rank: u.rank.clone(),
+                    },
+                ),
+                image_url: post.image_url,
+                media_title: post.title,
+                tagged_spot_ids,
+                created_at: post.created_at.with_timezone(&chrono::Utc),
+            }
+        })
+        .collect();
+
+    Ok(TryListResponse { tries, total })
 }
 
 #[cfg(test)]

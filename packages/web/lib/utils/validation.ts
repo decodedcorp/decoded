@@ -8,6 +8,8 @@ export const UPLOAD_CONFIG = {
   maxImages: 1, // 단일 이미지만 허용 (AI 감지용)
   supportedFormats: ["image/jpeg", "image/png", "image/webp"] as const,
   supportedExtensions: [".jpg", ".jpeg", ".png", ".webp"] as const,
+  minDimension: 200, // 최소 200x200px
+  maxDimension: 8000, // 최대 8000x8000px
 } as const;
 
 export type SupportedFormat = (typeof UPLOAD_CONFIG.supportedFormats)[number];
@@ -97,6 +99,58 @@ export function validateAddingImages(
     };
   }
   return { valid: true };
+}
+
+/**
+ * 이미지 해상도 검증 (비동기)
+ * 이미지를 로드하여 dimensions과 손상 여부를 확인합니다.
+ */
+export function validateImageDimensions(
+  file: File
+): Promise<ValidationResult> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const { naturalWidth: w, naturalHeight: h } = img;
+
+      if (
+        w < UPLOAD_CONFIG.minDimension ||
+        h < UPLOAD_CONFIG.minDimension
+      ) {
+        resolve({
+          valid: false,
+          error: `이미지가 너무 작습니다. 최소 ${UPLOAD_CONFIG.minDimension}x${UPLOAD_CONFIG.minDimension}px 이상이어야 합니다. (현재: ${w}x${h}px)`,
+        });
+        return;
+      }
+
+      if (
+        w > UPLOAD_CONFIG.maxDimension ||
+        h > UPLOAD_CONFIG.maxDimension
+      ) {
+        resolve({
+          valid: false,
+          error: `이미지가 너무 큽니다. 최대 ${UPLOAD_CONFIG.maxDimension}x${UPLOAD_CONFIG.maxDimension}px 이하여야 합니다. (현재: ${w}x${h}px)`,
+        });
+        return;
+      }
+
+      resolve({ valid: true });
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve({
+        valid: false,
+        error: "손상된 이미지 파일입니다. 다른 파일을 선택해주세요.",
+      });
+    };
+
+    img.src = url;
+  });
 }
 
 /**

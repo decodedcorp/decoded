@@ -54,6 +54,10 @@ pub struct CreateSolutionInlineDto {
     /// og metadata image
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
+
+    /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_id: Option<Uuid>,
 }
 
 /// Spot 생성 요청 (Post 생성 시 포함)
@@ -95,9 +99,17 @@ pub struct CreatePostDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_name: Option<String>,
 
+    /// `warehouse.groups.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<Uuid>,
+
     /// 아티스트명 (옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_name: Option<String>,
+
+    /// `warehouse.artists.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<Uuid>,
 
     /// 상황 정보 (옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -105,15 +117,86 @@ pub struct CreatePostDto {
 
     /// 이미지 가로 크기 (픽셀, 옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(range(min = 1, max = 20000))]
     pub image_width: Option<i32>,
 
     /// 이미지 세로 크기 (픽셀, 옵션)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(range(min = 1, max = 20000))]
     pub image_height: Option<i32>,
 
     /// Spots (최소 1개 이상 필요, 유저가 직접 지정)
     #[validate(length(min = 1))]
     pub spots: Vec<CreateSpotDto>,
+}
+
+/// Try Post 생성 요청 (multipart의 data 필드)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
+pub struct CreateTryPostDto {
+    /// 원본 포스트 ID
+    pub parent_post_id: Uuid,
+
+    /// 한줄 코멘트 (선택, 100자)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(max = 100))]
+    pub media_title: Option<String>,
+
+    /// 태깅할 스팟 ID 배열 (선택)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spot_ids: Vec<Uuid>,
+}
+
+/// Try Post 목록 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryPostListItem {
+    /// Try Post ID
+    pub id: Uuid,
+
+    /// 사용자 정보
+    pub user: PostUserInfo,
+
+    /// 이미지 URL
+    pub image_url: String,
+
+    /// 한줄 코멘트
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media_title: Option<String>,
+
+    /// 태깅된 스팟 ID 목록
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tagged_spot_ids: Vec<Uuid>,
+
+    /// 생성일시
+    pub created_at: DateTime<Utc>,
+}
+
+/// Try 목록 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryListResponse {
+    /// Try 목록
+    pub tries: Vec<TryPostListItem>,
+
+    /// 전체 개수
+    pub total: i64,
+}
+
+/// Try 개수 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TryCountResponse {
+    /// 개수
+    pub count: i64,
+}
+
+/// Try 목록 조회 쿼리
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct TryListQuery {
+    /// 페이지 번호
+    #[serde(default = "default_page")]
+    pub page: u64,
+
+    /// 페이지당 개수
+    #[serde(default = "default_per_page")]
+    pub per_page: u64,
 }
 
 /// Post 수정 요청
@@ -261,6 +344,14 @@ pub struct PostResponse {
     /// 이미지 세로 크기 (픽셀)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_height: Option<i32>,
+
+    /// Try 포스트의 원본 포스트 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_post_id: Option<Uuid>,
+
+    /// 포스트 타입 (post | try)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_type: Option<String>,
 
     /// 생성일시
     pub created_at: DateTime<Utc>,
@@ -500,6 +591,18 @@ pub struct PostDetailResponse {
     /// 이미지 세로 크기 (픽셀)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_height: Option<i32>,
+
+    /// Try 포스트의 원본 포스트 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_post_id: Option<Uuid>,
+
+    /// 포스트 타입 (post | try)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_type: Option<String>,
+
+    /// Try 개수 (원본 포스트일 때만)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub try_count: Option<i64>,
 }
 
 impl PostDetailResponse {
@@ -532,6 +635,9 @@ impl PostDetailResponse {
             style_tags: post.style_tags.clone(),
             image_width: post.image_width,
             image_height: post.image_height,
+            parent_post_id: post.parent_post_id,
+            post_type: post.post_type.clone(),
+            try_count: None,
             user: PostUserInfo {
                 id: user.id,
                 username: user.username,
@@ -586,6 +692,8 @@ impl From<PostModel> for PostResponse {
             status: model.status,
             image_width: model.image_width,
             image_height: model.image_height,
+            parent_post_id: model.parent_post_id,
+            post_type: model.post_type,
             created_at: model.created_at.with_timezone(&chrono::Utc),
         }
     }

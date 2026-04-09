@@ -1,4 +1,4 @@
-# Sends repository events to Telegram (plain text, no PR/issue body).
+# Sends repository events to Telegram with clean formatting.
 # Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: Telegram notify
 
@@ -10,6 +10,7 @@ on:
     types: [opened]
   issues:
     types: [opened]
+  deployment_status:
 
 permissions:
   contents: read
@@ -35,31 +36,23 @@ jobs:
           ACTOR="${{ github.actor }}"
           SHA="${{ github.sha }}"
           REF="${{ github.ref }}"
-          RUN_URL="${SERVER}/${REPO}/actions/runs/${{ github.run_id }}"
 
           case "$EVENT_NAME" in
             workflow_dispatch)
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] Manual test
-          repo: ${REPO}
-          triggered by: ${ACTOR}
-          open: ${RUN_URL}
-          EOF
+              MSG="🔧 decoded — manual trigger by ${ACTOR}"
               ;;
 
             push)
               SHORT="${SHA:0:7}"
               BRANCH="${REF#refs/heads/}"
-              MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 300)
+              COMMIT_MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 200)
               COMMIT_URL="${SERVER}/${REPO}/commit/${SHA}"
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] Push
-          repo: ${REPO}
-          branch: ${BRANCH}
-          by: ${ACTOR}
-          commit: ${SHORT} — ${MSG}
-          open: ${COMMIT_URL}
-          EOF
+              MSG="📦 decoded push → ${BRANCH}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${SHORT} ${COMMIT_MSG}
+          by ${ACTOR}
+
+          ${COMMIT_URL}"
               ;;
 
             pull_request)
@@ -69,13 +62,17 @@ jobs:
               BASE=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
               AUTHOR=$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH")
               URL=$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] New PR #${NUM}
+              ADDITIONS=$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")
+              DELETIONS=$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")
+              CHANGED=$(jq -r '.pull_request.changed_files // 0' "$GITHUB_EVENT_PATH")
+              MSG="🔀 decoded PR #${NUM}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${TITLE}
           ${HEAD} → ${BASE}
-          title: ${TITLE}
-          by: ${AUTHOR}
-          open: ${URL}
-          EOF
+          +${ADDITIONS} -${DELETIONS} (${CHANGED} files)
+          by ${AUTHOR}
+
+          ${URL}"
               ;;
 
             issues)
@@ -83,12 +80,41 @@ jobs:
               TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
               AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
               URL=$(jq -r '.issue.html_url' "$GITHUB_EVENT_PATH")
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] New issue #${NUM}
-          title: ${TITLE}
-          by: ${AUTHOR}
-          open: ${URL}
-          EOF
+              LABELS=$(jq -r '[.issue.labels[].name] | join(", ")' "$GITHUB_EVENT_PATH")
+              MSG="📌 decoded issue #${NUM}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${TITLE}
+          ${LABELS:-no labels}
+          by ${AUTHOR}
+
+          ${URL}"
+              ;;
+
+            deployment_status)
+              STATE=$(jq -r '.deployment_status.state' "$GITHUB_EVENT_PATH")
+              ENV_NAME=$(jq -r '.deployment_status.environment // "unknown"' "$GITHUB_EVENT_PATH")
+              TARGET_URL=$(jq -r '.deployment_status.target_url // ""' "$GITHUB_EVENT_PATH")
+              DEPLOY_REF=$(jq -r '.deployment.ref // ""' "$GITHUB_EVENT_PATH")
+
+              if [ "$STATE" != "success" ] && [ "$STATE" != "failure" ] && [ "$STATE" != "error" ]; then
+                echo "Skipping deployment_status state: ${STATE}"
+                exit 0
+              fi
+
+              if [ "$STATE" = "success" ]; then
+                ICON="🚀"
+                LABEL="배포 완료"
+              else
+                ICON="💥"
+                LABEL="배포 실패"
+              fi
+
+              MSG="${ICON} decoded deploy — ${LABEL}
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          env: ${ENV_NAME}
+          ref: ${DEPLOY_REF}
+
+          ${TARGET_URL}"
               ;;
 
             *)
@@ -97,12 +123,12 @@ jobs:
               ;;
           esac
 
-          sed -i 's/^[[:space:]]*//' /tmp/tg-message.txt
+          MSG=$(echo "$MSG" | sed 's/^[[:space:]]*//')
 
           PAYLOAD=$(jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --rawfile text /tmp/tg-message.txt \
-            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end)}')
+            --arg text "$MSG" \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), disable_web_page_preview: true}')
 
           RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \

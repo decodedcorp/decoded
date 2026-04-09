@@ -20,8 +20,9 @@ use crate::{
 
 use super::{
     dto::{
-        CreatePostDto, CreatePostWithSolutionsResponse, ImageAnalyzeResponse, ImageUploadResponse,
-        PostDetailResponse, PostListQuery, PostResponse, UpdatePostDto,
+        CreatePostDto, CreatePostWithSolutionsResponse, CreateTryPostDto, ImageAnalyzeResponse,
+        ImageUploadResponse, PostDetailResponse, PostListQuery, PostResponse, TryCountResponse,
+        TryListQuery, TryListResponse, UpdatePostDto,
     },
     service,
 };
@@ -397,11 +398,142 @@ pub async fn analyze_image(
     Ok(Json(response))
 }
 
+/// POST /api/v1/posts/try - Try Post 생성
+#[utoipa::path(
+    post,
+    path = "/api/v1/posts/try",
+    tag = "posts",
+    security(
+        ("bearer_auth" = [])
+    ),
+    request_body(content = String, content_type = "multipart/form-data"),
+    responses(
+        (status = 201, description = "Try Post 생성 성공", body = PostResponse),
+        (status = 401, description = "인증 필요"),
+        (status = 400, description = "잘못된 요청")
+    )
+)]
+pub async fn create_try_post(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    mut multipart: Multipart,
+) -> AppResult<Json<PostResponse>> {
+    let mut image_file: Option<Vec<u8>> = None;
+    let mut image_content_type: Option<String> = None;
+    let mut post_data_str: Option<String> = None;
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        crate::error::AppError::BadRequest(format!("Failed to parse multipart: {}", e))
+    })? {
+        let name = field.name().unwrap_or("");
+
+        if name == "image" {
+            let content_type = field.content_type().unwrap_or("image/jpeg").to_string();
+            let data = field.bytes().await.map_err(|e| {
+                crate::error::AppError::BadRequest(format!("Failed to read image data: {}", e))
+            })?;
+            image_file = Some(data.to_vec());
+            image_content_type = Some(content_type);
+        } else if name == "data" {
+            let data = field.text().await.map_err(|e| {
+                crate::error::AppError::BadRequest(format!("Failed to read data field: {}", e))
+            })?;
+            post_data_str = Some(data);
+        }
+    }
+
+    let image_file = image_file.ok_or_else(|| {
+        crate::error::AppError::BadRequest("No image file found in multipart form".to_string())
+    })?;
+
+    let image_content_type = image_content_type.unwrap_or_else(|| "image/jpeg".to_string());
+
+    let post_data_str = post_data_str.ok_or_else(|| {
+        crate::error::AppError::BadRequest("No data field found in multipart form".to_string())
+    })?;
+
+    let dto: CreateTryPostDto = serde_json::from_str(&post_data_str).map_err(|e| {
+        crate::error::AppError::BadRequest(format!("Failed to parse JSON data: {}", e))
+    })?;
+
+    let post =
+        service::create_try_post(&state, user.id, image_file, &image_content_type, dto).await?;
+    Ok(Json(post))
+}
+
+/// GET /api/v1/posts/{post_id}/tries - Try 목록 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/posts/{post_id}/tries",
+    tag = "posts",
+    params(
+        ("post_id" = Uuid, Path, description = "원본 Post ID"),
+        ("page" = Option<u64>, Query, description = "페이지 번호"),
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수"),
+    ),
+    responses(
+        (status = 200, description = "Try 목록 조회 성공", body = TryListResponse),
+        (status = 404, description = "Post를 찾을 수 없음")
+    )
+)]
+pub async fn list_tries(
+    State(state): State<AppState>,
+    Path(post_id): Path<Uuid>,
+    Query(query): Query<TryListQuery>,
+) -> AppResult<Json<TryListResponse>> {
+    let response = service::list_tries(&state.db, post_id, query).await?;
+    Ok(Json(response))
+}
+
+/// GET /api/v1/posts/{post_id}/tries/count - Try 개수 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/posts/{post_id}/tries/count",
+    tag = "posts",
+    params(
+        ("post_id" = Uuid, Path, description = "원본 Post ID"),
+    ),
+    responses(
+        (status = 200, description = "Try 개수 조회 성공", body = TryCountResponse),
+    )
+)]
+pub async fn count_tries(
+    State(state): State<AppState>,
+    Path(post_id): Path<Uuid>,
+) -> AppResult<Json<TryCountResponse>> {
+    let response = service::count_tries(&state.db, post_id).await?;
+    Ok(Json(response))
+}
+
+/// GET /api/v1/spots/{spot_id}/tries - 스팟별 Try 목록 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/spots/{spot_id}/tries",
+    tag = "spots",
+    params(
+        ("spot_id" = Uuid, Path, description = "Spot ID"),
+        ("page" = Option<u64>, Query, description = "페이지 번호"),
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수"),
+    ),
+    responses(
+        (status = 200, description = "스팟별 Try 목록 조회 성공", body = TryListResponse),
+    )
+)]
+pub async fn list_tries_by_spot(
+    State(state): State<AppState>,
+    Path(spot_id): Path<Uuid>,
+    Query(query): Query<TryListQuery>,
+) -> AppResult<Json<TryListResponse>> {
+    let response = service::list_tries_by_spot(&state.db, spot_id, query).await?;
+    Ok(Json(response))
+}
+
 /// Posts 도메인 라우터
 pub fn router(app_config: AppConfig) -> Router<AppState> {
     let protected_routes = Router::new()
         .route("/", post(create_post_without_solutions))
         .route("/with-solutions", post(create_post_with_solutions))
+        .route("/try", post(create_try_post))
         .route("/upload", post(upload_image))
         .route("/{post_id}", patch(update_post).delete(delete_post))
         .route_layer(from_fn_with_state(app_config.clone(), auth_middleware));
@@ -424,6 +556,8 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
 
     Router::new()
         .route("/", get(list_posts))
+        .route("/{post_id}/tries", get(list_tries))
+        .route("/{post_id}/tries/count", get(count_tries))
         .merge(rate_limited_routes)
         .nest("/{post_id}/spots", spots_router)
         .merge(optional_auth_routes)

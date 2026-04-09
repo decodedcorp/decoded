@@ -66,3 +66,6 @@ packages/backend/target/
 .agents/skills/gstack*/node_modules/
 .dmux/
 .gstack/
+
+# Worktrees
+.claude/worktrees/

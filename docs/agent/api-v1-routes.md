@@ -24,6 +24,9 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 | `/api/v1/posts/[postId]/spots`   | GET/POST | Spots for a post              |
 | `/api/v1/posts/[postId]/likes`   | POST     | Like/unlike a post            |
 | `/api/v1/posts/[postId]/saved`   | POST     | Save/unsave a post            |
+| `/api/v1/posts/try`                  | POST     | Try 포스트 생성 (인증 필요)          |
+| `/api/v1/posts/[postId]/tries`       | GET      | Try 포스트 목록                      |
+| `/api/v1/posts/[postId]/tries/count` | GET      | Try 개수                             |
 | `/api/v1/post-magazines/[id]`    | GET      | Post magazine data            |
 | `/api/v1/post-magazines/generate` | POST   | Trigger editorial generation for a post (admin only, proxy → Rust)      |
 
@@ -31,11 +34,15 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 
 | Route                                  | Methods   | Description                  |
 | -------------------------------------- | --------- | ---------------------------- |
-| `/api/v1/solutions/convert-affiliate`  | POST      | Convert affiliate links      |
-| `/api/v1/solutions/[solutionId]`       | GET/PATCH | Solution CRUD                |
-| `/api/v1/solutions/[solutionId]/adopt` | POST      | Adopt a solution             |
-| `/api/v1/solutions/extract-metadata`   | POST      | Solution metadata extraction |
+| `/api/v1/solutions/convert-affiliate`         | POST      | Convert affiliate links                |
+| `/api/v1/solutions/[solutionId]`              | GET/PATCH | Solution CRUD                          |
+| `/api/v1/solutions/[solutionId]/adopt`        | POST      | Adopt a solution                       |
+| `/api/v1/solutions/extract-metadata`          | POST      | Solution metadata extraction           |
+| `/api/v1/solutions/[solutionId]/votes`        | GET       | 솔루션 투표 조회                         |
+| `/api/v1/solutions/[solutionId]/votes`        | POST      | 투표 생성 (인증 필요)                    |
+| `/api/v1/solutions/[solutionId]/votes`        | DELETE    | 투표 삭제 (인증 필요)                    |
 | `/api/v1/spots/[spotId]`               | GET/PATCH | Spot CRUD                    |
+| `/api/v1/spots/[spotId]/tries`         | GET       | Tries tagged with spot       |
 | `/api/v1/spots/[spotId]/solutions`     | GET/POST  | Solutions for spot           |
 
 ## Users & profile

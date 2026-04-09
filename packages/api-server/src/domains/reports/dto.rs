@@ -4,28 +4,34 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 /// 신고 생성 요청
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct CreateReportDto {
     /// 대상 타입 (post, comment, solution)
+    #[validate(length(min = 1, max = 64))]
     pub target_type: String,
     /// 대상 ID
     pub target_id: Uuid,
     /// 신고 사유 (spam, inappropriate, copyright, incorrect, other)
+    #[validate(length(min = 1, max = 64))]
     pub reason: String,
     /// 상세 설명 (선택)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(max = 5000))]
     pub details: Option<String>,
 }
 
 /// 신고 상태 업데이트 요청 (admin)
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct UpdateReportStatusDto {
     /// 새 상태 (pending, reviewed, dismissed, actioned)
+    #[validate(length(min = 1, max = 64))]
     pub status: String,
     /// 처리 결과 메모 (선택)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(max = 5000))]
     pub resolution: Option<String>,
 }
 

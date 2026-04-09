@@ -31,6 +31,7 @@ App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트
 | `/admin/entities/group-members` | 그룹 멤버 관리                                                          |
 | `/request/upload`    | Image upload with DropZone                                                         |
 | `/request/detect`    | AI detection results with item spotting                                            |
+| `/request/try`       | Try 포스트 업로드 페이지                                                            |
 | `/login`             | OAuth authentication (Kakao, Google, Apple)                                        |
 | `/debug/supabase`    | Supabase debug tools                                                               |
 | `/lab/*`             | Experimental (ascii-text, fashion-scan)                                            |
@@ -69,6 +70,15 @@ Sections rendered in order:
 | `app/sitemap.ts` | 동적 XML sitemap (active posts + 정적 페이지) |
 | `app/robots.ts` | robots.txt 규칙 |
 | `app/api/og/route.tsx` | OG image 동적 생성 |
+
+## API proxy routes (Try & Votes)
+
+| Route | Methods | Description |
+| ----- | ------- | ----------- |
+| `/api/v1/posts/try` | POST | Try 생성 API (인증 필요) |
+| `/api/v1/posts/[postId]/tries` | GET | Try 목록 |
+| `/api/v1/posts/[postId]/tries/count` | GET | Try 개수 |
+| `/api/v1/solutions/[solutionId]/votes` | GET/POST/DELETE | 솔루션 투표 조회·생성·삭제 (POST·DELETE 인증 필요) |
 
 ## Auth
 

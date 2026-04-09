@@ -25,6 +25,7 @@ User uploads a single photo of their own attempt (outfit, purchase, styling) lin
 | DropZone | `packages/web/lib/components/request/DropZone.tsx` | Image upload (reuse) |
 | MobileUploadOptions | `packages/web/lib/components/request/MobileUploadOptions.tsx` | Camera/Gallery (reuse) |
 | TryCommentInput | `packages/web/lib/components/request/TryCommentInput.tsx` | Single-line comment (new) |
+| SpotTagSelector | `packages/web/lib/components/request/SpotTagSelector.tsx` | Optional spot tagging chips (new) |
 | DS Button | `packages/web/lib/design-system/` | CTA button (reuse) |
 
 ---
@@ -48,6 +49,9 @@ User uploads a single photo of their own attempt (outfit, purchase, styling) lin
 │  │  착용샷, 구매 인증 등     │   │
 │  └─────────────────────────┘   │
 │                                 │
+│  🏷️ 이 아이템 갖고 있어요       │  SpotTagSelector (optional)
+│  [아이템A ✓] [아이템B] [아이템C] │  원본 포스트 스팟 목록, 탭 토글
+│                                 │
 │  [ 한줄 코멘트 (선택) _______ ] │  TryCommentInput (100자)
 │                                 │
 │        [Try 공유하기]           │  disabled until image selected
@@ -69,6 +73,9 @@ User uploads a single photo of their own attempt (outfit, purchase, styling) lin
 │  │                       │     │  (tap to replace)
 │  └───────────────────────┘     │
 │  [🔄 다시 선택]                 │  Replace button
+│                                 │
+│  🏷️ 이 아이템 갖고 있어요       │  SpotTagSelector
+│  [아이템A ✓] [아이템B ✓]        │  selected spots highlighted
 │                                 │
 │  [ 잘 어울리네요! ____________ ] │  TryCommentInput (filled)
 │                                 │
@@ -116,6 +123,7 @@ User uploads a single photo of their own attempt (outfit, purchase, styling) lin
 | `parentPostId` | `string \| null` | Original post reference |
 | `postType` | `'original' \| 'try'` | Defaults to 'original' |
 | `tryComment` | `string` | Max 100 chars |
+| `taggedSpotIds` | `string[]` | Selected spot IDs (optional) |
 
 Reuse existing `images`, `addImage`, `clearImages`, `resetRequestFlow`.
 
@@ -127,6 +135,7 @@ Reuse existing `images`, `addImage`, `clearImages`, `resetRequestFlow`.
 | `image` | `File \| null` | Single image |
 | `previewUrl` | `string \| null` | Object URL |
 | `comment` | `string` | Max 100 chars |
+| `taggedSpotIds` | `string[]` | Selected spot IDs (optional) |
 | `isSubmitting` | `boolean` | Submit state |
 
 ---
@@ -139,7 +148,8 @@ Reuse existing `images`, `addImage`, `clearImages`, `resetRequestFlow`.
 | R2 | When user selects an image, the system shall validate (JPG/PNG/WebP, ≤10MB), compress if needed, and show preview | Draft |
 | R3 | When user taps the uploaded image or "다시 선택", the system shall allow replacing the image | Draft |
 | R4 | When user types a comment, the system shall enforce 100-character limit with counter | Draft |
-| R5 | When user taps "Try 공유하기" with an image, the system shall POST to `/api/v1/posts` with `parent_post_id` and `post_type: 'try'` | Draft |
+| R5 | When user taps "Try 공유하기" with an image, the system shall POST to `/api/v1/posts` with `parent_post_id`, `post_type: 'try'`, and optional `spot_ids` | Draft |
+| R10 | When the original post has spots, the system shall display SpotTagSelector with item chips; user may toggle 0 or more spots | Draft |
 | R6 | When the POST succeeds, the system shall navigate to `/posts/:parentId`, show success toast, and reset state | Draft |
 | R7 | When the POST fails, the system shall show error toast and preserve image + comment state | Draft |
 | R8 | When user taps close (✕), the system shall confirm if image is selected, then reset and navigate to `/posts/:parentId` | Draft |
@@ -157,6 +167,8 @@ formData.append('parent_post_id', parentPostId);
 formData.append('post_type', 'try');
 formData.append('media_type', 'try');
 formData.append('media_title', comment || '');  // 한줄 코멘트
+// optional — 태깅할 스팟 ID들
+taggedSpotIds.forEach(id => formData.append('spot_ids', id));
 ```
 
 ---
@@ -200,7 +212,7 @@ formData.append('media_title', comment || '');  // 한줄 코멘트
 |--------|---------------------|----------------------|
 | Steps | 3 steps (Upload → Detect → Details) | 1 step (Image + Comment) |
 | AI Detection | Required (spots mandatory) | None |
-| Spots/Solutions | Manual placement + form | None (Phase 2) |
+| Spots/Solutions | Manual placement + form | Optional spot tagging (select from parent's spots) |
 | Metadata | media_type, source, artist, group | comment only |
 | Context | Standalone creation | Linked to parent post |
 | CTA text | "Post" | "Try 공유하기" |

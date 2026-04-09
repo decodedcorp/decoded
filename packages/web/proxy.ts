@@ -25,8 +25,12 @@ export async function proxy(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
 
-  // Profile: require session, redirect to login with return URL
-  if (pathname === "/profile" || pathname.startsWith("/profile/")) {
+  // Protected pages: require session, redirect to login with return URL
+  if (
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/") ||
+    pathname.startsWith("/request/")
+  ) {
     if (!session) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("redirect", pathname);
@@ -59,5 +63,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/profile"],
+  matcher: ["/admin/:path*", "/profile", "/request/:path*"],
 };

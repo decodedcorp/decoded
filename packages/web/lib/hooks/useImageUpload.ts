@@ -15,6 +15,7 @@ import {
 } from "@/lib/stores/requestStore";
 import {
   validateImageFile,
+  validateImageDimensions,
   validateAddingImages,
   extractImageFromClipboard,
   UPLOAD_CONFIG,
@@ -59,18 +60,26 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
     updateImageStatus(id, "uploading", 0);
 
     try {
-      // 1. 이미지 압축
-      updateImageStatus(id, "uploading", 10);
-      const { file: compressedFile, wasCompressed } = await compressImage(file);
+      // 1. 이미지 압축 (0-30% 구간)
+      const { file: compressedFile, wasCompressed } = await compressImage(
+        file,
+        (compressionPercent) => {
+          const weighted = Math.round(compressionPercent * 0.3);
+          updateImageStatus(id, "uploading", weighted);
+        }
+      );
 
       if (wasCompressed) {
         console.log(`Image compressed: ${file.name}`);
       }
 
-      // 2. API를 통해 백엔드에 업로드
+      // 2. API를 통해 백엔드에 업로드 (30-95% 구간)
       const { image_url } = await uploadImage({
         file: compressedFile,
-        onProgress: (progress) => updateImageStatus(id, "uploading", progress),
+        onProgress: (uploadPercent) => {
+          const weighted = 30 + Math.round(uploadPercent * 0.65);
+          updateImageStatus(id, "uploading", Math.min(weighted, 95));
+        },
       });
 
       // 3. 업로드 완료
@@ -124,14 +133,21 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
       const validFiles: File[] = [];
       const errors: string[] = [];
 
-      // 각 파일 검증
+      // 각 파일 검증 (동기 + 비동기)
       for (const file of files) {
-        const validation = validateImageFile(file);
-        if (validation.valid) {
-          validFiles.push(file);
-        } else {
-          errors.push(`${file.name}: ${validation.error}`);
+        const syncValidation = validateImageFile(file);
+        if (!syncValidation.valid) {
+          errors.push(`${file.name}: ${syncValidation.error}`);
+          continue;
         }
+
+        const dimValidation = await validateImageDimensions(file);
+        if (!dimValidation.valid) {
+          errors.push(`${file.name}: ${dimValidation.error}`);
+          continue;
+        }
+
+        validFiles.push(file);
       }
 
       // 에러가 있으면 토스트 표시

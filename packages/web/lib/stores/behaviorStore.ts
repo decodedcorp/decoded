@@ -15,7 +15,8 @@ export type EventType =
   | "search_query"
   | "category_filter"
   | "dwell_time"
-  | "scroll_depth";
+  | "scroll_depth"
+  | "affiliate_click";
 
 export interface TrackEventPayload {
   event_type: EventType;

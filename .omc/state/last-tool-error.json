@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"supabase db pull --schema warehouse 2>&1\",\"timeout\":180000,\"description\":\"Pull warehouse schema from remote\"}",
-  "error": "Exit code 1\nInitialising login role...\nConnecting to remote database...\nCreating shadow database...\nInitialising schema...\nSeeding globals from roles.sql...\nApplying migration 20260409075040_remote_schema.sql...\nDiffing schemas: warehouse\nNo schema changes found\nTry rerunning the command with --debug to troubleshoot the error.",
-  "timestamp": "2026-04-09T07:52:58.845Z",
-  "retry_count": 1
+  "tool_input_preview": "{\"command\":\"git merge origin/feat/45-request-solution-flow-completion --no-edit\",\"description\":\"Merge #56 branch into dev\"}",
+  "error": "Exit code 1\n자동 병합: packages/web/lib/components/detail/ImageDetailContent.tsx\n충돌 (내용): packages/web/lib/components/detail/ImageDetailContent.tsx에 병합 충돌\n자동 병합: packages/web/lib/components/detail/ItemDetailCard.tsx\n자동 병합: packages/web/lib/components/detail/OtherSolutionsList.tsx\n충돌 (내용): packages/web/lib/components/detail/OtherSolutionsList.tsx에 병합 충돌\n자동 병합: packages/web/lib/components/detail/TopSolutionCard.tsx\n충돌 (내용): packages/web/lib/components/detail/TopSolutionCard.tsx에 병합 충돌\n자동 병합: packages/...",
+  "timestamp": "2026-04-09T08:12:39.569Z",
+  "retry_count": 2
 }

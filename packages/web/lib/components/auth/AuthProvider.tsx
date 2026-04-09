@@ -4,10 +4,13 @@ import { useEffect } from "react";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/stores/authStore";
 
+const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
   const setUser = useAuthStore((s) => s.setUser);
   const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     initialize();
@@ -38,7 +41,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // 주기적 세션 체크 (5분마다)
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [initialize, setUser, setSessionExpired]);
+
+  // 인증된 유저가 있을 때만 주기적 세션 체크 (5분마다)
+  useEffect(() => {
+    if (!user) return;
+
     const sessionCheckInterval = setInterval(async () => {
       const {
         data: { session },
@@ -46,27 +57,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = await supabaseBrowserClient.auth.getSession();
 
       if (error || !session) {
-        const currentUser = useAuthStore.getState().user;
-        if (currentUser) {
-          console.warn("[AuthProvider] Session expired, attempting refresh...");
-          const { error: refreshError } =
-            await supabaseBrowserClient.auth.refreshSession();
-          if (refreshError) {
-            console.error(
-              "[AuthProvider] Session refresh failed:",
-              refreshError.message
-            );
-            setSessionExpired(true);
-          }
+        console.warn("[AuthProvider] Session expired, attempting refresh...");
+        const { error: refreshError } =
+          await supabaseBrowserClient.auth.refreshSession();
+        if (refreshError) {
+          console.error(
+            "[AuthProvider] Session refresh failed:",
+            refreshError.message
+          );
+          setSessionExpired(true);
         }
       }
-    }, 5 * 60 * 1000);
+    }, SESSION_CHECK_INTERVAL_MS);
 
     return () => {
-      subscription.unsubscribe();
       clearInterval(sessionCheckInterval);
     };
-  }, [initialize, setUser, setSessionExpired]);
+  }, [user, setSessionExpired]);
 
   return <>{children}</>;
 }
