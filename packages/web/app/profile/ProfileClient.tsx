@@ -43,6 +43,7 @@ import {
   apiAvailableBadgeToStoreBadge,
 } from "@/lib/utils/badge-mapper";
 import { apiMyRankingDetailToStoreRankings } from "@/lib/utils/ranking-mapper";
+import { useAuthStore } from "@/lib/stores/authStore";
 
 function ProfileSkeleton() {
   return (
@@ -174,24 +175,25 @@ export function ProfileClient() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStyleDNAModalOpen, setIsStyleDNAModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActivityTab>("posts");
+  const isAuthReady = useAuthStore((s) => s.isInitialized);
 
-  // Fetch user data from API
+  // Fetch user data from API (wait for auth initialization)
   const {
     data: userData,
     isLoading: isUserLoading,
     isError: isUserError,
     error: userError,
     refetch: refetchUser,
-  } = useMe();
+  } = useMe({ enabled: isAuthReady });
 
-  // Fetch stats from API
+  // Fetch stats from API (wait for auth initialization)
   const {
     data: statsData,
     isLoading: isStatsLoading,
     isError: isStatsError,
     error: statsError,
     refetch: refetchStats,
-  } = useUserStats();
+  } = useUserStats({ enabled: isAuthReady });
 
   // Badges & Rankings (실제 API)
   const { data: badgesData, refetch: refetchBadges } = useMyBadges();
