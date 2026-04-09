@@ -144,6 +144,9 @@ export type PostGridItem = {
   title?: string | null;
   /** Meilisearch highlight (검색 결과에서만) */
   highlight?: Record<string, string> | null;
+  /** DB-stored dimensions for CLS prevention */
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 };
 
 /**
@@ -232,6 +235,8 @@ export function useInfinitePosts(params: {
           spotCount: post.spot_count ?? 0,
           viewCount: post.view_count,
           title: post.post_magazine_title ?? post.title ?? null,
+          imageWidth: post.image_width ?? null,
+          imageHeight: post.image_height ?? null,
         }));
 
         const totalPages = response.pagination.total_pages;
@@ -308,6 +313,8 @@ export function useInfinitePosts(params: {
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
         title: post.post_magazine_title ?? post.title ?? null,
+        imageWidth: post.image_width ?? null,
+        imageHeight: post.image_height ?? null,
       }));
 
       return { items, nextPage: hasMore ? page + 1 : null, hasMore };

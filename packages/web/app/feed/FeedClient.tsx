@@ -73,6 +73,8 @@ export function FeedClient() {
           postSource: post.postSource,
           postAccount: post.postAccount,
           postCreatedAt: post.postCreatedAt,
+          imageWidth: post.imageWidth ?? null,
+          imageHeight: post.imageHeight ?? null,
         })),
     [items]
   );
