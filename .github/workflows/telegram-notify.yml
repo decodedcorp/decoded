@@ -1,4 +1,4 @@
-# Sends repository events to Telegram (plain text, no PR/issue body).
+# Sends repository events to Telegram with MarkdownV2 formatting.
 # Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: Telegram notify
 
@@ -31,35 +31,42 @@ jobs:
             exit 1
           fi
 
+          # MarkdownV2 escape helper
+          esc() { echo "$1" | sed 's/[_*[\]()~`>#+\-=|{}.!\\]/\\&/g'; }
+
           REPO="${{ github.repository }}"
           SERVER="${{ github.server_url }}"
           ACTOR="${{ github.actor }}"
           SHA="${{ github.sha }}"
           REF="${{ github.ref }}"
           RUN_URL="${SERVER}/${REPO}/actions/runs/${{ github.run_id }}"
+          PARSE_MODE="MarkdownV2"
 
           case "$EVENT_NAME" in
             workflow_dispatch)
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] Manual test
-          repo: ${REPO}
-          triggered by: ${ACTOR}
-          open: ${RUN_URL}
-          EOF
+              MSG_TEXT="$(cat <<MSGEOF
+          🔧 *DECODED \\| Manual Trigger*
+
+          👤 $(esc "$ACTOR")
+          🔗 [Actions Run]($(esc "$RUN_URL"))
+          MSGEOF
+          )"
               ;;
 
             push)
               SHORT="${SHA:0:7}"
               BRANCH="${REF#refs/heads/}"
-              MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 300)
+              COMMIT_MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 200)
               COMMIT_URL="${SERVER}/${REPO}/commit/${SHA}"
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] Push → ${BRANCH}
-          repo: ${REPO}
-          by: ${ACTOR}
-          commit: ${SHORT} — ${MSG}
-          open: ${COMMIT_URL}
-          EOF
+              MSG_TEXT="$(cat <<MSGEOF
+          📦 *DECODED \\| Push*
+
+          🌿 \`$(esc "$BRANCH")\`
+          📝 \`$(esc "$SHORT")\` $(esc "$COMMIT_MSG")
+          👤 $(esc "$ACTOR")
+          🔗 [커밋 보기]($(esc "$COMMIT_URL"))
+          MSGEOF
+          )"
               ;;
 
             pull_request)
@@ -69,13 +76,19 @@ jobs:
               BASE=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
               AUTHOR=$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH")
               URL=$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] New PR #${NUM}
-          ${HEAD} → ${BASE}
-          title: ${TITLE}
-          by: ${AUTHOR}
-          open: ${URL}
-          EOF
+              ADDITIONS=$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")
+              DELETIONS=$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")
+              CHANGED=$(jq -r '.pull_request.changed_files // 0' "$GITHUB_EVENT_PATH")
+              MSG_TEXT="$(cat <<MSGEOF
+          🔀 *DECODED \\| New PR \\#${NUM}*
+
+          📋 *$(esc "$TITLE")*
+          🌿 \`$(esc "$HEAD")\` → \`$(esc "$BASE")\`
+          👤 $(esc "$AUTHOR")
+          📊 \`\\+${ADDITIONS}\` \`\\-${DELETIONS}\` \\(${CHANGED} files\\)
+          🔗 [PR 보기]($(esc "$URL"))
+          MSGEOF
+          )"
               ;;
 
             issues)
@@ -83,12 +96,16 @@ jobs:
               TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
               AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
               URL=$(jq -r '.issue.html_url' "$GITHUB_EVENT_PATH")
-              cat <<EOF > /tmp/tg-message.txt
-          [decoded] New issue #${NUM}
-          title: ${TITLE}
-          by: ${AUTHOR}
-          open: ${URL}
-          EOF
+              LABELS=$(jq -r '[.issue.labels[].name] | join(", ")' "$GITHUB_EVENT_PATH")
+              MSG_TEXT="$(cat <<MSGEOF
+          📌 *DECODED \\| New Issue \\#${NUM}*
+
+          📋 *$(esc "$TITLE")*
+          👤 $(esc "$AUTHOR")
+          🏷️ \`$(esc "${LABELS:-none}")\`
+          🔗 [이슈 보기]($(esc "$URL"))
+          MSGEOF
+          )"
               ;;
 
             deployment_status)
@@ -97,25 +114,33 @@ jobs:
               TARGET_URL=$(jq -r '.deployment_status.target_url // ""' "$GITHUB_EVENT_PATH")
               DEPLOY_REF=$(jq -r '.deployment.ref // ""' "$GITHUB_EVENT_PATH")
 
-              # Only notify on success or failure, skip pending
               if [ "$STATE" != "success" ] && [ "$STATE" != "failure" ] && [ "$STATE" != "error" ]; then
                 echo "Skipping deployment_status state: ${STATE}"
                 exit 0
               fi
 
               if [ "$STATE" = "success" ]; then
-                EMOJI="🚀"
+                HEADER="🚀 *DECODED \\| Deploy Success*"
+                STATUS_LINE="✅ *$(esc "$ENV_NAME")* 배포 완료"
               else
-                EMOJI="💥"
+                HEADER="💥 *DECODED \\| Deploy Failed*"
+                STATUS_LINE="❌ *$(esc "$ENV_NAME")* 배포 실패"
               fi
 
-              cat <<EOF > /tmp/tg-message.txt
-          ${EMOJI} [decoded] Deploy ${STATE}
-          env: ${ENV_NAME}
-          ref: ${DEPLOY_REF}
-          by: ${ACTOR}
-          url: ${TARGET_URL}
-          EOF
+              LINK_LINE=""
+              if [ -n "$TARGET_URL" ] && [ "$TARGET_URL" != "null" ]; then
+                LINK_LINE="🔗 [배포 확인]($(esc "$TARGET_URL"))"
+              fi
+
+              MSG_TEXT="$(cat <<MSGEOF
+          ${HEADER}
+
+          ${STATUS_LINE}
+          🌿 \`$(esc "$DEPLOY_REF")\`
+          👤 $(esc "$ACTOR")
+          ${LINK_LINE}
+          MSGEOF
+          )"
               ;;
 
             *)
@@ -124,16 +149,32 @@ jobs:
               ;;
           esac
 
-          sed -i 's/^[[:space:]]*//' /tmp/tg-message.txt
+          # Remove leading whitespace from heredoc
+          MSG_TEXT=$(echo "$MSG_TEXT" | sed 's/^[[:space:]]*//')
 
           PAYLOAD=$(jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --rawfile text /tmp/tg-message.txt \
-            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end)}')
+            --arg text "$MSG_TEXT" \
+            --arg parse_mode "$PARSE_MODE" \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), parse_mode: $parse_mode, disable_web_page_preview: true}')
 
           RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
 
           echo "$RESP" | jq .
-          echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1
+
+          # If MarkdownV2 fails, retry as plain text
+          if ! echo "$RESP" | jq -e '.ok == true' >/dev/null 2>&1; then
+            echo "MarkdownV2 failed, retrying as plain text..."
+            PLAIN_TEXT=$(echo "$MSG_TEXT" | sed 's/\\//g; s/\*//g; s/`//g; s/\[//g; s/\]//g; s/(//g; s/)//g')
+            PAYLOAD=$(jq -n \
+              --arg chat_id "$TELEGRAM_CHAT_ID" \
+              --arg text "$PLAIN_TEXT" \
+              '{chat_id: $chat_id, text: $text}')
+            RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD")
+            echo "$RESP" | jq .
+            echo "$RESP" | jq -e '.ok == true' >/dev/null || exit 1
+          fi

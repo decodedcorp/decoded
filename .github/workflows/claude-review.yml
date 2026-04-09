@@ -29,7 +29,7 @@ jobs:
             Write your review as PR comments in Korean.
 
       - name: Notify Telegram on review completion
-        if: always() && env.TELEGRAM_BOT_TOKEN != ''
+        if: always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -40,6 +40,8 @@ jobs:
             exit 0
           fi
 
+          esc() { echo "$1" | sed 's/[_*[\]()~`>#+\-=|{}.!\\]/\\&/g'; }
+
           PR_NUM="${{ github.event.pull_request.number || github.event.issue.number }}"
           PR_TITLE="${{ github.event.pull_request.title || github.event.issue.title }}"
           STATUS="${{ job.status }}"
@@ -47,25 +49,42 @@ jobs:
           URL="${{ github.server_url }}/${REPO}/pull/${PR_NUM}"
 
           if [ "$STATUS" = "success" ]; then
-            EMOJI="✅"
+            MSG_TEXT="$(cat <<MSGEOF
+          🤖 *DECODED \\| Code Review Complete*
+
+          ✅ PR \\#${PR_NUM} 리뷰 완료
+          📋 *$(esc "$PR_TITLE")*
+          🔗 [PR 보기]($(esc "$URL"))
+          MSGEOF
+          )"
           else
-            EMOJI="❌"
+            MSG_TEXT="$(cat <<MSGEOF
+          🤖 *DECODED \\| Code Review Failed*
+
+          ❌ PR \\#${PR_NUM} 리뷰 실패
+          📋 *$(esc "$PR_TITLE")*
+          🔗 [PR 보기]($(esc "$URL"))
+          MSGEOF
+          )"
           fi
 
-          cat <<EOF > /tmp/tg-message.txt
-          ${EMOJI} [decoded] Claude Code Review
-          PR #${PR_NUM}: ${PR_TITLE}
-          status: ${STATUS}
-          open: ${URL}
-          EOF
-
-          sed -i 's/^[[:space:]]*//' /tmp/tg-message.txt
+          MSG_TEXT=$(echo "$MSG_TEXT" | sed 's/^[[:space:]]*//')
 
           PAYLOAD=$(jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --rawfile text /tmp/tg-message.txt \
-            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end)}')
+            --arg text "$MSG_TEXT" \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), parse_mode: "MarkdownV2", disable_web_page_preview: true}')
 
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "$PAYLOAD" | jq .
+            -d "$PAYLOAD")
+
+          echo "$RESP" | jq .
+
+          if ! echo "$RESP" | jq -e '.ok == true' >/dev/null 2>&1; then
+            echo "MarkdownV2 failed, retrying as plain text..."
+            PLAIN="$(echo "$MSG_TEXT" | sed 's/\\//g; s/\*//g; s/`//g; s/\[//g; s/\]//g; s/(//g; s/)//g')"
+            PAYLOAD=$(jq -n --arg chat_id "$TELEGRAM_CHAT_ID" --arg text "$PLAIN" '{chat_id: $chat_id, text: $text}')
+            curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" -d "$PAYLOAD" | jq .
+          fi
