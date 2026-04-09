@@ -11,6 +11,7 @@ import { LazyVtonModal } from "@/lib/components/vton/LazyVtonModal";
 import { ThemeScript } from "@/lib/theme/theme-script";
 import { EventFlushProvider } from "./EventFlushProvider";
 import { JsonLdOrganization } from "@/lib/seo/json-ld";
+import { SessionExpiredBanner } from "@/lib/components/auth/SessionExpiredBanner";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
@@ -78,6 +79,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AppProviders>
+          <SessionExpiredBanner />
           <EventFlushProvider />
           <div className="flex flex-col min-h-screen">
             {/* Conditional Navigation (Headers + MobileNav) */}
