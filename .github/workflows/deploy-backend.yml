@@ -28,6 +28,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Copy env file
+        run: cp /Users/decoded/dev/decoded/.env.backend.prod .env.backend.prod
+
       - name: Tag current images as :prev
         run: |
           for img in "$API_IMAGE" "$AI_IMAGE"; do
