@@ -12,7 +12,11 @@ export function initSupabase(
   anonKey: string
 ): SupabaseClient<Database> {
   if (!supabaseClient) {
-    supabaseClient = createClient<Database>(url, anonKey);
+    supabaseClient = createClient<Database>(url, anonKey, {
+      auth: {
+        flowType: "pkce",
+      },
+    });
   }
   return supabaseClient;
 }
