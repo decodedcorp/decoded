@@ -4,36 +4,69 @@ import { useEffect } from "react";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/stores/authStore";
 
-/**
- * Auth Provider - Supabase 인증 상태 변화를 감지하고 store에 반영
- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
   const setUser = useAuthStore((s) => s.setUser);
+  const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
 
   useEffect(() => {
-    // 앱 시작 시 세션 확인
     initialize();
 
-    // Auth 상태 변화 구독
     const {
       data: { subscription },
-    } = supabaseBrowserClient.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email);
+    } = supabaseBrowserClient.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AuthProvider] Auth state changed:", event);
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        setUser(session?.user ?? null);
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-      } else if (event === "INITIAL_SESSION") {
-        // 초기 세션은 initialize에서 처리됨
+      switch (event) {
+        case "SIGNED_IN":
+        case "TOKEN_REFRESHED":
+          setUser(session?.user ?? null);
+          setSessionExpired(false);
+          break;
+
+        case "SIGNED_OUT":
+          setUser(null);
+          setSessionExpired(false);
+          break;
+
+        case "INITIAL_SESSION":
+          // initialize()에서 처리
+          break;
+
+        default:
+          break;
       }
     });
 
+    // 주기적 세션 체크 (5분마다)
+    const sessionCheckInterval = setInterval(async () => {
+      const {
+        data: { session },
+        error,
+      } = await supabaseBrowserClient.auth.getSession();
+
+      if (error || !session) {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          console.warn("[AuthProvider] Session expired, attempting refresh...");
+          const { error: refreshError } =
+            await supabaseBrowserClient.auth.refreshSession();
+          if (refreshError) {
+            console.error(
+              "[AuthProvider] Session refresh failed:",
+              refreshError.message
+            );
+            setSessionExpired(true);
+          }
+        }
+      }
+    }, 5 * 60 * 1000);
+
     return () => {
       subscription.unsubscribe();
+      clearInterval(sessionCheckInterval);
     };
-  }, [initialize, setUser]);
+  }, [initialize, setUser, setSessionExpired]);
 
   return <>{children}</>;
 }
