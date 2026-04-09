@@ -4,7 +4,7 @@
 
 ## Build / run (모노레포 루트)
 
-1. `packages/api-server/.env.dev` + `packages/ai-server/.dev.env` 준비 (staging/prod는 각각 `.env.staging` / `.staging.env`, `.env.prod` / `.prod.env`).
+1. 모노레포 루트에 `.env.backend.dev` 준비 (staging: `.env.backend.staging`, prod: `.env.backend.prod`). 템플릿: `.env.backend.example`.
 2. 배포 스크립트:
 
 ```bash
@@ -35,13 +35,13 @@ Compose `environment`로 덮어쓰는 값: `MEILISEARCH_URL`, `AI_SERVER_GRPC_UR
 ## 수동 compose
 
 ```bash
-docker compose --env-file packages/api-server/.env.dev \
+docker compose --env-file .env.backend.dev \
   -f packages/api-server/docker/stack/docker-compose.yml up --build
 ```
 
 ## Meilisearch 키
 
-`deploy-backend.sh`는 API env를 `--env-file`로 넘겨 `${MEILISEARCH_MASTER_KEY}` 보간에 사용합니다. prod는 `packages/api-server/.env.prod`에 키가 있어야 합니다.
+`deploy-backend.sh`는 통합 env를 `--env-file`로 넘겨 `${MEILISEARCH_MASTER_KEY}` 보간에 사용합니다. prod는 `.env.backend.prod`에 키가 있어야 합니다.
 
 ## 환경 변수 이름
 

@@ -11,13 +11,13 @@
 # 액션: up | down | build | pull | ps | logs | restart | config
 # 기본 액션: up -d
 #
-# 필수 env 파일:
-#   dev:     packages/api-server/.env.dev      + packages/ai-server/.dev.env
-#   staging: packages/api-server/.env.staging  + packages/ai-server/.staging.env
-#   prod:    packages/api-server/.env.prod     + packages/ai-server/.prod.env
+# 필수 env 파일 (모노레포 루트):
+#   dev:     .env.backend.dev
+#   staging: .env.backend.staging
+#   prod:    .env.backend.prod
 #
-# Meilisearch: compose의 ${MEILISEARCH_MASTER_KEY}는 API env 파일로 보간됨 (--env-file).
-#   prod는 .env.prod에 MEILISEARCH_MASTER_KEY 필수(:?).
+# Meilisearch: compose의 ${MEILISEARCH_MASTER_KEY}는 env 파일로 보간됨 (--env-file).
+#   prod는 .env.backend.prod에 MEILISEARCH_MASTER_KEY 필수(:?).
 
 set -euo pipefail
 
@@ -44,18 +44,15 @@ EXTRA=("$@")
 case "$ENV" in
   dev)
     COMPOSE="$STACK/docker-compose.yml"
-    API_ENV="$ROOT/packages/api-server/.env.dev"
-    AI_ENV="$ROOT/packages/ai-server/.dev.env"
+    ENV_FILE="$ROOT/.env.backend.dev"
     ;;
   staging)
     COMPOSE="$STACK/docker-compose.staging.yml"
-    API_ENV="$ROOT/packages/api-server/.env.staging"
-    AI_ENV="$ROOT/packages/ai-server/.staging.env"
+    ENV_FILE="$ROOT/.env.backend.staging"
     ;;
   prod)
     COMPOSE="$STACK/docker-compose.prod.yml"
-    API_ENV="$ROOT/packages/api-server/.env.prod"
-    AI_ENV="$ROOT/packages/ai-server/.prod.env"
+    ENV_FILE="$ROOT/.env.backend.prod"
     ;;
   *)
     usage
@@ -63,16 +60,8 @@ case "$ENV" in
 esac
 
 require_env_files() {
-  local missing=0
-  if [[ ! -f "$API_ENV" ]]; then
-    echo "Missing: $API_ENV (copy from packages/api-server/.env.dev.example or sibling)" >&2
-    missing=1
-  fi
-  if [[ ! -f "$AI_ENV" ]]; then
-    echo "Missing: $AI_ENV (copy from packages/ai-server/.dev.env.example or sibling)" >&2
-    missing=1
-  fi
-  if [[ "$missing" -ne 0 ]]; then
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Missing: $ENV_FILE (copy from .env.backend.example)" >&2
     exit 1
   fi
 }
@@ -81,8 +70,8 @@ compose() {
   # --env-file: ${MEILISEARCH_MASTER_KEY} 등 compose 파일 내 보간용 (컨테이너 전체에 노출되지 않음)
   # set -u + 빈 EXTRA[@]는 일부 bash(예: macOS 3.2)에서 실패하므로 배열로 합쳐서 실행
   local -a cmd
-  if [[ -f "$API_ENV" ]]; then
-    cmd=(docker compose --env-file "$API_ENV" -f "$COMPOSE" "$@")
+  if [[ -f "$ENV_FILE" ]]; then
+    cmd=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE" "$@")
   else
     cmd=(docker compose -f "$COMPOSE" "$@")
   fi
