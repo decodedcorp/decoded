@@ -45,7 +45,15 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
   const resetRequestFlow = useRequestStore((s) => s.resetRequestFlow);
   const startDetection = useRequestStore((s) => s.startDetection);
   const selectSpot = useRequestStore((s) => s.selectSpot);
+  const addSpot = useRequestStore((s) => s.addSpot);
   const setStep = useRequestStore((s) => s.setStep);
+
+  const handleImageClick = useCallback(
+    (x: number, y: number) => {
+      addSpot(x, y);
+    },
+    [addSpot]
+  );
 
   const { images, isMaxImages, handleFilesSelected, removeImage, retryUpload } =
     useImageUpload();
@@ -210,6 +218,7 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
                       isRevealing={isRevealing}
                       selectedSpotId={selectedSpotId}
                       onSpotClick={(spot) => selectSpot(spot.id)}
+                      onImageClick={handleImageClick}
                     />
                   </div>
 
