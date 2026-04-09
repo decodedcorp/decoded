@@ -218,7 +218,13 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
                       isDetecting={isDetecting}
                       isRevealing={isRevealing}
                       selectedSpotId={selectedSpotId}
-                      onSpotClick={(spot) => selectSpot(spot.id)}
+                      onSpotClick={(spot) => {
+                        if (selectedSpotId === spot.id) {
+                          removeSpot(spot.id);
+                        } else {
+                          selectSpot(spot.id);
+                        }
+                      }}
                       onImageClick={handleImageClick}
                     />
                   </div>
