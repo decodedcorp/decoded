@@ -14,6 +14,7 @@ import {
   selectProfile,
   selectLogout,
 } from "@/lib/stores/authStore";
+import { RequestModal } from "@/lib/components/request/RequestModal";
 
 const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
   ssr: false,
@@ -23,7 +24,6 @@ const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
-  { href: "/request/upload", label: "Upload" },
 ] as const;
 
 interface SmartNavProps {
@@ -51,6 +51,7 @@ export function SmartNav({ className }: SmartNavProps) {
   const profile = useAuthStore(selectProfile);
   const logout = useAuthStore(selectLogout);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -122,6 +123,7 @@ export function SmartNav({ className }: SmartNavProps) {
     : "bg-[#050505] border-b border-white/5";
 
   return (
+    <>
     <header
       ref={navRef}
       className={[
@@ -169,6 +171,17 @@ export function SmartNav({ className }: SmartNavProps) {
           );
         })}
 
+        {/* Upload — opens modal without URL change */}
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className={[
+            "text-xs tracking-[0.2em] uppercase transition-colors",
+            isUploadModalOpen ? "text-white" : "text-white/60 hover:text-white",
+          ].join(" ")}
+        >
+          Upload
+        </button>
+
         {/* Auth: Login / Profile Dropdown */}
         {isLoggedIn ? (
           <div ref={profileRef} className="relative">
@@ -211,13 +224,15 @@ export function SmartNav({ className }: SmartNavProps) {
                   >
                     프로필 보기
                   </Link>
-                  <Link
-                    href="/request/upload"
-                    className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    onClick={() => setIsProfileOpen(false)}
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsUploadModalOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                   >
                     업로드
-                  </Link>
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
@@ -238,5 +253,12 @@ export function SmartNav({ className }: SmartNavProps) {
         )}
       </div>
     </header>
+
+      {/* Upload Modal — rendered outside header to avoid z-index issues */}
+      <RequestModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
+    </>
   );
 }
