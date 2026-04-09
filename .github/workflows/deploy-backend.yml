@@ -62,7 +62,7 @@ jobs:
       - name: Health check — ai
         run: |
           for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:10000/health; then
+            if docker exec decoded-backend-ai-prod curl -sf http://127.0.0.1:10000/health; then
               echo ""
               echo "ai healthy"
               exit 0
