@@ -21,8 +21,51 @@ jobs:
       id-token: write
     steps:
       - uses: anthropics/claude-code-action@v1
+        id: claude-review
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: |
             Review this PR. Focus on bugs, security issues, and performance problems.
             Write your review as PR comments in Korean.
+
+      - name: Notify Telegram on review completion
+        if: always() && env.TELEGRAM_BOT_TOKEN != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -eo pipefail
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "Telegram secrets not set, skipping notification"
+            exit 0
+          fi
+
+          PR_NUM="${{ github.event.pull_request.number || github.event.issue.number }}"
+          PR_TITLE="${{ github.event.pull_request.title || github.event.issue.title }}"
+          STATUS="${{ job.status }}"
+          REPO="${{ github.repository }}"
+          URL="${{ github.server_url }}/${REPO}/pull/${PR_NUM}"
+
+          if [ "$STATUS" = "success" ]; then
+            EMOJI="✅"
+          else
+            EMOJI="❌"
+          fi
+
+          cat <<EOF > /tmp/tg-message.txt
+          ${EMOJI} [decoded] Claude Code Review
+          PR #${PR_NUM}: ${PR_TITLE}
+          status: ${STATUS}
+          open: ${URL}
+          EOF
+
+          sed -i 's/^[[:space:]]*//' /tmp/tg-message.txt
+
+          PAYLOAD=$(jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --rawfile text /tmp/tg-message.txt \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end)}')
+
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" | jq .

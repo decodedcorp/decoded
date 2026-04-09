@@ -10,6 +10,7 @@ on:
     types: [opened]
   issues:
     types: [opened]
+  deployment_status:
 
 permissions:
   contents: read
@@ -53,9 +54,8 @@ jobs:
               MSG=$(jq -r '.head_commit.message // empty' "$GITHUB_EVENT_PATH" | head -1 | head -c 300)
               COMMIT_URL="${SERVER}/${REPO}/commit/${SHA}"
               cat <<EOF > /tmp/tg-message.txt
-          [decoded] Push
+          [decoded] Push → ${BRANCH}
           repo: ${REPO}
-          branch: ${BRANCH}
           by: ${ACTOR}
           commit: ${SHORT} — ${MSG}
           open: ${COMMIT_URL}
@@ -88,6 +88,33 @@ jobs:
           title: ${TITLE}
           by: ${AUTHOR}
           open: ${URL}
+          EOF
+              ;;
+
+            deployment_status)
+              STATE=$(jq -r '.deployment_status.state' "$GITHUB_EVENT_PATH")
+              ENV_NAME=$(jq -r '.deployment_status.environment // "unknown"' "$GITHUB_EVENT_PATH")
+              TARGET_URL=$(jq -r '.deployment_status.target_url // ""' "$GITHUB_EVENT_PATH")
+              DEPLOY_REF=$(jq -r '.deployment.ref // ""' "$GITHUB_EVENT_PATH")
+
+              # Only notify on success or failure, skip pending
+              if [ "$STATE" != "success" ] && [ "$STATE" != "failure" ] && [ "$STATE" != "error" ]; then
+                echo "Skipping deployment_status state: ${STATE}"
+                exit 0
+              fi
+
+              if [ "$STATE" = "success" ]; then
+                EMOJI="🚀"
+              else
+                EMOJI="💥"
+              fi
+
+              cat <<EOF > /tmp/tg-message.txt
+          ${EMOJI} [decoded] Deploy ${STATE}
+          env: ${ENV_NAME}
+          ref: ${DEPLOY_REF}
+          by: ${ACTOR}
+          url: ${TARGET_URL}
           EOF
               ;;
 
