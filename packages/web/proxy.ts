@@ -42,10 +42,13 @@ export async function proxy(req: NextRequest) {
 
   // Admin: require session + admin role — redirect to login on failure
   if (!session) {
+    console.log("[proxy] /admin - no session, redirecting to login");
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
+  console.log("[proxy] /admin - session found:", session.user.email);
   const isAdmin = await checkIsAdmin(supabase, session.user.id);
+  console.log("[proxy] /admin - isAdmin:", isAdmin);
 
   if (!isAdmin) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
