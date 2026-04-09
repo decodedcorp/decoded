@@ -19,9 +19,9 @@ export function AdminPostTableSkeleton() {
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
             {["", "Title / Artist", "User", "Status", "Views", "Spots", "Date", ""].map(
-              (h) => (
+              (h, i) => (
                 <th
-                  key={h || "spacer"}
+                  key={h || `spacer-${i}`}
                   className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                 >
                   {h}

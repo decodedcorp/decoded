@@ -9,6 +9,7 @@ import {
 } from "@/lib/components/admin/pipeline/PipelineTable";
 import { PipelineStatusFilter } from "@/lib/components/admin/pipeline/PipelineStatusFilter";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 import type { PipelineStatus } from "@/lib/api/admin/pipeline";
 
 // ─── Inner component (needs Suspense boundary for useSearchParams) ────────────
@@ -50,7 +51,6 @@ function PipelineLogsContent() {
 
   const handleStatusChange = useCallback(
     (status: PipelineStatus | undefined) => {
-      // Reset to page 1 when changing filter; collapse any expanded row
       setExpandedId(null);
       updateUrl({ status, page: "1" });
     },
@@ -66,7 +66,6 @@ function PipelineLogsContent() {
   );
 
   const handleSelectPipeline = useCallback((id: string) => {
-    // Toggle expansion: clicking an already-expanded row collapses it
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
@@ -75,6 +74,11 @@ function PipelineLogsContent() {
   const totalPages = pipelinesQuery.data
     ? Math.ceil(pipelinesQuery.data.total / pipelinesQuery.data.pageSize)
     : 0;
+
+  const isEmpty =
+    !pipelinesQuery.isLoading &&
+    pipelinesQuery.data?.data.length === 0 &&
+    !currentStatus;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -90,33 +94,59 @@ function PipelineLogsContent() {
         </p>
       </div>
 
-      {/* Status filter */}
-      <PipelineStatusFilter
-        value={currentStatus}
-        onChange={handleStatusChange}
-      />
-
-      {/* Table with skeleton fallback */}
-      {pipelinesQuery.isLoading || pipelinesQuery.isError ? (
-        <PipelineTableSkeleton />
-      ) : pipelinesQuery.data ? (
+      {isEmpty ? (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
+                />
+              </svg>
+            }
+            title="No pipeline executions"
+            description="Pipeline logs will appear here when images are processed through the AI detection pipeline."
+          />
+        </div>
+      ) : (
         <>
-          <PipelineTable
-            data={pipelinesQuery.data.data}
-            onSelectPipeline={handleSelectPipeline}
-            expandedId={expandedId}
+          {/* Status filter */}
+          <PipelineStatusFilter
+            value={currentStatus}
+            onChange={handleStatusChange}
           />
 
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+          {/* Table with skeleton fallback */}
+          {pipelinesQuery.isLoading || pipelinesQuery.isError ? (
+            <PipelineTableSkeleton />
+          ) : pipelinesQuery.data ? (
+            <>
+              <PipelineTable
+                data={pipelinesQuery.data.data}
+                onSelectPipeline={handleSelectPipeline}
+                expandedId={expandedId}
+              />
+
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </>
+          ) : (
+            <PipelineTableSkeleton />
           )}
         </>
-      ) : (
-        <PipelineTableSkeleton />
       )}
     </div>
   );
@@ -124,13 +154,6 @@ function PipelineLogsContent() {
 
 // ─── Page export ──────────────────────────────────────────────────────────────
 
-/**
- * Pipeline Logs page — lists all AI pipeline executions with status filtering,
- * URL-synced pagination, and expandable step-by-step accordion rows.
- *
- * Satisfies: PIPE-01 (list), PIPE-02 (step detail), PIPE-03 (error filter + retry)
- * URL params: ?page=N&status=completed|running|failed
- */
 export default function PipelineLogsPage() {
   return (
     <Suspense fallback={<PipelineTableSkeleton />}>
