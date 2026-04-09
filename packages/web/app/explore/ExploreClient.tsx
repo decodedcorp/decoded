@@ -374,21 +374,48 @@ export function ExploreClient({
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty state with search suggestions */}
             {!isError && !isLoading && items.length === 0 && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-                  <div className="mb-4 text-4xl">📷</div>
+                <div className="flex flex-col items-center justify-center px-4 py-12 text-center max-w-md">
+                  <div className="mb-4 text-4xl">
+                    {debouncedQuery.trim().length > 0 ? "🔍" : "📷"}
+                  </div>
                   <h2 className="mb-2 text-xl font-semibold text-foreground">
                     {debouncedQuery.trim().length > 0
-                      ? "No posts found"
+                      ? `'${debouncedQuery}'에 대한 결과가 없습니다`
                       : "No posts found yet."}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-6">
                     {debouncedQuery.trim().length > 0
-                      ? "Try adjusting your search query."
+                      ? "검색어를 변경하거나 아래 추천 검색어를 시도해보세요."
                       : "Check back later."}
                   </p>
+                  {debouncedQuery.trim().length > 0 && (
+                    <>
+                      <div className="flex flex-wrap justify-center gap-2 mb-4">
+                        {["BLACKPINK", "NewJeans", "Lisa", "Jennie", "Minji", "Hanni"].map(
+                          (tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleSuggestionSelect(tag)}
+                              className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:border-primary/30"
+                            >
+                              {tag}
+                            </button>
+                          )
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClear}
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      >
+                        검색어 지우기
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
