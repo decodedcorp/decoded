@@ -354,4 +354,61 @@ mod mock_db_tests {
             service::delete_comment(&db, fixtures::test_uuid(4), fixtures::test_uuid(11)).await;
         assert!(matches!(result, Err(crate::AppError::Forbidden(_))));
     }
+
+    #[tokio::test]
+    async fn update_comment_success() {
+        use sea_orm::MockExecResult;
+        let mut updated = fixtures::comment_model();
+        updated.content = "updated".to_string();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::comment_model()]])
+            .append_query_results([[updated.clone()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result = service::update_comment(
+            &db,
+            fixtures::test_uuid(4),
+            fixtures::test_uuid(10),
+            "updated".to_string(),
+        )
+        .await;
+        assert!(result.is_ok(), "unexpected: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn delete_comment_success() {
+        use sea_orm::MockExecResult;
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::comment_model()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result =
+            service::delete_comment(&db, fixtures::test_uuid(4), fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn list_comments_with_tree() {
+        let parent = fixtures::comment_model();
+        let mut reply = fixtures::comment_model();
+        reply.id = fixtures::test_uuid(5);
+        reply.parent_id = Some(fixtures::test_uuid(4));
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([vec![parent.clone(), reply.clone()]])
+            .append_query_results([[fixtures::user_model()]])
+            .into_connection();
+        let result = service::list_comments(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok(), "unexpected: {:?}", result.err());
+        let comments = result.unwrap();
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].replies.len(), 1);
+    }
 }

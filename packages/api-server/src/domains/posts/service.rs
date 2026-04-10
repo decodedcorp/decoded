@@ -2394,6 +2394,108 @@ mod tests {
         assert!(top.is_adopted);
     }
 
+    #[test]
+    fn select_top_solution_includes_brand_logo_url_when_mapped() {
+        let sid = Uuid::new_v4();
+        let brand_id = Uuid::new_v4();
+        let mut sol = mk_solution(sid, false, false, 5, 0);
+        sol.brand_id = Some(brand_id);
+        let mut brands = std::collections::HashMap::new();
+        brands.insert(brand_id, "https://logo.example.com/brand.png".to_string());
+        let top = select_top_solution(&[sol], &brands).expect("some");
+        assert_eq!(
+            top.brand_logo_url.as_deref(),
+            Some("https://logo.example.com/brand.png")
+        );
+    }
+
+    #[test]
+    fn select_top_solution_brand_logo_none_when_not_mapped() {
+        let sid = Uuid::new_v4();
+        let mut sol = mk_solution(sid, false, false, 5, 0);
+        sol.brand_id = Some(Uuid::new_v4());
+        let empty_brands = std::collections::HashMap::new();
+        let top = select_top_solution(&[sol], &empty_brands).expect("some");
+        assert!(top.brand_logo_url.is_none());
+    }
+
+    #[test]
+    fn select_top_solution_brand_logo_none_when_no_brand_id() {
+        let sid = Uuid::new_v4();
+        let sol = mk_solution(sid, false, false, 5, 0);
+        let mut brands = std::collections::HashMap::new();
+        brands.insert(Uuid::new_v4(), "https://logo.example.com/x.png".to_string());
+        let top = select_top_solution(&[sol], &brands).expect("some");
+        assert!(top.brand_logo_url.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_both_none_ids() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist_img, group_img) = load_entity_profile_images(&db, None, None).await;
+        assert!(artist_img.is_none());
+        assert!(group_img.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_artist_found() {
+        use crate::entities::warehouse_artists;
+        let t = ts();
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[warehouse_artists::Model {
+                id: Uuid::nil(),
+                name_ko: Some("카리나".into()),
+                name_en: Some("Karina".into()),
+                profile_image_url: Some("https://img.example.com/karina.jpg".into()),
+                primary_instagram_account_id: None,
+                metadata: None,
+                created_at: t,
+                updated_at: t,
+            }]])
+            .into_connection();
+        let (artist_img, group_img) =
+            load_entity_profile_images(&db, Some(Uuid::nil()), None).await;
+        assert_eq!(
+            artist_img.as_deref(),
+            Some("https://img.example.com/karina.jpg")
+        );
+        assert!(group_img.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_group_found() {
+        use crate::entities::warehouse_groups;
+        let t = ts();
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[warehouse_groups::Model {
+                id: Uuid::nil(),
+                name_ko: Some("에스파".into()),
+                name_en: Some("aespa".into()),
+                profile_image_url: Some("https://img.example.com/aespa.jpg".into()),
+                primary_instagram_account_id: None,
+                metadata: None,
+                created_at: t,
+                updated_at: t,
+            }]])
+            .into_connection();
+        let (artist_img, group_img) =
+            load_entity_profile_images(&db, None, Some(Uuid::nil())).await;
+        assert!(artist_img.is_none());
+        assert_eq!(
+            group_img.as_deref(),
+            Some("https://img.example.com/aespa.jpg")
+        );
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_artist_not_found() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .into_connection();
+        let (artist_img, _) = load_entity_profile_images(&db, Some(Uuid::new_v4()), None).await;
+        assert!(artist_img.is_none());
+    }
+
     // ── build_spots_response additional tests ──
 
     #[test]
@@ -2479,6 +2581,33 @@ mod tests {
         assert_eq!(result[1].solution_count, 1);
     }
 
+    #[test]
+    fn build_spots_response_propagates_brand_logo_url() {
+        use crate::tests::fixtures;
+
+        let brand_id = Uuid::new_v4();
+        let mut sol = fixtures::solution_model();
+        sol.brand_id = Some(brand_id);
+
+        let mut brand_logos = std::collections::HashMap::new();
+        brand_logos.insert(brand_id, "https://logo.example.com/b.png".to_string());
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![sol],
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+            brand_logos,
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 1);
+        let top = result[0].top_solution.as_ref().expect("top solution");
+        assert_eq!(
+            top.brand_logo_url.as_deref(),
+            Some("https://logo.example.com/b.png")
+        );
+    }
+
     // ── admin_update_post_status tests ──
 
     #[tokio::test]
@@ -2553,6 +2682,92 @@ mod tests {
     }
 
     // ── build_media_source_from_post additional test ──
+
+    // ── load_post_related_data tests ──
+
+    #[tokio::test]
+    async fn load_post_related_data_empty_spots_returns_early() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert!(data.spots.is_empty());
+        assert!(data.solutions.is_empty());
+        assert!(data.subcategories.is_empty());
+        assert!(data.categories.is_empty());
+        assert!(data.brand_logos.is_empty());
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_with_spots_no_subcategories() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut spot = fixtures::spot_model();
+        spot.subcategory_id = None;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[spot.clone()]]) // spots query
+            .append_query_results([Vec::<crate::entities::solutions::Model>::new()]) // solutions query
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert_eq!(data.spots.len(), 1);
+        assert!(data.solutions.is_empty());
+        assert!(data.subcategories.is_empty());
+        assert!(data.categories.is_empty());
+        assert!(data.brand_logos.is_empty());
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_with_spots_solutions_and_brands() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let spot = fixtures::spot_model();
+        let mut sol = fixtures::solution_model();
+        let brand_id = Uuid::new_v4();
+        sol.brand_id = Some(brand_id);
+
+        let wb = crate::entities::warehouse_brands::Model {
+            id: brand_id,
+            name_ko: Some("나이키".into()),
+            name_en: Some("Nike".into()),
+            logo_image_url: Some("https://logo.test/nike.png".into()),
+            primary_instagram_account_id: None,
+            metadata: None,
+            created_at: ts(),
+            updated_at: ts(),
+        };
+
+        let subcat = fixtures::subcategory_model();
+        let cat = fixtures::category_model();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[spot.clone()]])
+            .append_query_results([[sol.clone()]])
+            .append_query_results([[subcat.clone()]])
+            .append_query_results([[cat.clone()]])
+            .append_query_results([[wb]])
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert_eq!(data.spots.len(), 1);
+        assert_eq!(data.solutions.len(), 1);
+        assert_eq!(data.subcategories.len(), 1);
+        assert_eq!(data.categories.len(), 1);
+        assert_eq!(
+            data.brand_logos.get(&brand_id).map(String::as_str),
+            Some("https://logo.test/nike.png")
+        );
+    }
 
     // ── get_post_detail tests ──
 

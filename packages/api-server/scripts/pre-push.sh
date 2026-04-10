@@ -58,10 +58,9 @@ if ! command -v cargo-tarpaulin >/dev/null 2>&1; then
 fi
 # SeaORM 엔티티 파일은 생성 코드 위주라 단위 커버리지 분모에서 제외
 # 필요 시: TARPAULIN_FAIL_UNDER=60 ./scripts/pre-push.sh (임시 완화)
-: "${TARPAULIN_FAIL_UNDER:=64}"
+: "${TARPAULIN_FAIL_UNDER:=65}"
 cargo tarpaulin --lib \
   --exclude-files 'src/entities/*' \
-  --exclude-files 'src/entities/warehouse_*' \
   --fail-under "${TARPAULIN_FAIL_UNDER}" \
   --out Stdout \
   -- --skip config::tests

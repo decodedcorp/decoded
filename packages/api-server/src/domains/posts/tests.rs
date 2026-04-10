@@ -115,6 +115,38 @@ mod tests {
         assert_eq!(detail.user_has_liked, Some(true));
         assert_eq!(detail.user_has_saved, Some(false));
         assert!(detail.spots.is_empty());
+        assert!(
+            detail.artist_profile_image_url.is_none(),
+            "from_post_model sets profile images to None by default"
+        );
+        assert!(detail.group_profile_image_url.is_none());
+    }
+
+    #[test]
+    fn post_detail_response_profile_images_can_be_set_after_construction() {
+        let mut detail = PostDetailResponse::from_post_model(
+            post_model(),
+            user_model(),
+            MediaSourceDto {
+                media_type: "mv".to_string(),
+                description: None,
+            },
+            None,
+            0,
+            0,
+            None,
+            None,
+        );
+        detail.artist_profile_image_url = Some("https://img/artist.jpg".into());
+        detail.group_profile_image_url = Some("https://img/group.jpg".into());
+        assert_eq!(
+            detail.artist_profile_image_url.as_deref(),
+            Some("https://img/artist.jpg")
+        );
+        assert_eq!(
+            detail.group_profile_image_url.as_deref(),
+            Some("https://img/group.jpg")
+        );
     }
 
     #[test]

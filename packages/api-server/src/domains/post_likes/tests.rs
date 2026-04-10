@@ -56,6 +56,38 @@ mod mock_db_tests {
     }
 
     #[tokio::test]
+    async fn create_like_success_inserts() {
+        use sea_orm::MockExecResult;
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([Vec::<crate::entities::post_likes::Model>::new()])
+            .append_query_results([[like_model()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result =
+            service::create_like(&db, fixtures::test_uuid(1), fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn delete_like_success_deletes() {
+        use sea_orm::MockExecResult;
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[like_model()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result =
+            service::delete_like(&db, fixtures::test_uuid(1), fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
     async fn delete_like_not_found() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([Vec::<crate::entities::post_likes::Model>::new()])
