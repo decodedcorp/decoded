@@ -91,7 +91,7 @@ pub async fn create_badge(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Json(dto): Json<CreateBadgeDto>,
 ) -> AppResult<Json<BadgeResponse>> {
-    let badge = service::admin_create_badge(&state.db, dto).await?;
+    let badge = service::admin_create_badge(state.db.as_ref(), dto).await?;
     Ok(Json(badge))
 }
 
@@ -120,7 +120,7 @@ pub async fn update_badge(
     Path(badge_id): Path<Uuid>,
     Json(dto): Json<UpdateBadgeDto>,
 ) -> AppResult<Json<BadgeResponse>> {
-    let badge = service::admin_update_badge(&state.db, badge_id, dto).await?;
+    let badge = service::admin_update_badge(state.db.as_ref(), badge_id, dto).await?;
     Ok(Json(badge))
 }
 
@@ -148,7 +148,7 @@ pub async fn delete_badge(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Path(badge_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
-    service::admin_delete_badge(&state.db, badge_id).await?;
+    service::admin_delete_badge(state.db.as_ref(), badge_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -176,7 +176,7 @@ pub async fn list_badges(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Query(pagination): Query<Pagination>,
 ) -> AppResult<Json<PaginatedResponse<BadgeResponse>>> {
-    let badges = service::admin_list_badges(&state.db, pagination).await?;
+    let badges = service::admin_list_badges(state.db.as_ref(), pagination).await?;
     Ok(Json(badges))
 }
 
@@ -369,5 +369,218 @@ mod service {
                 total_pages,
             },
         })
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::disallowed_methods)]
+    mod tests {
+        use super::*;
+        use crate::tests::fixtures::{badge_model, test_uuid};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        #[tokio::test]
+        async fn create_badge_success() {
+            let badge = badge_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![badge.clone()]])
+                .into_connection();
+
+            let dto = CreateBadgeDto {
+                badge_type: BadgeType::Achievement,
+                name: "Test Badge".to_string(),
+                description: Some("desc".to_string()),
+                icon_url: None,
+                criteria: BadgeCriteria {
+                    criteria_type: "count".to_string(),
+                    target: None,
+                    threshold: 1,
+                },
+                rarity: BadgeRarity::Common,
+            };
+
+            let result = admin_create_badge(&db, dto).await;
+            assert!(result.is_ok());
+            let resp = result.unwrap();
+            assert_eq!(resp.name, "First Post");
+        }
+
+        #[tokio::test]
+        async fn update_badge_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<entities::badges::Model>::new()])
+                .into_connection();
+
+            let dto = UpdateBadgeDto {
+                name: Some("New".to_string()),
+                description: None,
+                icon_url: None,
+                criteria: None,
+                rarity: None,
+            };
+
+            let result = admin_update_badge(&db, test_uuid(99), dto).await;
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn update_badge_success() {
+            let badge = badge_model();
+            let mut updated = badge.clone();
+            updated.name = "Updated Name".to_string();
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![badge]])
+                .append_query_results([vec![updated]])
+                .into_connection();
+
+            let dto = UpdateBadgeDto {
+                name: Some("Updated Name".to_string()),
+                description: None,
+                icon_url: None,
+                criteria: None,
+                rarity: Some(BadgeRarity::Rare),
+            };
+
+            let result = admin_update_badge(&db, test_uuid(60), dto).await;
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().name, "Updated Name");
+        }
+
+        #[tokio::test]
+        async fn delete_badge_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<entities::badges::Model>::new()])
+                .into_connection();
+
+            let result = admin_delete_badge(&db, test_uuid(99)).await;
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn update_badge_with_all_fields() {
+            let badge = badge_model();
+            let updated = badge.clone();
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![badge]])
+                .append_query_results([vec![updated]])
+                .into_connection();
+
+            let dto = UpdateBadgeDto {
+                name: Some("X".to_string()),
+                description: Some("Y".to_string()),
+                icon_url: Some("https://example.com/icon.png".to_string()),
+                criteria: Some(BadgeCriteria {
+                    criteria_type: "count".to_string(),
+                    target: Some("fashion".to_string()),
+                    threshold: 10,
+                }),
+                rarity: Some(BadgeRarity::Epic),
+            };
+
+            let result = admin_update_badge(&db, test_uuid(60), dto).await;
+            assert!(result.is_ok());
+        }
+
+        #[tokio::test]
+        async fn delete_badge_success_no_users() {
+            let badge = badge_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![badge]]) // find_by_id
+                .append_query_results([[crate::tests::fixtures::count_row(0)]]) // user_badge_count
+                .append_exec_results([sea_orm::MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                }])
+                .into_connection();
+
+            let result = admin_delete_badge(&db, test_uuid(60)).await;
+            assert!(result.is_ok());
+        }
+
+        #[tokio::test]
+        async fn delete_badge_rejected_when_user_earned() {
+            let badge = badge_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![badge]]) // find_by_id
+                .append_query_results([[crate::tests::fixtures::count_row(3)]]) // user_badge_count > 0
+                .into_connection();
+
+            let result = admin_delete_badge(&db, test_uuid(60)).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn list_badges_empty() {
+            use crate::utils::pagination::Pagination;
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([[crate::tests::fixtures::count_row(0)]]) // num_items
+                .append_query_results([[crate::tests::fixtures::count_row(0)]]) // num_pages
+                .append_query_results([Vec::<entities::badges::Model>::new()]) // fetch_page
+                .into_connection();
+
+            let result = admin_list_badges(&db, Pagination::new(1, 20)).await;
+            assert!(result.is_ok());
+            let resp = result.unwrap();
+            assert!(resp.data.is_empty());
+            assert_eq!(resp.pagination.total_items, 0);
+        }
+
+        #[tokio::test]
+        async fn list_badges_with_one_badge() {
+            use crate::utils::pagination::Pagination;
+            let badge = badge_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([[crate::tests::fixtures::count_row(1)]])
+                .append_query_results([[crate::tests::fixtures::count_row(1)]])
+                .append_query_results([vec![badge]])
+                .into_connection();
+
+            let result = admin_list_badges(&db, Pagination::new(1, 20)).await;
+            assert!(result.is_ok());
+            let resp = result.unwrap();
+            assert_eq!(resp.data.len(), 1);
+            assert_eq!(resp.data[0].name, "First Post");
+        }
+
+        #[tokio::test]
+        async fn create_badge_db_error() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_errors(vec![sea_orm::DbErr::Custom("down".into())])
+                .into_connection();
+
+            let dto = CreateBadgeDto {
+                badge_type: BadgeType::Achievement,
+                name: "X".to_string(),
+                description: None,
+                icon_url: None,
+                criteria: BadgeCriteria {
+                    criteria_type: "count".to_string(),
+                    target: None,
+                    threshold: 1,
+                },
+                rarity: BadgeRarity::Common,
+            };
+            let result = admin_create_badge(&db, dto).await;
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn create_badge_dto_roundtrip() {
+            let dto = CreateBadgeDto {
+                badge_type: BadgeType::Milestone,
+                name: "Milestone".to_string(),
+                description: None,
+                icon_url: None,
+                criteria: BadgeCriteria {
+                    criteria_type: "count".to_string(),
+                    target: None,
+                    threshold: 100,
+                },
+                rarity: BadgeRarity::Legendary,
+            };
+            let json = serde_json::to_string(&dto.criteria).unwrap();
+            assert!(json.contains("\"threshold\":100"));
+        }
     }
 }

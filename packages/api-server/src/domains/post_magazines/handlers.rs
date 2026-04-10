@@ -16,9 +16,12 @@ pub async fn generate(
     State(state): State<AppState>,
     Json(body): Json<GeneratePostMagazineRequest>,
 ) -> AppResult<Json<GeneratePostMagazineResponse>> {
-    let magazine_id =
-        service::generate_post_magazine(&state.db, state.decoded_ai_client.as_ref(), body.post_id)
-            .await?;
+    let magazine_id = service::generate_post_magazine(
+        state.db.as_ref(),
+        state.decoded_ai_client.as_ref(),
+        body.post_id,
+    )
+    .await?;
 
     Ok(Json(GeneratePostMagazineResponse {
         post_magazine_id: magazine_id,
@@ -30,7 +33,7 @@ pub async fn get_magazine(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<PostMagazineResponse>> {
-    let response = service::get_post_magazine(&state.db, id).await?;
+    let response = service::get_post_magazine(state.db.as_ref(), id).await?;
     Ok(Json(response))
 }
 

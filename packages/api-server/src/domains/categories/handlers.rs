@@ -21,7 +21,7 @@ use super::{dto::CategoryResponse, service};
 pub async fn get_categories(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<CategoryResponse>>> {
-    let categories = service::list_active_categories(&state.db).await?;
+    let categories = service::list_active_categories(state.db.as_ref()).await?;
     Ok(Json(categories))
 }
 

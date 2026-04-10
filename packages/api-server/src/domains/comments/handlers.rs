@@ -42,12 +42,18 @@ pub async fn create_comment(
 ) -> AppResult<impl IntoResponse> {
     dto.validate()?;
 
-    let comment =
-        service::create_comment(&state.db, post_id, user.id, dto.content, dto.parent_id).await?;
+    let comment = service::create_comment(
+        state.db.as_ref(),
+        post_id,
+        user.id,
+        dto.content,
+        dto.parent_id,
+    )
+    .await?;
 
     // 사용자 정보 포함한 응답 생성
     let user_info = crate::entities::users::Entity::find_by_id(user.id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or_else(|| crate::error::AppError::not_found("사용자를 찾을 수 없습니다"))?;
 
@@ -89,7 +95,7 @@ pub async fn list_comments(
     State(state): State<AppState>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    let comments = service::list_comments(&state.db, post_id).await?;
+    let comments = service::list_comments(state.db.as_ref(), post_id).await?;
 
     Ok(Json(comments))
 }
@@ -122,11 +128,12 @@ pub async fn update_comment(
 ) -> AppResult<impl IntoResponse> {
     dto.validate()?;
 
-    let comment = service::update_comment(&state.db, comment_id, user.id, dto.content).await?;
+    let comment =
+        service::update_comment(state.db.as_ref(), comment_id, user.id, dto.content).await?;
 
     // 사용자 정보 포함한 응답 생성
     let user_info = crate::entities::users::Entity::find_by_id(user.id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or_else(|| crate::error::AppError::not_found("사용자를 찾을 수 없습니다"))?;
 
@@ -174,7 +181,7 @@ pub async fn delete_comment(
     Extension(user): Extension<User>,
     Path(comment_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::delete_comment(&state.db, comment_id, user.id).await?;
+    service::delete_comment(state.db.as_ref(), comment_id, user.id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

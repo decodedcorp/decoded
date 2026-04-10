@@ -23,12 +23,12 @@ use uuid::Uuid;
 use crate::services::EmbeddingClient;
 
 pub struct BackendGrpcService {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
     embedding_client: Arc<dyn EmbeddingClient>,
 }
 
 impl BackendGrpcService {
-    pub fn new(db: DatabaseConnection, embedding_client: Arc<dyn EmbeddingClient>) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>, embedding_client: Arc<dyn EmbeddingClient>) -> Self {
         Self {
             db,
             embedding_client,
@@ -55,7 +55,7 @@ impl Metadata for BackendGrpcService {
 
         // 트랜잭션 시작
         let result = self
-            .db
+            .db.as_ref()
             .transaction::<_, (ProcessedBatchResponse, Vec<Uuid>), Status>(|txn| {
                 Box::pin(async move {
                     // 1. Idempotency 체크
@@ -308,7 +308,7 @@ impl Metadata for BackendGrpcService {
 // Helper methods
 impl BackendGrpcService {
     /// Idempotency 체크
-    async fn check_batch_processed<C>(txn: &C, batch_id: &str) -> Result<bool, Status>
+    pub(super) async fn check_batch_processed<C>(txn: &C, batch_id: &str) -> Result<bool, Status>
     where
         C: sea_orm::ConnectionTrait,
     {
@@ -320,7 +320,7 @@ impl BackendGrpcService {
     }
 
     /// Success 항목 처리 (모든 메타데이터 저장)
-    async fn process_success_item<C>(
+    pub(super) async fn process_success_item<C>(
         txn: &C,
         solution_map: &HashMap<Uuid, crate::entities::solutions::Model>,
         solution_id: Uuid,
@@ -428,7 +428,7 @@ impl BackendGrpcService {
     }
 
     /// Partial 항목 처리 (있는 필드만 업데이트)
-    async fn process_partial_item<C>(
+    pub(super) async fn process_partial_item<C>(
         txn: &C,
         solution_map: &HashMap<Uuid, crate::entities::solutions::Model>,
         solution_id: Uuid,
@@ -496,7 +496,7 @@ impl BackendGrpcService {
     }
 
     /// 실패 항목 저장 (재시도 큐)
-    async fn save_failed_item<C>(
+    pub(super) async fn save_failed_item<C>(
         txn: &C,
         item_id: &str,
         batch_id: &str,
@@ -534,7 +534,7 @@ impl BackendGrpcService {
 
     /// 배치 이력 저장
     #[allow(clippy::too_many_arguments)]
-    async fn save_batch_history<C>(
+    pub(super) async fn save_batch_history<C>(
         txn: &C,
         batch_id: &str,
         processing_timestamp: i64,

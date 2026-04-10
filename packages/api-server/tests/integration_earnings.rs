@@ -20,7 +20,7 @@ async fn create_test_user(state: &AppState, username: &str) -> entities::UsersMo
         is_admin: Set(false),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -40,7 +40,7 @@ async fn create_test_post(state: &AppState, user_id: Uuid) -> entities::PostsMod
         view_count: Set(0),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -50,7 +50,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
     // 카테고리 조회 (fashion 카테고리 사용)
     let category = entities::Categories::find()
         .filter(entities::categories::Column::Code.eq("fashion"))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -58,7 +58,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
     // 서브카테고리 조회 (해당 카테고리의 첫 번째 서브카테고리 사용)
     let subcategory = entities::Subcategories::find()
         .filter(entities::subcategories::Column::CategoryId.eq(category.id))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -73,7 +73,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
         status: Set("open".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -98,7 +98,7 @@ async fn create_test_solution(
         status: Set("active".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -115,7 +115,7 @@ async fn test_create_click_log() {
 
     // 클릭 로그 저장
     let result = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -139,7 +139,7 @@ async fn test_duplicate_click_prevention() {
 
     // 첫 번째 클릭 저장
     let result1 = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -151,7 +151,7 @@ async fn test_duplicate_click_prevention() {
 
     // 두 번째 클릭 (24시간 내 중복) - 조용히 무시되어야 함
     let result2 = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -175,7 +175,7 @@ async fn test_ip_rate_limiting() {
     // 1분당 최대 10회까지는 성공해야 함
     for i in 0..10 {
         let result = service::create_click_log(
-            &state.db,
+            state.db.as_ref(),
             Some(user.id),
             solution.id,
             "192.168.1.1".to_string(),
@@ -191,7 +191,7 @@ async fn test_ip_rate_limiting() {
 
     // 11번째 클릭은 Rate Limit에 걸려야 함
     let result = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "192.168.1.1".to_string(),
@@ -219,7 +219,7 @@ async fn test_user_agent_validation() {
 
     // 유효한 User Agent
     let result1 = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -231,7 +231,7 @@ async fn test_user_agent_validation() {
 
     // 유효하지 않은 User Agent (없음)
     let result2 = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -247,7 +247,7 @@ async fn test_user_agent_validation() {
 
     // 유효하지 않은 User Agent (일반적인 브라우저 패턴 없음)
     let result3 = service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         Some(user.id),
         solution.id,
         "127.0.0.1".to_string(),
@@ -276,7 +276,7 @@ async fn test_click_stats_aggregation() {
     // 여러 클릭 로그 생성
     for i in 0..5 {
         service::create_click_log(
-            &state.db,
+            state.db.as_ref(),
             Some(user1.id),
             solution.id,
             format!("127.0.0.{}", i + 1),
@@ -287,7 +287,7 @@ async fn test_click_stats_aggregation() {
         .unwrap();
 
         service::create_click_log(
-            &state.db,
+            state.db.as_ref(),
             Some(user2.id),
             solution.id,
             format!("127.0.0.{}", i + 1),
@@ -299,7 +299,7 @@ async fn test_click_stats_aggregation() {
     }
 
     // 통계 조회
-    let stats = service::get_click_stats_by_user(&state.db, user1.id)
+    let stats = service::get_click_stats_by_user(state.db.as_ref(), user1.id)
         .await
         .unwrap();
 

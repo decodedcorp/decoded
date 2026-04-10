@@ -13,7 +13,7 @@ use tracing::{error, info};
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting rank update batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
 
     // 모든 사용자 조회
     let users = entities::Users::find().all(db).await?;
@@ -100,5 +100,39 @@ mod tests {
         assert_eq!(calculate_rank(1000), "Expert");
         assert_eq!(calculate_rank(2000), "Expert");
         assert_eq!(calculate_rank(-1), "Member");
+    }
+
+    #[tokio::test]
+    async fn run_with_empty_users_succeeds() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+        use std::sync::Arc;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_skips_users_with_unchanged_rank() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+        use std::sync::Arc;
+
+        // user has 100 points → rank stays "Member" (but fixture is "user")
+        // Let's use a user with "Member" rank and 0 points (no update).
+        let mut user = fixtures::user_model();
+        user.rank = "Member".to_string();
+        user.total_points = 10;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![user]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
     }
 }

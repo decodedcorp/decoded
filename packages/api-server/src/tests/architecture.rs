@@ -538,13 +538,19 @@ fn migration_naming_convention() {
 
 #[test]
 fn migration_no_duplicate_sequence() {
+    // 기존 merge된 충돌 (이미 dev에 반영, 파일명 변경 불가 — seaql_migrations 레코드 보존)
+    const KNOWN_DUPLICATES: &[&str] = &["m20260402_000001_add"];
+
     let mig_dir = backend_root().join("migration/src");
     let mut keys: HashMap<String, Vec<String>> = HashMap::new();
     for stem in list_migration_stems(&mig_dir) {
         let key = stem.split('_').take(3).collect::<Vec<_>>().join("_");
         keys.entry(key).or_default().push(stem);
     }
-    let dups: Vec<_> = keys.into_iter().filter(|(_, v)| v.len() > 1).collect();
+    let dups: Vec<_> = keys
+        .into_iter()
+        .filter(|(k, v)| v.len() > 1 && !KNOWN_DUPLICATES.contains(&k.as_str()))
+        .collect();
     assert!(dups.is_empty(), "같은 날짜+순번 충돌: {:?}", dups);
 }
 

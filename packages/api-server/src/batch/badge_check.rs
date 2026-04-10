@@ -19,7 +19,7 @@ use uuid::Uuid;
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Starting badge check batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
 
     // 모든 사용자 조회
     let users = entities::Users::find().all(db).await?;
@@ -120,7 +120,7 @@ async fn check_badge_progress(
     user_id: Uuid,
     criteria: BadgeCriteria,
 ) -> Result<BadgeProgress, Box<dyn std::error::Error + Send + Sync>> {
-    let db = &state.db;
+    let db = state.db.as_ref();
     let current = match criteria.criteria_type.as_str() {
         "count" => {
             // 총 Solution 수
@@ -213,7 +213,7 @@ async fn count_solutions_by_artist(
     user_id: Uuid,
     artist_name: &str,
 ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-    let db = &state.db;
+    let db = state.db.as_ref();
     let solutions = entities::Solutions::find()
         .filter(entities::solutions::Column::UserId.eq(user_id))
         .filter(entities::solutions::Column::Status.eq("active"))
@@ -246,7 +246,7 @@ async fn count_solutions_by_group(
     user_id: Uuid,
     group_name: &str,
 ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-    let db = &state.db;
+    let db = state.db.as_ref();
     let solutions = entities::Solutions::find()
         .filter(entities::solutions::Column::UserId.eq(user_id))
         .filter(entities::solutions::Column::Status.eq("active"))
@@ -279,7 +279,7 @@ async fn count_solutions_by_category(
     user_id: Uuid,
     category_code: &str,
 ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-    let db = &state.db;
+    let db = state.db.as_ref();
     let category = entities::Categories::find()
         .filter(entities::categories::Column::Code.eq(category_code))
         .one(db)
@@ -376,5 +376,356 @@ mod tests {
     fn parse_criteria_rejects_missing_threshold() {
         let v = json!({ "type": "count" });
         assert!(parse_criteria(&v).is_err());
+    }
+
+    #[test]
+    fn parse_criteria_zero_threshold() {
+        let v = json!({ "type": "count", "threshold": 0 });
+        let c = parse_criteria(&v).unwrap();
+        assert_eq!(c.threshold, 0);
+    }
+
+    #[test]
+    fn parse_criteria_rejects_string_threshold() {
+        let v = json!({ "type": "count", "threshold": "five" });
+        assert!(parse_criteria(&v).is_err());
+    }
+
+    #[test]
+    fn parse_criteria_rejects_empty_object() {
+        let v = json!({});
+        assert!(parse_criteria(&v).is_err());
+    }
+
+    #[test]
+    fn parse_criteria_ignores_extra_fields() {
+        let v = json!({ "type": "verified", "threshold": 3, "extra": true });
+        let c = parse_criteria(&v).unwrap();
+        assert_eq!(c.criteria_type, "verified");
+        assert_eq!(c.threshold, 3);
+        assert_eq!(c.target, None);
+    }
+
+    #[test]
+    fn parse_criteria_negative_threshold() {
+        let v = json!({ "type": "count", "threshold": -1 });
+        let c = parse_criteria(&v).unwrap();
+        assert_eq!(c.threshold, -1);
+    }
+
+    #[test]
+    fn badge_progress_completed_when_current_meets_threshold() {
+        use crate::domains::badges::dto::BadgeProgress;
+        let p = BadgeProgress {
+            current: 5,
+            threshold: 5,
+            completed: 5 >= 5,
+        };
+        assert!(p.completed);
+    }
+
+    #[test]
+    fn badge_progress_not_completed_below_threshold() {
+        use crate::domains::badges::dto::BadgeProgress;
+        let p = BadgeProgress {
+            current: 4,
+            threshold: 5,
+            completed: 4 >= 5,
+        };
+        assert!(!p.completed);
+    }
+
+    #[test]
+    fn parse_criteria_all_known_types() {
+        for ty in [
+            "count",
+            "verified",
+            "adopted",
+            "artist",
+            "group",
+            "category",
+            "explorer_post",
+            "explorer_spot",
+            "shopper_solution",
+            "unknown_type",
+        ] {
+            let v = json!({ "type": ty, "threshold": 1 });
+            let c = parse_criteria(&v).unwrap();
+            assert_eq!(c.criteria_type, ty);
+        }
+    }
+
+    #[tokio::test]
+    async fn run_with_empty_users_and_badges_succeeds() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .append_query_results([Vec::<crate::entities::badges::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_count_completes_when_threshold_met() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(5)]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "count".to_string(),
+            target: None,
+            threshold: 5,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 5);
+        assert!(progress.completed);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_verified_below_threshold() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(2)]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "verified".to_string(),
+            target: None,
+            threshold: 10,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 2);
+        assert!(!progress.completed);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_adopted_zero() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(0)]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "adopted".to_string(),
+            target: None,
+            threshold: 1,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 0);
+        assert!(!progress.completed);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_artist_no_target_zero() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "artist".to_string(),
+            target: None,
+            threshold: 1,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 0);
+        assert!(!progress.completed);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_group_no_target_zero() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "group".to_string(),
+            target: None,
+            threshold: 1,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 0);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_category_no_target_zero() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "category".to_string(),
+            target: None,
+            threshold: 1,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 0);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_unknown_type_zero() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "this_does_not_exist".to_string(),
+            target: None,
+            threshold: 1,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 0);
+    }
+
+    #[tokio::test]
+    async fn check_badge_progress_shopper_solution_counts_clicks() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(7)]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+
+        let criteria = BadgeCriteria {
+            criteria_type: "shopper_solution".to_string(),
+            target: None,
+            threshold: 5,
+        };
+        let progress = check_badge_progress(state, fixtures::test_uuid(10), criteria)
+            .await
+            .expect("ok");
+        assert_eq!(progress.current, 7);
+        assert!(progress.completed);
+    }
+
+    #[tokio::test]
+    async fn count_solutions_by_artist_filters_correctly() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // 1) load solutions
+        // 2) per solution: spot, post (loop)
+        let mut post_match = fixtures::post_model();
+        post_match.artist_name = Some("BTS".to_string());
+        let mut post_other = fixtures::post_model();
+        post_other.artist_name = Some("BLACKPINK".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::solution_model(), {
+                let mut s2 = fixtures::solution_model();
+                s2.id = fixtures::test_uuid(31);
+                s2
+            }]])
+            // sol1: spot then post (BTS)
+            .append_query_results([vec![fixtures::spot_model()]])
+            .append_query_results([vec![post_match]])
+            // sol2: spot then post (BLACKPINK)
+            .append_query_results([vec![fixtures::spot_model()]])
+            .append_query_results([vec![post_other]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let count = count_solutions_by_artist(state, fixtures::test_uuid(10), "BTS")
+            .await
+            .expect("ok");
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn count_solutions_by_group_filters_correctly() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut post_match = fixtures::post_model();
+        post_match.group_name = Some("BTS".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::solution_model()]])
+            .append_query_results([vec![fixtures::spot_model()]])
+            .append_query_results([vec![post_match]])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let count = count_solutions_by_group(state, fixtures::test_uuid(10), "BTS")
+            .await
+            .expect("ok");
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn count_solutions_by_category_returns_zero_when_category_not_found() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::categories::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = count_solutions_by_category(state, fixtures::test_uuid(10), "fashion").await;
+        // Returns NotFound error wrapped in Box<dyn Error>
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn run_with_user_no_badges_succeeds() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // 1) Users::find().all → one user
+        // 2) Badges::find().all → empty
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::user_model()]])
+            .append_query_results([Vec::<crate::entities::badges::Model>::new()])
+            // user-loop: earned user_badges for that one user
+            .append_query_results([Vec::<crate::entities::user_badges::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_returns_err_on_db_failure() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_err());
     }
 }

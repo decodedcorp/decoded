@@ -5,6 +5,7 @@
 use meilisearch_sdk::client::Client;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::entities;
 
@@ -29,12 +30,12 @@ pub(crate) fn build_synonym_map_from_models(
 /// 동의어 관리자
 pub struct SynonymManager {
     client: Client,
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl SynonymManager {
     /// 새 SynonymManager 인스턴스 생성
-    pub fn new(client: Client, db: DatabaseConnection) -> Self {
+    pub fn new(client: Client, db: Arc<DatabaseConnection>) -> Self {
         Self { client, db }
     }
 
@@ -79,7 +80,7 @@ impl SynonymManager {
     async fn fetch_active_synonyms(&self) -> Result<Vec<entities::SynonymsModel>, SearchError> {
         entities::Synonyms::find()
             .filter(entities::synonyms::Column::IsActive.eq(true))
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(|e| SearchError::SynonymError(format!("Failed to fetch synonyms: {}", e)))
     }
@@ -92,7 +93,7 @@ impl SynonymManager {
         entities::Synonyms::find()
             .filter(entities::synonyms::Column::IsActive.eq(true))
             .filter(entities::synonyms::Column::Type.is_in(types))
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(|e| SearchError::SynonymError(format!("Failed to fetch synonyms: {}", e)))
     }
@@ -101,7 +102,7 @@ impl SynonymManager {
     pub async fn update_synonym(&self, synonym_id: uuid::Uuid) -> Result<(), SearchError> {
         // DB에서 동의어 조회
         let synonym = entities::Synonyms::find_by_id(synonym_id)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(|e| SearchError::SynonymError(format!("Failed to find synonym: {}", e)))?
             .ok_or_else(|| SearchError::SynonymError("Synonym not found".to_string()))?;
@@ -191,6 +192,32 @@ mod tests {
             result.get("dup").unwrap(),
             &vec!["dup".to_string(), "b".to_string()]
         );
+    }
+
+    #[test]
+    fn build_synonym_map_preserves_synonym_ordering_with_canonical_first() {
+        let synonyms = vec![sample_model("Jennie", vec!["제니", "JENNIE"])];
+        let result = build_synonym_map_from_models(synonyms);
+        let list = result.get("Jennie").unwrap();
+        assert_eq!(list[0], "Jennie");
+        assert_eq!(list[1], "제니");
+        assert_eq!(list[2], "JENNIE");
+    }
+
+    #[test]
+    fn build_synonym_map_with_unicode_canonical() {
+        let synonyms = vec![sample_model("제니", vec!["Jennie"])];
+        let result = build_synonym_map_from_models(synonyms);
+        assert!(result.contains_key("제니"));
+        assert_eq!(result.get("제니").unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn synonym_manager_new_constructs() {
+        // Ensure `SynonymManager::new` can be called with a dummy client+db.
+        let db = Arc::new(crate::tests::helpers::empty_mock_db());
+        let client = Client::new("http://localhost:7700", None::<String>).expect("client");
+        let _manager = SynonymManager::new(client, db);
     }
 
     #[test]

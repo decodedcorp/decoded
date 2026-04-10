@@ -19,7 +19,7 @@ pub async fn save_post(
     Extension(user): Extension<User>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    let saved = service::save_post(&state.db, post_id, user.id).await?;
+    let saved = service::save_post(state.db.as_ref(), post_id, user.id).await?;
 
     let response = SavedPostResponse {
         id: saved.id,
@@ -36,7 +36,7 @@ pub async fn unsave_post(
     Extension(user): Extension<User>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::unsave_post(&state.db, post_id, user.id).await?;
+    service::unsave_post(state.db.as_ref(), post_id, user.id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -47,7 +47,7 @@ pub async fn get_save_status(
     user: Option<Extension<User>>,
 ) -> AppResult<impl IntoResponse> {
     let user_has_saved = if let Some(Extension(u)) = user {
-        service::user_has_saved(&state.db, post_id, u.id).await?
+        service::user_has_saved(state.db.as_ref(), post_id, u.id).await?
     } else {
         false
     };

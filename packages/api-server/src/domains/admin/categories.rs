@@ -121,7 +121,7 @@ pub async fn create_category(
     Json(dto): Json<CreateCategoryDto>,
 ) -> AppResult<Json<CategoryResponse>> {
     let category =
-        crate::domains::categories::service::admin_create_category(&state.db, dto).await?;
+        crate::domains::categories::service::admin_create_category(state.db.as_ref(), dto).await?;
     Ok(Json(category))
 }
 
@@ -150,9 +150,12 @@ pub async fn update_category(
     Path(category_id): Path<Uuid>,
     Json(dto): Json<UpdateCategoryDto>,
 ) -> AppResult<Json<CategoryResponse>> {
-    let category =
-        crate::domains::categories::service::admin_update_category(&state.db, category_id, dto)
-            .await?;
+    let category = crate::domains::categories::service::admin_update_category(
+        state.db.as_ref(),
+        category_id,
+        dto,
+    )
+    .await?;
     Ok(Json(category))
 }
 
@@ -177,9 +180,11 @@ pub async fn update_category_order(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Json(dto): Json<CategoryOrderUpdate>,
 ) -> AppResult<Json<Vec<CategoryResponse>>> {
-    let categories =
-        crate::domains::categories::service::admin_update_category_order(&state.db, dto.orders)
-            .await?;
+    let categories = crate::domains::categories::service::admin_update_category_order(
+        state.db.as_ref(),
+        dto.orders,
+    )
+    .await?;
     Ok(Json(categories))
 }
 
@@ -209,7 +214,7 @@ pub async fn update_category_status(
     Json(dto): Json<CategoryStatusUpdate>,
 ) -> AppResult<Json<CategoryResponse>> {
     let category = crate::domains::categories::service::admin_update_category_status(
-        &state.db,
+        state.db.as_ref(),
         category_id,
         dto.is_active,
     )

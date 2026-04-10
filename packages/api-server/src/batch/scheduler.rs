@@ -118,3 +118,42 @@ pub async fn start_scheduler(state: Arc<AppState>) -> Result<(), Box<dyn std::er
 
     Ok(())
 }
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use tokio_cron_scheduler::Job;
+
+    /// Verify the cron expressions used in `start_scheduler` are valid.
+    /// This isolates the parsing logic without actually starting the scheduler
+    /// (which spawns async tasks that aren't safe to run in unit tests).
+    #[test]
+    fn cron_expressions_are_valid() {
+        let expressions = [
+            "0 0 0 * * 1",   // rank update (weekly)
+            "0 0 3 * * *",   // badge check (daily 03:00)
+            "0 0 * * * *",   // trending (hourly)
+            "0 0 2 * * *",   // click aggregation (daily 02:00)
+            "0 */5 * * * *", // retry (every 5 min)
+            "0 0 4 * * *",   // search reindex (daily 04:00)
+        ];
+        for expr in expressions {
+            let job = Job::new_async(expr, move |_uuid, _l| Box::pin(async move {}));
+            assert!(job.is_ok(), "cron expr `{}` failed to parse", expr);
+        }
+    }
+
+    #[test]
+    fn one_shot_job_construction_succeeds() {
+        let job = Job::new_one_shot_async(std::time::Duration::from_secs(10), move |_uuid, _l| {
+            Box::pin(async move {})
+        });
+        assert!(job.is_ok());
+    }
+
+    #[test]
+    fn invalid_cron_expression_fails() {
+        let result = Job::new_async("not a cron", move |_uuid, _l| Box::pin(async move {}));
+        assert!(result.is_err());
+    }
+}

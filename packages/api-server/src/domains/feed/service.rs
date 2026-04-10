@@ -36,15 +36,15 @@ impl FeedService {
             .order_by_desc(entities::posts::Column::CreatedAt)
             .offset(pagination.offset())
             .limit(pagination.limit())
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let total_items = entities::Posts::find()
             .filter(entities::posts::Column::Status.eq("published"))
-            .count(&state.db)
+            .count(state.db.as_ref())
             .await?;
 
-        let data = Self::posts_to_feed_items(&state.db, posts).await?;
+        let data = Self::posts_to_feed_items(state.db.as_ref(), posts).await?;
 
         let pagination_meta = PaginationMeta {
             current_page: pagination.page,
@@ -77,7 +77,7 @@ impl FeedService {
         let posts = entities::Posts::find()
             .filter(entities::posts::Column::Status.eq("published"))
             .filter(entities::posts::Column::CreatedAt.gte(twenty_four_hours_ago))
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         // 2. 각 Post의 트렌딩 점수 계산
@@ -86,7 +86,7 @@ impl FeedService {
             // 2-1. 해당 Post의 Spot IDs 조회
             let spot_ids: Vec<Uuid> = entities::Spots::find()
                 .filter(entities::spots::Column::PostId.eq(post.id))
-                .all(&state.db)
+                .all(state.db.as_ref())
                 .await?
                 .into_iter()
                 .map(|s| s.id)
@@ -99,7 +99,7 @@ impl FeedService {
                 entities::Solutions::find()
                     .filter(entities::solutions::Column::SpotId.is_in(spot_ids))
                     .filter(entities::solutions::Column::CreatedAt.gte(twenty_four_hours_ago))
-                    .all(&state.db)
+                    .all(state.db.as_ref())
                     .await?
             };
 
@@ -113,7 +113,7 @@ impl FeedService {
                 entities::Votes::find()
                     .filter(entities::votes::Column::SolutionId.is_in(solution_ids))
                     .filter(entities::votes::Column::CreatedAt.gte(twenty_four_hours_ago))
-                    .count(&state.db)
+                    .count(state.db.as_ref())
                     .await? as i32
             };
 
@@ -140,7 +140,7 @@ impl FeedService {
             .map(|(post, _score)| post.clone())
             .collect();
 
-        let data = Self::posts_to_feed_items(&state.db, paginated_posts).await?;
+        let data = Self::posts_to_feed_items(state.db.as_ref(), paginated_posts).await?;
 
         let pagination_meta = PaginationMeta {
             current_page: pagination.page,
@@ -159,7 +159,7 @@ impl FeedService {
     ///
     /// 점수 = (조회수 × 1) + (Solution 수 × 5) + (투표 수 × 3) + 시간 가중치
     /// 시간 가중치: 0~24시간 전 → 100~0점 (선형 감소)
-    fn calculate_trending_score(
+    pub(crate) fn calculate_trending_score(
         view_count: i32,
         solution_count: i32,
         vote_count: i32,
@@ -180,7 +180,7 @@ impl FeedService {
         let curations = entities::Curations::find()
             .filter(entities::curations::Column::IsActive.eq(true))
             .order_by_asc(entities::curations::Column::DisplayOrder)
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let mut data = Vec::new();
@@ -189,7 +189,7 @@ impl FeedService {
             // 각 큐레이션의 Post 개수 계산
             let post_count = entities::CurationPosts::find()
                 .filter(entities::curation_posts::Column::CurationId.eq(curation.id))
-                .count(&state.db)
+                .count(state.db.as_ref())
                 .await? as i32;
 
             data.push(CurationListItem {
@@ -211,7 +211,7 @@ impl FeedService {
     ) -> AppResult<CurationDetailResponse> {
         // 큐레이션 조회
         let curation = entities::Curations::find_by_id(curation_id)
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await?
             .ok_or_else(|| crate::error::AppError::NotFound("Curation not found".to_string()))?;
 
@@ -219,14 +219,14 @@ impl FeedService {
         let curation_posts = entities::CurationPosts::find()
             .filter(entities::curation_posts::Column::CurationId.eq(curation_id))
             .order_by_asc(entities::curation_posts::Column::DisplayOrder)
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let post_ids: Vec<Uuid> = curation_posts.iter().map(|cp| cp.post_id).collect();
 
         let posts = entities::Posts::find()
             .filter(entities::posts::Column::Id.is_in(post_ids.clone()))
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         // display_order 순서대로 정렬
@@ -237,7 +237,7 @@ impl FeedService {
             }
         }
 
-        let feed_items = Self::posts_to_feed_items(&state.db, sorted_posts).await?;
+        let feed_items = Self::posts_to_feed_items(state.db.as_ref(), sorted_posts).await?;
 
         Ok(CurationDetailResponse {
             id: curation.id,

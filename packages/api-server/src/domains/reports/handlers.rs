@@ -63,7 +63,7 @@ async fn create_report(
     }
 
     let report = service::create_report(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         &dto.target_type,
         dto.target_id,
@@ -110,7 +110,7 @@ async fn admin_list_reports(
     _extension: axum::Extension<User>,
     Query(query): Query<AdminReportListQuery>,
 ) -> AppResult<Json<PaginatedResponse<ReportListItem>>> {
-    let reports = service::admin_list_reports(&state.db, query).await?;
+    let reports = service::admin_list_reports(state.db.as_ref(), query).await?;
     Ok(Json(reports))
 }
 
@@ -137,7 +137,8 @@ async fn admin_update_report(
     Path(report_id): Path<Uuid>,
     Json(dto): Json<UpdateReportStatusDto>,
 ) -> AppResult<Json<ReportListItem>> {
-    let report = service::admin_update_report_status(&state.db, report_id, user.id, dto).await?;
+    let report =
+        service::admin_update_report_status(state.db.as_ref(), report_id, user.id, dto).await?;
     Ok(Json(report))
 }
 

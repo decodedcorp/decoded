@@ -130,7 +130,8 @@ pub async fn list_synonyms(
     Query(query): Query<SynonymListQuery>,
 ) -> AppResult<Json<Vec<SynonymResponse>>> {
     let synonyms =
-        crate::domains::admin::synonyms::service::admin_list_synonyms(&state.db, query).await?;
+        crate::domains::admin::synonyms::service::admin_list_synonyms(state.db.as_ref(), query)
+            .await?;
     Ok(Json(synonyms))
 }
 
@@ -156,7 +157,8 @@ pub async fn create_synonym(
     Json(dto): Json<CreateSynonymDto>,
 ) -> AppResult<Json<SynonymResponse>> {
     let synonym =
-        crate::domains::admin::synonyms::service::admin_create_synonym(&state.db, dto).await?;
+        crate::domains::admin::synonyms::service::admin_create_synonym(state.db.as_ref(), dto)
+            .await?;
     Ok(Json(synonym))
 }
 
@@ -185,9 +187,12 @@ pub async fn update_synonym(
     Path(synonym_id): Path<Uuid>,
     Json(dto): Json<UpdateSynonymDto>,
 ) -> AppResult<Json<SynonymResponse>> {
-    let synonym =
-        crate::domains::admin::synonyms::service::admin_update_synonym(&state.db, synonym_id, dto)
-            .await?;
+    let synonym = crate::domains::admin::synonyms::service::admin_update_synonym(
+        state.db.as_ref(),
+        synonym_id,
+        dto,
+    )
+    .await?;
     Ok(Json(synonym))
 }
 
@@ -214,7 +219,8 @@ pub async fn delete_synonym(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Path(synonym_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
-    crate::domains::admin::synonyms::service::admin_delete_synonym(&state.db, synonym_id).await?;
+    crate::domains::admin::synonyms::service::admin_delete_synonym(state.db.as_ref(), synonym_id)
+        .await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -506,5 +512,212 @@ pub mod service {
             .map_err(|e| AppError::ExternalService(format!("Failed to sync synonyms: {}", e)))?;
 
         Ok(())
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::disallowed_methods)]
+    mod tests {
+        use super::*;
+        use crate::entities::synonyms::Model as SynonymModel;
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        fn synonym_model() -> SynonymModel {
+            SynonymModel {
+                id: fixtures::test_uuid(120),
+                type_: "artist".to_string(),
+                canonical: "Jennie".to_string(),
+                synonyms: vec!["jennie kim".to_string(), "ジェニー".to_string()],
+                is_active: true,
+                created_at: fixtures::test_timestamp(),
+                updated_at: fixtures::test_timestamp(),
+            }
+        }
+
+        #[tokio::test]
+        async fn admin_list_synonyms_empty() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<SynonymModel>::new()])
+                .into_connection();
+            let result = admin_list_synonyms(
+                &db,
+                SynonymListQuery {
+                    type_: None,
+                    is_active: None,
+                    search: None,
+                },
+            )
+            .await
+            .expect("ok");
+            assert!(result.is_empty());
+        }
+
+        #[tokio::test]
+        async fn admin_list_synonyms_returns_mapped_rows() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![synonym_model()]])
+                .into_connection();
+            let result = admin_list_synonyms(
+                &db,
+                SynonymListQuery {
+                    type_: Some("artist".to_string()),
+                    is_active: Some(true),
+                    search: Some("jennie".to_string()),
+                },
+            )
+            .await
+            .expect("ok");
+            assert_eq!(result.len(), 1);
+            assert_eq!(result[0].canonical, "Jennie");
+            assert_eq!(result[0].type_, "artist");
+            assert_eq!(result[0].synonyms.len(), 2);
+            assert!(result[0].is_active);
+        }
+
+        #[tokio::test]
+        async fn admin_create_synonym_rejects_invalid_type() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+            let dto = CreateSynonymDto {
+                type_: "invalid_type".to_string(),
+                canonical: "test".to_string(),
+                synonyms: vec!["alias".to_string()],
+                is_active: true,
+            };
+            let result = admin_create_synonym(&db, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_create_synonym_rejects_empty_synonyms() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+            let dto = CreateSynonymDto {
+                type_: "artist".to_string(),
+                canonical: "Jennie".to_string(),
+                synonyms: vec![],
+                is_active: true,
+            };
+            let result = admin_create_synonym(&db, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_create_synonym_rejects_duplicate_canonical() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![synonym_model()]])
+                .into_connection();
+            let dto = CreateSynonymDto {
+                type_: "artist".to_string(),
+                canonical: "Jennie".to_string(),
+                synonyms: vec!["alias".to_string()],
+                is_active: true,
+            };
+            let result = admin_create_synonym(&db, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_update_synonym_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<SynonymModel>::new()])
+                .into_connection();
+            let dto = UpdateSynonymDto {
+                type_: None,
+                canonical: None,
+                synonyms: None,
+                is_active: Some(false),
+            };
+            let result = admin_update_synonym(&db, fixtures::test_uuid(99), dto).await;
+            assert!(matches!(result, Err(AppError::NotFound(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_update_synonym_rejects_invalid_type() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![synonym_model()]])
+                .into_connection();
+            let dto = UpdateSynonymDto {
+                type_: Some("not_a_type".to_string()),
+                canonical: None,
+                synonyms: None,
+                is_active: None,
+            };
+            let result = admin_update_synonym(&db, synonym_model().id, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_update_synonym_rejects_empty_synonyms() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![synonym_model()]])
+                .into_connection();
+            let dto = UpdateSynonymDto {
+                type_: None,
+                canonical: None,
+                synonyms: Some(vec![]),
+                is_active: None,
+            };
+            let result = admin_update_synonym(&db, synonym_model().id, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_update_synonym_rejects_duplicate_canonical() {
+            let mut existing = synonym_model();
+            existing.canonical = "Old Name".to_string();
+            // 1st query: load by id; 2nd: lookup duplicate canonical
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![existing.clone()]])
+                .append_query_results([vec![synonym_model()]])
+                .into_connection();
+            let dto = UpdateSynonymDto {
+                type_: None,
+                canonical: Some("Jennie".to_string()),
+                synonyms: None,
+                is_active: None,
+            };
+            let result = admin_update_synonym(&db, existing.id, dto).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_delete_synonym_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<SynonymModel>::new()])
+                .into_connection();
+            let result = admin_delete_synonym(&db, fixtures::test_uuid(99)).await;
+            assert!(matches!(result, Err(AppError::NotFound(_))));
+        }
+
+        #[tokio::test]
+        async fn admin_sync_synonyms_rejects_dummy_search_client() {
+            // The DummySearchClient is not a MeilisearchClient, so downcast fails -> InternalError
+            let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+            let state = crate::tests::helpers::test_app_state(db);
+            let result = admin_sync_synonyms(&state).await;
+            assert!(matches!(result, Err(AppError::InternalError(_))));
+        }
+
+        #[test]
+        fn create_synonym_dto_validation_passes() {
+            use validator::Validate;
+            let dto = CreateSynonymDto {
+                type_: "artist".to_string(),
+                canonical: "Jennie".to_string(),
+                synonyms: vec!["alias".to_string()],
+                is_active: true,
+            };
+            assert!(dto.validate().is_ok());
+        }
+
+        #[test]
+        fn create_synonym_dto_default_is_active_true() {
+            let json = serde_json::json!({
+                "type": "artist",
+                "canonical": "Jennie",
+                "synonyms": ["alias"]
+            });
+            let dto: CreateSynonymDto = serde_json::from_value(json).unwrap();
+            assert!(dto.is_active);
+        }
     }
 }

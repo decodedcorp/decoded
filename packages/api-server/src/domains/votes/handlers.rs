@@ -42,7 +42,13 @@ pub async fn create_vote(
 ) -> AppResult<impl IntoResponse> {
     dto.validate()?;
 
-    let vote = service::create_vote(&state.db, solution_id, user.id, dto.vote_type.clone()).await?;
+    let vote = service::create_vote(
+        state.db.as_ref(),
+        solution_id,
+        user.id,
+        dto.vote_type.clone(),
+    )
+    .await?;
 
     let response = VoteResponse {
         id: vote.id,
@@ -77,7 +83,7 @@ pub async fn delete_vote(
     Extension(user): Extension<User>,
     Path(solution_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::delete_vote(&state.db, solution_id, user.id).await?;
+    service::delete_vote(state.db.as_ref(), solution_id, user.id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -101,7 +107,7 @@ pub async fn get_vote_stats(
     user: Option<Extension<User>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = user.map(|u| u.id);
-    let stats = service::get_vote_stats(&state.db, solution_id, user_id).await?;
+    let stats = service::get_vote_stats(state.db.as_ref(), solution_id, user_id).await?;
 
     Ok(Json(stats))
 }
@@ -134,7 +140,8 @@ pub async fn adopt_solution(
 ) -> AppResult<impl IntoResponse> {
     dto.validate()?;
 
-    let response = service::adopt_solution(&state.db, solution_id, user.id, dto.match_type).await?;
+    let response =
+        service::adopt_solution(state.db.as_ref(), solution_id, user.id, dto.match_type).await?;
 
     Ok(Json(response))
 }
@@ -162,7 +169,7 @@ pub async fn unadopt_solution(
     Extension(user): Extension<User>,
     Path(solution_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::unadopt_solution(&state.db, solution_id, user.id).await?;
+    service::unadopt_solution(state.db.as_ref(), solution_id, user.id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

@@ -20,7 +20,7 @@ use tracing::{error, info, warn};
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Starting search reindex batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
 
     // active 포스트 전체 조회
     let posts = entities::Posts::find()
@@ -83,4 +83,30 @@ pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error +
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use crate::tests::helpers;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn run_with_empty_posts_succeeds() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_returns_err_on_db_failure() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_err());
+    }
 }

@@ -38,10 +38,11 @@ if [[ ! -f "$LIB_RS" ]]; then
 fi
 
 # lib.rs 의 `mod mYYYYMMDD_...;` 목록 (macOS 기본 bash 3.2: mapfile 미지원 → while read)
+# 6자리 순번 포함/미포함 모두 수용 (e.g. m20260409_add_image_dimensions 같은 레거시 파일명)
 CODE_MIGS=()
 while IFS= read -r line; do
   [[ -n "$line" ]] && CODE_MIGS+=("$line")
-done < <(grep -E '^\s*mod m[0-9]{8}_[0-9]{6}_' "$LIB_RS" | sed -E 's/.*mod (m[0-9]{8}_[0-9]{6}_[a-zA-Z0-9_]+);.*/\1/' | sort -u)
+done < <(grep -E '^\s*mod m[0-9]{8}_' "$LIB_RS" | sed -E 's/.*mod (m[0-9]{8}_[a-zA-Z0-9_]+);.*/\1/' | sort -u)
 
 TMP_DB="$(mktemp)"
 trap 'rm -f "$TMP_DB"' EXIT

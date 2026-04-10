@@ -72,7 +72,7 @@ pub async fn list_posts(
     Query(query): Query<AdminPostListQuery>,
 ) -> AppResult<Json<PaginatedResponse<PostListItem>>> {
     // status 필터가 있으면 적용, 없으면 모든 상태 조회
-    let posts = service::admin_list_posts(&state.db, query).await?;
+    let posts = service::admin_list_posts(state.db.as_ref(), query).await?;
     Ok(Json(posts))
 }
 
@@ -110,9 +110,13 @@ pub async fn update_post_status(
         )));
     }
 
-    let post =
-        service::admin_update_post_status(&state.search_client, &state.db, post_id, &dto.status)
-            .await?;
+    let post = service::admin_update_post_status(
+        &state.search_client,
+        state.db.as_ref(),
+        post_id,
+        &dto.status,
+    )
+    .await?;
     Ok(Json(post))
 }
 

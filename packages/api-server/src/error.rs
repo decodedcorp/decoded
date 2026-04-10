@@ -258,4 +258,113 @@ mod tests {
         )
         .await;
     }
+
+    // ── Helper method tests ──
+
+    #[test]
+    fn helper_not_found_creates_correct_variant() {
+        let err = AppError::not_found("user");
+        assert!(matches!(err, AppError::NotFound(ref m) if m == "user"));
+    }
+
+    #[test]
+    fn helper_bad_request_creates_correct_variant() {
+        let err = AppError::bad_request("missing field");
+        assert!(matches!(err, AppError::BadRequest(ref m) if m == "missing field"));
+    }
+
+    #[test]
+    fn helper_unauthorized_creates_correct_variant() {
+        let err = AppError::unauthorized("expired token");
+        assert!(matches!(err, AppError::Unauthorized(ref m) if m == "expired token"));
+    }
+
+    #[test]
+    fn helper_forbidden_creates_correct_variant() {
+        let err = AppError::forbidden("admin only");
+        assert!(matches!(err, AppError::Forbidden(ref m) if m == "admin only"));
+    }
+
+    #[test]
+    fn helper_validation_creates_correct_variant() {
+        let err = AppError::validation("invalid email");
+        assert!(matches!(err, AppError::ValidationError(ref m) if m == "invalid email"));
+    }
+
+    #[test]
+    fn helper_internal_creates_correct_variant() {
+        let err = AppError::internal("disk full");
+        assert!(matches!(err, AppError::InternalError(ref m) if m == "disk full"));
+    }
+
+    #[test]
+    fn helper_external_service_creates_correct_variant() {
+        let err = AppError::external_service("timeout");
+        assert!(matches!(err, AppError::ExternalService(ref m) if m == "timeout"));
+    }
+
+    #[test]
+    fn helper_configuration_creates_correct_variant() {
+        let err = AppError::configuration("missing key");
+        assert!(matches!(err, AppError::Configuration(ref m) if m == "missing key"));
+    }
+
+    // ── From trait conversion tests ──
+
+    #[test]
+    fn from_db_err_converts_to_database_error() {
+        let db_err = DbErr::Custom("test".to_string());
+        let app_err: AppError = db_err.into();
+        assert!(matches!(app_err, AppError::DatabaseError(_)));
+    }
+
+    #[test]
+    fn from_validation_errors_converts() {
+        let mut ve = ValidationErrors::new();
+        ve.add("name", ValidationError::new("required"));
+        let app_err: AppError = ve.into();
+        assert!(matches!(app_err, AppError::ValidationErrors(_)));
+    }
+
+    // ── Display for all variants ──
+
+    #[test]
+    fn display_messages_for_all_variants() {
+        let cases: Vec<(AppError, &str)> = vec![
+            (AppError::not_found("x"), "Resource not found: x"),
+            (AppError::bad_request("x"), "Bad request: x"),
+            (AppError::unauthorized("x"), "Unauthorized: x"),
+            (AppError::forbidden("x"), "Forbidden: x"),
+            (AppError::validation("x"), "Validation error: x"),
+            (AppError::internal("x"), "Internal server error: x"),
+            (AppError::external_service("x"), "External service error: x"),
+            (AppError::configuration("x"), "Configuration error: x"),
+        ];
+        for (err, expected) in cases {
+            assert_eq!(format!("{err}"), expected);
+        }
+    }
+
+    #[test]
+    fn display_database_error() {
+        let err = AppError::DatabaseError(DbErr::Custom("conn lost".to_string()));
+        let msg = format!("{err}");
+        assert!(msg.contains("conn lost"));
+    }
+
+    // ── ErrorResponse serde roundtrip ──
+
+    #[test]
+    fn error_response_serde_roundtrip() {
+        let resp = ErrorResponse {
+            error: ErrorDetail {
+                code: 404,
+                message: "not found".to_string(),
+            },
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        let parsed: ErrorResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.error.code, 404);
+        assert_eq!(parsed.error.message, "not found");
+    }
 }

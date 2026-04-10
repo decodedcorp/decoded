@@ -99,14 +99,14 @@ impl RankingsService {
         user_id: Uuid,
     ) -> AppResult<Vec<super::dto::CategoryRank>> {
         // 1. 모든 카테고리 조회
-        let all_categories = entities::Categories::find().all(&state.db).await?;
+        let all_categories = entities::Categories::find().all(state.db.as_ref()).await?;
 
         // 2. 각 카테고리별 사용자 포인트 계산
         let mut category_points: Vec<(entities::CategoriesModel, i32)> = Vec::new();
 
         for category in all_categories {
             let points_map =
-                Self::get_users_category_points(&state.db, &[user_id], category.id).await?;
+                Self::get_users_category_points(state.db.as_ref(), &[user_id], category.id).await?;
 
             if let Some(&points) = points_map.get(&user_id) {
                 if points > 0 {
@@ -127,14 +127,15 @@ impl RankingsService {
         for (category, points) in category_points {
             // 해당 카테고리에서 나보다 높은 포인트를 가진 사용자 수 + 1
             let all_user_ids: Vec<Uuid> = entities::Users::find()
-                .all(&state.db)
+                .all(state.db.as_ref())
                 .await?
                 .iter()
                 .map(|u| u.id)
                 .collect();
 
             let all_category_points =
-                Self::get_users_category_points(&state.db, &all_user_ids, category.id).await?;
+                Self::get_users_category_points(state.db.as_ref(), &all_user_ids, category.id)
+                    .await?;
 
             let higher_count = all_category_points
                 .values()
@@ -312,16 +313,17 @@ impl RankingsService {
             .order_by_desc(entities::users::Column::TotalPoints)
             .offset(pagination.offset())
             .limit(pagination.limit())
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
-        let total_items = entities::Users::find().count(&state.db).await?;
+        let total_items = entities::Users::find().count(state.db.as_ref()).await?;
 
         // N+1 쿼리 방지: 모든 사용자의 통계를 한 번에 조회
         let user_ids: Vec<Uuid> = users.iter().map(|u| u.id).collect();
-        let solution_stats_map = Self::get_users_solution_stats(&state.db, &user_ids).await?;
+        let solution_stats_map =
+            Self::get_users_solution_stats(state.db.as_ref(), &user_ids).await?;
         let period_points_map =
-            Self::get_users_period_points(&state.db, &user_ids, period_start).await?;
+            Self::get_users_period_points(state.db.as_ref(), &user_ids, period_start).await?;
 
         let mut data = Vec::new();
         for (idx, user) in users.iter().enumerate() {
@@ -349,21 +351,24 @@ impl RankingsService {
 
         // 내 랭킹 (로그인한 경우)
         let my_ranking = if let Some(uid) = user_id {
-            let my_user = entities::Users::find_by_id(uid).one(&state.db).await?;
+            let my_user = entities::Users::find_by_id(uid)
+                .one(state.db.as_ref())
+                .await?;
 
             if let Some(my_user) = my_user {
                 // 내 순위 계산 (total_points가 더 높은 사용자 수 + 1)
                 let rank = entities::Users::find()
                     .filter(entities::users::Column::TotalPoints.gt(my_user.total_points))
-                    .count(&state.db)
+                    .count(state.db.as_ref())
                     .await? as i32
                     + 1;
 
                 // 기간별 포인트 조회 (단일 쿼리)
-                let weekly_points = *Self::get_users_period_points(&state.db, &[uid], period_start)
-                    .await?
-                    .get(&uid)
-                    .unwrap_or(&0);
+                let weekly_points =
+                    *Self::get_users_period_points(state.db.as_ref(), &[uid], period_start)
+                        .await?
+                        .get(&uid)
+                        .unwrap_or(&0);
 
                 Some(MyRanking {
                     rank,
@@ -400,18 +405,18 @@ impl RankingsService {
         // 카테고리 검증
         let category = entities::Categories::find()
             .filter(entities::categories::Column::Code.eq(category_code))
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await?
             .ok_or_else(|| AppError::NotFound("Category not found".to_string()))?;
 
         // 전체 활동 사용자 조회 (카테고리별 포인트로 정렬하기 위해 모든 사용자 대상)
-        let all_users = entities::Users::find().all(&state.db).await?;
+        let all_users = entities::Users::find().all(state.db.as_ref()).await?;
 
         let all_user_ids: Vec<Uuid> = all_users.iter().map(|u| u.id).collect();
 
         // 카테고리별 포인트를 한 번에 조회 (N+1 방지)
         let category_points_map =
-            Self::get_users_category_points(&state.db, &all_user_ids, category.id).await?;
+            Self::get_users_category_points(state.db.as_ref(), &all_user_ids, category.id).await?;
 
         // 카테고리 포인트 기준으로 정렬
         let mut users_with_points: Vec<_> = all_users
@@ -438,7 +443,7 @@ impl RankingsService {
         // 해당 카테고리의 subcategories 조회
         let subcategories = entities::Subcategories::find()
             .filter(entities::subcategories::Column::CategoryId.eq(category.id))
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let subcategory_ids: Vec<Uuid> = subcategories.iter().map(|s| s.id).collect();
@@ -447,7 +452,7 @@ impl RankingsService {
         let spots = if !subcategory_ids.is_empty() {
             entities::Spots::find()
                 .filter(entities::spots::Column::SubcategoryId.is_in(subcategory_ids))
-                .all(&state.db)
+                .all(state.db.as_ref())
                 .await?
         } else {
             Vec::new()
@@ -460,7 +465,7 @@ impl RankingsService {
             entities::Solutions::find()
                 .filter(entities::solutions::Column::SpotId.is_in(spot_ids.iter().copied()))
                 .filter(entities::solutions::Column::UserId.is_in(user_ids.iter().copied()))
-                .all(&state.db)
+                .all(state.db.as_ref())
                 .await?
         } else {
             vec![]
@@ -518,14 +523,14 @@ impl RankingsService {
         user_id: Uuid,
     ) -> AppResult<MyRankingDetailResponse> {
         let user = entities::Users::find_by_id(user_id)
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await?
             .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
         // 전체 순위 계산
         let overall_rank = entities::Users::find()
             .filter(entities::users::Column::TotalPoints.gt(user.total_points))
-            .count(&state.db)
+            .count(state.db.as_ref())
             .await? as i32
             + 1;
 
@@ -535,18 +540,20 @@ impl RankingsService {
         let month_ago = now - chrono::Duration::days(30);
 
         // 주간/월간 포인트를 한 번에 조회
-        let weekly_points = *Self::get_users_period_points(&state.db, &[user_id], week_ago)
+        let weekly_points = *Self::get_users_period_points(state.db.as_ref(), &[user_id], week_ago)
             .await?
             .get(&user_id)
             .unwrap_or(&0);
 
-        let monthly_points = *Self::get_users_period_points(&state.db, &[user_id], month_ago)
-            .await?
-            .get(&user_id)
-            .unwrap_or(&0);
+        let monthly_points =
+            *Self::get_users_period_points(state.db.as_ref(), &[user_id], month_ago)
+                .await?
+                .get(&user_id)
+                .unwrap_or(&0);
 
         // Solution 통계 (한 번에 조회)
-        let solution_stats_map = Self::get_users_solution_stats(&state.db, &[user_id]).await?;
+        let solution_stats_map =
+            Self::get_users_solution_stats(state.db.as_ref(), &[user_id]).await?;
         let stats = solution_stats_map
             .get(&user_id)
             .cloned()
@@ -555,7 +562,7 @@ impl RankingsService {
         // accurate_votes는 별도 계산 필요
         let solutions = entities::Solutions::find()
             .filter(entities::solutions::Column::UserId.eq(user_id))
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
         let accurate_votes = solutions.iter().map(|s| s.accurate_count).sum::<i32>();
 

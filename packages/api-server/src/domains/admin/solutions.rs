@@ -82,7 +82,7 @@ pub async fn list_solutions(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Query(query): Query<AdminSolutionListQuery>,
 ) -> AppResult<Json<PaginatedResponse<SolutionListItem>>> {
-    let solutions = service::admin_list_solutions(&state.db, query).await?;
+    let solutions = service::admin_list_solutions(state.db.as_ref(), query).await?;
     Ok(Json(solutions))
 }
 
@@ -121,7 +121,7 @@ pub async fn update_solution_status(
     }
 
     let solution =
-        service::admin_update_solution_status(&state.db, solution_id, &dto.status).await?;
+        service::admin_update_solution_status(state.db.as_ref(), solution_id, &dto.status).await?;
     Ok(Json(solution))
 }
 

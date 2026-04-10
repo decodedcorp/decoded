@@ -64,7 +64,8 @@ pub async fn create_solution(
     Json(dto): Json<CreateSolutionDto>,
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
     // Create solution
-    let solution_id = service::create_solution(&state.db, spot_id, user.id, dto.clone()).await?;
+    let solution_id =
+        service::create_solution(state.db.as_ref(), spot_id, user.id, dto.clone()).await?;
 
     // Trigger AI analysis asynchronously (fire and forget)
     let url = dto.original_url.clone();
@@ -132,7 +133,7 @@ pub async fn list_solutions(
     State(state): State<AppState>,
     Path(spot_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<SolutionListItem>>> {
-    let solutions = service::list_solutions_by_spot_id(&state.db, spot_id).await?;
+    let solutions = service::list_solutions_by_spot_id(state.db.as_ref(), spot_id).await?;
     Ok(Json(solutions))
 }
 
@@ -153,7 +154,7 @@ pub async fn get_solution(
     State(state): State<AppState>,
     Path(solution_id): Path<Uuid>,
 ) -> AppResult<Json<SolutionResponse>> {
-    let solution = service::get_solution_by_id(&state.db, solution_id).await?;
+    let solution = service::get_solution_by_id(state.db.as_ref(), solution_id).await?;
     Ok(Json(solution))
 }
 
@@ -182,7 +183,7 @@ pub async fn update_solution(
     Path(solution_id): Path<Uuid>,
     Json(dto): Json<UpdateSolutionDto>,
 ) -> AppResult<StatusCode> {
-    service::update_solution(&state.db, solution_id, user.id, dto).await?;
+    service::update_solution(state.db.as_ref(), solution_id, user.id, dto).await?;
     Ok(StatusCode::OK)
 }
 
@@ -209,7 +210,7 @@ pub async fn delete_solution(
     Extension(user): Extension<User>,
     Path(solution_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
-    service::delete_solution(&state.db, solution_id, user.id).await?;
+    service::delete_solution(state.db.as_ref(), solution_id, user.id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -300,7 +301,7 @@ pub async fn test_analyze_link(
     Json(dto): Json<TestAnalyzeLinkDto>,
 ) -> AppResult<Json<serde_json::Value>> {
     // 1. Get Solution from DB
-    let solution = service::get_solution_by_id(&state.db, dto.solution_id).await?;
+    let solution = service::get_solution_by_id(state.db.as_ref(), dto.solution_id).await?;
 
     // Check if URL exists
     let url = match solution.original_url.clone() {
@@ -384,14 +385,14 @@ pub async fn test_full_integration_flow(
     use sea_orm::QuerySelect;
     let user = crate::entities::users::Entity::find()
         .limit(1)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .map_err(|e| AppError::InternalError(format!("DB Error finding user: {}", e)))?
         .ok_or_else(|| AppError::BadRequest("No users found in DB to run test".to_string()))?;
 
     let spot = crate::entities::spots::Entity::find()
         .limit(1)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .map_err(|e| AppError::InternalError(format!("DB Error finding spot: {}", e)))?
         .ok_or_else(|| AppError::BadRequest("No spots found in DB to run test".to_string()))?;
@@ -407,7 +408,8 @@ pub async fn test_full_integration_flow(
         brand_id: None,
     };
 
-    let solution_id = service::create_solution(&state.db, spot.id, user.id, create_dto).await?;
+    let solution_id =
+        service::create_solution(state.db.as_ref(), spot.id, user.id, create_dto).await?;
 
     // 3. AI Analyze Direct
     let ai_client = state.decoded_ai_client.clone();
@@ -441,7 +443,7 @@ pub async fn test_full_integration_flow(
 
     // 4. Update Solution with AI Result
     let mut solution: solutions::ActiveModel = solutions::Entity::find_by_id(solution_id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .map_err(|e| AppError::InternalError(e.to_string()))?
         .ok_or_else(|| AppError::InternalError("Created solution not found".to_string()))?
@@ -572,7 +574,7 @@ pub async fn test_full_integration_flow(
 
     use sea_orm::ActiveModelTrait;
     solution
-        .update(&state.db)
+        .update(state.db.as_ref())
         .await
         .map_err(|e| AppError::InternalError(e.to_string()))?;
 

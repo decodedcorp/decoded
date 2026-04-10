@@ -74,7 +74,7 @@ pub async fn create_click(
 
     // 클릭 로그 저장
     service::create_click_log(
-        &state.db,
+        state.db.as_ref(),
         user.as_ref().map(|u| u.id),
         dto.solution_id,
         ip_address,
@@ -103,7 +103,7 @@ pub async fn get_click_stats(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<ClickStatsResponse>> {
-    let stats = service::get_click_stats_by_user(&state.db, user.id).await?;
+    let stats = service::get_click_stats_by_user(state.db.as_ref(), user.id).await?;
     Ok(Json(stats))
 }
 

@@ -166,14 +166,192 @@ fn test_comment_list_item_structure() {
     assert!(json.contains("reply_count"));
 }
 
-// 통합 테스트는 실제 DB 필요
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
-mod integration_tests {
-    // TODO: 실제 DB 연결 후 통합 테스트 작성
-    // - create_comment 테스트
-    // - list_comments 테스트 (계층 구조)
-    // - update_comment 테스트
-    // - delete_comment 테스트
-    // - 대댓글 제한 테스트 (2단계까지만)
+mod mock_db_tests {
+    use crate::domains::comments::service;
+    use crate::tests::fixtures;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    #[tokio::test]
+    async fn get_comment_by_id_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::comment_model()]])
+            .into_connection();
+        let result = service::get_comment_by_id(&db, fixtures::test_uuid(4)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().content, "Test comment");
+    }
+
+    #[tokio::test]
+    async fn get_comment_by_id_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .into_connection();
+        let result = service::get_comment_by_id(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    // count queries use SeaORM paginator which requires special mock setup;
+    // covered via integration tests instead.
+
+    #[tokio::test]
+    async fn create_comment_post_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let result = service::create_comment(
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+            "hello".to_string(),
+            None,
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn create_comment_success_root() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[fixtures::comment_model()]])
+            .into_connection();
+        let result = service::create_comment(
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+            "hello".to_string(),
+            None,
+        )
+        .await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        assert_eq!(result.unwrap().content, "Test comment");
+    }
+
+    #[tokio::test]
+    async fn create_comment_parent_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .into_connection();
+        let result = service::create_comment(
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+            "reply".to_string(),
+            Some(fixtures::test_uuid(99)),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn create_comment_parent_wrong_post() {
+        let mut parent = fixtures::comment_model();
+        parent.post_id = fixtures::test_uuid(77);
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[parent]])
+            .into_connection();
+        let result = service::create_comment(
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+            "reply".to_string(),
+            Some(fixtures::test_uuid(4)),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn create_comment_grandchild_rejected() {
+        let mut parent = fixtures::comment_model();
+        parent.parent_id = Some(fixtures::test_uuid(55));
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[parent]])
+            .into_connection();
+        let result = service::create_comment(
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+            "reply".to_string(),
+            Some(fixtures::test_uuid(4)),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn list_comments_post_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let result = service::list_comments(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn list_comments_empty() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result = service::list_comments(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn update_comment_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .into_connection();
+        let result = service::update_comment(
+            &db,
+            fixtures::test_uuid(99),
+            fixtures::test_uuid(10),
+            "x".to_string(),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn update_comment_forbidden() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::comment_model()]])
+            .into_connection();
+        let result = service::update_comment(
+            &db,
+            fixtures::test_uuid(4),
+            fixtures::test_uuid(11),
+            "x".to_string(),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::Forbidden(_))));
+    }
+
+    #[tokio::test]
+    async fn delete_comment_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .into_connection();
+        let result =
+            service::delete_comment(&db, fixtures::test_uuid(99), fixtures::test_uuid(10)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn delete_comment_forbidden() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::comment_model()]])
+            .into_connection();
+        let result =
+            service::delete_comment(&db, fixtures::test_uuid(4), fixtures::test_uuid(11)).await;
+        assert!(matches!(result, Err(crate::AppError::Forbidden(_))));
+    }
 }

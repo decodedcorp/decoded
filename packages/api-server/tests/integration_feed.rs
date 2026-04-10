@@ -24,7 +24,7 @@ async fn create_test_user(state: &AppState, username: &str) -> entities::UsersMo
         is_admin: Set(false),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create test user")
 }
@@ -49,7 +49,7 @@ async fn create_test_post(
         view_count: Set(view_count),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create test post")
 }
@@ -59,7 +59,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
     // 카테고리 조회 (fashion 카테고리 사용)
     let category = entities::Categories::find()
         .filter(entities::categories::Column::Code.eq("fashion"))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .expect("Failed to find fashion category")
         .expect("Fashion category not found");
@@ -67,7 +67,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
     // 서브카테고리 조회 (해당 카테고리의 첫 번째 서브카테고리 사용)
     let _subcategory = entities::Subcategories::find()
         .filter(entities::subcategories::Column::CategoryId.eq(category.id))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .expect("Failed to find subcategory")
         .expect("Subcategory not found");
@@ -82,7 +82,7 @@ async fn create_test_spot(state: &AppState, post_id: Uuid, user_id: Uuid) -> ent
         status: Set("pending".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create test spot")
 }
@@ -101,7 +101,7 @@ async fn create_test_comment(
         content: Set("Test comment".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create test comment")
 }
@@ -117,7 +117,7 @@ async fn create_test_curation(state: &AppState, title: &str) -> entities::Curati
         is_active: Set(true),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create test curation")
 }
@@ -134,7 +134,7 @@ async fn add_post_to_curation(
         post_id: Set(post_id),
         display_order: Set(display_order),
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to add post to curation");
 }
@@ -273,7 +273,7 @@ async fn test_trending_sorting_by_score() {
             adopted_at: Set(None),
             ..Default::default()
         }
-        .insert(&state.db)
+        .insert(state.db.as_ref())
         .await
         .expect("Failed to create solution");
     }
@@ -309,7 +309,7 @@ async fn test_list_curations_active_only() {
         is_active: Set(false), // 비활성
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .expect("Failed to create inactive curation");
 
