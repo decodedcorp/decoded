@@ -1233,6 +1233,7 @@ pub async fn admin_list_posts(
 }
 
 /// Admin용 Post 상태 변경
+#[allow(clippy::disallowed_methods)] // serde_json::json! 매크로 전개
 pub async fn admin_update_post_status(
     search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     db: &DatabaseConnection,
