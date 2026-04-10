@@ -5,6 +5,8 @@
 import { create } from "zustand";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
+import { getMyProfile, updateMyProfile } from "@/lib/api/generated/users/users";
+import type { UpdateUserDto } from "@/lib/api/generated/models";
 
 export type OAuthProvider = "kakao" | "google" | "apple";
 
@@ -243,30 +245,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   /**
-   * public.users 프로필 데이터 가져오기
+   * 백엔드 API를 통해 프로필 데이터 가져오기
    */
   fetchProfile: async () => {
     const user = get().user;
     if (!user) return;
 
     try {
-      const { data, error } = await supabaseBrowserClient
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const data = await getMyProfile();
 
-      if (error) {
-        if (error.code === "PGRST116") {
-          console.log("[authStore] New user detected, needs onboarding");
-          set({ needsOnboarding: true, profile: null });
-          return;
-        }
-        console.error("Failed to fetch profile:", error);
-        return;
-      }
-
-      const profile = data as unknown as UserProfile;
+      const profile: UserProfile = {
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        display_name: data.display_name ?? null,
+        avatar_url: data.avatar_url ?? null,
+        bio: data.bio ?? null,
+        rank: data.rank ?? null,
+        total_points: data.total_points,
+        is_admin: data.is_admin,
+        created_at: "",
+        updated_at: "",
+      };
 
       // Detect first-time user: username and display_name are both email-prefix defaults
       const emailPrefix = user.email.split("@")[0] || "";
@@ -279,13 +279,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin: profile.is_admin === true,
         needsOnboarding: isDefault,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      // 404 = new user not yet in users table
+      if (error && typeof error === "object" && "status" in error && (error as { status: number }).status === 404) {
+        console.log("[authStore] New user detected, needs onboarding");
+        set({ needsOnboarding: true, profile: null });
+        return;
+      }
       console.error("Profile fetch error:", error);
     }
   },
 
   /**
-   * public.users 프로필 업데이트
+   * 백엔드 API를 통해 프로필 업데이트
    */
   updateProfile: async (
     updates: Partial<Pick<UserProfile, "username" | "display_name" | "bio">>
@@ -294,16 +300,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return false;
 
     try {
-      const { error } = await supabaseBrowserClient
-        .from("users")
-        .update(updates as Record<string, unknown>)
-        .eq("id", user.id);
-
-      if (error) {
-        console.error("Failed to update profile:", error);
-        return false;
-      }
-
+      await updateMyProfile(updates as UpdateUserDto);
       // Re-fetch profile to get updated data
       await get().fetchProfile();
       return true;

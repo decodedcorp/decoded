@@ -1,7 +1,7 @@
 # Production-style: api + ai + Meilisearch + Redis + SearXNG (Meili/Redis/SearXNG not published to host).
-# Env: packages/api-server/.env.prod + packages/ai-server/.prod.env
+# Env: .env.backend.prod (repo root, unified)
 # From repo root: bash scripts/deploy-backend.sh prod up
-# Set MEILISEARCH_MASTER_KEY in packages/api-server/.env.prod (used with deploy-backend.sh --env-file).
+# Set MEILISEARCH_MASTER_KEY in .env.backend.prod (used with deploy-backend.sh --env-file).
 
 name: decoded-backend-prod
 
@@ -15,10 +15,11 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ../../.env.prod
+      - ../../../../.env.backend.prod
     environment:
       PORT: "8080"
       HOST: "0.0.0.0"
+      LOG_FORMAT: text
       MEILISEARCH_URL: http://meilisearch:7700
       AI_SERVER_GRPC_URL: http://ai:50051
       API_SERVER_GRPC_PORT: "50052"
@@ -44,8 +45,9 @@ services:
     expose:
       - "50051"
     env_file:
-      - ../../../ai-server/.prod.env
+      - ../../../../.env.backend.prod
     environment:
+      LOG_FORMAT: json
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       SEARXNG_API_URL: http://searxng:8080
@@ -81,7 +83,7 @@ services:
       - decoded-backend-prod
     environment:
       MEILI_ENV: production
-      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?set MEILISEARCH_MASTER_KEY in packages/api-server/.env.prod (used with deploy-backend.sh --env-file)}
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?set MEILISEARCH_MASTER_KEY in .env.backend.prod (used with deploy-backend.sh --env-file)}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
       interval: 10s
@@ -95,7 +97,7 @@ services:
     networks:
       - decoded-backend-prod
     env_file:
-      - ../../../ai-server/.prod.env
+      - ../../../../.env.backend.prod
     command:
       - /bin/sh
       - -c

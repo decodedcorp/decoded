@@ -31,6 +31,7 @@ pub mod subcategories;
 pub mod synonyms;
 pub mod try_spot_tags;
 pub mod user_badges;
+pub mod user_social_accounts;
 pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;

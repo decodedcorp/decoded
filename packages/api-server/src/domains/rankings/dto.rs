@@ -148,6 +148,36 @@ pub struct CategoryRank {
     pub points: i32,
 }
 
+/// 트렌딩 아티스트 쿼리
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct TrendingArtistsQuery {
+    /// 기간 (weekly, monthly, all_time)
+    #[serde(default = "default_period")]
+    pub period: String,
+
+    /// 반환 수 (기본 20, 최대 50)
+    #[serde(default = "default_trending_limit")]
+    pub limit: u64,
+}
+
+fn default_trending_limit() -> u64 {
+    20
+}
+
+/// 트렌딩 아티스트 항목
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TrendingArtistItem {
+    /// 아티스트명
+    pub artist_name: String,
+
+    /// 해당 기간 포스트 수
+    pub post_count: i64,
+
+    /// 대표 이미지 URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_url: Option<String>,
+}
+
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 mod tests {
