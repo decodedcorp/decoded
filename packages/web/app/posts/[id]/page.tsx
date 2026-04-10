@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ImageDetailPage } from "@/lib/components/detail/ImageDetailPage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { JsonLdArticle } from "@/lib/seo/json-ld";
+import { prefetchPostDetail } from "@/lib/api/server-prefetch";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -71,7 +72,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PostDetailPageRoute({ params }: Props) {
   const { id } = await params;
-  const post = await getCachedPost(id);
+
+  const [post, prefetchedDetail] = await Promise.all([
+    getCachedPost(id),
+    prefetchPostDetail(id),
+  ]);
 
   const artistLabel = post?.artist_name || post?.group_name || "Unknown";
   const title = post?.title || post?.context || `${artistLabel}'s Style`;
@@ -92,7 +97,7 @@ export default async function PostDetailPageRoute({ params }: Props) {
           artistName={artistLabel}
         />
       )}
-      <ImageDetailPage imageId={id} />
+      <ImageDetailPage imageId={id} serverData={prefetchedDetail} />
     </>
   );
 }

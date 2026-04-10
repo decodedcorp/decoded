@@ -2,54 +2,54 @@
 
 import { usePostDetailForImage, usePostMagazine } from "@/lib/hooks/useImages";
 import { ImageDetailContent } from "./ImageDetailContent";
-import { LenisProvider } from "./LenisProvider";
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
+import { useEffect, useRef, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Lightbox } from "./Lightbox";
 import { ErrorState } from "@/lib/components/shared";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
+import type { ImageDetail } from "@/lib/supabase/queries/images";
+
+const LenisProvider = lazy(() =>
+  import("./LenisProvider").then((m) => ({ default: m.LenisProvider }))
+);
 
 type Props = {
   imageId: string;
+  serverData?: ImageDetail | null;
 };
 
 /**
- * Full page version of image detail
- * Used when directly accessing URL or refreshing page
- * Now renders post data instead of old image data
+ * Full page version of image detail.
+ * Accepts optional serverData prefetched by the RSC to eliminate client waterfall.
  */
-export function ImageDetailPage({ imageId }: Props) {
+export function ImageDetailPage({ imageId, serverData }: Props) {
   const router = useRouter();
-  const { data: image, isLoading, error } = usePostDetailForImage(imageId);
+  const {
+    data: image,
+    isLoading,
+    error,
+  } = usePostDetailForImage(imageId, serverData ?? undefined);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
   const { data: magazine, isLoading: magazineLoading } =
     usePostMagazine(magazineId);
   const pageRef = useRef<HTMLDivElement>(null);
-  const [showLightbox, setShowLightbox] = useState(false);
   const track = useTrackEvent();
 
-  // Track post_view on page mount (once per post)
   useEffect(() => {
     if (!imageId) return;
     track({ event_type: "post_view", entity_id: imageId });
   }, [imageId]);
 
-  // Fade-in animation for direct access
   useEffect(() => {
     if (!pageRef.current) return;
-
-    gsap.fromTo(
-      pageRef.current,
-      { opacity: 0 },
-      {
-        opacity: 1,
-        duration: 0.4,
-        ease: "power2.out",
+    pageRef.current.style.opacity = "0";
+    requestAnimationFrame(() => {
+      if (pageRef.current) {
+        pageRef.current.style.transition = "opacity 0.4s ease-out";
+        pageRef.current.style.opacity = "1";
       }
-    );
+    });
   }, []);
 
   const handleBack = () => {
@@ -89,33 +89,30 @@ export function ImageDetailPage({ imageId }: Props) {
   }
 
   return (
-    <LenisProvider>
-      <div ref={pageRef} className="relative">
-        {/* Back Button */}
-        <div className="fixed left-4 top-16 md:top-20 z-50">
-          <button
-            onClick={handleBack}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+    <Suspense fallback={<div ref={pageRef} className="relative" />}>
+      <LenisProvider>
+        <div ref={pageRef} className="relative">
+          <div className="fixed left-4 top-16 md:top-20 z-50">
+            <button
+              onClick={handleBack}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-transform transition-colors hover:scale-105 hover:bg-background/90"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          </div>
+
+          <ImageDetailContent
+            image={image}
+            magazineLayout={showMagazine ? magazine!.layout_json : null}
+            relatedEditorials={magazine?.related_editorials ?? []}
+            commentCount={
+              (image as ImageDetailWithPostOwner & { comment_count?: number })
+                .comment_count
+            }
+          />
         </div>
-
-        <ImageDetailContent
-          image={image}
-          magazineLayout={showMagazine ? magazine!.layout_json : null}
-          relatedEditorials={magazine?.related_editorials ?? []}
-        />
-
-        {/* Lightbox */}
-        <Lightbox
-          isOpen={showLightbox}
-          onClose={() => setShowLightbox(false)}
-          imageUrl={(image as { image_url?: string }).image_url || ""}
-          alt={`Post ${image.id}`}
-        />
-      </div>
-    </LenisProvider>
+      </LenisProvider>
+    </Suspense>
   );
 }

@@ -1,6 +1,14 @@
 "use client";
 
-import { RefObject, useCallback, useMemo, useRef, useState } from "react";
+import {
+  RefObject,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
 import type {
@@ -13,7 +21,9 @@ import type { UiItem } from "./types";
 import { HeroSection } from "./HeroSection";
 import { InteractiveShowcase } from "./InteractiveShowcase";
 import { ShopGrid } from "./ShopGrid";
-import { RelatedImages } from "./RelatedImages";
+const RelatedImages = lazy(() =>
+  import("./RelatedImages").then((m) => ({ default: m.RelatedImages }))
+);
 import { SocialActions } from "@/lib/components/shared/SocialActions";
 import { ImageCommentSection } from "./ImageCommentSection";
 import { AddSolutionSheet } from "./AddSolutionSheet";
@@ -29,11 +39,18 @@ import {
   MagazineCelebSection,
   MagazineItemsSection,
   MagazineNewsSection,
-  MagazineRelatedSection,
 } from "./magazine";
 import { MagazineTitleSection } from "./magazine/MagazineTitleSection";
+// MagazineRelatedSection lazy-loaded (only rendered when related editorials exist)
+const MagazineRelatedSectionLazy = lazy(() =>
+  import("./magazine").then((m) => ({
+    default: m.MagazineRelatedSection,
+  }))
+);
 import { EditorialPreviewHeader } from "./EditorialPreviewHeader";
-import DecodeShowcase from "@/lib/components/main-renewal/DecodeShowcase";
+const DecodeShowcase = lazy(
+  () => import("@/lib/components/main-renewal/DecodeShowcase")
+);
 import { toDecodeShowcaseData } from "./adapters/toDecodeShowcaseData";
 import { SpotDot } from "./SpotDot";
 import { SpotSolutionTabs } from "./SpotSolutionTabs";
@@ -49,6 +66,8 @@ type Props = {
   hideImage?: boolean;
   onHeroClick?: () => void;
   variant?: "full" | "explore-preview";
+  /** Pre-computed comment count from PostDetailResponse (avoids separate fetch) */
+  commentCount?: number;
 };
 
 /**
@@ -71,6 +90,7 @@ export function ImageDetailContent({
   hideImage = false,
   onHeroClick,
   variant = "full",
+  commentCount: commentCountProp,
 }: Props) {
   const isExplorePreview = variant === "explore-preview";
   const hasMagazine = !!magazineLayout;
@@ -233,7 +253,10 @@ export function ImageDetailContent({
     null
   );
 
-  const commentCount = useCommentCount(image.id);
+  const fetchedCommentCount = useCommentCount(
+    commentCountProp != null ? "" : image.id
+  );
+  const commentCount = commentCountProp ?? fetchedCommentCount;
 
   // Build DecodeShowcase data from normalized items (magazine mode)
   const decodeShowcaseData = useMemo(() => {
@@ -396,7 +419,9 @@ export function ImageDetailContent({
         {/* Section 2: DecodeShowcase (magazine) or Interactive Showcase (non-magazine) */}
         {/* In modal mode, skip — the floating left panel already shows this image */}
         {decodeShowcaseData && !isModal && !isExplorePreview && (
-          <DecodeShowcase data={decodeShowcaseData} />
+          <Suspense fallback={null}>
+            <DecodeShowcase data={decodeShowcaseData} />
+          </Suspense>
         )}
         {!hasMagazine && hasItemsWithCoordinates && (
           <InteractiveShowcase
@@ -517,19 +542,34 @@ export function ImageDetailContent({
           </>
         )}
 
-        {/* Related Posts - 같은 유저가 올린 다른 포스트 */}
+        {/* Related Posts - 같은 유저가 올린 다른 포스트 (lazy loaded) */}
         {!isExplorePreview &&
           (image.postImages?.[0]?.post as Record<string, unknown>)?.account && (
-            <RelatedImages
-              currentPostId={image.id}
-              account={String(
-                (image.postImages![0].post as Record<string, unknown>).account
-              )}
-              userId={
-                (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
+            <Suspense
+              fallback={
+                <div className="mx-auto max-w-6xl px-4 py-8">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-[3/4] animate-pulse rounded-lg bg-muted"
+                      />
+                    ))}
+                  </div>
+                </div>
               }
-              isModal={isModal}
-            />
+            >
+              <RelatedImages
+                currentPostId={image.id}
+                account={String(
+                  (image.postImages![0].post as Record<string, unknown>).account
+                )}
+                userId={
+                  (image as ImageDetailWithPostOwner).post_owner_id ?? undefined
+                }
+                isModal={isModal}
+              />
+            </Suspense>
           )}
 
         {/* TODO: Try Gallery Section — temporarily disabled
@@ -564,9 +604,13 @@ export function ImageDetailContent({
           />
         </div>
 
-        {/* Magazine: Related Editorials - 맨 마지막 */}
+        {/* Magazine: Related Editorials - 맨 마지막 (lazy loaded) */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
-          <MagazineRelatedSection relatedEditorials={relatedEditorials} />
+          <Suspense fallback={null}>
+            <MagazineRelatedSectionLazy
+              relatedEditorials={relatedEditorials}
+            />
+          </Suspense>
         )}
 
         {/* Fallback: Show basic info if no items */}
