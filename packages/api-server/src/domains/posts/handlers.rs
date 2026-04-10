@@ -243,21 +243,23 @@ pub async fn get_post(
     Path(post_id): Path<Uuid>,
     user: Option<Extension<User>>,
 ) -> AppResult<Json<PostDetailResponse>> {
-    // 조회수 증가
-    let _ = service::increment_view_count(state.db.as_ref(), post_id).await;
-
     let user_id = user.as_ref().map(|Extension(u)| u.id);
 
-    // 로그인한 사용자의 경우 view_logs 기록
-    if let Some(Extension(ref user)) = user {
-        let _ = crate::domains::views::service::create_view_log(
-            state.db.as_ref(),
-            user.id,
-            "post",
-            post_id,
-        )
-        .await;
-    }
+    // 조회수 증가 + view_log를 백그라운드 태스크로 분리하여 응답 지연 제거
+    let db_bg = state.db.clone();
+    tokio::spawn(async move {
+        let _ = service::increment_view_count(db_bg.as_ref(), post_id).await;
+        if let Some(uid) = user_id {
+            let _ = crate::domains::views::service::create_view_log(
+                db_bg.as_ref(),
+                uid,
+                "post",
+                post_id,
+            )
+            .await;
+        }
+    });
+
     let post_detail = service::get_post_detail(state.db.as_ref(), post_id, user_id).await?;
     Ok(Json(post_detail))
 }

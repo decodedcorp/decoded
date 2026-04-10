@@ -13,20 +13,30 @@ import { useTransitionStore } from "@/lib/stores/transitionStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
+import type { ImageDetail } from "@/lib/supabase/queries/images";
 import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
 
 type Props = {
   imageId: string;
   variant?: "full" | "explore-preview";
+  serverData?: ImageDetail | null;
 };
 
 /**
  * Side Drawer version of image detail page
  * Used when navigating from grid (intercepting route)
  */
-export function ImageDetailModal({ imageId, variant = "full" }: Props) {
+export function ImageDetailModal({
+  imageId,
+  variant = "full",
+  serverData,
+}: Props) {
   const router = useRouter();
-  const { data: image, isLoading, error } = usePostDetailForImage(imageId);
+  const {
+    data: image,
+    isLoading,
+    error,
+  } = usePostDetailForImage(imageId, serverData ?? undefined);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
   const { data: magazine } = usePostMagazine(magazineId);
   const { originRect, reset, imgSrc } = useTransitionStore(
@@ -214,6 +224,11 @@ export function ImageDetailModal({ imageId, variant = "full" }: Props) {
         ? magazine.layout_json
         : null;
 
+    const imgWithOwner = image as ImageDetailWithPostOwner & {
+      comment_count?: number;
+    };
+    const backendCommentCount = imgWithOwner.comment_count;
+
     // Magazine posts: use same ImageDetailContent as full page (with isModal to skip GSAP)
     if (publishedMagazineLayout) {
       return (
@@ -228,6 +243,7 @@ export function ImageDetailModal({ imageId, variant = "full" }: Props) {
           }
           activeIndex={activeIndex}
           onActiveIndexChange={setActiveIndex}
+          commentCount={backendCommentCount}
         />
       );
     }
@@ -244,6 +260,7 @@ export function ImageDetailModal({ imageId, variant = "full" }: Props) {
         scrollContainerRef={scrollContainerRef as React.RefObject<HTMLElement>}
         activeIndex={activeIndex}
         onActiveIndexChange={setActiveIndex}
+        commentCount={backendCommentCount}
       />
     );
   };
