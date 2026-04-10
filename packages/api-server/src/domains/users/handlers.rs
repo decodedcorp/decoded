@@ -19,8 +19,8 @@ use crate::{
 
 use super::{
     dto::{
-        SavedItem, TryItem, UpdateUserDto, UserActivitiesQuery, UserActivityItem, UserActivityType,
-        UserResponse, UserStatsResponse,
+        SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivitiesQuery,
+        UserActivityItem, UserActivityType, UserResponse, UserStatsResponse,
     },
     service,
 };
@@ -199,6 +199,26 @@ pub async fn get_my_saved(
     Ok(Json(result))
 }
 
+/// GET /api/v1/users/me/social-accounts - 내 소셜 계정 목록
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/social-accounts",
+    tag = "Users",
+    summary = "GET /api/v1/users/me/social-accounts - 내 소셜 계정 목록",
+    responses(
+        (status = 200, description = "소셜 계정 목록", body = Vec<SocialAccountResponse>),
+        (status = 401, description = "인증 필요"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_my_social_accounts(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> AppResult<Json<Vec<SocialAccountResponse>>> {
+    let accounts = service::list_social_accounts(&state.db, user.id).await?;
+    Ok(Json(accounts))
+}
+
 /// Users 도메인 라우터
 pub fn router(app_config: AppConfig) -> Router<AppState> {
     let protected_routes = Router::new()
@@ -207,6 +227,7 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/me/stats", get(get_my_stats))
         .route("/me/tries", get(get_my_tries))
         .route("/me/saved", get(get_my_saved))
+        .route("/me/social-accounts", get(get_my_social_accounts))
         .route_layer(from_fn_with_state(app_config, auth_middleware));
 
     Router::new()

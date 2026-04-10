@@ -43,6 +43,13 @@ pub struct UserResponse {
     /// 관리자 여부
     pub is_admin: bool,
 
+    /// 잉크 크레딧
+    pub ink_credits: i32,
+
+    /// 스타일 DNA
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style_dna: Option<serde_json::Value>,
+
     /// 팔로워 수
     pub followers_count: i64,
 
@@ -62,6 +69,8 @@ impl From<UserModel> for UserResponse {
             rank: user.rank,
             total_points: user.total_points,
             is_admin: user.is_admin,
+            ink_credits: user.ink_credits,
+            style_dna: user.style_dna,
             followers_count: 0,
             following_count: 0,
         }
@@ -107,6 +116,20 @@ pub struct UserStatsResponse {
 
     /// 사용자 등급
     pub rank: String,
+}
+
+/// 소셜 계정 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SocialAccountResponse {
+    /// 소셜 프로바이더 (google, kakao 등)
+    pub provider: String,
+
+    /// 프로바이더 사용자 ID
+    pub provider_user_id: String,
+
+    /// 마지막 동기화 시간
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_synced_at: Option<DateTime<Utc>>,
 }
 
 /// VTON 히스토리 아이템

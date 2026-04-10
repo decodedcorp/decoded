@@ -9,13 +9,14 @@ use uuid::Uuid;
 
 use crate::{
     entities::users::{ActiveModel, Entity as Users, Model as UserModel},
+    entities::user_social_accounts::Entity as UserSocialAccounts,
     error::{AppError, AppResult},
     utils::pagination::{PaginatedResponse, Pagination},
 };
 
 use super::dto::{
-    SavedItem, TryItem, UpdateUserDto, UserActivityItem, UserActivityType, UserResponse,
-    UserStatsResponse,
+    SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivityItem, UserActivityType,
+    UserResponse, UserStatsResponse,
 };
 
 /// 사용자 ID로 프로필 조회
@@ -84,6 +85,30 @@ pub async fn list_user_activities(
 ) -> AppResult<PaginatedResponse<UserActivityItem>> {
     // TODO(Phase 6+): 실제 Post/Spot/Solution 데이터와 조인
     Ok(PaginatedResponse::new(Vec::new(), pagination, 0))
+}
+
+/// 소셜 계정 목록 조회
+pub async fn list_social_accounts(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+) -> AppResult<Vec<SocialAccountResponse>> {
+    use sea_orm::ColumnTrait;
+    use sea_orm::QueryFilter;
+
+    let accounts = UserSocialAccounts::find()
+        .filter(crate::entities::user_social_accounts::Column::UserId.eq(user_id))
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(accounts
+        .into_iter()
+        .map(|a| SocialAccountResponse {
+            provider: a.provider,
+            provider_user_id: a.provider_user_id,
+            last_synced_at: a.last_synced_at.map(|dt| dt.with_timezone(&chrono::Utc)),
+        })
+        .collect())
 }
 
 async fn count_followers(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {
