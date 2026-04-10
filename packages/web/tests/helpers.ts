@@ -69,8 +69,22 @@ const MOCK_POST_DETAIL = {
  * Set up common API mocks for content consumption tests.
  */
 export async function mockContentAPIs(page: Page) {
+  // Post detail — /api/v1/posts/{id} (ends at id, not followed by /sub-resource)
+  // Register FIRST so it takes precedence over listing pattern
+  await page.route(/\/api\/v1\/posts\/[\w-]+$/, async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_POST_DETAIL),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
   // Search endpoint
-  await page.route("**/api/v1/search?*", async (route) => {
+  await page.route(/\/api\/v1\/search(\?|$)/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -78,26 +92,13 @@ export async function mockContentAPIs(page: Page) {
     });
   });
 
-  // Posts listing (used by explore browse mode AND feed)
-  await page.route("**/api/v1/posts?*", async (route) => {
+  // Posts listing (explore browse + home feed) — only matches /api/v1/posts?...
+  await page.route(/\/api\/v1\/posts\?/, async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(MOCK_POSTS_RESPONSE),
-      });
-    } else {
-      await route.continue();
-    }
-  });
-
-  // Post detail — match /api/v1/posts/{id} but NOT /api/v1/posts?query
-  await page.route(/\/api\/v1\/posts\/[\w-]+$/, async (route) => {
-    if (route.request().method() === "GET") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(MOCK_POST_DETAIL),
       });
     } else {
       await route.continue();
