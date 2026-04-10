@@ -20,7 +20,8 @@ use crate::{
 use super::{
     dto::{
         SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivitiesQuery,
-        UserActivityItem, UserActivityType, UserResponse, UserStatsResponse,
+        UserActivityItem, UserActivityType, UserResponse, UserSolutionItem, UserSpotItem,
+        UserStatsResponse,
     },
     service,
 };
@@ -199,6 +200,56 @@ pub async fn get_my_saved(
     Ok(Json(result))
 }
 
+/// GET /api/v1/users/me/spots - 내 Spot 목록
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/spots",
+    tag = "Users",
+    summary = "GET /api/v1/users/me/spots - 내 Spot 목록",
+    params(
+        ("page" = Option<u64>, Query, description = "Page number"),
+        ("per_page" = Option<u64>, Query, description = "Items per page (max 50)"),
+    ),
+    responses(
+        (status = 200, description = "Spot 목록", body = PaginatedResponse<UserSpotItem>),
+        (status = 401, description = "인증 필요"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_my_spots(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(pagination): Query<Pagination>,
+) -> AppResult<Json<PaginatedResponse<UserSpotItem>>> {
+    let result = service::list_user_spots(&state.db, user.id, pagination).await?;
+    Ok(Json(result))
+}
+
+/// GET /api/v1/users/me/solutions - 내 Solution 목록
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/solutions",
+    tag = "Users",
+    summary = "GET /api/v1/users/me/solutions - 내 Solution 목록",
+    params(
+        ("page" = Option<u64>, Query, description = "Page number"),
+        ("per_page" = Option<u64>, Query, description = "Items per page (max 50)"),
+    ),
+    responses(
+        (status = 200, description = "Solution 목록", body = PaginatedResponse<UserSolutionItem>),
+        (status = 401, description = "인증 필요"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_my_solutions(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(pagination): Query<Pagination>,
+) -> AppResult<Json<PaginatedResponse<UserSolutionItem>>> {
+    let result = service::list_user_solutions(&state.db, user.id, pagination).await?;
+    Ok(Json(result))
+}
+
 /// GET /api/v1/users/me/social-accounts - 내 소셜 계정 목록
 #[utoipa::path(
     get,
@@ -227,6 +278,8 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/me/stats", get(get_my_stats))
         .route("/me/tries", get(get_my_tries))
         .route("/me/saved", get(get_my_saved))
+        .route("/me/spots", get(get_my_spots))
+        .route("/me/solutions", get(get_my_solutions))
         .route("/me/social-accounts", get(get_my_social_accounts))
         .route_layer(from_fn_with_state(app_config, auth_middleware));
 

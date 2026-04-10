@@ -132,6 +132,33 @@ pub struct SocialAccountResponse {
     pub last_synced_at: Option<DateTime<Utc>>,
 }
 
+/// 유저 Spot 아이템 (프로필 목록용)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserSpotItem {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    /// 포스트 이미지 URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_image_url: Option<String>,
+    pub position_left: String,
+    pub position_top: String,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 유저 Solution 아이템 (프로필 목록용)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserSolutionItem {
+    pub id: Uuid,
+    pub spot_id: Uuid,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail_url: Option<String>,
+    pub is_adopted: bool,
+    pub is_verified: bool,
+    pub created_at: DateTime<Utc>,
+}
+
 /// VTON 히스토리 아이템
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TryItem {
