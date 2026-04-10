@@ -405,6 +405,62 @@ mod tests {
         assert!(back.keys.is_empty());
     }
 
+    #[test]
+    fn claims_is_admin_variants() {
+        let mut c = sample_hs256_claims();
+        assert!(!c.is_admin());
+        c.role = "admin".to_string();
+        assert!(c.is_admin());
+        c.role = "service_role".to_string();
+        assert!(c.is_admin());
+        c.role = "authenticated".to_string();
+        assert!(!c.is_admin());
+    }
+
+    #[test]
+    fn claims_is_expired_detects_past_exp() {
+        let mut c = sample_hs256_claims();
+        assert!(!c.is_expired());
+        c.exp = 1; // way in the past
+        assert!(c.is_expired());
+    }
+
+    #[test]
+    fn claims_user_id_parses_valid_uuid() {
+        let c = sample_hs256_claims();
+        let id = c.user_id().expect("valid uuid");
+        assert_eq!(
+            id,
+            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
+        );
+    }
+
+    #[test]
+    fn claims_user_id_rejects_non_uuid_sub() {
+        let mut c = sample_hs256_claims();
+        c.sub = "not-a-uuid".to_string();
+        assert!(c.user_id().is_err());
+    }
+
+    #[test]
+    fn default_role_is_user() {
+        assert_eq!(default_role(), "user");
+    }
+
+    #[test]
+    fn claims_default_role_when_missing_in_json() {
+        // Claims has #[serde(default = "default_role")] on role
+        let now = chrono::Utc::now().timestamp() as usize;
+        let json = serde_json::json!({
+            "sub": "550e8400-e29b-41d4-a716-446655440000",
+            "email": "test@example.com",
+            "exp": now + 3600,
+            "iat": now,
+        });
+        let c: Claims = serde_json::from_value(json).expect("deserialize");
+        assert_eq!(c.role, "user");
+    }
+
     #[tokio::test]
     async fn verify_supabase_token_rejects_malformed_jwt() {
         assert!(

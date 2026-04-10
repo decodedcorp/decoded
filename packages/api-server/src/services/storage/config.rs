@@ -140,4 +140,57 @@ mod tests {
         assert_eq!(high_quality.quality, 95);
         assert_eq!(high_quality.format, ImageFormat::Png);
     }
+
+    #[test]
+    fn image_format_from_extension_case_insensitive() {
+        assert_eq!(ImageFormat::from_extension("JPG"), Some(ImageFormat::Jpeg));
+        assert_eq!(ImageFormat::from_extension("PNG"), Some(ImageFormat::Png));
+        assert_eq!(ImageFormat::from_extension("WEBP"), Some(ImageFormat::WebP));
+        assert_eq!(ImageFormat::from_extension("Jpeg"), Some(ImageFormat::Jpeg));
+    }
+
+    #[test]
+    fn image_format_roundtrip_serde() {
+        let fmt = ImageFormat::WebP;
+        let json = serde_json::to_string(&fmt).unwrap();
+        assert_eq!(json, "\"webp\"");
+        let back: ImageFormat = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, ImageFormat::WebP);
+    }
+
+    #[test]
+    fn compression_options_default_format_is_jpeg() {
+        let opts = CompressionOptions::default();
+        assert_eq!(opts.format, ImageFormat::Jpeg);
+        assert_eq!(opts.max_height, Some(2048));
+    }
+
+    #[test]
+    fn thumbnail_dimensions_smaller_than_default() {
+        let thumb = CompressionOptions::thumbnail();
+        let default = CompressionOptions::default();
+        assert!(thumb.max_width.unwrap() < default.max_width.unwrap());
+        assert!(thumb.max_height.unwrap() < default.max_height.unwrap());
+    }
+
+    #[test]
+    fn storage_error_display() {
+        let err = StorageError::UploadError("timeout".to_string());
+        assert_eq!(err.to_string(), "Upload error: timeout");
+
+        let err = StorageError::ImageTooLarge(5_000_000, 4_000_000);
+        assert!(err.to_string().contains("5000000"));
+
+        let err = StorageError::InvalidDimensions(99999, 1);
+        assert!(err.to_string().contains("99999x1"));
+    }
+
+    #[test]
+    fn compression_options_serialization() {
+        let opts = CompressionOptions::thumbnail();
+        let v = serde_json::to_value(&opts).unwrap();
+        assert_eq!(v["quality"], 80);
+        assert_eq!(v["max_width"], 400);
+        assert_eq!(v["format"], "jpeg");
+    }
 }

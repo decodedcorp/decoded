@@ -34,7 +34,7 @@ impl SearchService {
 
         // 검색어 로그 저장 (백그라운드에서 처리)
         if let Some(uid) = user_id {
-            let _ = Self::log_search(&state.db, uid, &query.q).await;
+            let _ = Self::log_search(state.db.as_ref(), uid, &query.q).await;
         }
 
         // Meilisearch 검색 수행
@@ -201,7 +201,7 @@ impl SearchService {
             sql,
             vec![twenty_four_hours_ago.into()],
         ))
-        .all(&state.db)
+        .all(state.db.as_ref())
         .await?;
 
         let data = results
@@ -229,7 +229,7 @@ impl SearchService {
             .filter(entities::search_logs::Column::UserId.eq(user_id))
             .order_by_desc(entities::search_logs::Column::CreatedAt)
             .limit(limit as u64)
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let data = logs
@@ -297,7 +297,7 @@ impl SearchService {
             sql,
             params,
         ))
-        .all(&state.db)
+        .all(state.db.as_ref())
         .await?;
 
         let data: Vec<SimilarSearchResultItem> = results
@@ -327,7 +327,7 @@ impl SearchService {
     ) -> AppResult<()> {
         // 검색 로그 조회 및 소유권 확인
         let log = entities::SearchLogs::find_by_id(search_id)
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await?
             .ok_or(AppError::NotFound("Search log not found".to_string()))?;
 
@@ -340,7 +340,7 @@ impl SearchService {
 
         // 삭제
         entities::SearchLogs::delete_by_id(search_id)
-            .exec(&state.db)
+            .exec(state.db.as_ref())
             .await?;
 
         Ok(())
@@ -366,6 +366,10 @@ impl SearchService {
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
+    use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+    use crate::tests::fixtures::{search_log_model, test_uuid};
+    use crate::tests::helpers::test_app_state;
 
     #[test]
     fn test_search_query_limit_validation() {
@@ -388,5 +392,325 @@ mod tests {
         };
 
         assert_eq!(item.query, "jennie airport");
+    }
+
+    #[tokio::test]
+    async fn search_with_dummy_client_returns_empty_results() {
+        // DummySearchClient returns {"hits":[],"estimatedTotalHits":0}
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            // log_search INSERT result
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            // log_search returns the inserted model
+            .append_query_results([vec![search_log_model()]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "test".to_string(),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, Some(test_uuid(10)), query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+        assert_eq!(resp.query, "test");
+    }
+
+    #[tokio::test]
+    async fn search_without_user_skips_log() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "coat".to_string(),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert_eq!(resp.query, "coat");
+        assert!(resp.data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn recent_searches_returns_logs() {
+        let log = search_log_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![log.clone()]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result = SearchService::recent_searches(&state, test_uuid(10), 10).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert_eq!(resp.data.len(), 1);
+        assert_eq!(resp.data[0].query, "jennie airport");
+    }
+
+    #[tokio::test]
+    async fn recent_searches_caps_limit_at_20() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<entities::search_logs::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+
+        // Request 100 but should be capped to 20 internally
+        let result = SearchService::recent_searches(&state, test_uuid(10), 100).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn delete_recent_search_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<entities::search_logs::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result =
+            SearchService::delete_recent_search(&state, test_uuid(10), test_uuid(50)).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_recent_search_forbidden_for_other_user() {
+        let mut log = search_log_model();
+        log.user_id = Some(test_uuid(99)); // different user
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![log]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result =
+            SearchService::delete_recent_search(&state, test_uuid(10), test_uuid(50)).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn similar_search_empty_query_returns_empty() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SimilarSearchQuery {
+            q: "   ".to_string(),
+            entity_type: None,
+            limit: 10,
+        };
+        let result = SearchService::search_similar(&state, query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+    }
+
+    // ── search: filters + sort variants ──
+    #[tokio::test]
+    async fn search_with_all_filters_and_recent_sort() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .append_query_results([vec![search_log_model()]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "jennie".to_string(),
+            category: Some("fashion".to_string()),
+            media_type: Some("variety".to_string()),
+            context: Some("airport".to_string()),
+            has_adopted: Some(true),
+            sort: "recent".to_string(),
+            page: 1,
+            limit: 10,
+        };
+        let result = SearchService::search(&state, Some(test_uuid(10)), query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.query, "jennie");
+        assert!(resp.data.is_empty());
+        assert_eq!(resp.pagination.per_page, 10);
+    }
+
+    #[tokio::test]
+    async fn search_popular_sort_no_log_when_no_user() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "test".to_string(),
+            sort: "popular".to_string(),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn search_solution_count_sort() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "coat".to_string(),
+            sort: "solution_count".to_string(),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn search_unknown_sort_falls_back_to_relevant() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "bag".to_string(),
+            sort: "unknown_sort".to_string(),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn search_has_adopted_false_no_filter_pushed() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "x".to_string(),
+            has_adopted: Some(false),
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn search_limit_capped_at_50() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+
+        let query = SearchQuery {
+            q: "y".to_string(),
+            limit: 200,
+            ..Default::default()
+        };
+        let result = SearchService::search(&state, None, query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert_eq!(resp.pagination.per_page, 50);
+    }
+
+    // ── popular_searches ──
+    #[tokio::test]
+    async fn popular_searches_empty() {
+        let empty: Vec<std::collections::BTreeMap<String, sea_orm::Value>> = vec![];
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([empty])
+            .into_connection();
+        let state = test_app_state(db);
+        let result = SearchService::popular_searches(&state).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        assert!(result.unwrap().data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn popular_searches_db_error() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result = SearchService::popular_searches(&state).await;
+        assert!(result.is_err());
+    }
+
+    // ── delete_recent_search success ──
+    #[tokio::test]
+    async fn delete_recent_search_success() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![search_log_model()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result =
+            SearchService::delete_recent_search(&state, test_uuid(10), test_uuid(50)).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+    }
+
+    // ── recent_searches db error ──
+    #[tokio::test]
+    async fn recent_searches_db_error() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let result = SearchService::recent_searches(&state, test_uuid(10), 10).await;
+        assert!(result.is_err());
+    }
+
+    // ── similar_search with dummy embedding client (returns a fixed vec) ──
+    #[tokio::test]
+    async fn similar_search_with_query_executes_db_path() {
+        let empty: Vec<std::collections::BTreeMap<String, sea_orm::Value>> = vec![];
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([empty])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = SimilarSearchQuery {
+            q: "jennie coat".to_string(),
+            entity_type: Some("solution".to_string()),
+            limit: 20,
+        };
+        let result = SearchService::search_similar(&state, query).await;
+        // Dummy embedding client + empty SQL result should succeed
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+        assert_eq!(resp.query, "jennie coat");
+    }
+
+    #[tokio::test]
+    async fn similar_search_filters_empty_entity_type() {
+        let empty: Vec<std::collections::BTreeMap<String, sea_orm::Value>> = vec![];
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([empty])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = SimilarSearchQuery {
+            q: "bag".to_string(),
+            entity_type: Some("".to_string()), // filtered out → None
+            limit: 10,
+        };
+        let result = SearchService::search_similar(&state, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn similar_search_db_error() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = SimilarSearchQuery {
+            q: "coat".to_string(),
+            entity_type: None,
+            limit: 10,
+        };
+        let result = SearchService::search_similar(&state, query).await;
+        assert!(result.is_err());
     }
 }

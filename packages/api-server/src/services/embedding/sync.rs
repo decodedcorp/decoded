@@ -75,11 +75,14 @@ fn build_solution_content_text_from_model(solution: &solutions::Model) -> String
 
 /// Solution embedding을 비동기로 upsert (실패 시 로그만, 핵심 로직에 영향 없음)
 pub async fn upsert_solution_embedding(
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
     embedding_client: Arc<dyn EmbeddingClient>,
     solution_id: Uuid,
 ) {
-    let solution = match solutions::Entity::find_by_id(solution_id).one(&db).await {
+    let solution = match solutions::Entity::find_by_id(solution_id)
+        .one(db.as_ref())
+        .await
+    {
         Ok(Some(s)) => s,
         Ok(None) => {
             tracing::warn!(solution_id = %solution_id, "Solution not found for embedding");
@@ -126,6 +129,7 @@ pub async fn upsert_solution_embedding(
     "#;
 
     if let Err(e) = db
+        .as_ref()
         .execute(Statement::from_sql_and_values(
             sea_orm::DatabaseBackend::Postgres,
             sql,
@@ -184,5 +188,36 @@ mod tests {
     fn build_solution_content_text_drops_empty_segments() {
         let out = build_solution_content_text("", &None, &None, &None);
         assert!(out.is_empty());
+    }
+
+    #[test]
+    fn build_solution_content_text_from_model_falls_back_to_id() {
+        let mut solution = crate::tests::fixtures::solution_model();
+        solution.title = "".to_string();
+        solution.keywords = None;
+        solution.metadata = None;
+        solution.description = None;
+        let out = build_solution_content_text_from_model(&solution);
+        assert_eq!(out, solution.id.to_string());
+    }
+
+    #[test]
+    fn build_solution_content_text_from_model_uses_content_when_present() {
+        let solution = crate::tests::fixtures::solution_model();
+        let out = build_solution_content_text_from_model(&solution);
+        assert!(out.contains("Test Solution"));
+    }
+
+    #[tokio::test]
+    async fn upsert_solution_embedding_returns_on_not_found() {
+        use crate::services::DummyEmbeddingClient;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<solutions::Model>::new()])
+            .into_connection();
+        let db = Arc::new(db);
+        let client: Arc<dyn EmbeddingClient> = Arc::new(DummyEmbeddingClient);
+        upsert_solution_embedding(db, client, crate::tests::fixtures::test_uuid(99)).await;
     }
 }

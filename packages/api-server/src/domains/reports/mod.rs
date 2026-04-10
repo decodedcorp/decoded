@@ -6,4 +6,7 @@ pub mod dto;
 pub mod handlers;
 pub mod service;
 
+#[cfg(test)]
+mod tests;
+
 pub use handlers::{admin_router, public_router};

@@ -44,7 +44,7 @@ pub async fn get_user_profile(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> AppResult<Json<UserResponse>> {
-    let user = service::get_user_with_follow_counts(&state.db, user_id).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user_id).await?;
     Ok(Json(user))
 }
 
@@ -65,7 +65,7 @@ pub async fn get_my_profile(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<UserResponse>> {
-    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user.id).await?;
     Ok(Json(user))
 }
 
@@ -89,8 +89,8 @@ pub async fn update_my_profile(
     Extension(user): Extension<User>,
     Json(dto): Json<UpdateUserDto>,
 ) -> AppResult<Json<UserResponse>> {
-    service::update_user_profile(&state.db, user.id, dto).await?;
-    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    service::update_user_profile(state.db.as_ref(), user.id, dto).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user.id).await?;
     Ok(Json(user))
 }
 
@@ -123,7 +123,8 @@ pub async fn get_my_activities(
     } = params;
 
     let activities =
-        service::list_user_activities(&state.db, user.id, activity_type, pagination).await?;
+        service::list_user_activities(state.db.as_ref(), user.id, activity_type, pagination)
+            .await?;
 
     Ok(Json(activities))
 }
@@ -145,7 +146,7 @@ pub async fn get_my_stats(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<UserStatsResponse>> {
-    let stats = service::get_user_stats(&state.db, user.id).await?;
+    let stats = service::get_user_stats(state.db.as_ref(), user.id).await?;
     Ok(Json(stats))
 }
 
@@ -171,7 +172,7 @@ pub async fn get_my_tries(
     Extension(user): Extension<User>,
     Query(pagination): Query<Pagination>,
 ) -> AppResult<Json<PaginatedResponse<TryItem>>> {
-    let result = service::list_my_tries(&state.db, user.id, pagination).await?;
+    let result = service::list_my_tries(state.db.as_ref(), user.id, pagination).await?;
     Ok(Json(result))
 }
 
@@ -197,7 +198,7 @@ pub async fn get_my_saved(
     Extension(user): Extension<User>,
     Query(pagination): Query<Pagination>,
 ) -> AppResult<Json<PaginatedResponse<SavedItem>>> {
-    let result = service::list_my_saved(&state.db, user.id, pagination).await?;
+    let result = service::list_my_saved(state.db.as_ref(), user.id, pagination).await?;
     Ok(Json(result))
 }
 

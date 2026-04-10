@@ -73,7 +73,7 @@ pub async fn list_candidates(
     _extension: axum::Extension<User>,
     Query(query): Query<EditorialCandidateQuery>,
 ) -> AppResult<Json<EditorialCandidateListResponse>> {
-    let db = &state.db;
+    let db = state.db.as_ref();
     let page = query.page.max(1);
     let per_page = query.per_page.clamp(1, 50);
 
@@ -200,5 +200,106 @@ mod tests {
     #[test]
     fn many_spots_and_solutions() {
         assert!(meets_editorial_criteria(6, &[5, 3, 2, 1, 4, 7]));
+    }
+
+    // --- Handler-level MockDatabase tests -------------------------------------
+    use crate::tests::fixtures;
+    use crate::tests::helpers::{mock_admin_user, test_app_state};
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    #[tokio::test]
+    async fn list_candidates_empty_posts_returns_empty() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let axum::Json(body) = list_candidates(
+            axum::extract::State(state),
+            axum::Extension(mock_admin_user()),
+            axum::extract::Query(EditorialCandidateQuery {
+                page: 1,
+                per_page: 20,
+            }),
+        )
+        .await
+        .expect("ok");
+
+        assert_eq!(body.total, 0);
+        assert!(body.data.is_empty());
+        assert_eq!(body.page, 1);
+        assert_eq!(body.per_page, 20);
+    }
+
+    #[tokio::test]
+    async fn list_candidates_post_with_too_few_spots_filtered_out() {
+        let post = fixtures::post_model();
+        let spot1 = fixtures::spot_model();
+        let mut spot2 = fixtures::spot_model();
+        spot2.id = fixtures::test_uuid(22);
+        let mut spot3 = fixtures::spot_model();
+        spot3.id = fixtures::test_uuid(23);
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![post]])
+            .append_query_results([vec![spot1, spot2, spot3]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let axum::Json(body) = list_candidates(
+            axum::extract::State(state),
+            axum::Extension(mock_admin_user()),
+            axum::extract::Query(EditorialCandidateQuery {
+                page: 1,
+                per_page: 20,
+            }),
+        )
+        .await
+        .expect("ok");
+
+        assert_eq!(body.total, 0);
+        assert!(body.data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_candidates_pagination_clamps_per_page() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let axum::Json(body) = list_candidates(
+            axum::extract::State(state),
+            axum::Extension(mock_admin_user()),
+            axum::extract::Query(EditorialCandidateQuery {
+                page: 1,
+                per_page: 200,
+            }),
+        )
+        .await
+        .expect("ok");
+
+        assert_eq!(body.per_page, 50);
+    }
+
+    #[tokio::test]
+    async fn list_candidates_clamps_page_to_at_least_one() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let axum::Json(body) = list_candidates(
+            axum::extract::State(state),
+            axum::Extension(mock_admin_user()),
+            axum::extract::Query(EditorialCandidateQuery {
+                page: 0,
+                per_page: 10,
+            }),
+        )
+        .await
+        .expect("ok");
+
+        assert_eq!(body.page, 1);
     }
 }

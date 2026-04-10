@@ -221,7 +221,7 @@ pub async fn list_posts(
     State(state): State<AppState>,
     Query(query): Query<PostListQuery>,
 ) -> AppResult<Json<PaginatedResponse<crate::domains::posts::dto::PostListItem>>> {
-    let posts = service::list_posts(&state.db, query).await?;
+    let posts = service::list_posts(state.db.as_ref(), query).await?;
     Ok(Json(posts))
 }
 
@@ -244,17 +244,21 @@ pub async fn get_post(
     user: Option<Extension<User>>,
 ) -> AppResult<Json<PostDetailResponse>> {
     // 조회수 증가
-    let _ = service::increment_view_count(&state.db, post_id).await;
+    let _ = service::increment_view_count(state.db.as_ref(), post_id).await;
 
     let user_id = user.as_ref().map(|Extension(u)| u.id);
 
     // 로그인한 사용자의 경우 view_logs 기록
     if let Some(Extension(ref user)) = user {
-        let _ =
-            crate::domains::views::service::create_view_log(&state.db, user.id, "post", post_id)
-                .await;
+        let _ = crate::domains::views::service::create_view_log(
+            state.db.as_ref(),
+            user.id,
+            "post",
+            post_id,
+        )
+        .await;
     }
-    let post_detail = service::get_post_detail(&state.db, post_id, user_id).await?;
+    let post_detail = service::get_post_detail(state.db.as_ref(), post_id, user_id).await?;
     Ok(Json(post_detail))
 }
 
@@ -310,7 +314,7 @@ pub async fn delete_post(
     Extension(user): Extension<User>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
-    service::delete_post(&state.search_client, &state.db, post_id, user.id).await?;
+    service::delete_post(&state.search_client, state.db.as_ref(), post_id, user.id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -481,7 +485,7 @@ pub async fn list_tries(
     Path(post_id): Path<Uuid>,
     Query(query): Query<TryListQuery>,
 ) -> AppResult<Json<TryListResponse>> {
-    let response = service::list_tries(&state.db, post_id, query).await?;
+    let response = service::list_tries(state.db.as_ref(), post_id, query).await?;
     Ok(Json(response))
 }
 
@@ -501,7 +505,7 @@ pub async fn count_tries(
     State(state): State<AppState>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<Json<TryCountResponse>> {
-    let response = service::count_tries(&state.db, post_id).await?;
+    let response = service::count_tries(state.db.as_ref(), post_id).await?;
     Ok(Json(response))
 }
 
@@ -524,7 +528,7 @@ pub async fn list_tries_by_spot(
     Path(spot_id): Path<Uuid>,
     Query(query): Query<TryListQuery>,
 ) -> AppResult<Json<TryListResponse>> {
-    let response = service::list_tries_by_spot(&state.db, spot_id, query).await?;
+    let response = service::list_tries_by_spot(state.db.as_ref(), spot_id, query).await?;
     Ok(Json(response))
 }
 

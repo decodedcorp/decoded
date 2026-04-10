@@ -16,7 +16,7 @@ use uuid::Uuid;
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Starting failed items retry batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
     let now = chrono::Utc::now();
 
     // 재시도 대상 조회 (next_retry_at <= now && retry_count < 3)
@@ -171,5 +171,130 @@ mod tests {
         assert_eq!(retry_backoff_seconds(1), 2);
         assert_eq!(retry_backoff_seconds(2), 4);
         assert_eq!(retry_backoff_seconds(3), 8);
+    }
+
+    #[test]
+    fn retry_backoff_seconds_power_of_two() {
+        assert_eq!(retry_backoff_seconds(4), 16);
+        assert_eq!(retry_backoff_seconds(5), 32);
+    }
+
+    #[tokio::test]
+    async fn run_with_empty_failed_items_succeeds() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+        use std::sync::Arc;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<entities::failed_batch_items::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn retry_backoff_seconds_single() {
+        assert_eq!(retry_backoff_seconds(0), 1);
+        assert_eq!(retry_backoff_seconds(1), 2);
+    }
+
+    #[tokio::test]
+    async fn run_with_invalid_item_id_deletes_and_continues() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+        use std::sync::Arc;
+
+        // One failed item with invalid UUID → delete_failed_item then continue → done.
+        let mut item = fixtures::failed_batch_item_model();
+        item.item_id = "not-a-uuid".to_string();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![item]]) // failed items list
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }]) // delete
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_with_missing_solution_deletes_item() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+        use std::sync::Arc;
+
+        // Item parses but Solutions::find_by_id → None → delete → done.
+        let item = fixtures::failed_batch_item_model();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![item]]) // failed items list
+            .append_query_results([Vec::<crate::entities::solutions::Model>::new()]) // solution not found
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }]) // delete
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_with_successful_retry_deletes_item() {
+        use crate::tests::{fixtures, helpers};
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+        use std::sync::Arc;
+
+        // Successful retry path:
+        // 1. failed items list
+        // 2. Solutions::find_by_id → Some
+        // 3. txn begin (exec)
+        // 4. update solution (query returns updated model)
+        // 5. txn commit (exec)
+        // 6. delete failed_item (exec)
+        let item = fixtures::failed_batch_item_model();
+        let solution = fixtures::solution_model();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![item]]) // failed items
+            .append_query_results([vec![solution.clone()]]) // find solution
+            .append_query_results([vec![solution]]) // txn: update returns
+            .append_exec_results([
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 0,
+                }, // txn begin
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                }, // update
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 0,
+                }, // txn commit
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                }, // delete failed_item
+            ])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_returns_err_on_db_failure() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_err());
     }
 }
