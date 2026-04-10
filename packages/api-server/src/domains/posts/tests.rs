@@ -7,6 +7,7 @@ mod tests {
     use crate::domains::posts::service::{compute_search_fields, PostRelatedData};
     use crate::tests::fixtures::*;
     use serde_json::json;
+    use std::collections::HashMap;
     use validator::Validate;
 
     // ── MediaSourceDto ──
@@ -145,6 +146,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.category_codes.is_empty());
@@ -160,6 +162,7 @@ mod tests {
             solutions: vec![solution_model()],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert_eq!(fields.spot_count, 1);
@@ -177,6 +180,7 @@ mod tests {
             solutions: vec![sol],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.has_adopted_solution);
@@ -191,6 +195,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.category_codes.is_empty());
@@ -206,6 +211,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert_eq!(fields.category_codes.len(), 1);

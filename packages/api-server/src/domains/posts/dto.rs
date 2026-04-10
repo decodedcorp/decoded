@@ -475,6 +475,10 @@ pub struct TopSolutionSummary {
 
     /// 채택 여부
     pub is_adopted: bool,
+
+    /// 브랜드 로고 URL (warehouse.brands)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand_logo_url: Option<String>,
 }
 
 /// Spot + 대표 Solution (Post 상세용)
@@ -530,6 +534,14 @@ pub struct PostDetailResponse {
     /// 아티스트명
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_name: Option<String>,
+
+    /// 아티스트 프로필 이미지 URL (warehouse.artists)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_profile_image_url: Option<String>,
+
+    /// 그룹 프로필 이미지 URL (warehouse.groups)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_profile_image_url: Option<String>,
 
     /// 상황 정보
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -624,6 +636,8 @@ impl PostDetailResponse {
             title: post.title.clone(),
             group_name: post.group_name.clone(),
             artist_name: post.artist_name.clone(),
+            artist_profile_image_url: None,
+            group_profile_image_url: None,
             context: post.context.clone(),
             view_count: post.view_count,
             status: post.status.clone(),

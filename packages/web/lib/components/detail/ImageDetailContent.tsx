@@ -49,14 +49,6 @@ type Props = {
   hideImage?: boolean;
   onHeroClick?: () => void;
   variant?: "full" | "explore-preview";
-  artistProfiles?: Record<
-    string,
-    { name: string; profileImageUrl: string | null }
-  >;
-  brandProfiles?: Record<
-    string,
-    { name: string; profileImageUrl: string | null }
-  >;
 };
 
 /**
@@ -79,8 +71,6 @@ export function ImageDetailContent({
   hideImage = false,
   onHeroClick,
   variant = "full",
-  artistProfiles,
-  brandProfiles,
 }: Props) {
   const isExplorePreview = variant === "explore-preview";
   const hasMagazine = !!magazineLayout;
@@ -296,21 +286,17 @@ export function ImageDetailContent({
         {/* Artist/Group profile — explore-preview only */}
         {isExplorePreview &&
           (() => {
-            const profile =
-              artistProfiles?.[
-                imageWithOwner.artist_name?.toLowerCase() ?? ""
-              ] ||
-              artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
+            const profileImageUrl =
+              imageWithOwner.artist_profile_image_url ||
+              imageWithOwner.group_profile_image_url;
             const displayName =
-              profile?.name ||
-              imageWithOwner.artist_name ||
-              imageWithOwner.group_name;
+              imageWithOwner.artist_name || imageWithOwner.group_name;
             if (!displayName) return null;
             return (
               <div className="flex flex-col items-center gap-2 px-6 py-5">
-                {profile?.profileImageUrl ? (
+                {profileImageUrl ? (
                   <img
-                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
+                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profileImageUrl)}`}
                     alt=""
                     className="w-12 h-12 rounded-full object-cover border border-white/10"
                   />
@@ -365,21 +351,17 @@ export function ImageDetailContent({
         {/* Artist/Group profile — full page and magazine mode */}
         {!isExplorePreview &&
           (() => {
-            const profile =
-              artistProfiles?.[
-                imageWithOwner.artist_name?.toLowerCase() ?? ""
-              ] ||
-              artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
+            const profileImageUrl =
+              imageWithOwner.artist_profile_image_url ||
+              imageWithOwner.group_profile_image_url;
             const displayName =
-              profile?.name ||
-              imageWithOwner.artist_name ||
-              imageWithOwner.group_name;
+              imageWithOwner.artist_name || imageWithOwner.group_name;
             if (!displayName) return null;
             return (
               <div className="flex flex-col items-center gap-2 px-6 py-5">
-                {profile?.profileImageUrl ? (
+                {profileImageUrl ? (
                   <img
-                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
+                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profileImageUrl)}`}
                     alt=""
                     className="w-12 h-12 rounded-full object-cover border border-white/10"
                   />
@@ -467,7 +449,6 @@ export function ImageDetailContent({
               compact={isExplorePreview}
               scrollContainerRef={scrollContainerRef}
               onActiveIndexChange={onActiveIndexChange}
-              brandProfiles={brandProfiles}
             />
 
             {/* Magazine: News References */}
@@ -530,7 +511,6 @@ export function ImageDetailContent({
                   onAddSolutionClick={(spotId) =>
                     setSpotIdToAddSolution(spotId)
                   }
-                  brandProfiles={brandProfiles}
                 />
               </div>
             )}

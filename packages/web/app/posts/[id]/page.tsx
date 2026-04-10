@@ -1,7 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { ImageDetailPage } from "@/lib/components/detail/ImageDetailPage";
-import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { JsonLdArticle } from "@/lib/seo/json-ld";
 
@@ -70,45 +69,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/**
- * Filter profile maps to only entries relevant to this post.
- * Reduces RSC payload from ~1,500 entries to 1-2 entries.
- */
-function filterArtistProfiles(
-  map: Map<string, { name: string; profileImageUrl: string | null }>,
-  artistName: string | null | undefined,
-  groupName: string | null | undefined
-): Record<string, { name: string; profileImageUrl: string | null }> {
-  const result: Record<
-    string,
-    { name: string; profileImageUrl: string | null }
-  > = {};
-  for (const raw of [artistName, groupName]) {
-    if (!raw) continue;
-    const key = raw.toLowerCase();
-    const entry = map.get(key);
-    if (entry) result[key] = entry;
-  }
-  return result;
-}
-
-/**
- * Full page route for /posts/[id]
- * Uses ImageDetailPage (image-centric UI)
- */
 export default async function PostDetailPageRoute({ params }: Props) {
   const { id } = await params;
-
-  const [post, artistProfileMap] = await Promise.all([
-    getCachedPost(id),
-    buildArtistProfileMap(),
-  ]);
-
-  const artistProfiles = filterArtistProfiles(
-    artistProfileMap,
-    post?.artist_name,
-    post?.group_name
-  );
+  const post = await getCachedPost(id);
 
   const artistLabel = post?.artist_name || post?.group_name || "Unknown";
   const title = post?.title || post?.context || `${artistLabel}'s Style`;
@@ -129,7 +92,7 @@ export default async function PostDetailPageRoute({ params }: Props) {
           artistName={artistLabel}
         />
       )}
-      <ImageDetailPage imageId={id} artistProfiles={artistProfiles} />
+      <ImageDetailPage imageId={id} />
     </>
   );
 }

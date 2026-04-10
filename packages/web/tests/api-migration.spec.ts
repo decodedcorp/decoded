@@ -100,8 +100,7 @@ test.describe("API migration — post detail response contract", () => {
     page.on("request", (req) => {
       const url = req.url();
       if (url.includes("/api/v1/posts/")) apiCalls.push(url);
-      if (url.includes("supabase.co/rest/v1/posts"))
-        supabaseCalls.push(url);
+      if (url.includes("supabase.co/rest/v1/posts")) supabaseCalls.push(url);
     });
 
     const listRes = await page.request.get("/api/v1/posts?page=1&per_page=1");

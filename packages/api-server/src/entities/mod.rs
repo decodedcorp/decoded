@@ -36,6 +36,9 @@ pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;
 pub mod votes;
+pub mod warehouse_artists;
+pub mod warehouse_brands;
+pub mod warehouse_groups;
 
 pub use categories::ActiveModel as CategoriesActiveModel;
 pub use categories::Entity as Categories;
@@ -148,3 +151,12 @@ pub use try_spot_tags::Model as TrySpotTagsModel;
 pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
 pub use user_tryon_history::Entity as UserTryonHistory;
 pub use user_tryon_history::Model as UserTryonHistoryModel;
+
+pub use warehouse_artists::Entity as WarehouseArtists;
+pub use warehouse_artists::Model as WarehouseArtistsModel;
+
+pub use warehouse_brands::Entity as WarehouseBrands;
+pub use warehouse_brands::Model as WarehouseBrandsModel;
+
+pub use warehouse_groups::Entity as WarehouseGroups;
+pub use warehouse_groups::Model as WarehouseGroupsModel;
