@@ -120,6 +120,7 @@ function DropZoneComponent({
 
   return (
     <div
+      data-testid="upload-dropzone"
       role="button"
       tabIndex={disabled ? -1 : 0}
       onClick={handleClick}

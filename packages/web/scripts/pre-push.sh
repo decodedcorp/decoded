@@ -41,4 +41,12 @@ else
   echo "=== 4. Build 건너뜀 (기본 — 켜려면 RUN_FE_BUILD=1) ==="
 fi
 
+if [[ -n "${RUN_E2E_COVERAGE:-}" ]]; then
+  echo "=== 5. E2E Coverage ==="
+  E2E_COVERAGE=1 bunx playwright test
+  bash "$SCRIPT_DIR/check-coverage.sh" 30
+else
+  echo "=== 5. E2E Coverage 건너뜀 (기본 — 켜려면 RUN_E2E_COVERAGE=1) ==="
+fi
+
 echo "=== web: 모든 체크 통과 ==="

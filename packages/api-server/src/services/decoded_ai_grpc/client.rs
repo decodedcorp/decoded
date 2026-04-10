@@ -230,10 +230,7 @@ impl DecodedAIGrpcClient {
     ) -> Result<ExtractPostContextResponse, Box<dyn std::error::Error>> {
         let start = Instant::now();
         let mut client = self.client.clone();
-        let request = tonic::Request::new(ExtractPostContextRequest {
-            post_id,
-            image_url,
-        });
+        let request = tonic::Request::new(ExtractPostContextRequest { post_id, image_url });
         let res = async {
             let response = client.extract_post_context(request).await?;
             Ok::<_, Box<dyn std::error::Error>>(response.into_inner())

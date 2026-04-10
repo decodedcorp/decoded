@@ -686,7 +686,11 @@ pub async fn list_posts(
     let mut select = Posts::find().filter(Column::Status.eq(crate::constants::post_status::ACTIVE));
 
     // Try 포스트는 일반 피드에서 제외
-    select = select.filter(Column::PostType.is_null().or(Column::PostType.ne(POST_TYPE_TRY)));
+    select = select.filter(
+        Column::PostType
+            .is_null()
+            .or(Column::PostType.ne(POST_TYPE_TRY)),
+    );
 
     // 필터 적용
     if let Some(ref artist_name) = query.artist_name {

@@ -191,7 +191,7 @@ export const FeedCard = memo(
 
     const cardContent = (
       // dwellRef tracks 3-second viewport visibility for dwell_time event
-      <article ref={dwellRef as React.RefObject<HTMLElement>}>
+      <article data-testid="feed-card" ref={dwellRef as React.RefObject<HTMLElement>}>
         <Card
           data-flip-id={id ? `feed-card-${id}` : undefined}
           interactive
@@ -303,6 +303,7 @@ export const FeedCard = memo(
               <div className="flex items-center gap-4 mt-3">
                 {/* Like button */}
                 <button
+                  data-testid="like-button"
                   onClick={handleLike}
                   className="flex items-center gap-1 text-white transition-transform"
                   aria-label={engagement.isLiked ? "Unlike" : "Like"}

@@ -9,8 +9,8 @@ use sea_orm::{
 use uuid::Uuid;
 
 use crate::{
-    entities::users::{ActiveModel, Entity as Users, Model as UserModel},
     entities::user_social_accounts::Entity as UserSocialAccounts,
+    entities::users::{ActiveModel, Entity as Users, Model as UserModel},
     error::{AppError, AppResult},
     utils::pagination::{PaginatedResponse, Pagination},
 };
@@ -134,7 +134,10 @@ pub async fn get_user_stats(
         ))
         .await
         .map_err(AppError::DatabaseError)
-        .map(|r| r.map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0)).unwrap_or(0))
+        .map(|r| {
+            r.map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+                .unwrap_or(0)
+        })
     };
 
     let total_posts = query_count(count_query("posts")).await?;
@@ -261,20 +264,20 @@ pub async fn list_user_activities(
                 _ => UserActivityType::Post,
             };
 
-            let spot = row
-                .try_get::<Uuid>("", "spot_id")
-                .ok()
-                .map(|spot_id| UserActivitySpotMeta {
-                    id: spot_id,
-                    post: row.try_get::<Uuid>("", "spot_post_id").ok().map(|pid| {
-                        UserActivityPostMeta {
-                            id: pid,
-                            image_url: row.try_get("", "spot_post_image_url").ok(),
-                            artist_name: row.try_get("", "spot_post_artist_name").ok(),
-                            group_name: row.try_get("", "spot_post_group_name").ok(),
-                        }
-                    }),
-                });
+            let spot =
+                row.try_get::<Uuid>("", "spot_id")
+                    .ok()
+                    .map(|spot_id| UserActivitySpotMeta {
+                        id: spot_id,
+                        post: row.try_get::<Uuid>("", "spot_post_id").ok().map(|pid| {
+                            UserActivityPostMeta {
+                                id: pid,
+                                image_url: row.try_get("", "spot_post_image_url").ok(),
+                                artist_name: row.try_get("", "spot_post_artist_name").ok(),
+                                group_name: row.try_get("", "spot_post_group_name").ok(),
+                            }
+                        }),
+                    });
 
             UserActivityItem {
                 id: row.try_get("", "id").unwrap_or_default(),
@@ -331,10 +334,8 @@ pub async fn list_user_spots(
         .all(db)
         .await
         .map_err(AppError::DatabaseError)?;
-    let post_map: std::collections::HashMap<Uuid, String> = posts
-        .into_iter()
-        .map(|p| (p.id, p.image_url))
-        .collect();
+    let post_map: std::collections::HashMap<Uuid, String> =
+        posts.into_iter().map(|p| (p.id, p.image_url)).collect();
 
     let items = spots
         .into_iter()
@@ -349,7 +350,11 @@ pub async fn list_user_spots(
         })
         .collect();
 
-    Ok(PaginatedResponse::new(items, Pagination::new(pagination.page, per_page), total))
+    Ok(PaginatedResponse::new(
+        items,
+        Pagination::new(pagination.page, per_page),
+        total,
+    ))
 }
 
 /// 유저의 Solution 목록 조회
@@ -392,7 +397,11 @@ pub async fn list_user_solutions(
         })
         .collect();
 
-    Ok(PaginatedResponse::new(items, Pagination::new(pagination.page, per_page), total))
+    Ok(PaginatedResponse::new(
+        items,
+        Pagination::new(pagination.page, per_page),
+        total,
+    ))
 }
 
 pub async fn list_social_accounts(
@@ -574,7 +583,9 @@ pub async fn follow_user(
     following_id: Uuid,
 ) -> AppResult<()> {
     if follower_id == following_id {
-        return Err(AppError::BadRequest("자기 자신을 팔로우할 수 없습니다".to_string()));
+        return Err(AppError::BadRequest(
+            "자기 자신을 팔로우할 수 없습니다".to_string(),
+        ));
     }
 
     // 대상 유저 존재 확인

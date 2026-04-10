@@ -557,7 +557,10 @@ impl RankingsService {
             .map(|row| super::dto::TrendingArtistItem {
                 artist_name: row.try_get::<String>("", "artist_name").unwrap_or_default(),
                 post_count: row.try_get::<i64>("", "post_count").unwrap_or(0),
-                image_url: row.try_get::<Option<String>>("", "top_image_url").ok().flatten(),
+                image_url: row
+                    .try_get::<Option<String>>("", "top_image_url")
+                    .ok()
+                    .flatten(),
             })
             .collect();
 

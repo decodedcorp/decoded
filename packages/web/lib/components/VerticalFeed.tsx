@@ -63,7 +63,7 @@ export const VerticalFeed = memo(
       <div ref={scrollContainerRef} className="h-full overflow-y-auto">
         <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-20 md:pb-4">
           {/* Feed cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          <div data-testid="feed-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {items.map((item, index) => (
               <FeedCard
                 key={item.id}
