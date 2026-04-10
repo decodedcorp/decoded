@@ -565,74 +565,93 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
     Ok(spots_with_solutions)
 }
 
-/// Warehouse에서 아티스트/그룹 프로필 이미지를 조회
+/// Warehouse에서 아티스트/그룹 프로필 이미지를 병렬 조회
 async fn load_entity_profile_images(
     db: &DatabaseConnection,
     artist_id: Option<Uuid>,
     group_id: Option<Uuid>,
 ) -> (Option<String>, Option<String>) {
-    let artist_img = if let Some(aid) = artist_id {
-        crate::entities::WarehouseArtists::find_by_id(aid)
-            .one(db)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|a| a.profile_image_url)
-    } else {
-        None
+    let artist_fut = async {
+        match artist_id {
+            Some(aid) => crate::entities::WarehouseArtists::find_by_id(aid)
+                .one(db)
+                .await
+                .ok()
+                .flatten()
+                .and_then(|a| a.profile_image_url),
+            None => None,
+        }
     };
 
-    let group_img = if let Some(gid) = group_id {
-        crate::entities::WarehouseGroups::find_by_id(gid)
-            .one(db)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|g| g.profile_image_url)
-    } else {
-        None
+    let group_fut = async {
+        match group_id {
+            Some(gid) => crate::entities::WarehouseGroups::find_by_id(gid)
+                .one(db)
+                .await
+                .ok()
+                .flatten()
+                .and_then(|g| g.profile_image_url),
+            None => None,
+        }
     };
 
-    (artist_img, group_img)
+    tokio::join!(artist_fut, group_fut)
 }
 
 /// Post 상세 조회 (Spots + 대표 Solution 포함)
+///
+/// 독립적인 쿼리를 tokio::try_join!으로 병렬 실행하여 응답 시간을 최소화한다.
+/// Before: post → user → related_data → like_stats → saved → profile (직렬 ~6 RTT)
+/// After:  post → [user, related_data, like_count, user_liked, saved, profile] 병렬 (~2 RTT)
 pub async fn get_post_detail(
     db: &DatabaseConnection,
     post_id: Uuid,
     user_id: Option<Uuid>,
 ) -> AppResult<PostDetailResponse> {
     use crate::domains::comments::service::count_comments_by_post_id;
-    use crate::domains::post_likes::service::get_like_stats as get_post_like_stats;
+    use crate::domains::post_likes::service::{count_likes_by_post_id, user_has_liked};
     use crate::domains::users::service::get_user_by_id;
 
-    // 1. Post 및 관련 데이터 로드
+    // 1. Post 조회 (나머지 쿼리에서 post.user_id, post.artist_id 등이 필요)
     let post = get_post_by_id(db, post_id).await?;
-    let user = get_user_by_id(db, post.user_id).await?;
-    let related_data = load_post_related_data(db, post_id).await?;
 
-    // 2. Like/Saved 상태 + warehouse 프로필 이미지 조회
-    let like_stats = get_post_like_stats(db, post_id, user_id).await?;
-    let user_has_saved = if let Some(uid) = user_id {
-        crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
-            .await
-            .unwrap_or(false)
-    } else {
-        false
+    // 2. 독립적인 쿼리들을 모두 병렬 실행
+    let user_fut = get_user_by_id(db, post.user_id);
+    let related_fut = load_post_related_data(db, post_id);
+    let like_count_fut = count_likes_by_post_id(db, post_id);
+    let profile_fut = load_entity_profile_images(db, post.artist_id, post.group_id);
+
+    let user_liked_fut = async {
+        match user_id {
+            Some(uid) => user_has_liked(db, post_id, uid).await,
+            None => Ok(false),
+        }
     };
-    let (artist_profile_image_url, group_profile_image_url) =
-        load_entity_profile_images(db, post.artist_id, post.group_id).await;
+    let saved_fut = async {
+        match user_id {
+            Some(uid) => Ok(crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
+                .await
+                .unwrap_or(false)),
+            None => Ok::<bool, crate::error::AppError>(false),
+        }
+    };
+
+    let (user, related_data, like_count, user_has_liked_val, user_has_saved, (artist_img, group_img)) =
+        tokio::try_join!(
+            user_fut,
+            related_fut,
+            like_count_fut,
+            user_liked_fut,
+            saved_fut,
+            async { Ok(profile_fut.await) },
+        )?;
 
     // 3. Spots이 없으면 빈 응답 반환
     if related_data.spots.is_empty() {
         let media_source = build_media_source_from_post(&post);
         let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
             let c = count_tries(db, post_id).await?;
-            if c.count > 0 {
-                Some(c.count)
-            } else {
-                None
-            }
+            if c.count > 0 { Some(c.count) } else { None }
         } else {
             None
         };
@@ -642,49 +661,45 @@ pub async fn get_post_detail(
             media_source,
             None,
             0,
-            like_stats.like_count as i64,
-            Some(like_stats.user_has_liked),
+            like_count as i64,
+            Some(user_has_liked_val),
             user_id.map(|_| user_has_saved),
         );
         response.try_count = try_count;
-        response.artist_profile_image_url = artist_profile_image_url;
-        response.group_profile_image_url = group_profile_image_url;
+        response.artist_profile_image_url = artist_img;
+        response.group_profile_image_url = group_img;
         return Ok(response);
     }
 
-    // 4. Spot 목록 생성 (배치 로드된 데이터로부터)
+    // 4. Spot 목록 생성 + Comment/Try 카운트 병렬
     let spots = build_spots_response(&related_data)?;
-
-    // 5. Comment 개수 및 MediaSource 조회
-    let comment_count = count_comments_by_post_id(db, post_id).await? as i64;
     let media_source = build_media_source_from_post(&post);
 
-    // 6. Try 개수 조회 (원본 포스트인 경우만)
-    let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
-        let count = count_tries(db, post_id).await?;
-        if count.count > 0 {
-            Some(count.count)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    let is_try = post.post_type.as_deref() == Some(POST_TYPE_TRY);
+    let (comment_count, try_count_result) = tokio::try_join!(
+        async { count_comments_by_post_id(db, post_id).await.map(|c| c as i64) },
+        async {
+            if is_try {
+                return Ok(None);
+            }
+            count_tries(db, post_id).await.map(|c| if c.count > 0 { Some(c.count) } else { None })
+        },
+    )?;
 
-    // 7. PostDetailResponse 반환
+    // 5. PostDetailResponse 반환
     let mut response = PostDetailResponse::from_post_model(
         post,
         user,
         media_source,
         Some(spots),
         comment_count,
-        like_stats.like_count as i64,
-        Some(like_stats.user_has_liked),
+        like_count as i64,
+        Some(user_has_liked_val),
         user_id.map(|_| user_has_saved),
     );
-    response.try_count = try_count;
-    response.artist_profile_image_url = artist_profile_image_url;
-    response.group_profile_image_url = group_profile_image_url;
+    response.try_count = try_count_result;
+    response.artist_profile_image_url = artist_img;
+    response.group_profile_image_url = group_img;
 
     Ok(response)
 }
