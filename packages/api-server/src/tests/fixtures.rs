@@ -56,6 +56,8 @@ pub fn user_model() -> crate::entities::users::Model {
         rank: "user".to_string(),
         total_points: 100,
         is_admin: false,
+        ink_credits: 0,
+        style_dna: None,
         created_at: test_timestamp(),
         updated_at: test_timestamp(),
     }
