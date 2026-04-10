@@ -5,7 +5,6 @@
  * Production code should use image-based routes instead.
  */
 import { fetchLatestPostsServer } from "@/lib/supabase/queries/debug/posts.server";
-import { PostsClient } from "./PostsClient";
 
 // Disable caching for debug page
 export const revalidate = 0;
@@ -39,9 +38,6 @@ export default async function DebugPostsPage() {
           Total posts fetched: {posts.length}
         </div>
       </div>
-
-      {/* Client Component (CSR with React Query) version */}
-      <PostsClient />
     </div>
   );
 }
