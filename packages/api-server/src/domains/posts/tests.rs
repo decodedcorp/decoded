@@ -628,23 +628,29 @@ mod tests {
         use axum::extract::{Path, State};
         use sea_orm::{DatabaseBackend, MockDatabase};
 
-        // increment_view_count: get_post_by_id + update → both succeed
-        // get_post_detail (empty spots path):
-        //   1) get_post_by_id → post
-        //   2) get_user_by_id → user
-        //   3) load_post_related_data → spots (empty)
-        //   4) get_like_stats: post find + count
-        //   5) count_tries
-        let updated_post = post_model();
+        // increment_view_count + view_log are now in tokio::spawn (background, not awaited).
+        // Handler only awaits get_post_detail. With a shared MockDatabase, the spawned
+        // task may consume mock rows unpredictably, so we provide enough results for both
+        // the background task and the main path.
+        //
+        // get_post_detail (parallelized, empty spots, no user):
+        //   1) get_post_by_id
+        //   2a) get_user_by_id
+        //   2b) spots (empty)
+        //   2c) count_likes_by_post_id
+        //   3) count_tries
+        //
+        // Background task (may or may not consume from same mock):
+        //   - increment_view_count: get_post_by_id + update
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![post_model()]]) // inc: find
-            .append_query_results([vec![updated_post.clone()]]) // inc: update returns model
-            .append_query_results([vec![post_model()]]) // detail: post
-            .append_query_results([vec![user_model()]]) // detail: user
+            .append_query_results([vec![post_model()]]) // detail: get_post_by_id
+            .append_query_results([vec![user_model()]]) // detail: get_user_by_id
             .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // spots
-            .append_query_results([vec![post_model()]]) // like_stats post find
-            .append_query_results([vec![count_row(0)]]) // like count
+            .append_query_results([vec![count_row(0)]]) // count_likes_by_post_id
             .append_query_results([vec![count_row(0)]]) // count_tries
+            // Extra rows for background increment_view_count (best-effort)
+            .append_query_results([vec![post_model()]]) // inc: find
+            .append_query_results([vec![post_model()]]) // inc: update
             .into_connection();
         let state = test_app_state(db);
 
@@ -1144,17 +1150,15 @@ mod tests {
         use axum::Extension;
         use sea_orm::{DatabaseBackend, MockDatabase};
 
-        // Flow:
-        //   increment_view_count: get_post_by_id + update
-        //   create_view_log: find existing view_log → Some → early return
-        //   get_post_detail (empty spots):
-        //     1) get_post_by_id
-        //     2) get_user_by_id
-        //     3) spots (empty)
-        //     4) like_stats: post find + like_count
-        //     5) user_has_liked check: post_likes find (Some(uid) branch)
-        //     6) user_has_saved: saved_posts find
-        //     7) count_tries
+        // Background tasks (tokio::spawn): increment_view_count + create_view_log
+        // Main path: get_post_detail (parallelized, empty spots, with user_id):
+        //   1) get_post_by_id
+        //   2a) get_user_by_id
+        //   2b) spots (empty)
+        //   2c) count_likes_by_post_id
+        //   2d) user_has_liked
+        //   2e) user_has_saved
+        //   3) count_tries
         let existing_view_log = crate::entities::view_logs::Model {
             id: test_uuid(111),
             user_id: Some(test_uuid(10)),
@@ -1163,17 +1167,17 @@ mod tests {
             created_at: crate::tests::fixtures::test_timestamp(),
         };
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![post_model()]]) // inc: find
-            .append_query_results([vec![post_model()]]) // inc: update
-            .append_query_results([vec![existing_view_log]]) // view_logs find → Some → skip insert
-            .append_query_results([vec![post_model()]]) // detail: post
-            .append_query_results([vec![user_model()]]) // detail: user
+            .append_query_results([vec![post_model()]]) // detail: get_post_by_id
+            .append_query_results([vec![user_model()]]) // detail: get_user_by_id
             .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // spots
-            .append_query_results([vec![post_model()]]) // like: post find
-            .append_query_results([vec![count_row(0)]]) // like count
+            .append_query_results([vec![count_row(0)]]) // count_likes_by_post_id
             .append_query_results([Vec::<crate::entities::post_likes::Model>::new()]) // user_has_liked
             .append_query_results([Vec::<crate::entities::saved_posts::Model>::new()]) // user_has_saved
             .append_query_results([vec![count_row(0)]]) // count_tries
+            // Extra rows for background tasks (best-effort)
+            .append_query_results([vec![post_model()]]) // inc: find
+            .append_query_results([vec![post_model()]]) // inc: update
+            .append_query_results([vec![existing_view_log]]) // view_logs find → skip insert
             .into_connection();
         let state = test_app_state(db);
         let result = get_post(
