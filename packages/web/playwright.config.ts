@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
+import dotenv from "dotenv";
+
+// Load .env.local for test credentials
+dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -42,14 +47,14 @@ export default defineConfig({
         storageState: ".playwright/storageState.json",
       },
       dependencies: ["setup"],
-      testIgnore: [/auth\.setup\.ts/, /login\.spec\.ts/],
+      testIgnore: [/auth\.setup\.ts/, /login\.spec\.ts/, /api-migration\.spec\.ts/],
     },
 
-    // Unauthenticated tests — login flow, no storageState dependency
+    // Unauthenticated tests — login flow + API migration smoke tests
     {
       name: "chromium-no-auth",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /login\.spec\.ts/,
+      testMatch: [/login\.spec\.ts/, /api-migration\.spec\.ts/],
     },
   ],
 

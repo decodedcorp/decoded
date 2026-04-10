@@ -3,19 +3,21 @@
 //! 사용자 관련 비즈니스 로직
 
 use sea_orm::{
-    ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait, Set, Statement,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait,
+    QueryFilter, QueryOrder, QuerySelect, Set, Statement,
 };
 use uuid::Uuid;
 
 use crate::{
     entities::users::{ActiveModel, Entity as Users, Model as UserModel},
+    entities::user_social_accounts::Entity as UserSocialAccounts,
     error::{AppError, AppResult},
     utils::pagination::{PaginatedResponse, Pagination},
 };
 
 use super::dto::{
-    SavedItem, TryItem, UpdateUserDto, UserActivityItem, UserActivityType, UserResponse,
-    UserStatsResponse,
+    SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivityItem, UserActivityType,
+    UserResponse, UserSolutionItem, UserSpotItem, UserStatsResponse,
 };
 
 /// 사용자 ID로 프로필 조회
@@ -65,11 +67,44 @@ pub async fn get_user_stats(
 ) -> AppResult<UserStatsResponse> {
     let user = get_user_by_id(db, user_id).await?;
 
+    let count_query = |table: &str| {
+        format!(
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.{} WHERE user_id = $1",
+            table
+        )
+    };
+
+    let query_count = |sql: String| async move {
+        db.query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            &sql,
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)
+        .map(|r| r.map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0)).unwrap_or(0))
+    };
+
+    let total_posts = query_count(count_query("posts")).await?;
+    let total_comments = query_count(count_query("comments")).await?;
+
+    let likes_sql = "SELECT COUNT(*)::BIGINT AS cnt FROM public.post_likes pl JOIN public.posts p ON pl.post_id = p.id WHERE p.user_id = $1";
+    let total_likes_received = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            likes_sql,
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0);
+
     Ok(UserStatsResponse {
         user_id,
-        total_posts: 0,
-        total_comments: 0,
-        total_likes_received: 0,
+        total_posts,
+        total_comments,
+        total_likes_received,
         total_points: user.total_points,
         rank: user.rank,
     })
@@ -84,6 +119,126 @@ pub async fn list_user_activities(
 ) -> AppResult<PaginatedResponse<UserActivityItem>> {
     // TODO(Phase 6+): 실제 Post/Spot/Solution 데이터와 조인
     Ok(PaginatedResponse::new(Vec::new(), pagination, 0))
+}
+
+/// 소셜 계정 목록 조회
+/// 유저의 Spot 목록 조회
+pub async fn list_user_spots(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    pagination: Pagination,
+) -> AppResult<PaginatedResponse<UserSpotItem>> {
+    use crate::entities::spots::{Column as SpotCol, Entity as Spots};
+    use sea_orm::PaginatorTrait;
+
+    let per_page = pagination.per_page.min(50);
+    let total = Spots::find()
+        .filter(SpotCol::UserId.eq(user_id))
+        .count(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let spots = Spots::find()
+        .filter(SpotCol::UserId.eq(user_id))
+        .order_by_desc(SpotCol::CreatedAt)
+        .offset(pagination.offset())
+        .limit(per_page)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    // Fetch post image_url for each spot
+    let post_ids: Vec<Uuid> = spots.iter().map(|s| s.post_id).collect();
+    let posts = crate::entities::Posts::find()
+        .filter(crate::entities::posts::Column::Id.is_in(post_ids))
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+    let post_map: std::collections::HashMap<Uuid, String> = posts
+        .into_iter()
+        .map(|p| (p.id, p.image_url))
+        .collect();
+
+    let items = spots
+        .into_iter()
+        .map(|s| UserSpotItem {
+            id: s.id,
+            post_id: s.post_id,
+            post_image_url: Some(post_map.get(&s.post_id).cloned().unwrap_or_default()),
+            position_left: s.position_left,
+            position_top: s.position_top,
+            status: s.status,
+            created_at: s.created_at.with_timezone(&chrono::Utc),
+        })
+        .collect();
+
+    Ok(PaginatedResponse::new(items, Pagination::new(pagination.page, per_page), total))
+}
+
+/// 유저의 Solution 목록 조회
+pub async fn list_user_solutions(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    pagination: Pagination,
+) -> AppResult<PaginatedResponse<UserSolutionItem>> {
+    use crate::entities::solutions::{Column as SolCol, Entity as Solutions};
+    use sea_orm::PaginatorTrait;
+
+    let per_page = pagination.per_page.min(50);
+    let total = Solutions::find()
+        .filter(SolCol::UserId.eq(user_id))
+        .filter(SolCol::Status.eq("active"))
+        .count(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let solutions = Solutions::find()
+        .filter(SolCol::UserId.eq(user_id))
+        .filter(SolCol::Status.eq("active"))
+        .order_by_desc(SolCol::CreatedAt)
+        .offset(pagination.offset())
+        .limit(per_page)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let items = solutions
+        .into_iter()
+        .map(|s| UserSolutionItem {
+            id: s.id,
+            spot_id: s.spot_id,
+            title: s.title,
+            thumbnail_url: s.thumbnail_url,
+            is_adopted: s.is_adopted,
+            is_verified: s.is_verified,
+            created_at: s.created_at.with_timezone(&chrono::Utc),
+        })
+        .collect();
+
+    Ok(PaginatedResponse::new(items, Pagination::new(pagination.page, per_page), total))
+}
+
+pub async fn list_social_accounts(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+) -> AppResult<Vec<SocialAccountResponse>> {
+    use sea_orm::ColumnTrait;
+    use sea_orm::QueryFilter;
+
+    let accounts = UserSocialAccounts::find()
+        .filter(crate::entities::user_social_accounts::Column::UserId.eq(user_id))
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    Ok(accounts
+        .into_iter()
+        .map(|a| SocialAccountResponse {
+            provider: a.provider,
+            provider_user_id: a.provider_user_id,
+            last_synced_at: a.last_synced_at.map(|dt| dt.with_timezone(&chrono::Utc)),
+        })
+        .collect())
 }
 
 async fn count_followers(db: &DatabaseConnection, user_id: Uuid) -> AppResult<i64> {

@@ -24,6 +24,12 @@ pub struct Model {
 
     pub is_admin: bool,
 
+    #[sea_orm(column_type = "Integer", default_value = "0")]
+    pub ink_credits: i32,
+
+    #[sea_orm(column_type = "Json", nullable)]
+    pub style_dna: Option<serde_json::Value>,
+
     pub created_at: DateTimeWithTimeZone,
 
     pub updated_at: DateTimeWithTimeZone,
