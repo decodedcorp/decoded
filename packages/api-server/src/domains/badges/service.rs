@@ -22,7 +22,7 @@ pub struct BadgesService;
 impl BadgesService {
     /// 전체 뱃지 목록 조회
     pub async fn list_badges(state: &AppState) -> AppResult<Vec<BadgeResponse>> {
-        let badges = entities::Badges::find().all(&state.db).await?;
+        let badges = entities::Badges::find().all(state.db.as_ref()).await?;
 
         let mut result = Vec::new();
         for badge in badges {
@@ -47,7 +47,7 @@ impl BadgesService {
         let earned_user_badges = entities::UserBadges::find()
             .filter(entities::user_badges::Column::UserId.eq(user_id))
             .find_also_related(entities::Badges)
-            .all(&state.db)
+            .all(state.db.as_ref())
             .await?;
 
         let mut earned_badges = Vec::new();
@@ -78,7 +78,7 @@ impl BadgesService {
         }
 
         // 2. 모든 뱃지 조회
-        let all_badges = entities::Badges::find().all(&state.db).await?;
+        let all_badges = entities::Badges::find().all(state.db.as_ref()).await?;
 
         // 3. 획득한 뱃지 ID 집합
         let earned_badge_ids: std::collections::HashSet<Uuid> =
@@ -89,7 +89,8 @@ impl BadgesService {
         for badge in all_badges {
             if !earned_badge_ids.contains(&badge.id) {
                 let criteria = Self::parse_criteria(&badge.criteria)?;
-                let progress = Self::check_badge_progress(&state.db, user_id, &criteria).await?;
+                let progress =
+                    Self::check_badge_progress(state.db.as_ref(), user_id, &criteria).await?;
 
                 available_badges.push(AvailableBadgeItem {
                     id: badge.id,
@@ -111,7 +112,7 @@ impl BadgesService {
     /// 뱃지 상세 조회
     pub async fn get_badge_by_id(state: &AppState, badge_id: Uuid) -> AppResult<BadgeResponse> {
         let badge = entities::Badges::find_by_id(badge_id)
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await?
             .ok_or_else(|| AppError::not_found("뱃지를 찾을 수 없습니다"))?;
 

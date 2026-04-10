@@ -15,6 +15,8 @@
 | 아키텍처·컨벤션·스택 심층 | [`.planning/codebase/`](../../.planning/codebase/) |
 | 디자인 토큰·UI 상세 | [`docs/design-system/`](../design-system/) |
 
+| E2E 테스트 인프라·검증 항목 | [e2e-testing.md](e2e-testing.md) |
+
 ## Rust API crate
 
 `packages/api-server` 전용 가이드는 [`packages/api-server/AGENT.md`](../../packages/api-server/AGENT.md)를 사용합니다.

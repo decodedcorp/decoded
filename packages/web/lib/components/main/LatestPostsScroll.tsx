@@ -52,11 +52,13 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               {post.createdWithSolutions !== null && (
-                <span className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide backdrop-blur-md ${
-                  post.createdWithSolutions
-                    ? "bg-[#eafd67]/90 text-[#050505]"
-                    : "bg-white/15 text-white/90"
-                }`}>
+                <span
+                  className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide backdrop-blur-md ${
+                    post.createdWithSolutions
+                      ? "bg-[#eafd67]/90 text-[#050505]"
+                      : "bg-white/15 text-white/90"
+                  }`}
+                >
                   {post.createdWithSolutions
                     ? "아이템을 공유해요"
                     : "아이템이 궁금해요"}

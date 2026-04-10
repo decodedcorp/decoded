@@ -10,6 +10,8 @@ dotenv.config({ path: path.resolve(__dirname, ".env.local") });
  */
 export default defineConfig({
   testDir: "./tests",
+  testMatch: /\.(spec|setup)\.ts$/,
+  testIgnore: [/\.test\.ts$/],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -47,7 +49,11 @@ export default defineConfig({
         storageState: ".playwright/storageState.json",
       },
       dependencies: ["setup"],
-      testIgnore: [/auth\.setup\.ts/, /login\.spec\.ts/, /api-migration\.spec\.ts/],
+      testIgnore: [
+        /auth\.setup\.ts/,
+        /login\.spec\.ts/,
+        /api-migration\.spec\.ts/,
+      ],
     },
 
     // Unauthenticated tests — login flow + API migration smoke tests

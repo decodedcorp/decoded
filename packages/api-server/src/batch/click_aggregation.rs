@@ -14,7 +14,7 @@ use tracing::{error, info};
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Starting click aggregation batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
 
     // 모든 Solution 조회
     let solutions = entities::Solutions::find()
@@ -67,4 +67,31 @@ pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error +
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use crate::tests::helpers;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn run_with_empty_solutions_succeeds() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::solutions::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_returns_err_on_db_failure() {
+        // No query results queued → first query will fail
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_err());
+    }
 }

@@ -239,4 +239,69 @@ mod tests {
             Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
         );
     }
+
+    #[test]
+    fn test_user_serde_roundtrip() {
+        let user = User {
+            id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            email: "test@example.com".to_string(),
+            username: Some("testuser".to_string()),
+            rank: "user".to_string(),
+            is_admin: false,
+        };
+
+        let json = serde_json::to_string(&user).unwrap();
+        let parsed: User = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.id, user.id);
+        assert_eq!(parsed.email, user.email);
+        assert_eq!(parsed.username, Some("testuser".to_string()));
+        assert_eq!(parsed.rank, "user");
+        assert!(!parsed.is_admin);
+    }
+
+    #[test]
+    fn test_user_serde_with_none_username() {
+        let user = User {
+            id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            email: "test@example.com".to_string(),
+            username: None,
+            rank: "user".to_string(),
+            is_admin: false,
+        };
+
+        let json = serde_json::to_string(&user).unwrap();
+        let parsed: User = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.username, None);
+    }
+
+    #[test]
+    fn test_user_clone() {
+        let user = User {
+            id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            email: "admin@test.com".to_string(),
+            username: None,
+            rank: "admin".to_string(),
+            is_admin: true,
+        };
+
+        let cloned = user.clone();
+        assert_eq!(cloned.id, user.id);
+        assert_eq!(cloned.email, user.email);
+        assert_eq!(cloned.is_admin, user.is_admin);
+    }
+
+    #[test]
+    fn test_user_debug_format() {
+        let user = User {
+            id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            email: "test@example.com".to_string(),
+            username: None,
+            rank: "user".to_string(),
+            is_admin: false,
+        };
+
+        let debug = format!("{:?}", user);
+        assert!(debug.contains("test@example.com"));
+        assert!(debug.contains("User"));
+    }
 }

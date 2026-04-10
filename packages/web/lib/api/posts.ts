@@ -22,7 +22,9 @@ import type {
 } from "./mutation-types";
 import { ApiError } from "./mutation-types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+// Use empty string to route through Next.js proxy (/api/v1/*),
+// which forwards to the backend (API_BASE_URL in server env).
+const API_BASE_URL = "";
 
 // Upload retry configuration
 const UPLOAD_RETRY_CONFIG = {

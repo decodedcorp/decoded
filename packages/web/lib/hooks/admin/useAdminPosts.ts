@@ -12,10 +12,7 @@ import {
   keepPreviousData,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import type {
-  AdminPostListResponse,
-  PostStatus,
-} from "@/lib/api/admin/posts";
+import type { AdminPostListResponse, PostStatus } from "@/lib/api/admin/posts";
 
 // ─── Shared fetcher ───────────────────────────────────────────────────────────
 

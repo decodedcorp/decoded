@@ -125,7 +125,7 @@ pub async fn list_sessions(
         .filter(agent_sessions::Column::ThreadId.like("mag-%"))
         .order_by_desc(agent_sessions::Column::CreatedAt)
         .limit(50)
-        .all(&state.db)
+        .all(state.db.as_ref())
         .await?;
 
     let empty = serde_json::Map::new();
@@ -166,7 +166,7 @@ pub async fn get_session(
     Path(session_id): Path<Uuid>,
 ) -> AppResult<Json<SessionDetailResponse>> {
     let row = AgentSessions::find_by_id(session_id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or_else(|| AppError::NotFound("Session not found".to_string()))?;
 
@@ -307,7 +307,7 @@ pub async fn create_session(
         updated_at: sea_orm::ActiveValue::NotSet,
     };
 
-    let result = active.insert(&state.db).await?;
+    let result = active.insert(state.db.as_ref()).await?;
 
     Ok(Json(CreateSessionResponse {
         session_id: result.id,
@@ -323,14 +323,14 @@ pub async fn delete_session(
     Path(session_id): Path<Uuid>,
 ) -> AppResult<Json<DeleteSessionResponse>> {
     let row = AgentSessions::find_by_id(session_id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or_else(|| AppError::NotFound("Session not found".to_string()))?;
 
     delete_session_storage(&state.config, session_id, row.metadata.as_ref()).await;
 
     AgentSessions::delete_by_id(session_id)
-        .exec(&state.db)
+        .exec(state.db.as_ref())
         .await?;
 
     Ok(Json(DeleteSessionResponse {
@@ -458,4 +458,304 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
             app_config,
             crate::middleware::auth_middleware,
         ))
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use super::*;
+    use crate::tests::fixtures;
+    use crate::tests::helpers::{mock_admin_user, test_app_state};
+    use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+    #[tokio::test]
+    async fn list_sessions_returns_mapped_items() {
+        let session = fixtures::agent_session_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(body) = list_sessions(axum::extract::State(state), axum::Extension(user))
+            .await
+            .expect("list_sessions ok");
+
+        assert_eq!(body.sessions.len(), 1);
+        assert_eq!(body.sessions[0].topic, "test topic");
+        assert_eq!(body.sessions[0].current_step, "vision");
+    }
+
+    #[tokio::test]
+    async fn list_sessions_empty_returns_empty_vec() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::agent_sessions::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(body) = list_sessions(axum::extract::State(state), axum::Extension(user))
+            .await
+            .expect("list_sessions ok");
+
+        assert!(body.sessions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_session_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::agent_sessions::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let result = get_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(fixtures::test_uuid(99)),
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn get_session_happy_path_parses_metadata() {
+        let session = fixtures::agent_session_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(detail) = get_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(session.id),
+        )
+        .await
+        .expect("get_session ok");
+
+        assert_eq!(detail.id, session.id);
+        assert_eq!(detail.topic, "test topic");
+        assert_eq!(detail.current_step, "vision");
+        assert_eq!(detail.step_status, "pending_confirm");
+        assert_eq!(detail.image_count, 0);
+    }
+
+    #[tokio::test]
+    async fn delete_session_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::agent_sessions::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let result = delete_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(fixtures::test_uuid(99)),
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[test]
+    fn empty_metadata_has_expected_keys() {
+        let m = empty_metadata();
+        let obj = m.as_object().expect("object");
+        for key in [
+            "topic",
+            "current_step",
+            "step_status",
+            "image_urls",
+            "images_b64",
+            "images_json",
+            "outline",
+            "external_solutions",
+            "sections",
+            "layout_spec",
+            "revision_history",
+        ] {
+            assert!(obj.contains_key(key), "missing key: {}", key);
+        }
+        assert_eq!(obj["current_step"], "vision");
+        assert_eq!(obj["step_status"], "pending_confirm");
+    }
+
+    #[test]
+    fn allowed_ext_constants_match_mime() {
+        // Sanity-check the parallel constants used by parse_multipart.
+        assert_eq!(ALLOWED_EXT.len(), EXT_MIME.len());
+        for (ext, _) in EXT_MIME.iter() {
+            assert!(ALLOWED_EXT.contains(ext));
+        }
+    }
+
+    #[tokio::test]
+    async fn get_session_parses_image_urls_and_writer_fields() {
+        let mut session = fixtures::agent_session_model();
+        session.metadata = Some(json!({
+            "topic": "fashion",
+            "current_step": "writer",
+            "step_status": "done",
+            "image_urls": ["https://cdn.test/a.jpg", "https://cdn.test/b.jpg"],
+            "cropped_image_urls": ["https://cdn.test/a-crop.jpg"],
+            "images_b64": [{"b64": "abc"}, {"b64": "def"}, {"b64": "ghi"}],
+            "writer_headline": "Big Headline",
+            "writer_subheadline": "Sub",
+            "writer_standfirst": "Stand",
+            "step_error": "minor warning",
+        }));
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(detail) = get_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(session.id),
+        )
+        .await
+        .expect("get_session ok");
+
+        assert_eq!(detail.topic, "fashion");
+        assert_eq!(detail.current_step, "writer");
+        assert_eq!(detail.step_status, "done");
+        assert_eq!(detail.image_count, 3);
+        assert_eq!(detail.image_urls.len(), 2);
+        assert_eq!(detail.cropped_image_urls.len(), 1);
+        assert_eq!(detail.writer_headline.as_deref(), Some("Big Headline"));
+        assert_eq!(detail.writer_subheadline.as_deref(), Some("Sub"));
+        assert_eq!(detail.writer_standfirst.as_deref(), Some("Stand"));
+        assert_eq!(detail.step_error.as_deref(), Some("minor warning"));
+    }
+
+    #[tokio::test]
+    async fn get_session_with_null_metadata_uses_defaults() {
+        let mut session = fixtures::agent_session_model();
+        session.metadata = None;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(detail) = get_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(session.id),
+        )
+        .await
+        .expect("get_session ok");
+        assert_eq!(detail.topic, "");
+        assert_eq!(detail.current_step, "vision");
+        assert_eq!(detail.step_status, "pending_confirm");
+        assert_eq!(detail.image_count, 0);
+        assert!(detail.image_urls.is_empty());
+        assert!(detail.writer_headline.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_sessions_with_null_metadata_uses_defaults() {
+        let mut session = fixtures::agent_session_model();
+        session.metadata = None;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session]])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(body) = list_sessions(axum::extract::State(state), axum::Extension(user))
+            .await
+            .expect("list_sessions ok");
+        assert_eq!(body.sessions.len(), 1);
+        assert_eq!(body.sessions[0].topic, "");
+        assert_eq!(body.sessions[0].current_step, "vision");
+    }
+
+    #[tokio::test]
+    async fn create_session_rejects_invalid_json_body() {
+        use axum::body::Body;
+        use axum::http::Request;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let req = Request::builder()
+            .header("content-type", "application/json")
+            .body(Body::from("{not valid json"))
+            .unwrap();
+
+        let result = create_session(axum::extract::State(state), axum::Extension(user), req).await;
+        assert!(matches!(result, Err(AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn create_session_json_happy_path_inserts_session() {
+        use axum::body::Body;
+        use axum::http::Request;
+
+        let session = fixtures::agent_session_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let body = serde_json::json!({
+            "topic": "test topic",
+            "images": [
+                {"b64": "AAAA", "mime_type": "image/png", "filename": "a.png"},
+                {"b64": "BBBB", "mime_type": "", "filename": ""}
+            ]
+        });
+
+        let req = Request::builder()
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&body).unwrap()))
+            .unwrap();
+
+        let Json(resp) = create_session(axum::extract::State(state), axum::Extension(user), req)
+            .await
+            .expect("create_session ok");
+        assert_eq!(resp.image_count, 2);
+        assert!(resp.thread_id.starts_with("mag-"));
+    }
+
+    #[tokio::test]
+    async fn delete_session_happy_path() {
+        let session = fixtures::agent_session_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![session.clone()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_admin_user();
+
+        let Json(body) = delete_session(
+            axum::extract::State(state),
+            axum::Extension(user),
+            axum::extract::Path(session.id),
+        )
+        .await
+        .expect("delete_session ok");
+
+        assert!(body.deleted);
+        assert_eq!(body.session_id, session.id);
+    }
 }

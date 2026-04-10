@@ -41,4 +41,11 @@ else
   echo "=== 4. Build 건너뜀 (기본 — 켜려면 RUN_FE_BUILD=1) ==="
 fi
 
+if [[ -n "${RUN_E2E:-}" ]]; then
+  echo "=== 5. E2E Tests ==="
+  bunx playwright test
+else
+  echo "=== 5. E2E Tests 건너뜀 (기본 — 켜려면 RUN_E2E=1) ==="
+fi
+
 echo "=== web: 모든 체크 통과 ==="

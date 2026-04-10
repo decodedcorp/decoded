@@ -84,7 +84,11 @@ function ContentManagementContent() {
 
   const handleTabChange = useCallback(
     (tab: ContentTab) => {
-      updateUrl({ tab: tab === "posts" ? undefined : tab, status: undefined, page: "1" });
+      updateUrl({
+        tab: tab === "posts" ? undefined : tab,
+        status: undefined,
+        page: "1",
+      });
     },
     [updateUrl]
   );

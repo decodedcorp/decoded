@@ -36,7 +36,7 @@ pub fn router() -> Router<AppState> {
 pub async fn get_all_subcategories(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<CategoryWithSubcategories>>> {
-    let result = service::list_all_with_categories(&state.db).await?;
+    let result = service::list_all_with_categories(state.db.as_ref()).await?;
     Ok(Json(result))
 }
 
@@ -60,6 +60,6 @@ pub async fn get_subcategories_by_category(
     State(state): State<AppState>,
     Path(category_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<SubcategoryResponse>>> {
-    let result = service::list_subcategories_by_category(&state.db, category_id).await?;
+    let result = service::list_subcategories_by_category(state.db.as_ref(), category_id).await?;
     Ok(Json(result))
 }

@@ -7,10 +7,12 @@ export type ActivityTab = "posts" | "spots" | "solutions" | "tries" | "saved";
 interface ActivityTabsProps {
   activeTab: ActivityTab;
   onTabChange: (tab: ActivityTab) => void;
+  /** Override which tabs to show (default: all) */
+  tabs?: { id: ActivityTab; label: string }[];
   className?: string;
 }
 
-const TABS: { id: ActivityTab; label: string }[] = [
+const ALL_TABS: { id: ActivityTab; label: string }[] = [
   { id: "posts", label: "Posts" },
   { id: "spots", label: "Spots" },
   { id: "solutions", label: "Solutions" },
@@ -18,15 +20,23 @@ const TABS: { id: ActivityTab; label: string }[] = [
   { id: "saved", label: "Saved" },
 ];
 
+/** Public profile shows only posts/spots/solutions */
+export const PUBLIC_TABS: { id: ActivityTab; label: string }[] = [
+  { id: "posts", label: "Posts" },
+  { id: "spots", label: "Spots" },
+  { id: "solutions", label: "Solutions" },
+];
+
 export function ActivityTabs({
   activeTab,
   onTabChange,
+  tabs,
   className,
 }: ActivityTabsProps) {
   return (
     <div className={cn("border-b border-border", className)}>
       <nav className="flex gap-0" aria-label="Activity tabs">
-        {TABS.map((tab) => (
+        {(tabs ?? ALL_TABS).map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}

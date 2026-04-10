@@ -76,7 +76,8 @@ function ReviewQueueContent() {
   const handleApprove = useCallback(
     (id: string) => {
       approveMutation.mutate(id, {
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "review"] }),
+        onSuccess: () =>
+          qc.invalidateQueries({ queryKey: ["admin", "review"] }),
       });
     },
     [approveMutation, qc]
@@ -85,7 +86,8 @@ function ReviewQueueContent() {
   const handleReject = useCallback(
     (id: string) => {
       rejectMutation.mutate(id, {
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "review"] }),
+        onSuccess: () =>
+          qc.invalidateQueries({ queryKey: ["admin", "review"] }),
       });
     },
     [rejectMutation, qc]

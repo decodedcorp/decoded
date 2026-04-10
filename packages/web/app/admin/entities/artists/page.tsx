@@ -40,11 +40,17 @@ interface ArtistFormRowProps {
   isSaving: boolean;
 }
 
-function ArtistFormRow({ initial, onSave, onCancel, isSaving }: ArtistFormRowProps) {
+function ArtistFormRow({
+  initial,
+  onSave,
+  onCancel,
+  isSaving,
+}: ArtistFormRowProps) {
   const [form, setForm] = useState(initial);
 
-  const set = (key: keyof ArtistFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const set =
+    (key: keyof ArtistFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   return (
     <div className="rounded-xl border border-blue-500/40 bg-gray-800/60 p-4 space-y-3">
@@ -68,7 +74,9 @@ function ArtistFormRow({ initial, onSave, onCancel, isSaving }: ArtistFormRowPro
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Profile Image URL</label>
+          <label className="block text-xs text-gray-400 mb-1">
+            Profile Image URL
+          </label>
           <input
             value={form.profile_image_url}
             onChange={set("profile_image_url")}
@@ -77,7 +85,9 @@ function ArtistFormRow({ initial, onSave, onCancel, isSaving }: ArtistFormRowPro
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Instagram Account ID</label>
+          <label className="block text-xs text-gray-400 mb-1">
+            Instagram Account ID
+          </label>
           <input
             value={form.primary_instagram_account_id}
             onChange={set("primary_instagram_account_id")}
@@ -167,7 +177,8 @@ function ArtistsPageContent() {
   };
 
   const handleDelete = (artist: Artist) => {
-    if (!window.confirm(`Delete artist "${artist.name_en ?? artist.name_ko}"?`)) return;
+    if (!window.confirm(`Delete artist "${artist.name_en ?? artist.name_ko}"?`))
+      return;
     deleteArtist.mutate(artist.id);
   };
 
@@ -177,7 +188,11 @@ function ArtistsPageContent() {
       label: "Image",
       render: (row) =>
         row.profile_image_url ? (
-          <AdminImagePreview src={row.profile_image_url} alt={row.name_en ?? ""} size="sm" />
+          <AdminImagePreview
+            src={row.profile_image_url}
+            alt={row.name_en ?? ""}
+            size="sm"
+          />
         ) : (
           <div className="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-gray-500 text-xs">
             N/A
@@ -194,7 +209,9 @@ function ArtistsPageContent() {
     {
       key: "name_ko",
       label: "Name (KO)",
-      render: (row) => <span className="text-gray-300">{row.name_ko ?? "—"}</span>,
+      render: (row) => (
+        <span className="text-gray-300">{row.name_ko ?? "—"}</span>
+      ),
     },
     {
       key: "instagram",
@@ -221,7 +238,10 @@ function ArtistsPageContent() {
       key: "actions",
       label: "",
       render: (row) => (
-        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1 justify-end"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={() => setEditingId(row.id)}
             className="p-1.5 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-700 transition-colors"
@@ -253,12 +273,17 @@ function ArtistsPageContent() {
           <p className="text-sm text-gray-400 mt-1">
             Manage warehouse artist entities
             {pagination && (
-              <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+              <span className="ml-2 text-gray-500">
+                ({pagination.total_items} total)
+              </span>
             )}
           </p>
         </div>
         <button
-          onClick={() => { setShowCreate(true); setEditingId(null); }}
+          onClick={() => {
+            setShowCreate(true);
+            setEditingId(null);
+          }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -289,23 +314,25 @@ function ArtistsPageContent() {
       )}
 
       {/* Edit form (inline, above table when editing) */}
-      {editingId && (() => {
-        const artist = artists.find((a) => a.id === editingId);
-        if (!artist) return null;
-        return (
-          <ArtistFormRow
-            initial={{
-              name_en: artist.name_en ?? "",
-              name_ko: artist.name_ko ?? "",
-              profile_image_url: artist.profile_image_url ?? "",
-              primary_instagram_account_id: artist.primary_instagram_account_id ?? "",
-            }}
-            onSave={(form) => handleUpdate(artist, form)}
-            onCancel={() => setEditingId(null)}
-            isSaving={updateArtist.isPending}
-          />
-        );
-      })()}
+      {editingId &&
+        (() => {
+          const artist = artists.find((a) => a.id === editingId);
+          if (!artist) return null;
+          return (
+            <ArtistFormRow
+              initial={{
+                name_en: artist.name_en ?? "",
+                name_ko: artist.name_ko ?? "",
+                profile_image_url: artist.profile_image_url ?? "",
+                primary_instagram_account_id:
+                  artist.primary_instagram_account_id ?? "",
+              }}
+              onSave={(form) => handleUpdate(artist, form)}
+              onCancel={() => setEditingId(null)}
+              isSaving={updateArtist.isPending}
+            />
+          );
+        })()}
 
       {/* Table */}
       <AdminDataTable
@@ -331,7 +358,9 @@ function ArtistsPageContent() {
 
 export default function ArtistsPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <ArtistsPageContent />
     </Suspense>
   );

@@ -19,7 +19,7 @@ pub async fn create_like(
     Extension(user): Extension<User>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    let like = service::create_like(&state.db, post_id, user.id).await?;
+    let like = service::create_like(state.db.as_ref(), post_id, user.id).await?;
 
     let response = PostLikeResponse {
         id: like.id,
@@ -36,7 +36,7 @@ pub async fn delete_like(
     Extension(user): Extension<User>,
     Path(post_id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::delete_like(&state.db, post_id, user.id).await?;
+    service::delete_like(state.db.as_ref(), post_id, user.id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -47,7 +47,7 @@ pub async fn get_like_stats(
     user: Option<Extension<User>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = user.map(|u| u.id);
-    let stats = service::get_like_stats(&state.db, post_id, user_id).await?;
+    let stats = service::get_like_stats(state.db.as_ref(), post_id, user_id).await?;
 
     Ok(Json(stats))
 }

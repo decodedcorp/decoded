@@ -46,3 +46,12 @@ local-help:
 ci-web:
     bash "{{ repo }}/packages/web/scripts/pre-push.sh"
 
+# E2E 테스트 실행
+e2e:
+    cd "{{ repo }}/packages/web" && bunx playwright test
+
+# E2E 특정 테스트만 실행 (예: just e2e-only "content")
+e2e-only PATTERN:
+    cd "{{ repo }}/packages/web" && bunx playwright test --grep "{{ PATTERN }}"
+
+

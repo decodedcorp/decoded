@@ -59,6 +59,7 @@ export function SocialActions({
   return (
     <div className={cn("flex items-center gap-1", className)}>
       <button
+        data-testid="like-button"
         onClick={handleLike}
         className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors hover:bg-accent"
         aria-label={liked ? "Unlike" : "Like"}
@@ -99,6 +100,7 @@ export function SocialActions({
       </button>
 
       <button
+        data-testid="save-button"
         onClick={handleSave}
         className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors hover:bg-accent ml-auto"
         aria-label={saved ? "Unsave" : "Save"}

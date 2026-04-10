@@ -4,8 +4,9 @@
 
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     middleware::from_fn_with_state,
-    routing::get,
+    routing::{get, post},
     Extension, Json, Router,
 };
 use uuid::Uuid;
@@ -19,9 +20,9 @@ use crate::{
 
 use super::{
     dto::{
-        SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivitiesQuery,
-        UserActivityItem, UserActivityType, UserResponse, UserSolutionItem, UserSpotItem,
-        UserStatsResponse,
+        FollowStatusResponse, SavedItem, SocialAccountResponse, TryItem, UpdateUserDto,
+        UserActivitiesQuery, UserActivityItem, UserActivityType, UserResponse, UserSolutionItem,
+        UserSpotItem, UserStatsResponse,
     },
     service,
 };
@@ -43,7 +44,7 @@ pub async fn get_user_profile(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> AppResult<Json<UserResponse>> {
-    let user = service::get_user_with_follow_counts(&state.db, user_id).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user_id).await?;
     Ok(Json(user))
 }
 
@@ -64,7 +65,7 @@ pub async fn get_my_profile(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<UserResponse>> {
-    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user.id).await?;
     Ok(Json(user))
 }
 
@@ -88,8 +89,8 @@ pub async fn update_my_profile(
     Extension(user): Extension<User>,
     Json(dto): Json<UpdateUserDto>,
 ) -> AppResult<Json<UserResponse>> {
-    service::update_user_profile(&state.db, user.id, dto).await?;
-    let user = service::get_user_with_follow_counts(&state.db, user.id).await?;
+    service::update_user_profile(state.db.as_ref(), user.id, dto).await?;
+    let user = service::get_user_with_follow_counts(state.db.as_ref(), user.id).await?;
     Ok(Json(user))
 }
 
@@ -122,7 +123,8 @@ pub async fn get_my_activities(
     } = params;
 
     let activities =
-        service::list_user_activities(&state.db, user.id, activity_type, pagination).await?;
+        service::list_user_activities(state.db.as_ref(), user.id, activity_type, pagination)
+            .await?;
 
     Ok(Json(activities))
 }
@@ -144,7 +146,7 @@ pub async fn get_my_stats(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> AppResult<Json<UserStatsResponse>> {
-    let stats = service::get_user_stats(&state.db, user.id).await?;
+    let stats = service::get_user_stats(state.db.as_ref(), user.id).await?;
     Ok(Json(stats))
 }
 
@@ -170,7 +172,7 @@ pub async fn get_my_tries(
     Extension(user): Extension<User>,
     Query(pagination): Query<Pagination>,
 ) -> AppResult<Json<PaginatedResponse<TryItem>>> {
-    let result = service::list_my_tries(&state.db, user.id, pagination).await?;
+    let result = service::list_my_tries(state.db.as_ref(), user.id, pagination).await?;
     Ok(Json(result))
 }
 
@@ -196,8 +198,73 @@ pub async fn get_my_saved(
     Extension(user): Extension<User>,
     Query(pagination): Query<Pagination>,
 ) -> AppResult<Json<PaginatedResponse<SavedItem>>> {
-    let result = service::list_my_saved(&state.db, user.id, pagination).await?;
+    let result = service::list_my_saved(state.db.as_ref(), user.id, pagination).await?;
     Ok(Json(result))
+}
+
+/// POST /api/v1/users/{user_id}/follow - 팔로우
+#[utoipa::path(
+    post,
+    path = "/api/v1/users/{user_id}/follow",
+    tag = "users",
+    security(("bearer_auth" = [])),
+    params(("user_id" = Uuid, Path, description = "팔로우할 사용자 ID")),
+    responses(
+        (status = 204, description = "팔로우 성공"),
+        (status = 400, description = "자기 자신을 팔로우할 수 없음"),
+        (status = 401, description = "인증 필요"),
+        (status = 404, description = "사용자를 찾을 수 없음")
+    )
+)]
+pub async fn follow_user_handler(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(target_id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    service::follow_user(&state.db, user.id, target_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// DELETE /api/v1/users/{user_id}/follow - 언팔로우
+#[utoipa::path(
+    delete,
+    path = "/api/v1/users/{user_id}/follow",
+    tag = "users",
+    security(("bearer_auth" = [])),
+    params(("user_id" = Uuid, Path, description = "언팔로우할 사용자 ID")),
+    responses(
+        (status = 204, description = "언팔로우 성공"),
+        (status = 401, description = "인증 필요")
+    )
+)]
+pub async fn unfollow_user_handler(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(target_id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    service::unfollow_user(&state.db, user.id, target_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// GET /api/v1/users/{user_id}/follow-status - 팔로우 여부 확인
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/{user_id}/follow-status",
+    tag = "users",
+    security(("bearer_auth" = [])),
+    params(("user_id" = Uuid, Path, description = "대상 사용자 ID")),
+    responses(
+        (status = 200, description = "팔로우 상태 조회 성공", body = FollowStatusResponse),
+        (status = 401, description = "인증 필요")
+    )
+)]
+pub async fn get_follow_status(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(target_id): Path<Uuid>,
+) -> AppResult<Json<FollowStatusResponse>> {
+    let is_following = service::check_is_following(&state.db, user.id, target_id).await?;
+    Ok(Json(FollowStatusResponse { is_following }))
 }
 
 /// GET /api/v1/users/me/spots - 내 Spot 목록
@@ -278,6 +345,11 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/me/stats", get(get_my_stats))
         .route("/me/tries", get(get_my_tries))
         .route("/me/saved", get(get_my_saved))
+        .route(
+            "/{user_id}/follow",
+            post(follow_user_handler).delete(unfollow_user_handler),
+        )
+        .route("/{user_id}/follow-status", get(get_follow_status))
         .route("/me/spots", get(get_my_spots))
         .route("/me/solutions", get(get_my_solutions))
         .route("/me/social-accounts", get(get_my_social_accounts))

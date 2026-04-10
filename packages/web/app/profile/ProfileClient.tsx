@@ -16,23 +16,24 @@ import {
   ProfileDesktopLayout,
   ActivityTabs,
   ActivityContent,
-  EmptyState,
-  ActivityItemCard,
   type ActivityTab,
   ProfileBio,
   FollowStats,
+  PostsGrid,
+  SpotsList,
+  SolutionsList,
   SavedGrid,
   TriesGrid,
   StyleDNACard,
   ArchiveStats,
   InkEconomyCard,
 } from "@/lib/components/profile";
+import { StyleDNAEditModal } from "@/lib/components/profile/StyleDNAEditModal";
 import {
   useMe,
   useUserStats,
   useMyBadges,
   useMyRanking,
-  useUserActivities,
   useProfileExtras,
   useTryOnCount,
 } from "@/lib/hooks/useProfile";
@@ -42,6 +43,7 @@ import {
   apiAvailableBadgeToStoreBadge,
 } from "@/lib/utils/badge-mapper";
 import { apiMyRankingDetailToStoreRankings } from "@/lib/utils/ranking-mapper";
+import { useAuthStore } from "@/lib/stores/authStore";
 
 function ProfileSkeleton() {
   return (
@@ -171,25 +173,27 @@ function ProfileError({
 export function ProfileClient() {
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isStyleDNAModalOpen, setIsStyleDNAModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActivityTab>("posts");
+  const isAuthReady = useAuthStore((s) => s.isInitialized);
 
-  // Fetch user data from API
+  // Fetch user data from API (wait for auth initialization)
   const {
     data: userData,
     isLoading: isUserLoading,
     isError: isUserError,
     error: userError,
     refetch: refetchUser,
-  } = useMe();
+  } = useMe({ enabled: isAuthReady });
 
-  // Fetch stats from API
+  // Fetch stats from API (wait for auth initialization)
   const {
     data: statsData,
     isLoading: isStatsLoading,
     isError: isStatsError,
     error: statsError,
     refetch: refetchStats,
-  } = useUserStats();
+  } = useUserStats({ enabled: isAuthReady });
 
   // Badges & Rankings (실제 API)
   const { data: badgesData, refetch: refetchBadges } = useMyBadges();
@@ -199,30 +203,6 @@ export function ProfileClient() {
   const userId = userData?.id;
   const { data: profileExtras } = useProfileExtras(userId);
   const { data: tryOnCount } = useTryOnCount(userId);
-
-  // Activities from API (saved 탭은 미구현) - 반드시 early return 전에 호출
-  const activitiesTypeMap: Record<
-    ActivityTab,
-    "post" | "spot" | "solution" | undefined
-  > = {
-    posts: "post",
-    spots: "spot",
-    solutions: "solution",
-    tries: undefined,
-    saved: undefined,
-  };
-  const activitiesType = activitiesTypeMap[activeTab];
-  const {
-    data: activitiesData,
-    isLoading: isActivitiesLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useUserActivities({
-    type: activitiesType ?? undefined,
-    perPage: 20,
-    enabled: activeTab !== "saved" && activeTab !== "tries",
-  });
 
   // Sync API data to store
   const setUserFromApi = useProfileStore((state) => state.setUserFromApi);
@@ -295,43 +275,21 @@ export function ProfileClient() {
     return <ProfileError error={error} onRetry={handleRetry} />;
   }
 
-  const activityItems = activitiesData?.pages.flatMap((p) => p.data) ?? [];
-  const hasActivityContent = activityItems.length > 0;
-
   const renderTabContent = () => {
-    if (activeTab === "tries") {
-      return <TriesGrid />;
+    switch (activeTab) {
+      case "posts":
+        return <PostsGrid userId={userId} />;
+      case "spots":
+        return <SpotsList userId={userId} />;
+      case "solutions":
+        return <SolutionsList userId={userId} />;
+      case "tries":
+        return <TriesGrid />;
+      case "saved":
+        return <SavedGrid />;
+      default:
+        return null;
     }
-    if (activeTab === "saved") {
-      return <SavedGrid />;
-    }
-    if (isActivitiesLoading && !activitiesData) {
-      return (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      );
-    }
-    if (!hasActivityContent) {
-      return <EmptyState tab={activeTab} />;
-    }
-
-    return (
-      <div className="space-y-4">
-        {activityItems.map((item) => (
-          <ActivityItemCard key={item.id} item={item} />
-        ))}
-        {hasNextPage && (
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="w-full py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            {isFetchingNextPage ? "로딩 중..." : "더 보기"}
-          </button>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -383,6 +341,8 @@ export function ProfileClient() {
           keywords={profileExtras?.style_dna?.keywords}
           colors={profileExtras?.style_dna?.colors}
           progress={profileExtras?.style_dna?.progress}
+          editable
+          onEditClick={() => setIsStyleDNAModalOpen(true)}
         />
         <ArchiveStats tryOnCount={tryOnCount} />
         <InkEconomyCard inkCredits={profileExtras?.ink_credits} />
@@ -436,6 +396,15 @@ export function ProfileClient() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
       />
+      {userId && (
+        <StyleDNAEditModal
+          isOpen={isStyleDNAModalOpen}
+          onClose={() => setIsStyleDNAModalOpen(false)}
+          userId={userId}
+          initialKeywords={profileExtras?.style_dna?.keywords}
+          initialColors={profileExtras?.style_dna?.colors}
+        />
+      )}
     </div>
   );
 }

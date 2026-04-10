@@ -55,7 +55,9 @@ export function ThemeProvider({
     setThemeState(newTheme);
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch {}
+    } catch {
+      /* no-op */
+    }
   }, []);
 
   // Apply theme class to <html>
@@ -94,7 +96,7 @@ export function ThemeProvider({
       themes: ["light", "dark", "system"] as Theme[],
       systemTheme,
     }),
-    [theme, setTheme, resolvedTheme, systemTheme],
+    [theme, setTheme, resolvedTheme, systemTheme]
   );
 
   return (

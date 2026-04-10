@@ -29,18 +29,21 @@ export function FilterChip({
         active
           ? "bg-primary/10 text-primary border border-primary/30"
           : "border border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-        className,
+        className
       )}
     >
       {label}
       {count != null && (
-        <span className={cn("text-[10px]", active ? "text-primary/60" : "text-muted-foreground/60")}>
+        <span
+          className={cn(
+            "text-[10px]",
+            active ? "text-primary/60" : "text-muted-foreground/60"
+          )}
+        >
           {count}
         </span>
       )}
-      {active && (
-        <X className="h-3 w-3 ml-0.5" />
-      )}
+      {active && <X className="h-3 w-3 ml-0.5" />}
     </button>
   );
 }

@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { usePathname } from "next/navigation";
-import { Home, Search, Compass } from "lucide-react";
+import { Home, Search, Compass, Upload } from "lucide-react";
 import { NavBar, NavItem } from "@/lib/design-system";
 
 interface NavItemConfig {
@@ -21,6 +21,7 @@ interface NavItemConfig {
 const navItems: NavItemConfig[] = [
   { id: "home", href: "/", icon: Home, label: "Home" },
   { id: "search", href: "/search", icon: Search, label: "Search" },
+  { id: "upload", href: "/request/upload", icon: Upload, label: "Upload" },
   { id: "explore", href: "/explore", icon: Compass, label: "Explore" },
 ];
 
@@ -48,9 +49,7 @@ export const MobileNavBar = memo(() => {
     <NavBar>
       {navItems.map((item) => {
         const isActive =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
 
         return (

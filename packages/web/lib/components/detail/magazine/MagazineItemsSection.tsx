@@ -24,7 +24,10 @@ type Props = {
   compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   onActiveIndexChange?: (index: number | null) => void;
-  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  brandProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
 };
 
 export function MagazineItemsSection({
@@ -125,7 +128,9 @@ export function MagazineItemsSection({
           // Re-evaluate triggers now that hasScrolled is true
           ScrollTrigger.update();
         };
-        scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
+        scrollerTarget.addEventListener("scroll", markScrolled, {
+          passive: true,
+        });
 
         const initScrollTriggers = () => {
           if (cancelled) return;
@@ -164,14 +169,20 @@ export function MagazineItemsSection({
           ScrollTrigger.refresh();
         };
 
-        const scrollerEl = scroller instanceof Window ? document.documentElement : scroller as HTMLElement;
+        const scrollerEl =
+          scroller instanceof Window
+            ? document.documentElement
+            : (scroller as HTMLElement);
         let attempts = 0;
         const maxAttempts = 25;
 
         const checkReady = () => {
           if (cancelled) return;
           attempts++;
-          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+          if (
+            scrollerEl.scrollHeight > scrollerEl.clientHeight ||
+            attempts >= maxAttempts
+          ) {
             initScrollTriggers();
           } else {
             requestAnimationFrame(checkReady);
@@ -209,7 +220,11 @@ export function MagazineItemsSection({
         </>
       )}
 
-      <div className={compact ? "divide-y divide-border/20" : "space-y-12 md:space-y-16"}>
+      <div
+        className={
+          compact ? "divide-y divide-border/20" : "space-y-12 md:space-y-16"
+        }
+      >
         {items.map((item, i) => {
           const meta = item.metadata as
             | {
@@ -223,12 +238,20 @@ export function MagazineItemsSection({
           const titleHeight = titleLayouts[item.spot_id]?.height ?? 0;
 
           return (
-            <div key={item.spot_id} className={compact ? "item-card py-5 first:pt-0 last:pb-0" : "item-card"} data-item-index={i}>
+            <div
+              key={item.spot_id}
+              className={
+                compact ? "item-card py-5 first:pt-0 last:pb-0" : "item-card"
+              }
+              data-item-index={i}
+            >
               <div
                 className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
               >
                 {/* Item Image */}
-                <div className={`w-full shrink-0 ${compact ? "md:w-52 lg:w-56" : "md:w-60 lg:w-64"}`}>
+                <div
+                  className={`w-full shrink-0 ${compact ? "md:w-52 lg:w-56" : "md:w-60 lg:w-64"}`}
+                >
                   {item.image_url ? (
                     <ItemImage
                       src={item.image_url}
@@ -251,7 +274,9 @@ export function MagazineItemsSection({
                       {item.brand && (
                         <>
                           <div className="mx-auto h-px w-8 bg-border/30" />
-                          <span className={`font-serif font-light tracking-wide text-foreground/70 ${compact ? "text-lg" : "text-2xl md:text-3xl"}`}>
+                          <span
+                            className={`font-serif font-light tracking-wide text-foreground/70 ${compact ? "text-lg" : "text-2xl md:text-3xl"}`}
+                          >
                             {item.brand}
                           </span>
                         </>
@@ -264,14 +289,16 @@ export function MagazineItemsSection({
                           </span>
                         </>
                       )}
-                      {!compact && meta?.material && meta.material.length > 0 && (
-                        <>
-                          <div className="mx-auto h-px w-8 bg-border/30" />
-                          <span className="text-[10px] italic text-muted-foreground/40">
-                            {meta.material.join(" · ")}
-                          </span>
-                        </>
-                      )}
+                      {!compact &&
+                        meta?.material &&
+                        meta.material.length > 0 && (
+                          <>
+                            <div className="mx-auto h-px w-8 bg-border/30" />
+                            <span className="text-[10px] italic text-muted-foreground/40">
+                              {meta.material.join(" · ")}
+                            </span>
+                          </>
+                        )}
                     </div>
                   )}
                 </div>
@@ -279,7 +306,9 @@ export function MagazineItemsSection({
                 {/* Item Details */}
                 <div className="flex flex-1 flex-col justify-center">
                   {item.brand && (
-                    <div className={`flex items-center gap-2 ${compact ? "mb-1" : "mb-2"}`}>
+                    <div
+                      className={`flex items-center gap-2 ${compact ? "mb-1" : "mb-2"}`}
+                    >
                       {(() => {
                         const bp = brandProfiles?.[item.brand.toLowerCase()];
                         if (!bp?.profileImageUrl) return null;
@@ -297,9 +326,15 @@ export function MagazineItemsSection({
                     </div>
                   )}
                   <h3
-                    className={compact ? "text-base font-semibold mb-1" : "typography-h4 mb-2"}
+                    className={
+                      compact
+                        ? "text-base font-semibold mb-1"
+                        : "typography-h4 mb-2"
+                    }
                     style={
-                      !compact && titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                      !compact && titleHeight > 0
+                        ? { minHeight: titleHeight }
+                        : undefined
                     }
                   >
                     {item.title}
@@ -312,24 +347,24 @@ export function MagazineItemsSection({
                           {item.editorial_paragraphs[0]}
                         </p>
                       )}
-                    <div className="flex items-center gap-3 mt-1">
-                      {price && (
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {price}
-                        </span>
-                      )}
-                      {item.original_url && (
-                        <a
-                          href={item.original_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Shop
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        {price && (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {price}
+                          </span>
+                        )}
+                        {item.original_url && (
+                          <a
+                            href={item.original_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Shop
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
                     </>
                   ) : (
                     /* Full: original layout */
@@ -376,11 +411,19 @@ export function MagazineItemsSection({
 
               {/* Similar Items for this spot */}
               {spotRelated.length > 0 && (
-                <div className={compact ? "mt-3" : "mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"}>
+                <div
+                  className={
+                    compact
+                      ? "mt-3"
+                      : "mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"
+                  }
+                >
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Similar Items
                   </p>
-                  <div className={`grid ${compact ? "grid-cols-3 gap-2" : "grid-cols-2 gap-4 sm:grid-cols-3"}`}>
+                  <div
+                    className={`grid ${compact ? "grid-cols-3 gap-2" : "grid-cols-2 gap-4 sm:grid-cols-3"}`}
+                  >
                     {spotRelated.slice(0, 3).map((ri, j) => (
                       <a
                         key={`${ri.title}-${j}`}
@@ -397,11 +440,15 @@ export function MagazineItemsSection({
                         />
                         <div className={compact ? "p-1.5" : "p-2"}>
                           {ri.brand && (
-                            <p className={`font-medium uppercase tracking-wider text-muted-foreground ${compact ? "text-[8px]" : "text-[10px]"}`}>
+                            <p
+                              className={`font-medium uppercase tracking-wider text-muted-foreground ${compact ? "text-[8px]" : "text-[10px]"}`}
+                            >
                               {ri.brand}
                             </p>
                           )}
-                          <p className={`mt-0.5 font-medium leading-snug line-clamp-1 ${compact ? "text-[10px]" : "text-xs line-clamp-2"}`}>
+                          <p
+                            className={`mt-0.5 font-medium leading-snug line-clamp-1 ${compact ? "text-[10px]" : "text-xs line-clamp-2"}`}
+                          >
                             {ri.title}
                           </p>
                         </div>

@@ -17,7 +17,13 @@ import { createClient as createBrowserClient } from "@supabase/supabase-js";
 
 function usePostSearch(query: string) {
   const [results, setResults] = useState<
-    { id: string; image_url: string | null; artist_name: string | null; group_name: string | null; context: string | null }[]
+    {
+      id: string;
+      image_url: string | null;
+      artist_name: string | null;
+      group_name: string | null;
+      context: string | null;
+    }[]
   >([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +42,9 @@ function usePostSearch(query: string) {
         .from("posts")
         .select("id, image_url, artist_name, group_name, context")
         .eq("status", "active")
-        .or(`artist_name.ilike.%${q}%,group_name.ilike.%${q}%,context.ilike.%${q}%`)
+        .or(
+          `artist_name.ilike.%${q}%,group_name.ilike.%${q}%,context.ilike.%${q}%`
+        )
         .order("created_at", { ascending: false })
         .limit(10);
       setResults(data ?? []);
@@ -53,9 +61,14 @@ function usePostSearch(query: string) {
 function CreatePickModal({ onClose }: { onClose: () => void }) {
   const [postQuery, setPostQuery] = useState("");
   const [selectedPost, setSelectedPost] = useState<{
-    id: string; image_url: string | null; artist_name: string | null; group_name: string | null;
+    id: string;
+    image_url: string | null;
+    artist_name: string | null;
+    group_name: string | null;
   } | null>(null);
-  const [pickDate, setPickDate] = useState(new Date().toISOString().slice(0, 10));
+  const [pickDate, setPickDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [note, setNote] = useState("");
   const [curatedBy, setCuratedBy] = useState<"editor" | "ai">("editor");
   const { results, loading, search, setResults } = usePostSearch(postQuery);
@@ -80,10 +93,14 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="w-full max-w-lg rounded-xl bg-gray-900 p-6 shadow-2xl">
-        <h3 className="mb-6 text-lg font-semibold text-white">Create Decoded Pick</h3>
+        <h3 className="mb-6 text-lg font-semibold text-white">
+          Create Decoded Pick
+        </h3>
 
         {/* Post Search */}
-        <label className="mb-1 block text-xs font-medium text-gray-400">Post</label>
+        <label className="mb-1 block text-xs font-medium text-gray-400">
+          Post
+        </label>
         {selectedPost ? (
           <div className="mb-4 flex items-center gap-3 rounded-lg bg-gray-800 p-3">
             {selectedPost.image_url && (
@@ -99,7 +116,10 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
               {selectedPost.artist_name || selectedPost.group_name || "Unknown"}
             </div>
             <button
-              onClick={() => { setSelectedPost(null); setPostQuery(""); }}
+              onClick={() => {
+                setSelectedPost(null);
+                setPostQuery("");
+              }}
               className="text-xs text-gray-500 hover:text-white"
             >
               Change
@@ -116,7 +136,11 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
             />
             {(results.length > 0 || loading) && (
               <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-lg bg-gray-800 shadow-xl">
-                {loading && <div className="px-4 py-2 text-xs text-gray-500">Searching...</div>}
+                {loading && (
+                  <div className="px-4 py-2 text-xs text-gray-500">
+                    Searching...
+                  </div>
+                )}
                 {results.map((post) => (
                   <button
                     key={post.id}
@@ -140,7 +164,9 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
                       {post.artist_name || post.group_name || "Unknown"}
                     </span>
                     {post.context && (
-                      <span className="text-xs text-gray-500">{post.context}</span>
+                      <span className="text-xs text-gray-500">
+                        {post.context}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -150,7 +176,9 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
         )}
 
         {/* Date */}
-        <label className="mb-1 block text-xs font-medium text-gray-400">Pick Date</label>
+        <label className="mb-1 block text-xs font-medium text-gray-400">
+          Pick Date
+        </label>
         <input
           type="date"
           value={pickDate}
@@ -159,7 +187,9 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
         />
 
         {/* Note */}
-        <label className="mb-1 block text-xs font-medium text-gray-400">Note (optional)</label>
+        <label className="mb-1 block text-xs font-medium text-gray-400">
+          Note (optional)
+        </label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -169,7 +199,9 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
         />
 
         {/* Curated By */}
-        <label className="mb-1 block text-xs font-medium text-gray-400">Curated By</label>
+        <label className="mb-1 block text-xs font-medium text-gray-400">
+          Curated By
+        </label>
         <div className="mb-6 flex gap-2">
           {(["editor", "ai"] as const).map((val) => (
             <button
@@ -218,7 +250,8 @@ function PickRow({
   onToggleActive: (id: string, active: boolean) => void;
   onDelete: (id: string) => void;
 }) {
-  const displayName = pick.post?.artist_name || pick.post?.group_name || "Unknown";
+  const displayName =
+    pick.post?.artist_name || pick.post?.group_name || "Unknown";
 
   return (
     <tr className="border-b border-gray-800 hover:bg-gray-800/50">
@@ -357,13 +390,19 @@ function PickManagementContent() {
           <tbody>
             {pickListQuery.isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                <td
+                  colSpan={6}
+                  className="px-4 py-12 text-center text-sm text-gray-500"
+                >
                   Loading...
                 </td>
               </tr>
             ) : picks.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                <td
+                  colSpan={6}
+                  className="px-4 py-12 text-center text-sm text-gray-500"
+                >
                   No picks yet. Create your first pick!
                 </td>
               </tr>

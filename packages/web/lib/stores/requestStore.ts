@@ -27,6 +27,8 @@ export interface UploadedImage {
   file: File;
   previewUrl: string;
   uploadedUrl?: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   status: UploadStatus;
   progress: number;
   error?: string;
@@ -110,7 +112,12 @@ interface RequestState {
     progress?: number,
     error?: string
   ) => void;
-  setImageUploadedUrl: (id: string, url: string) => void;
+  setImageUploadedUrl: (
+    id: string,
+    url: string,
+    width?: number | null,
+    height?: number | null
+  ) => void;
   clearImages: () => void;
 
   // Actions - Detection / Manual Spot Creation
@@ -269,13 +276,15 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }));
   },
 
-  setImageUploadedUrl: (id, url) => {
+  setImageUploadedUrl: (id, url, width?, height?) => {
     set((state) => ({
       images: state.images.map((img) =>
         img.id === id
           ? {
               ...img,
               uploadedUrl: url,
+              imageWidth: width ?? null,
+              imageHeight: height ?? null,
               status: "uploaded" as const,
               progress: 100,
             }

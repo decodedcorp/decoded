@@ -49,8 +49,14 @@ type Props = {
   hideImage?: boolean;
   onHeroClick?: () => void;
   variant?: "full" | "explore-preview";
-  artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
-  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  artistProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
+  brandProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
 };
 
 /**
@@ -288,32 +294,42 @@ export function ImageDetailContent({
         )}
 
         {/* Artist/Group profile — explore-preview only */}
-        {isExplorePreview && (() => {
-          const profile =
-            artistProfiles?.[imageWithOwner.artist_name?.toLowerCase() ?? ""] ||
-            artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
-          const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
-          if (!displayName) return null;
-          return (
-            <div className="flex flex-col items-center gap-2 px-6 py-5">
-              {profile?.profileImageUrl ? (
-                <img
-                  src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
-                  alt=""
-                  className="w-12 h-12 rounded-full object-cover border border-white/10"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
-                  {displayName.charAt(0).toUpperCase()}
+        {isExplorePreview &&
+          (() => {
+            const profile =
+              artistProfiles?.[
+                imageWithOwner.artist_name?.toLowerCase() ?? ""
+              ] ||
+              artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
+            const displayName =
+              profile?.name ||
+              imageWithOwner.artist_name ||
+              imageWithOwner.group_name;
+            if (!displayName) return null;
+            return (
+              <div className="flex flex-col items-center gap-2 px-6 py-5">
+                {profile?.profileImageUrl ? (
+                  <img
+                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover border border-white/10"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">
+                    {displayName}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    Artist
+                  </p>
                 </div>
-              )}
-              <div className="text-center">
-                <p className="text-lg font-semibold text-foreground">{displayName}</p>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Artist</p>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* Decorative Vertical Typography - Shown on desktop (Full Page & Modal) */}
         {!isExplorePreview && (
@@ -347,32 +363,42 @@ export function ImageDetailContent({
         )}
 
         {/* Artist/Group profile — full page and magazine mode */}
-        {!isExplorePreview && (() => {
-          const profile =
-            artistProfiles?.[imageWithOwner.artist_name?.toLowerCase() ?? ""] ||
-            artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
-          const displayName = profile?.name || imageWithOwner.artist_name || imageWithOwner.group_name;
-          if (!displayName) return null;
-          return (
-            <div className="flex flex-col items-center gap-2 px-6 py-5">
-              {profile?.profileImageUrl ? (
-                <img
-                  src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
-                  alt=""
-                  className="w-12 h-12 rounded-full object-cover border border-white/10"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
-                  {displayName.charAt(0).toUpperCase()}
+        {!isExplorePreview &&
+          (() => {
+            const profile =
+              artistProfiles?.[
+                imageWithOwner.artist_name?.toLowerCase() ?? ""
+              ] ||
+              artistProfiles?.[imageWithOwner.group_name?.toLowerCase() ?? ""];
+            const displayName =
+              profile?.name ||
+              imageWithOwner.artist_name ||
+              imageWithOwner.group_name;
+            if (!displayName) return null;
+            return (
+              <div className="flex flex-col items-center gap-2 px-6 py-5">
+                {profile?.profileImageUrl ? (
+                  <img
+                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profile.profileImageUrl)}`}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover border border-white/10"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">
+                    {displayName}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    Artist
+                  </p>
                 </div>
-              )}
-              <div className="text-center">
-                <p className="text-lg font-semibold text-foreground">{displayName}</p>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Artist</p>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* AI Summary Section — only rendered when summary exists */}
         {aiSummary && !isExplorePreview && (
@@ -543,25 +569,20 @@ export function ImageDetailContent({
       />
       */}
 
-        {/* TODO: Social Actions & Comments — temporarily disabled
-      <div className="px-6 py-6 md:px-10 border-t border-border">
-        <SocialActions
-          initialLiked={initialLiked}
-          initialSaved={initialSaved}
-          likeCount={likeCount}
-          commentCount={commentCount}
-          showComment
-          variant="default"
-          onLike={handleLike}
-          onSave={handleSave}
-          onShare={handleShare}
-          onComment={scrollToComments}
-        />
-      </div>
-      <div ref={commentSectionRef}>
-        <ImageCommentSection imageId={image.id} />
-      </div>
-      */}
+        <div className="px-6 py-6 md:px-10 border-t border-border">
+          <SocialActions
+            initialLiked={initialLiked}
+            initialSaved={initialSaved}
+            likeCount={likeCount}
+            commentCount={commentCount}
+            showComment
+            variant="default"
+            onLike={handleLike}
+            onSave={handleSave}
+            onShare={handleShare}
+            onComment={scrollToComments}
+          />
+        </div>
 
         {/* Magazine: Related Editorials - 맨 마지막 */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (

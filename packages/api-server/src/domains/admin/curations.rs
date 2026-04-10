@@ -130,7 +130,8 @@ pub async fn create_curation(
     Json(dto): Json<CreateCurationDto>,
 ) -> AppResult<Json<CurationResponse>> {
     let curation =
-        crate::domains::admin::curations::service::admin_create_curation(&state.db, dto).await?;
+        crate::domains::admin::curations::service::admin_create_curation(state.db.as_ref(), dto)
+            .await?;
     Ok(Json(curation))
 }
 
@@ -160,7 +161,7 @@ pub async fn update_curation(
     Json(dto): Json<UpdateCurationDto>,
 ) -> AppResult<Json<CurationResponse>> {
     let curation = crate::domains::admin::curations::service::admin_update_curation(
-        &state.db,
+        state.db.as_ref(),
         curation_id,
         dto,
     )
@@ -190,7 +191,8 @@ pub async fn update_curation_order(
     Json(dto): Json<CurationOrderUpdate>,
 ) -> AppResult<Json<Vec<CurationResponse>>> {
     let curations = crate::domains::admin::curations::service::admin_update_curation_order(
-        &state.db, dto.orders,
+        state.db.as_ref(),
+        dto.orders,
     )
     .await?;
     Ok(Json(curations))
@@ -219,8 +221,11 @@ pub async fn delete_curation(
     _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
     Path(curation_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
-    crate::domains::admin::curations::service::admin_delete_curation(&state.db, curation_id)
-        .await?;
+    crate::domains::admin::curations::service::admin_delete_curation(
+        state.db.as_ref(),
+        curation_id,
+    )
+    .await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -417,5 +422,208 @@ pub mod service {
             .map_err(AppError::DatabaseError)?;
 
         Ok(())
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::disallowed_methods)]
+    mod tests {
+        use super::*;
+        use crate::tests::fixtures::{curation_model, test_uuid};
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+        #[tokio::test]
+        async fn create_curation_with_explicit_order() {
+            let curation = curation_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![curation.clone()]])
+                .into_connection();
+
+            let dto = CreateCurationDto {
+                title: "New Curation".to_string(),
+                description: Some("desc".to_string()),
+                cover_image_url: None,
+                display_order: Some(5),
+            };
+
+            let result = admin_create_curation(&db, dto).await;
+            assert!(result.is_ok());
+            let resp = result.unwrap();
+            assert_eq!(resp.title, "Test Curation");
+        }
+
+        #[tokio::test]
+        async fn create_curation_auto_order() {
+            let curation = curation_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                // First query: find max display_order
+                .append_query_results([vec![curation.clone()]])
+                // Second: insert result
+                .append_query_results([vec![curation.clone()]])
+                .into_connection();
+
+            let dto = CreateCurationDto {
+                title: "Auto Order".to_string(),
+                description: None,
+                cover_image_url: None,
+                display_order: None, // auto
+            };
+
+            let result = admin_create_curation(&db, dto).await;
+            assert!(result.is_ok());
+        }
+
+        #[tokio::test]
+        async fn update_curation_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::curations::Model>::new()])
+                .into_connection();
+
+            let dto = UpdateCurationDto {
+                title: Some("Updated".to_string()),
+                description: None,
+                cover_image_url: None,
+                display_order: None,
+            };
+
+            let result = admin_update_curation(&db, test_uuid(99), dto).await;
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn update_curation_success() {
+            let curation = curation_model();
+            let mut updated = curation.clone();
+            updated.title = "Updated Title".to_string();
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![curation]])
+                .append_query_results([vec![updated.clone()]])
+                .into_connection();
+
+            let dto = UpdateCurationDto {
+                title: Some("Updated Title".to_string()),
+                description: None,
+                cover_image_url: None,
+                display_order: None,
+            };
+
+            let result = admin_update_curation(&db, test_uuid(40), dto).await;
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().title, "Updated Title");
+        }
+
+        #[tokio::test]
+        async fn delete_curation_not_found() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::curations::Model>::new()])
+                .into_connection();
+
+            let result = admin_delete_curation(&db, test_uuid(99)).await;
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn create_curation_auto_order_no_existing() {
+            // No existing curations (max_order query returns empty) → starts at 1
+            let curation = curation_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::curations::Model>::new()]) // max lookup
+                .append_query_results([vec![curation]]) // insert result
+                .into_connection();
+
+            let dto = CreateCurationDto {
+                title: "Auto".to_string(),
+                description: None,
+                cover_image_url: None,
+                display_order: None,
+            };
+            let result = admin_create_curation(&db, dto).await;
+            assert!(result.is_ok());
+        }
+
+        #[tokio::test]
+        async fn create_curation_db_error() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_errors(vec![sea_orm::DbErr::Custom("down".into())])
+                .into_connection();
+
+            let dto = CreateCurationDto {
+                title: "X".to_string(),
+                description: None,
+                cover_image_url: None,
+                display_order: Some(1),
+            };
+            let result = admin_create_curation(&db, dto).await;
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn update_curation_all_fields() {
+            let curation = curation_model();
+            let updated = curation.clone();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![curation]])
+                .append_query_results([vec![updated]])
+                .into_connection();
+
+            let dto = UpdateCurationDto {
+                title: Some("T".to_string()),
+                description: Some("D".to_string()),
+                cover_image_url: Some("https://example.com/c.webp".to_string()),
+                display_order: Some(9),
+            };
+            let result = admin_update_curation(&db, test_uuid(40), dto).await;
+            assert!(result.is_ok());
+        }
+
+        #[tokio::test]
+        async fn update_curation_order_empty_list_succeeds() {
+            // Empty orders vector: txn begin → txn commit → reload with empty id filter → []
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_exec_results([MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 0,
+                }])
+                .append_query_results([Vec::<crate::entities::curations::Model>::new()])
+                .into_connection();
+
+            let result = admin_update_curation_order(&db, vec![]).await;
+            assert!(result.is_ok());
+            assert!(result.unwrap().is_empty());
+        }
+
+        #[tokio::test]
+        async fn update_curation_order_not_found_aborts() {
+            // Non-empty orders: txn begin → find_by_id returns None → NotFound
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_exec_results([MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 0,
+                }])
+                .append_query_results([Vec::<crate::entities::curations::Model>::new()])
+                .into_connection();
+
+            let orders = vec![CurationOrderItem {
+                curation_id: test_uuid(99),
+                display_order: 1,
+            }];
+            let result = admin_update_curation_order(&db, orders).await;
+            assert!(matches!(result, Err(crate::error::AppError::NotFound(_))));
+        }
+
+        #[tokio::test]
+        async fn delete_curation_success() {
+            let curation = curation_model();
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![curation]])
+                .append_exec_results([MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                }])
+                .into_connection();
+
+            let result = admin_delete_curation(&db, test_uuid(40)).await;
+            assert!(result.is_ok());
+        }
     }
 }

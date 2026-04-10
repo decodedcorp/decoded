@@ -192,12 +192,18 @@ pub async fn create_post_without_solutions(
     let upload_response = upload_image(state, image_data, content_type, user_id).await?;
     let image_key = extract_key_from_url(&upload_response.image_url);
 
-    // 업로드된 이미지 URL을 dto에 설정
+    // 업로드된 이미지 URL과 dimension을 dto에 설정
     dto.image_url = upload_response.image_url.clone();
+    if dto.image_width.is_none() {
+        dto.image_width = upload_response.image_width;
+    }
+    if dto.image_height.is_none() {
+        dto.image_height = upload_response.image_height;
+    }
 
     // Post 생성 (트랜잭션 내에서 Post + Spots 생성)
     let (post, _spot_ids, _solution_infos) =
-        create_post_transaction(&state.db, user_id, dto, false)
+        create_post_transaction(state.db.as_ref(), user_id, dto, false)
             .await
             .inspect_err(|_e| {
                 // Post 생성 실패 시 업로드된 이미지 삭제
@@ -216,7 +222,7 @@ pub async fn create_post_without_solutions(
     // solution_infos는 비어있을 것 (Solution 없이 생성)
 
     // Meilisearch에 색인 (비동기, 실패해도 Post 생성은 성공)
-    let search_fields = match load_post_related_data(&state.db, post.id).await {
+    let search_fields = match load_post_related_data(state.db.as_ref(), post.id).await {
         Ok(data) => compute_search_fields(&data),
         Err(e) => {
             tracing::warn!("Failed to load search fields for post {}: {}", post.id, e);
@@ -258,26 +264,33 @@ pub async fn create_post_with_solutions(
     let upload_response = upload_image(state, image_data, content_type, user_id).await?;
     let image_key = extract_key_from_url(&upload_response.image_url);
 
-    // 업로드된 이미지 URL을 dto에 설정
+    // 업로드된 이미지 URL과 dimension을 dto에 설정
     dto.image_url = upload_response.image_url.clone();
+    if dto.image_width.is_none() {
+        dto.image_width = upload_response.image_width;
+    }
+    if dto.image_height.is_none() {
+        dto.image_height = upload_response.image_height;
+    }
 
     // Post 생성 (트랜잭션 내에서 Post + Spots + Solutions 생성)
-    let (post, spot_ids, solution_infos) = create_post_transaction(&state.db, user_id, dto, true)
-        .await
-        .inspect_err(|_e| {
-            // Post 생성 실패 시 업로드된 이미지 삭제
-            let image_key_clone = image_key.clone();
-            let storage_client = state.storage_client.clone();
-            tokio::spawn(async move {
-                if let Err(delete_err) = storage_client.delete(&image_key_clone).await {
-                    tracing::warn!(
-                        "Failed to delete orphaned image {}: {}",
-                        image_key_clone,
-                        delete_err
-                    );
-                }
-            });
-        })?;
+    let (post, spot_ids, solution_infos) =
+        create_post_transaction(state.db.as_ref(), user_id, dto, true)
+            .await
+            .inspect_err(|_e| {
+                // Post 생성 실패 시 업로드된 이미지 삭제
+                let image_key_clone = image_key.clone();
+                let storage_client = state.storage_client.clone();
+                tokio::spawn(async move {
+                    if let Err(delete_err) = storage_client.delete(&image_key_clone).await {
+                        tracing::warn!(
+                            "Failed to delete orphaned image {}: {}",
+                            image_key_clone,
+                            delete_err
+                        );
+                    }
+                });
+            })?;
 
     let solution_ids: Vec<Uuid> = solution_infos.iter().map(|s| s.id).collect();
 
@@ -308,7 +321,7 @@ pub async fn create_post_with_solutions(
     }
 
     // Meilisearch에 색인 (비동기, 실패해도 Post 생성은 성공)
-    let search_fields = match load_post_related_data(&state.db, post.id).await {
+    let search_fields = match load_post_related_data(state.db.as_ref(), post.id).await {
         Ok(data) => compute_search_fields(&data),
         Err(e) => {
             tracing::warn!("Failed to load search fields for post {}: {}", post.id, e);
@@ -674,7 +687,11 @@ pub async fn list_posts(
     let mut select = Posts::find().filter(Column::Status.eq(crate::constants::post_status::ACTIVE));
 
     // Try 포스트는 일반 피드에서 제외
-    select = select.filter(Column::PostType.is_null().or(Column::PostType.ne(POST_TYPE_TRY)));
+    select = select.filter(
+        Column::PostType
+            .is_null()
+            .or(Column::PostType.ne(POST_TYPE_TRY)),
+    );
 
     // 필터 적용
     if let Some(ref artist_name) = query.artist_name {
@@ -934,7 +951,7 @@ pub async fn update_post(
     dto: UpdatePostDto,
 ) -> AppResult<PostResponse> {
     // Post 존재 확인 및 소유권 확인
-    let post = get_post_by_id(&state.db, post_id).await?;
+    let post = get_post_by_id(state.db.as_ref(), post_id).await?;
     if post.user_id != user_id {
         return Err(AppError::Forbidden(
             "You can only update your own posts".to_string(),
@@ -968,14 +985,14 @@ pub async fn update_post(
 
     // DB 업데이트
     let updated_post = active_post
-        .update(&state.db)
+        .update(state.db.as_ref())
         .await
         .map_err(AppError::DatabaseError)?;
 
     let updated_response: PostResponse = updated_post.into();
 
     // Meilisearch 업데이트 (비동기, 실패해도 Post 업데이트는 성공)
-    let search_fields = match load_post_related_data(&state.db, post_id).await {
+    let search_fields = match load_post_related_data(state.db.as_ref(), post_id).await {
         Ok(data) => compute_search_fields(&data),
         Err(e) => {
             tracing::warn!("Failed to load search fields for post {}: {}", post_id, e);
@@ -1217,6 +1234,7 @@ pub async fn admin_list_posts(
 }
 
 /// Admin용 Post 상태 변경
+#[allow(clippy::disallowed_methods)] // serde_json::json! 매크로 전개
 pub async fn admin_update_post_status(
     search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     db: &DatabaseConnection,
@@ -1267,7 +1285,7 @@ pub async fn admin_update_post(
     post_id: Uuid,
     dto: UpdatePostDto,
 ) -> AppResult<PostResponse> {
-    let post = get_post_by_id(&state.db, post_id).await?;
+    let post = get_post_by_id(state.db.as_ref(), post_id).await?;
 
     let mut active_post: ActiveModel = post.into();
 
@@ -1288,14 +1306,14 @@ pub async fn admin_update_post(
     }
 
     let updated_post = active_post
-        .update(&state.db)
+        .update(state.db.as_ref())
         .await
         .map_err(AppError::DatabaseError)?;
 
     let updated_response: PostResponse = updated_post.into();
 
     // Meilisearch 재인덱싱
-    let search_fields = match load_post_related_data(&state.db, post_id).await {
+    let search_fields = match load_post_related_data(state.db.as_ref(), post_id).await {
         Ok(data) => compute_search_fields(&data),
         Err(e) => {
             tracing::warn!("Failed to load search fields for post {}: {}", post_id, e);
@@ -1342,6 +1360,9 @@ pub async fn upload_image(
     content_type: &str,
     user_id: Uuid,
 ) -> AppResult<ImageUploadResponse> {
+    // 이미지 dimension 추출 (업로드 전에 메모리에서 읽기)
+    let (image_width, image_height) = extract_image_dimensions(&image_data);
+
     // 파일 키 생성 (user_id/timestamp_uuid.ext 형식)
     use chrono::Utc;
     let timestamp = Utc::now().timestamp();
@@ -1369,7 +1390,25 @@ pub async fn upload_image(
         .await
         .map_err(|e| AppError::ExternalService(format!("Failed to upload image: {}", e)))?;
 
-    Ok(ImageUploadResponse { image_url })
+    Ok(ImageUploadResponse {
+        image_url,
+        image_width,
+        image_height,
+    })
+}
+
+/// 이미지 바이트에서 width/height 추출 (실패 시 None 반환)
+fn extract_image_dimensions(data: &[u8]) -> (Option<i32>, Option<i32>) {
+    match image::load_from_memory(data) {
+        Ok(img) => {
+            let (w, h) = (img.width(), img.height());
+            (Some(w as i32), Some(h as i32))
+        }
+        Err(e) => {
+            tracing::warn!("Failed to extract image dimensions: {}", e);
+            (None, None)
+        }
+    }
 }
 
 /// AI 이미지 분석 (decoded-ai gRPC)
@@ -1399,7 +1438,10 @@ pub async fn analyze_image(
         image_data.ok_or_else(|| AppError::BadRequest("No image field found".to_string()))?;
 
     // 카테고리 캐시에서 카테고리 규칙 생성
-    let category_rules = state.category_cache.build_category_rules(&state.db).await?;
+    let category_rules = state
+        .category_cache
+        .build_category_rules(state.db.as_ref())
+        .await?;
 
     // decoded-ai gRPC 클라이언트 호출
     let metadata = state
@@ -1543,7 +1585,7 @@ pub async fn create_try_post(
     dto: CreateTryPostDto,
 ) -> AppResult<PostResponse> {
     // 1. parent_post_id 검증
-    let parent = get_post_by_id(&state.db, dto.parent_post_id).await?;
+    let parent = get_post_by_id(state.db.as_ref(), dto.parent_post_id).await?;
     if parent.post_type.as_deref() == Some(POST_TYPE_TRY) {
         return Err(AppError::BadRequest(
             "Cannot create a try on another try post".to_string(),
@@ -1556,7 +1598,7 @@ pub async fn create_try_post(
         let valid_spots = Spots::find()
             .filter(SpotColumn::PostId.eq(dto.parent_post_id))
             .filter(SpotColumn::Id.is_in(dto.spot_ids.clone()))
-            .count(&state.db)
+            .count(state.db.as_ref())
             .await
             .map_err(AppError::DatabaseError)?;
         if valid_spots != dto.spot_ids.len() as u64 {
@@ -1573,8 +1615,11 @@ pub async fn create_try_post(
     // 4. Post + try_spot_tags 생성 (트랜잭션)
     let result = state
         .db
+        .as_ref()
         .transaction::<_, PostResponse, AppError>(|txn| {
             let image_url = upload_response.image_url.clone();
+            let img_width = upload_response.image_width;
+            let img_height = upload_response.image_height;
             let spot_ids = dto.spot_ids.clone();
             let media_title = dto.media_title.clone();
             let parent_post_id = dto.parent_post_id;
@@ -1593,6 +1638,8 @@ pub async fn create_try_post(
                     view_count: Set(0),
                     status: Set(crate::constants::post_status::ACTIVE.to_string()),
                     created_with_solutions: Set(None),
+                    image_width: Set(img_width),
+                    image_height: Set(img_height),
                     parent_post_id: Set(Some(parent_post_id)),
                     post_type: Set(Some(POST_TYPE_TRY.to_string())),
                     ..Default::default()
@@ -1979,6 +2026,11 @@ mod tests {
             created_with_solutions: None,
             post_magazine_id: None,
             ai_summary: None,
+            style_tags: None,
+            image_width: None,
+            image_height: None,
+            parent_post_id: None,
+            post_type: None,
             created_at: t,
             updated_at: t,
         };
@@ -2052,6 +2104,10 @@ mod tests {
             context: None,
             view_count: 1,
             status: "active".into(),
+            image_width: None,
+            image_height: None,
+            parent_post_id: None,
+            post_type: None,
             created_at: DateTime::parse_from_rfc3339("2025-01-01T00:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
@@ -2080,5 +2136,1482 @@ mod tests {
         assert!(!fields.has_adopted_solution);
         assert_eq!(fields.solution_count, 0);
         assert_eq!(fields.spot_count, 0);
+    }
+
+    // ── MockDatabase 기반 서비스 테스트 ──
+
+    #[tokio::test]
+    async fn get_post_by_id_returns_post() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .into_connection();
+        let result = get_post_by_id(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().id, fixtures::test_uuid(1));
+    }
+
+    #[tokio::test]
+    async fn get_post_by_id_not_found() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let result = get_post_by_id(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_err());
+        match result {
+            Err(crate::AppError::NotFound(msg)) => {
+                assert!(msg.contains("Post not found"));
+            }
+            other => panic!("Expected NotFound, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn increment_view_count_succeeds() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated_post = fixtures::post_model();
+        updated_post.view_count = 43;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[updated_post]]) // update returns model
+            .into_connection();
+        let result = increment_view_count(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn increment_view_count_post_not_found() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let result = increment_view_count(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_empty_spots() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .into_connection();
+        let result = load_post_related_data(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert!(data.spots.is_empty());
+        assert!(data.solutions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_with_spot() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::spot_model()]]) // spots query
+            .append_query_results([Vec::<solutions::Model>::new()]) // solutions query
+            .append_query_results([[fixtures::subcategory_model()]]) // subcategories query
+            .append_query_results([[fixtures::category_model()]]) // categories query
+            .into_connection();
+        let result = load_post_related_data(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert_eq!(data.spots.len(), 1);
+        assert_eq!(data.categories.len(), 1);
+    }
+
+    // ── delete_post tests ──
+
+    #[tokio::test]
+    async fn delete_post_success_owner() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+        let post = fixtures::post_model(); // user_id = test_uuid(10)
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[post.clone()]]) // get_post_by_id
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }]) // delete
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = delete_post(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn delete_post_forbidden_non_owner() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let post = fixtures::post_model(); // user_id = test_uuid(10)
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[post]]) // get_post_by_id
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = delete_post(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(99),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::Forbidden(_))));
+    }
+
+    #[tokio::test]
+    async fn delete_post_not_found() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = delete_post(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            fixtures::test_uuid(10),
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    // ── select_top_solution additional tests ──
+
+    #[test]
+    fn select_top_solution_verified_beats_unverified_when_neither_adopted() {
+        let sid = Uuid::new_v4();
+        let unverified = mk_solution(sid, false, false, 10, 0);
+        let verified = mk_solution(sid, false, true, 0, 0);
+        let verified_id = verified.id;
+        let top = select_top_solution(&[unverified, verified]).expect("some");
+        assert_eq!(top.id, verified_id);
+    }
+
+    #[test]
+    fn select_top_solution_single_solution() {
+        let sid = Uuid::new_v4();
+        let only = mk_solution(sid, false, false, 3, 1);
+        let only_id = only.id;
+        let top = select_top_solution(&[only]).expect("some");
+        assert_eq!(top.id, only_id);
+    }
+
+    #[test]
+    fn select_top_solution_adopted_beats_verified() {
+        let sid = Uuid::new_v4();
+        let adopted = mk_solution(sid, true, false, 0, 0);
+        let verified = mk_solution(sid, false, true, 100, 0);
+        let top = select_top_solution(&[verified, adopted]).expect("some");
+        assert!(top.is_adopted);
+    }
+
+    // ── build_spots_response additional tests ──
+
+    #[test]
+    fn build_spots_response_with_solutions_and_categories() {
+        use crate::tests::fixtures;
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![fixtures::solution_model()],
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].category.is_some());
+        assert_eq!(result[0].solution_count, 1);
+        assert!(result[0].top_solution.is_some());
+    }
+
+    #[test]
+    fn build_spots_response_subcategory_mismatch() {
+        use crate::tests::fixtures;
+
+        // Spot has subcategory_id = test_uuid(21), but we provide a different subcategory
+        let mut mismatched_subcategory = fixtures::subcategory_model();
+        mismatched_subcategory.id = fixtures::test_uuid(99); // won't match spot's subcategory_id
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![],
+            subcategories: vec![mismatched_subcategory],
+            categories: vec![fixtures::category_model()],
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 1);
+        // Category should be None because subcategory didn't match
+        assert!(result[0].category.is_none());
+    }
+
+    #[test]
+    fn build_spots_response_spot_without_subcategory() {
+        use crate::tests::fixtures;
+
+        let mut spot = fixtures::spot_model();
+        spot.subcategory_id = None;
+
+        let data = PostRelatedData {
+            spots: vec![spot],
+            solutions: vec![],
+            subcategories: vec![],
+            categories: vec![],
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].category.is_none());
+    }
+
+    #[test]
+    fn build_spots_response_multiple_spots_different_solutions() {
+        use crate::tests::fixtures;
+
+        let mut spot2 = fixtures::spot_model();
+        spot2.id = fixtures::test_uuid(5);
+        spot2.subcategory_id = None;
+
+        let mut sol_for_spot2 = fixtures::solution_model();
+        sol_for_spot2.id = fixtures::test_uuid(6);
+        sol_for_spot2.spot_id = fixtures::test_uuid(5);
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model(), spot2],
+            solutions: vec![fixtures::solution_model(), sol_for_spot2],
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].solution_count, 1);
+        assert_eq!(result[1].solution_count, 1);
+    }
+
+    // ── admin_update_post_status tests ──
+
+    #[tokio::test]
+    async fn admin_update_post_status_success() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated_post = fixtures::post_model();
+        updated_post.status = "hidden".to_string();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[updated_post.clone()]]) // update returns model
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().status, "hidden");
+    }
+
+    #[tokio::test]
+    async fn admin_update_post_status_not_found() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    // ── compute_search_fields tests ──
+
+    #[test]
+    fn compute_search_fields_with_data() {
+        use crate::tests::fixtures;
+
+        let mut adopted_solution = fixtures::solution_model();
+        adopted_solution.is_adopted = true;
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![adopted_solution],
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+        };
+        let fields = compute_search_fields(&data);
+        assert_eq!(fields.spot_count, 1);
+        assert_eq!(fields.solution_count, 1);
+        assert!(fields.has_adopted_solution);
+        assert!(fields.category_codes.contains(&"fashion".to_string()));
+    }
+
+    #[test]
+    fn compute_search_fields_no_adopted() {
+        use crate::tests::fixtures;
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![fixtures::solution_model()], // is_adopted = false
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+        };
+        let fields = compute_search_fields(&data);
+        assert!(!fields.has_adopted_solution);
+    }
+
+    // ── build_media_source_from_post additional test ──
+
+    // ── get_post_detail tests ──
+
+    #[tokio::test]
+    async fn get_post_detail_not_found() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // get_post_by_id → empty
+            .into_connection();
+        let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_not_found_with_user_id() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let result =
+            get_post_detail(&db, fixtures::test_uuid(1), Some(fixtures::test_uuid(10))).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    // ── admin_update_post tests ──
+
+    #[tokio::test]
+    async fn admin_update_post_not_found() {
+        use crate::tests::fixtures;
+        use crate::tests::helpers::test_app_state;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: None,
+            group_name: None,
+            artist_name: None,
+            context: None,
+            status: None,
+        };
+        let result = admin_update_post(&state, fixtures::test_uuid(1), dto).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn admin_update_post_success() {
+        use crate::tests::fixtures;
+        use crate::tests::helpers::test_app_state;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated = fixtures::post_model();
+        updated.artist_name = Some("New Artist".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[updated.clone()]]) // update returns model
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // load_post_related_data
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: None,
+            group_name: None,
+            artist_name: Some("New Artist".to_string()),
+            context: None,
+            status: None,
+        };
+        let result = admin_update_post(&state, fixtures::test_uuid(1), dto).await;
+        assert!(result.is_ok());
+    }
+
+    // ── count_tries tests ──
+
+    #[tokio::test]
+    async fn count_tries_returns_zero_when_no_tries() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // count() in SeaORM mock needs a query result that returns u64-compatible
+        // MockDatabase treats .count() as returning a vec of models then counting,
+        // so we provide empty results
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let result = count_tries(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().count, 0);
+    }
+
+    // ── list_tries_by_spot tests ──
+
+    #[tokio::test]
+    async fn list_tries_by_spot_empty() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::try_spot_tags::Model>::new()]) // tag query
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries_by_spot(&db, fixtures::test_uuid(1), query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert!(resp.tries.is_empty());
+        assert_eq!(resp.total, 0);
+    }
+
+    // ── delete_post additional tests ──
+
+    #[tokio::test]
+    async fn delete_post_db_error_propagates() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("db down".into())])
+            .into_connection();
+
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = delete_post(&client, &db, Uuid::new_v4(), Uuid::new_v4()).await;
+        assert!(result.is_err());
+    }
+
+    // ── increment_view_count additional tests ──
+
+    #[tokio::test]
+    async fn increment_view_count_db_error() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("connection lost".into())])
+            .into_connection();
+        let result = increment_view_count(&db, Uuid::new_v4()).await;
+        assert!(result.is_err());
+    }
+
+    // ── get_post_by_id db error ──
+
+    #[tokio::test]
+    async fn get_post_by_id_db_error() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("timeout".into())])
+            .into_connection();
+        let result = get_post_by_id(&db, Uuid::new_v4()).await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_media_source_from_post_drama_type() {
+        let t = ts();
+        let post = posts::Model {
+            id: Uuid::nil(),
+            user_id: Uuid::nil(),
+            image_url: "https://i".into(),
+            media_type: "drama".into(),
+            title: Some("My Drama".into()),
+            media_metadata: Some(json!({"title": "Drama Title"})),
+            group_name: None,
+            artist_name: None,
+            artist_id: None,
+            group_id: None,
+            context: None,
+            view_count: 0,
+            status: "active".into(),
+            trending_score: None,
+            created_with_solutions: None,
+            post_magazine_id: None,
+            ai_summary: None,
+            style_tags: None,
+            image_width: None,
+            image_height: None,
+            parent_post_id: None,
+            post_type: None,
+            created_at: t,
+            updated_at: t,
+        };
+        let ms = build_media_source_from_post(&post);
+        assert_eq!(ms.media_type(), "drama");
+    }
+
+    // ── update_post tests ──
+
+    #[tokio::test]
+    async fn update_post_success_owner() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated = fixtures::post_model();
+        updated.artist_name = Some("New Artist".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[updated.clone()]]) // update
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // load_post_related_data spots
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: None,
+            group_name: None,
+            artist_name: Some("New Artist".to_string()),
+            context: None,
+            status: None,
+        };
+        let result =
+            update_post(&state, fixtures::test_uuid(1), fixtures::test_uuid(10), dto).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn update_post_forbidden_non_owner() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: None,
+            group_name: None,
+            artist_name: None,
+            context: None,
+            status: None,
+        };
+        // user_id 99 != post owner (10)
+        let result =
+            update_post(&state, fixtures::test_uuid(1), fixtures::test_uuid(99), dto).await;
+        assert!(matches!(result, Err(crate::AppError::Forbidden(_))));
+    }
+
+    #[tokio::test]
+    async fn update_post_not_found() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: None,
+            group_name: None,
+            artist_name: None,
+            context: None,
+            status: None,
+        };
+        let result =
+            update_post(&state, fixtures::test_uuid(1), fixtures::test_uuid(10), dto).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn update_post_all_fields() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let updated = fixtures::post_model();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[updated]]) // update
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // spots (empty)
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = UpdatePostDto {
+            media_source: Some(MediaSourceDto {
+                media_type: "movie".to_string(),
+                description: None,
+            }),
+            group_name: Some("Group".to_string()),
+            artist_name: Some("Artist".to_string()),
+            context: Some("Ctx".to_string()),
+            status: Some("active".to_string()),
+        };
+        let result =
+            update_post(&state, fixtures::test_uuid(1), fixtures::test_uuid(10), dto).await;
+        assert!(result.is_ok());
+    }
+
+    // ── list_tries tests ──
+
+    #[tokio::test]
+    async fn list_tries_empty_result() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // count → 0, all → empty; users/tags batches skipped when empty
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // all
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries(&db, fixtures::test_uuid(1), query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert!(resp.tries.is_empty());
+        assert_eq!(resp.total, 0);
+    }
+
+    #[tokio::test]
+    async fn list_tries_db_error() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries(&db, Uuid::new_v4(), query).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_tries_by_spot_db_error() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries_by_spot(&db, Uuid::new_v4(), query).await;
+        assert!(result.is_err());
+    }
+
+    // ── list_posts tests ──
+
+    #[tokio::test]
+    async fn list_posts_empty_result() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Query pipeline: count → posts.all → users.all → spot_counts → comment_counts
+        // magazine_ids are empty so magazine query is skipped.
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts.all
+            .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: None,
+        };
+        let result = list_posts(&db, query).await;
+        assert!(result.is_ok());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_posts_with_filters_and_popular_sort() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts
+            .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: Some("Jennie".to_string()),
+            group_name: Some("BP".to_string()),
+            context: Some("airport".to_string()),
+            category: None,
+            user_id: Some(Uuid::new_v4()),
+            artist_id: Some(Uuid::new_v4()),
+            group_id: Some(Uuid::new_v4()),
+            sort: "popular".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: Some(true),
+        };
+        let result = list_posts(&db, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn list_posts_trending_sort() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "trending".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: None,
+        };
+        assert!(list_posts(&db, query).await.is_ok());
+    }
+
+    // ── admin_list_posts tests ──
+
+    #[tokio::test]
+    async fn admin_list_posts_empty_with_status_filter() {
+        use crate::domains::admin::posts::AdminPostListQuery;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts
+            .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spots
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comments
+            .into_connection();
+        let query = AdminPostListQuery {
+            status: Some("hidden".to_string()),
+            base_query: PostListQuery {
+                artist_name: Some("X".to_string()),
+                group_name: Some("Y".to_string()),
+                context: Some("Z".to_string()),
+                category: None,
+                user_id: Some(Uuid::new_v4()),
+                artist_id: None,
+                group_id: None,
+                sort: "recent".to_string(),
+                page: 1,
+                per_page: 20,
+                has_solutions: None,
+                has_magazine: None,
+            },
+        };
+        let result = admin_list_posts(&db, query).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn admin_list_posts_popular_sort_no_status() {
+        use crate::domains::admin::posts::AdminPostListQuery;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .append_query_results([Vec::<posts::Model>::new()])
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let query = AdminPostListQuery {
+            status: None,
+            base_query: PostListQuery {
+                artist_name: None,
+                group_name: None,
+                context: None,
+                category: None,
+                user_id: None,
+                artist_id: None,
+                group_id: None,
+                sort: "popular".to_string(),
+                page: 1,
+                per_page: 20,
+                has_solutions: None,
+                has_magazine: None,
+            },
+        };
+        assert!(admin_list_posts(&db, query).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn admin_list_posts_trending_sort() {
+        use crate::domains::admin::posts::AdminPostListQuery;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()])
+            .append_query_results([Vec::<posts::Model>::new()])
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let query = AdminPostListQuery {
+            status: None,
+            base_query: PostListQuery {
+                artist_name: None,
+                group_name: None,
+                context: None,
+                category: None,
+                user_id: None,
+                artist_id: None,
+                group_id: None,
+                sort: "trending".to_string(),
+                page: 1,
+                per_page: 20,
+                has_solutions: None,
+                has_magazine: None,
+            },
+        };
+        assert!(admin_list_posts(&db, query).await.is_ok());
+    }
+
+    // ── get_post_detail: propagation paths ──
+
+    #[tokio::test]
+    async fn get_post_detail_db_error_on_post_lookup() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_errors(vec![sea_orm::DbErr::Custom("db down".into())])
+            .into_connection();
+        let result = get_post_detail(&db, Uuid::new_v4(), None).await;
+        assert!(result.is_err());
+    }
+
+    // ── upload_image tests (DummyStorageClient) ──
+
+    #[tokio::test]
+    async fn upload_image_jpeg_returns_url_with_jpg_ext() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        let state = test_app_state(crate::tests::helpers::empty_mock_db());
+        let result =
+            upload_image(&state, vec![1, 2, 3], "image/jpeg", fixtures::test_uuid(10)).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert!(resp.image_url.contains("posts/"));
+        assert!(resp.image_url.ends_with(".jpg"));
+    }
+
+    #[tokio::test]
+    async fn upload_image_png_returns_url_with_png_ext() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        let state = test_app_state(crate::tests::helpers::empty_mock_db());
+        let resp = upload_image(&state, vec![0; 8], "image/png", fixtures::test_uuid(10))
+            .await
+            .expect("ok");
+        assert!(resp.image_url.ends_with(".png"));
+    }
+
+    #[tokio::test]
+    async fn upload_image_webp_returns_url_with_webp_ext() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        let state = test_app_state(crate::tests::helpers::empty_mock_db());
+        let resp = upload_image(&state, vec![0; 4], "image/webp", fixtures::test_uuid(10))
+            .await
+            .expect("ok");
+        assert!(resp.image_url.ends_with(".webp"));
+    }
+
+    #[tokio::test]
+    async fn upload_image_jpg_alias_accepted() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        let state = test_app_state(crate::tests::helpers::empty_mock_db());
+        let resp = upload_image(&state, vec![0; 4], "image/jpg", fixtures::test_uuid(10))
+            .await
+            .expect("ok");
+        assert!(resp.image_url.ends_with(".jpg"));
+    }
+
+    #[tokio::test]
+    async fn upload_image_unsupported_content_type_errors() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        let state = test_app_state(crate::tests::helpers::empty_mock_db());
+        let result = upload_image(&state, vec![0; 2], "image/gif", fixtures::test_uuid(10)).await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    // ── get_post_detail success path: empty spots branch ──
+    // Query order in get_post_detail when spots are empty:
+    //   1. get_post_by_id            → posts
+    //   2. get_user_by_id            → users
+    //   3. load_post_related_data    → spots (empty → early return inside)
+    //   4. get_like_stats            → posts find_by_id, then post_likes count
+    //   5. (user_has_saved if user)  → saved_posts find
+    //   6. count_tries               → posts count
+
+    #[tokio::test]
+    async fn get_post_detail_empty_spots_no_user_success() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // 1) get_post_by_id
+            .append_query_results([[fixtures::user_model()]]) // 2) get_user_by_id
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 3) spots
+            .append_query_results([[fixtures::post_model()]]) // 4a) like_stats: post find
+            .append_query_results([vec![fixtures::count_row(0)]]) // 4b) like count
+            .append_query_results([vec![fixtures::count_row(0)]]) // 6) count_tries
+            .into_connection();
+        let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.id, fixtures::test_uuid(1));
+        // try_count is None when count == 0
+        assert!(resp.try_count.is_none());
+    }
+
+    // ── get_post_detail: populated spots branch ──
+
+    #[tokio::test]
+    async fn get_post_detail_with_spots_success() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Query order when spots populated:
+        //  1) get_post_by_id
+        //  2) get_user_by_id
+        //  3) load_post_related_data: spots → solutions → subcategories → categories
+        //  4) get_like_stats: post find + count
+        //  5) count_comments_by_post_id
+        //  6) count_tries
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // 1
+            .append_query_results([[fixtures::user_model()]]) // 2
+            .append_query_results([[fixtures::spot_model()]]) // 3a spots
+            .append_query_results([[fixtures::solution_model()]]) // 3b solutions
+            .append_query_results([[fixtures::subcategory_model()]]) // 3c subcategories
+            .append_query_results([[fixtures::category_model()]]) // 3d categories
+            .append_query_results([[fixtures::post_model()]]) // 4a like: post find
+            .append_query_results([vec![fixtures::count_row(0)]]) // 4b like count
+            .append_query_results([vec![fixtures::count_row(2)]]) // 5 comment count
+            .append_query_results([vec![fixtures::count_row(0)]]) // 6 count_tries
+            .into_connection();
+        let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.spots.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_user_not_found_propagates() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Post found, but subsequent get_user_by_id returns empty → NotFound
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
+        assert!(result.is_err());
+    }
+
+    // ── list_posts has_solutions filter branches ──
+
+    #[tokio::test]
+    async fn list_posts_has_solutions_true_no_solutions_returns_empty() {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // has_solutions=true but empty solutions → early short-circuit
+        // Queries: solutions (empty) → count → posts.all → users → spot_counts → comment_counts
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // solution spot_ids (empty → short-circuit)
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts
+            .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: Some(true),
+            has_magazine: None,
+        };
+        let result = list_posts(&db, query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn list_posts_has_solutions_false_spot_only_branch() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // has_solutions=false branch:
+        //   1) solution spot_ids → non-empty
+        //   2) spots with solutions → post_ids
+        //   3) spots all → post_ids (superset)
+        //   4) count → posts → users → spot_counts → comment_counts
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::uuid_row("spot_id", fixtures::test_uuid(2))]]) // solution.spot_ids
+            .append_query_results([vec![fixtures::uuid_row("post_id", fixtures::test_uuid(1))]]) // spots with solutions
+            .append_query_results([vec![
+                fixtures::uuid_row("post_id", fixtures::test_uuid(1)),
+                fixtures::uuid_row("post_id", fixtures::test_uuid(7)),
+            ]]) // all spot post_ids
+            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([Vec::<posts::Model>::new()]) // posts
+            .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: Some(false),
+            has_magazine: None,
+        };
+        let result = list_posts(&db, query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn list_posts_with_populated_data_all_lookups() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Populated posts → users, spot_counts, comment_counts, magazine_titles
+        let mut post = fixtures::post_model();
+        post.post_magazine_id = Some(fixtures::test_uuid(80));
+
+        let magazine = crate::entities::post_magazines::Model {
+            id: fixtures::test_uuid(80),
+            title: "Mag Title".to_string(),
+            subtitle: None,
+            keyword: None,
+            layout_json: None,
+            status: "published".to_string(),
+            review_summary: None,
+            error_log: None,
+            created_at: fixtures::test_timestamp(),
+            updated_at: fixtures::test_timestamp(),
+            published_at: Some(fixtures::test_timestamp()),
+        };
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::count_row(1)]]) // count
+            .append_query_results([vec![post]]) // posts
+            .append_query_results([vec![fixtures::user_model()]]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .append_query_results([vec![magazine]]) // magazine titles
+            .into_connection();
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: None,
+        };
+        let result = list_posts(&db, query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.data.len(), 1);
+        assert_eq!(
+            resp.data[0].post_magazine_title.as_deref(),
+            Some("Mag Title")
+        );
+    }
+
+    // ── list_tries populated ──
+
+    #[tokio::test]
+    async fn list_tries_with_populated_data() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut try_post = fixtures::post_model();
+        try_post.id = fixtures::test_uuid(50);
+        try_post.post_type = Some("try".to_string());
+        try_post.parent_post_id = Some(fixtures::test_uuid(1));
+
+        let tag = crate::entities::try_spot_tags::Model {
+            id: fixtures::test_uuid(4),
+            try_post_id: fixtures::test_uuid(50),
+            spot_id: fixtures::test_uuid(2),
+            created_at: fixtures::test_timestamp(),
+        };
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::count_row(1)]]) // count
+            .append_query_results([vec![try_post]]) // posts
+            .append_query_results([vec![fixtures::user_model()]]) // users
+            .append_query_results([vec![tag]]) // tags
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries(&db, fixtures::test_uuid(1), query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.total, 1);
+        assert_eq!(resp.tries.len(), 1);
+        assert_eq!(resp.tries[0].tagged_spot_ids, vec![fixtures::test_uuid(2)]);
+    }
+
+    // ── list_tries_by_spot populated ──
+
+    #[tokio::test]
+    async fn list_tries_by_spot_with_populated_data() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut try_post = fixtures::post_model();
+        try_post.id = fixtures::test_uuid(50);
+        try_post.post_type = Some("try".to_string());
+
+        let tag = crate::entities::try_spot_tags::Model {
+            id: fixtures::test_uuid(4),
+            try_post_id: fixtures::test_uuid(50),
+            spot_id: fixtures::test_uuid(2),
+            created_at: fixtures::test_timestamp(),
+        };
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::uuid_row(
+                "try_post_id",
+                fixtures::test_uuid(50),
+            )]]) // tag into_tuple
+            .append_query_results([vec![fixtures::count_row(1)]]) // count
+            .append_query_results([vec![try_post]]) // posts
+            .append_query_results([vec![fixtures::user_model()]]) // users
+            .append_query_results([vec![tag]]) // all tags
+            .into_connection();
+        let query = TryListQuery {
+            page: 1,
+            per_page: 20,
+        };
+        let result = list_tries_by_spot(&db, fixtures::test_uuid(2), query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.total, 1);
+        assert_eq!(resp.tries.len(), 1);
+    }
+
+    // ── admin_list_posts populated ──
+
+    #[tokio::test]
+    async fn admin_list_posts_with_populated_data() {
+        use crate::domains::admin::posts::AdminPostListQuery;
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::count_row(1)]]) // count
+            .append_query_results([vec![fixtures::post_model()]]) // posts
+            .append_query_results([vec![fixtures::user_model()]]) // users
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // spot_counts
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ]) // comment_counts
+            .into_connection();
+        let query = AdminPostListQuery {
+            status: None,
+            base_query: PostListQuery {
+                artist_name: None,
+                group_name: None,
+                context: None,
+                category: None,
+                user_id: None,
+                artist_id: None,
+                group_id: None,
+                sort: "recent".to_string(),
+                page: 1,
+                per_page: 20,
+                has_solutions: None,
+                has_magazine: None,
+            },
+        };
+        let result = admin_list_posts(&db, query).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.data.len(), 1);
+    }
+
+    // ── admin_update_post_status: meilisearch sync branches ──
+
+    #[tokio::test]
+    async fn admin_update_post_status_hidden_triggers_search_delete() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated = fixtures::post_model();
+        updated.status = "hidden".to_string();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[updated.clone()]])
+            .into_connection();
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn admin_update_post_status_active_triggers_search_update() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated = fixtures::post_model();
+        updated.status = "active".to_string();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[updated.clone()]])
+            .into_connection();
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "active").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn admin_update_post_status_deleted_triggers_search_delete() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut updated = fixtures::post_model();
+        updated.status = "deleted".to_string();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]])
+            .append_query_results([[updated.clone()]])
+            .into_connection();
+        let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
+        let result =
+            admin_update_post_status(&client, &db, fixtures::test_uuid(1), "deleted").await;
+        assert!(result.is_ok());
+    }
+
+    // ── count_tries: populated count_row path ──
+
+    #[tokio::test]
+    async fn count_tries_returns_populated_count() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::count_row(5)]])
+            .into_connection();
+        let result = count_tries(&db, fixtures::test_uuid(1)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().count, 5);
+    }
+
+    // ── create_try_post error paths (pre-transaction validation) ──
+
+    #[tokio::test]
+    async fn create_try_post_parent_not_found() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<posts::Model>::new()]) // parent lookup
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = CreateTryPostDto {
+            parent_post_id: fixtures::test_uuid(1),
+            media_title: None,
+            spot_ids: vec![],
+        };
+        let result = create_try_post(
+            &state,
+            fixtures::test_uuid(10),
+            vec![1, 2, 3],
+            "image/jpeg",
+            dto,
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn create_try_post_rejects_try_on_try_parent() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut parent = fixtures::post_model();
+        parent.post_type = Some("try".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![parent]]) // parent is a try
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = CreateTryPostDto {
+            parent_post_id: fixtures::test_uuid(1),
+            media_title: None,
+            spot_ids: vec![],
+        };
+        let result = create_try_post(
+            &state,
+            fixtures::test_uuid(10),
+            vec![1, 2, 3],
+            "image/jpeg",
+            dto,
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn create_try_post_rejects_spot_ids_not_belonging_to_parent() {
+        use crate::tests::{fixtures, helpers::test_app_state};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Parent OK (non-try); spot count mismatch (0 vs 2 requested)
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![fixtures::post_model()]]) // parent lookup
+            .append_query_results([vec![fixtures::count_row(0)]]) // spots.count → 0 (mismatch)
+            .into_connection();
+        let state = test_app_state(db);
+        let dto = CreateTryPostDto {
+            parent_post_id: fixtures::test_uuid(1),
+            media_title: None,
+            spot_ids: vec![fixtures::test_uuid(2), fixtures::test_uuid(3)],
+        };
+        let result = create_try_post(
+            &state,
+            fixtures::test_uuid(10),
+            vec![1, 2, 3],
+            "image/jpeg",
+            dto,
+        )
+        .await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_empty_spots_with_user_success() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::post_model()]]) // 1) get_post_by_id
+            .append_query_results([[fixtures::user_model()]]) // 2) get_user_by_id
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 3) spots
+            .append_query_results([[fixtures::post_model()]]) // 4a) like_stats: post find
+            .append_query_results([vec![fixtures::count_row(2)]]) // 4b) like count
+            .append_query_results([Vec::<crate::entities::post_likes::Model>::new()]) // 4c) user_has_liked check
+            .append_query_results([Vec::<crate::entities::saved_posts::Model>::new()]) // 5) user_has_saved
+            .append_query_results([vec![fixtures::count_row(3)]]) // 6) count_tries
+            .into_connection();
+        let result =
+            get_post_detail(&db, fixtures::test_uuid(1), Some(fixtures::test_uuid(10))).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.try_count, Some(3));
     }
 }

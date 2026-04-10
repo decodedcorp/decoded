@@ -442,7 +442,10 @@ class CanvAscii {
 
   setRenderer(): boolean {
     try {
-      this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        alpha: true,
+      });
     } catch {
       // WebGL not available — skip rendering silently
       return false;

@@ -213,7 +213,7 @@ pub mod service {
 
     /// 대시보드 통계 조회
     pub async fn get_dashboard_stats(state: &AppState) -> AppResult<DashboardStatsResponse> {
-        let db = &state.db;
+        let db = state.db.as_ref();
         let now = Utc::now();
         let today_start = now
             .date_naive()
@@ -390,7 +390,7 @@ pub mod service {
 
     /// 인기 키워드 조회 (TOP 20)
     pub async fn get_popular_keywords(state: &AppState) -> AppResult<Vec<PopularKeyword>> {
-        let db = &state.db;
+        let db = state.db.as_ref();
 
         // 최근 30일간의 검색 로그에서 키워드 집계
         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
@@ -422,7 +422,7 @@ pub mod service {
         state: &AppState,
         query: TrafficQuery,
     ) -> AppResult<TrafficAnalysisResponse> {
-        let db = &state.db;
+        let db = state.db.as_ref();
 
         // 날짜 범위 결정
         let (start_date, end_date) =
@@ -586,5 +586,190 @@ pub mod service {
         }
 
         Ok(unique_users.len() as i64)
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::disallowed_methods)]
+    mod tests {
+        use super::*;
+        use crate::tests::fixtures;
+        use crate::tests::helpers::test_app_state;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        #[tokio::test]
+        async fn get_popular_keywords_empty() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::search_logs::Model>::new()])
+                .into_connection();
+            let state = test_app_state(db);
+
+            let result = get_popular_keywords(&state).await.expect("ok");
+            assert!(result.is_empty());
+        }
+
+        #[tokio::test]
+        async fn get_popular_keywords_aggregates_and_sorts_counts() {
+            let mut log1 = fixtures::search_log_model();
+            log1.query = "jennie".to_string();
+            let mut log2 = fixtures::search_log_model();
+            log2.id = fixtures::test_uuid(51);
+            log2.query = "jennie".to_string();
+            let mut log3 = fixtures::search_log_model();
+            log3.id = fixtures::test_uuid(52);
+            log3.query = "rose".to_string();
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![log1, log2, log3]])
+                .into_connection();
+            let state = test_app_state(db);
+
+            let result = get_popular_keywords(&state).await.expect("ok");
+            assert_eq!(result.len(), 2);
+            assert_eq!(result[0].keyword, "jennie");
+            assert_eq!(result[0].count, 2);
+            assert_eq!(result[1].keyword, "rose");
+            assert_eq!(result[1].count, 1);
+        }
+
+        #[tokio::test]
+        async fn get_popular_keywords_truncates_to_top_20() {
+            let logs: Vec<crate::entities::search_logs::Model> = (0..30_u8)
+                .map(|i| {
+                    let mut log = fixtures::search_log_model();
+                    log.id = uuid::Uuid::from_bytes([i; 16]);
+                    log.query = format!("keyword-{}", i);
+                    log
+                })
+                .collect();
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([logs])
+                .into_connection();
+            let state = test_app_state(db);
+
+            let result = get_popular_keywords(&state).await.expect("ok");
+            assert_eq!(result.len(), 20);
+        }
+
+        #[tokio::test]
+        async fn get_traffic_analysis_rejects_invalid_start_date() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+            let state = test_app_state(db);
+
+            let query = TrafficQuery {
+                start_date: Some("not-a-date".to_string()),
+                end_date: Some("2026-01-01".to_string()),
+            };
+            let result = get_traffic_analysis(&state, query).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn get_traffic_analysis_rejects_invalid_end_date() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+            let state = test_app_state(db);
+
+            let query = TrafficQuery {
+                start_date: Some("2026-01-01".to_string()),
+                end_date: Some("bad-date".to_string()),
+            };
+            let result = get_traffic_analysis(&state, query).await;
+            assert!(matches!(result, Err(AppError::BadRequest(_))));
+        }
+
+        #[tokio::test]
+        async fn get_traffic_analysis_default_range_no_dates() {
+            // No dates provided -> default last 30 days; should query search + click logs
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::search_logs::Model>::new()])
+                .append_query_results([Vec::<crate::entities::click_logs::Model>::new()])
+                .into_connection();
+            let state = test_app_state(db);
+
+            let query = TrafficQuery {
+                start_date: None,
+                end_date: None,
+            };
+            let result = get_traffic_analysis(&state, query).await.expect("ok");
+            assert!(result.daily_traffic.is_empty());
+            assert_eq!(result.total_searches, 0);
+            assert_eq!(result.total_clicks, 0);
+        }
+
+        #[tokio::test]
+        async fn get_dashboard_stats_empty_db() {
+            let empty: Vec<std::collections::BTreeMap<String, sea_orm::Value>> = vec![];
+            let mut mb = MockDatabase::new(DatabaseBackend::Postgres);
+            for _ in 0..6 {
+                mb = mb.append_query_results([empty.clone()]);
+            }
+            for _ in 0..7 {
+                mb = mb.append_query_results([[fixtures::count_row(0)]]);
+            }
+            let r = get_dashboard_stats(&test_app_state(mb.into_connection()))
+                .await
+                .expect("ok");
+            assert_eq!(r.dau, 0);
+            assert_eq!(r.mau, 0);
+            assert_eq!(r.total_users, 0);
+            assert_eq!(r.today_clicks, 0);
+        }
+
+        #[tokio::test]
+        async fn get_dashboard_stats_db_error() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_errors(vec![sea_orm::DbErr::Custom("boom".into())])
+                .into_connection();
+            assert!(get_dashboard_stats(&test_app_state(db)).await.is_err());
+        }
+
+        #[tokio::test]
+        async fn get_popular_keywords_db_error() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_errors(vec![sea_orm::DbErr::Custom("down".into())])
+                .into_connection();
+            assert!(get_popular_keywords(&test_app_state(db)).await.is_err());
+        }
+
+        #[tokio::test]
+        async fn get_traffic_analysis_with_search_logs_counts_totals() {
+            let mut log = fixtures::search_log_model();
+            log.query = "jennie".to_string();
+            let empty: Vec<std::collections::BTreeMap<String, sea_orm::Value>> = vec![];
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![log]])
+                .append_query_results([Vec::<crate::entities::click_logs::Model>::new()])
+                .append_query_results([empty.clone()])
+                .append_query_results([empty.clone()])
+                .append_query_results([empty])
+                .into_connection();
+            let q = TrafficQuery {
+                start_date: Some("2025-12-25".to_string()),
+                end_date: Some("2026-01-07".to_string()),
+            };
+            let r = get_traffic_analysis(&test_app_state(db), q)
+                .await
+                .expect("ok");
+            assert_eq!(r.total_searches, 1);
+            assert_eq!(r.daily_traffic.len(), 1);
+        }
+
+        #[tokio::test]
+        async fn get_traffic_analysis_empty_logs_returns_empty_daily() {
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<crate::entities::search_logs::Model>::new()])
+                .append_query_results([Vec::<crate::entities::click_logs::Model>::new()])
+                .into_connection();
+            let state = test_app_state(db);
+
+            let query = TrafficQuery {
+                start_date: Some("2026-01-01".to_string()),
+                end_date: Some("2026-01-07".to_string()),
+            };
+            let result = get_traffic_analysis(&state, query).await.expect("ok");
+            assert!(result.daily_traffic.is_empty());
+            assert_eq!(result.total_searches, 0);
+            assert_eq!(result.total_clicks, 0);
+        }
     }
 }

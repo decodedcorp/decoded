@@ -46,7 +46,7 @@ pub async fn admin_db_middleware(
         .ok_or_else(|| AppError::Unauthorized("Authentication required".to_string()))?;
 
     let db_user = users::Entity::find_by_id(user.id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .map_err(|e| AppError::InternalError(format!("Database error: {}", e)))?;
 

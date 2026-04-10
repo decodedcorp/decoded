@@ -38,7 +38,12 @@ function CandidatesPageContent() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data, isLoading } = useCandidateList(currentPage, 20, currentStatus, searchQuery);
+  const { data, isLoading } = useCandidateList(
+    currentPage,
+    20,
+    currentStatus,
+    searchQuery
+  );
   const approveCandidate = useApproveCandidate();
   const rejectCandidate = useRejectCandidate();
 
@@ -108,7 +113,9 @@ function CandidatesPageContent() {
       render: (row) =>
         row.context ? (
           <span className="text-sm text-gray-300 line-clamp-2 max-w-xs">
-            {row.context.length > 80 ? row.context.slice(0, 80) + "…" : row.context}
+            {row.context.length > 80
+              ? row.context.slice(0, 80) + "…"
+              : row.context}
           </span>
         ) : (
           <span className="text-gray-600">—</span>
@@ -163,7 +170,9 @@ function CandidatesPageContent() {
         <p className="text-sm text-gray-400 mt-1">
           Seed post candidates for curation
           {pagination && (
-            <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+            <span className="ml-2 text-gray-500">
+              ({pagination.total_items} total)
+            </span>
           )}
         </p>
       </div>
@@ -173,7 +182,9 @@ function CandidatesPageContent() {
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => updateUrl({ status: tab.value || undefined, page: "1" })}
+            onClick={() =>
+              updateUrl({ status: tab.value || undefined, page: "1" })
+            }
             className={[
               "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
               currentStatus === tab.value
@@ -217,7 +228,9 @@ function CandidatesPageContent() {
 
 export default function CandidatesPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <CandidatesPageContent />
     </Suspense>
   );

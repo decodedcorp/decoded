@@ -141,6 +141,9 @@ export type PostGridItem = {
   title?: string | null;
   /** Meilisearch highlight (검색 결과에서만) */
   highlight?: Record<string, string> | null;
+  /** DB-stored dimensions for CLS prevention */
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 };
 
 /**
@@ -228,6 +231,12 @@ export function useInfinitePosts(params: {
         spotCount: post.spot_count ?? 0,
         viewCount: post.view_count,
         title: post.post_magazine_title ?? post.title ?? null,
+        imageWidth: (post as Record<string, unknown>).image_width as
+          | number
+          | null,
+        imageHeight: (post as Record<string, unknown>).image_height as
+          | number
+          | null,
       }));
 
       const totalPages = response.pagination.total_pages;

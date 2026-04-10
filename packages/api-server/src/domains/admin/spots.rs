@@ -52,7 +52,8 @@ pub async fn list_spots(
     _extension: axum::Extension<User>,
     Query(query): Query<AdminSpotListQuery>,
 ) -> AppResult<Json<PaginatedResponse<crate::domains::spots::dto::AdminSpotListItem>>> {
-    let res = service::admin_list_spots(&state.db, query.subcategory_id, query.pagination).await?;
+    let res = service::admin_list_spots(state.db.as_ref(), query.subcategory_id, query.pagination)
+        .await?;
     Ok(Json(res))
 }
 
@@ -76,7 +77,7 @@ pub async fn update_spot_subcategory(
     Path(spot_id): Path<Uuid>,
     Json(dto): Json<AdminSpotSubcategoryUpdate>,
 ) -> AppResult<Json<SpotResponse>> {
-    let spot = service::admin_update_spot_subcategory(&state.db, spot_id, dto).await?;
+    let spot = service::admin_update_spot_subcategory(state.db.as_ref(), spot_id, dto).await?;
     Ok(Json(spot))
 }
 

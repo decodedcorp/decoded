@@ -8,10 +8,8 @@ import { useUpdateReportStatus } from "@/lib/hooks/admin/useAdminReports";
 const STATUS_STYLES: Record<ReportStatus, string> = {
   pending:
     "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  reviewed:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  dismissed:
-    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  reviewed: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  dismissed: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   actioned:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
@@ -137,16 +135,22 @@ export function ReportTable({ data }: ReportTableProps) {
         </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            {["Type", "Reason / Details", "Reporter", "Target ID", "Status", "Date", ""].map(
-              (h) => (
-                <th
-                  key={h || "spacer"}
-                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              )
-            )}
+            {[
+              "Type",
+              "Reason / Details",
+              "Reporter",
+              "Target ID",
+              "Status",
+              "Date",
+              "",
+            ].map((h) => (
+              <th
+                key={h || "spacer"}
+                className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

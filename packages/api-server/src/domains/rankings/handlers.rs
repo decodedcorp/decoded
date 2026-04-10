@@ -117,8 +117,7 @@ async fn trending_artists(
     State(state): State<AppState>,
     Query(query): Query<TrendingArtistsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let result =
-        RankingsService::get_trending_artists(&state.db, &query.period, query.limit).await;
+    let result = RankingsService::get_trending_artists(&state.db, &query.period, query.limit).await;
 
     match result {
         Ok(response) => Ok(Json(response)),

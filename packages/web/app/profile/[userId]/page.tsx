@@ -14,25 +14,68 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { data: user } = await supabase
     .from("users")
-    .select("display_name, bio")
+    .select("display_name, bio, avatar_url, username")
     .eq("id", userId)
     .single();
 
-  const displayName = user?.display_name || "User";
-  const title = `${displayName}'s Profile`;
+  const displayName = user?.display_name || user?.username || "User";
+  const title = `${displayName} | DECODED`;
   const description =
-    user?.bio || `View ${displayName}'s style collection on Decoded.`;
+    user?.bio || `${displayName}의 스타일 컬렉션을 확인하세요.`;
 
   return {
     title,
     description,
     alternates: { canonical: `${SITE_URL}/profile/${userId}` },
-    openGraph: { title, description },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/profile/${userId}`,
+      type: "profile",
+      ...(user?.avatar_url && {
+        images: [{ url: user.avatar_url, width: 200, height: 200 }],
+      }),
+    },
+    twitter: {
+      card: user?.avatar_url ? "summary" : "summary",
+      title,
+      description,
+      ...(user?.avatar_url && { images: [user.avatar_url] }),
+    },
     robots: { index: true, follow: true },
+    other: {
+      "profile:username": user?.username || "",
+    },
   };
 }
 
 export default async function PublicProfilePage({ params }: Props) {
   const { userId } = await params;
-  return <PublicProfileClient userId={userId} />;
+  const supabase = await createSupabaseServerClient();
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("display_name, username, avatar_url, bio")
+    .eq("id", userId)
+    .single();
+
+  const displayName = user?.display_name || user?.username || "User";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: displayName,
+    url: `${SITE_URL}/profile/${userId}`,
+    ...(user?.avatar_url && { image: user.avatar_url }),
+    ...(user?.bio && { description: user.bio }),
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <PublicProfileClient userId={userId} />
+    </>
+  );
 }

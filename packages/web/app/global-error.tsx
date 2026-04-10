@@ -1,6 +1,7 @@
 "use client";
 
 import * as Sentry from "@sentry/nextjs";
+import Link from "next/link";
 import { useEffect } from "react";
 
 /**
@@ -39,7 +40,9 @@ export default function GlobalError({
         <h1 style={{ fontSize: "6rem", fontWeight: 700, margin: "0 0 1rem" }}>
           500
         </h1>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+        <h2
+          style={{ fontSize: "1.5rem", fontWeight: 600, margin: "0 0 0.5rem" }}
+        >
           Something went wrong
         </h2>
         <p
@@ -68,7 +71,7 @@ export default function GlobalError({
           >
             Try Again
           </button>
-          <a
+          <Link
             href="/"
             style={{
               backgroundColor: "transparent",
@@ -82,7 +85,7 @@ export default function GlobalError({
             }}
           >
             Go Home
-          </a>
+          </Link>
         </div>
       </body>
     </html>

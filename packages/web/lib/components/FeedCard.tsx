@@ -67,6 +67,9 @@ export interface FeedCardItem {
   likeCount?: number;
   commentCount?: number;
   isLiked?: boolean;
+  // DB dimensions for CLS prevention
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 interface FeedCardProps {
@@ -97,7 +100,9 @@ export const FeedCard = memo(
       commentCount: item.commentCount ?? 0,
     });
 
-    const { id, imageUrl, hasItems } = item;
+    const { id, imageUrl, hasItems, imageWidth, imageHeight } = item;
+    const aspectRatio =
+      imageWidth && imageHeight ? imageWidth / imageHeight : undefined;
 
     // Fetch spots for cards with items
     const { data: spotsData } = useSpots(item.postId!, {
@@ -186,7 +191,10 @@ export const FeedCard = memo(
 
     const cardContent = (
       // dwellRef tracks 3-second viewport visibility for dwell_time event
-      <article ref={dwellRef as React.RefObject<HTMLElement>}>
+      <article
+        data-testid="feed-card"
+        ref={dwellRef as React.RefObject<HTMLElement>}
+      >
         <Card
           data-flip-id={id ? `feed-card-${id}` : undefined}
           interactive
@@ -218,7 +226,10 @@ export const FeedCard = memo(
           )}
 
           {/* Image container - dynamic ratio or 4:5 aspect ratio like Instagram */}
-          <div className="relative overflow-hidden">
+          <div
+            className="relative overflow-hidden"
+            style={aspectRatio ? { aspectRatio } : undefined}
+          >
             {imageUrl ? (
               <PostImage
                 src={imageUrl}
@@ -295,6 +306,7 @@ export const FeedCard = memo(
               <div className="flex items-center gap-4 mt-3">
                 {/* Like button */}
                 <button
+                  data-testid="like-button"
                   onClick={handleLike}
                   className="flex items-center gap-1 text-white transition-transform"
                   aria-label={engagement.isLiked ? "Unlike" : "Like"}

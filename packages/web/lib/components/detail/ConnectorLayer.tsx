@@ -123,7 +123,9 @@ export function ConnectorLayer({
 
     // Add scroll listener to specific container or window
     const scroller = scrollContainerRef?.current || window;
-    scroller.addEventListener("scroll", handleUpdate as EventListener, { passive: true });
+    scroller.addEventListener("scroll", handleUpdate as EventListener, {
+      passive: true,
+    });
 
     return () => {
       window.removeEventListener("resize", handleUpdate);

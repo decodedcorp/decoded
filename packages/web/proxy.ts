@@ -25,17 +25,14 @@ export async function proxy(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
 
-  // Protected pages: require session, redirect to login with return URL
+  // Protected pages: with implicit OAuth flow, session lives in localStorage
+  // (not server cookies), so server-side redirect is skipped.
+  // Client-side auth check handles 401 → login redirect instead.
   if (
     pathname === "/profile" ||
     pathname.startsWith("/profile/") ||
     pathname.startsWith("/request/")
   ) {
-    if (!session) {
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
     return res;
   }
 

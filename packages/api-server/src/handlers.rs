@@ -129,7 +129,7 @@ fn check_decoded_ai_config(state: &AppState) -> DependencyHealth {
     )
 )]
 pub async fn health_check(State(state): State<AppState>) -> Json<HealthResponse> {
-    let database = check_database(&state.db).await;
+    let database = check_database(state.db.as_ref()).await;
     let meilisearch = check_meilisearch(&state).await;
     let storage = check_storage_config(&state);
     let decoded_ai_grpc = check_decoded_ai_config(&state);
@@ -172,6 +172,68 @@ mod tests {
             v.get("detail").and_then(|x| x.as_str()),
             Some("connection refused")
         );
+    }
+
+    #[tokio::test]
+    async fn health_check_returns_ok_when_db_up() {
+        use crate::tests::helpers::test_app_state;
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let state = test_app_state(db);
+        let Json(body) = health_check(axum::extract::State(state)).await;
+        assert_eq!(body.database.status, "up");
+        // storage account_id is non-empty in test_config, so storage status = up
+        assert_eq!(body.storage.status, "up");
+        // search_client is DummySearchClient → downcast fails → skipped
+        assert_eq!(body.meilisearch.status, "skipped");
+        // ai_service url in test_config is non-empty → up
+        assert_eq!(body.decoded_ai_grpc.status, "up");
+        assert_eq!(body.status, "ok");
+    }
+
+    #[tokio::test]
+    async fn health_check_degraded_when_db_down() {
+        use crate::tests::helpers::test_app_state;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // No exec results → will error with "No mock result found"
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = test_app_state(db);
+        let Json(body) = health_check(axum::extract::State(state)).await;
+        assert_eq!(body.database.status, "down");
+        assert_eq!(body.status, "degraded");
+        assert!(body.database.detail.is_some());
+    }
+
+    #[tokio::test]
+    async fn health_check_skipped_storage_when_account_id_empty() {
+        use crate::config::AppState;
+        use crate::tests::helpers::{test_app_state, test_config};
+        use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let base = test_app_state(db);
+        let mut cfg = test_config();
+        cfg.storage.account_id = String::new();
+        cfg.ai_service.url = String::new();
+        let state = AppState {
+            config: cfg,
+            ..base
+        };
+        let Json(body) = health_check(axum::extract::State(state)).await;
+        assert_eq!(body.storage.status, "skipped");
+        assert_eq!(body.decoded_ai_grpc.status, "skipped");
     }
 
     #[test]

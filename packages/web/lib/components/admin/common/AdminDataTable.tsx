@@ -44,7 +44,8 @@ export function AdminDataTable<T>({
   skeletonRows = 5,
 }: AdminDataTableProps<T>) {
   const allIds = data.map(rowKey);
-  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds?.has(id));
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds?.has(id));
 
   const toggleAll = useCallback(() => {
     if (!onSelectionChange) return;
@@ -80,7 +81,10 @@ export function AdminDataTable<T>({
             <tr>
               {selectable && <th className="w-10 px-3 py-3" />}
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th
+                  key={col.key}
+                  className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500"
+                >
                   {col.label}
                 </th>
               ))}
@@ -89,7 +93,11 @@ export function AdminDataTable<T>({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {Array.from({ length: skeletonRows }).map((_, i) => (
               <tr key={i}>
-                {selectable && <td className="px-3 py-3"><div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>}
+                {selectable && (
+                  <td className="px-3 py-3">
+                    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                  </td>
+                )}
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3">
                     <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
@@ -132,16 +140,21 @@ export function AdminDataTable<T>({
                 key={col.key}
                 className={cn(
                   "px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500",
-                  col.sortable && "cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300",
+                  col.sortable &&
+                    "cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300",
                   col.className
                 )}
                 onClick={col.sortable ? () => handleSort(col.key) : undefined}
               >
                 <span className="inline-flex items-center gap-1">
                   {col.label}
-                  {col.sortable && sortKey === col.key && (
-                    sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                  )}
+                  {col.sortable &&
+                    sortKey === col.key &&
+                    (sortDir === "asc" ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    ))}
                 </span>
               </th>
             ))}
@@ -155,13 +168,17 @@ export function AdminDataTable<T>({
                 key={id}
                 className={cn(
                   "transition-colors",
-                  onRowClick && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900",
+                  onRowClick &&
+                    "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900",
                   selectedIds?.has(id) && "bg-blue-50 dark:bg-blue-900/20"
                 )}
                 onClick={() => onRowClick?.(row)}
               >
                 {selectable && (
-                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-3 py-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedIds?.has(id) ?? false}

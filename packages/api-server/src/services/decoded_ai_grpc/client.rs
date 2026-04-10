@@ -222,6 +222,11 @@ impl DecodedAIGrpcClient {
         })
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_parse_category_rules(&self, s: &str) -> Vec<CategoryRule> {
+        self.parse_category_rules(s)
+    }
+
     /// 포스트 이미지에서 context/style_tags를 추출합니다 (Ollama local inference).
     pub async fn extract_post_context(
         &self,
@@ -230,10 +235,7 @@ impl DecodedAIGrpcClient {
     ) -> Result<ExtractPostContextResponse, Box<dyn std::error::Error>> {
         let start = Instant::now();
         let mut client = self.client.clone();
-        let request = tonic::Request::new(ExtractPostContextRequest {
-            post_id,
-            image_url,
-        });
+        let request = tonic::Request::new(ExtractPostContextRequest { post_id, image_url });
         let res = async {
             let response = client.extract_post_context(request).await?;
             Ok::<_, Box<dyn std::error::Error>>(response.into_inner())
@@ -241,5 +243,149 @@ impl DecodedAIGrpcClient {
         .await;
         record_decoded_ai_call("extract_post_context", res.is_ok(), start.elapsed());
         res
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use super::*;
+
+    fn test_client() -> DecodedAIGrpcClient {
+        DecodedAIGrpcClient::new("http://localhost:50051".to_string()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn new_with_valid_url_succeeds() {
+        let c = DecodedAIGrpcClient::new("http://127.0.0.1:50051".to_string());
+        assert!(c.is_ok());
+    }
+
+    #[tokio::test]
+    async fn new_with_https_url_succeeds() {
+        let c = DecodedAIGrpcClient::new("https://ai.example.com:443".to_string());
+        assert!(c.is_ok());
+    }
+
+    #[tokio::test]
+    async fn parse_category_rules_simple_line() {
+        let c = test_client();
+        let rules = c.test_parse_category_rules("Tops: T-Shirts, Hoodies\nBottoms: Pants, Jeans");
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].category, "Tops");
+        assert_eq!(rules[0].sub_categories, vec!["T-Shirts", "Hoodies"]);
+        assert_eq!(rules[1].category, "Bottoms");
+        assert_eq!(rules[1].sub_categories, vec!["Pants", "Jeans"]);
+    }
+
+    #[tokio::test]
+    async fn parse_category_rules_skips_blank_lines() {
+        let c = test_client();
+        let rules = c.test_parse_category_rules("\n\nTops: A\n\n");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].category, "Tops");
+    }
+
+    #[tokio::test]
+    async fn parse_category_rules_skips_lines_without_colon() {
+        let c = test_client();
+        let rules = c.test_parse_category_rules("no colon here\nTops: A, B");
+        assert_eq!(rules.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn parse_category_rules_empty_string() {
+        let c = test_client();
+        let rules = c.test_parse_category_rules("");
+        assert!(rules.is_empty());
+    }
+
+    #[tokio::test]
+    async fn convert_to_metadata_empty_response() {
+        let c = test_client();
+        let response = AnalyzeImageResponse {
+            success: true,
+            error_message: String::new(),
+            subject: "person".to_string(),
+            title: "t".to_string(),
+            artist_name: Some("a".to_string()),
+            group_name: Some("g".to_string()),
+            context: Some("ctx".to_string()),
+            items: std::collections::HashMap::new(),
+        };
+        let meta = c.convert_to_metadata(response).unwrap();
+        assert_eq!(meta.subject, "person");
+        assert_eq!(meta.title, "t");
+        assert!(meta.items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn client_is_clone_and_debug() {
+        let c = test_client();
+        let _cloned = c.clone();
+        let _s = format!("{:?}", c);
+    }
+
+    #[tokio::test]
+    async fn extract_og_data_fails_without_server() {
+        let c = test_client();
+        let r = c.extract_og_data("https://x.test/".to_string()).await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn analyze_link_fails_without_server() {
+        let c = test_client();
+        let r = c
+            .analyze_link(
+                "https://x.test/".to_string(),
+                "post-1".to_string(),
+                "t".to_string(),
+                "d".to_string(),
+                "site".to_string(),
+            )
+            .await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn analyze_link_direct_fails_without_server() {
+        let c = test_client();
+        let r = c
+            .analyze_link_direct(
+                "https://x.test/".to_string(),
+                "post-1".to_string(),
+                "t".to_string(),
+                "d".to_string(),
+                "site".to_string(),
+            )
+            .await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn process_post_editorial_fails_without_server() {
+        let c = test_client();
+        let r = c.process_post_editorial("mag-1", "{}").await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn analyze_image_fails_without_server() {
+        let c = test_client();
+        let r = c
+            .analyze_image(vec![1u8, 2, 3], "Tops: A".to_string())
+            .await;
+        assert!(r.is_err());
+        assert!(matches!(r, Err(AppError::ExternalService(_))));
+    }
+
+    #[tokio::test]
+    async fn extract_post_context_fails_without_server() {
+        let c = test_client();
+        let r = c
+            .extract_post_context("post-1".to_string(), "https://img.test/a.webp".to_string())
+            .await;
+        assert!(r.is_err());
     }
 }

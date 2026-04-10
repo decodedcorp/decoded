@@ -46,7 +46,9 @@ export function VotingButtons({ solutionId, className }: VotingButtonsProps) {
           )}
           aria-label="Accurate"
         >
-          <ThumbsUp className={cn("h-4 w-4", userVote === "up" && "fill-current")} />
+          <ThumbsUp
+            className={cn("h-4 w-4", userVote === "up" && "fill-current")}
+          />
           <span>{ups}</span>
         </button>
 
@@ -60,7 +62,9 @@ export function VotingButtons({ solutionId, className }: VotingButtonsProps) {
           )}
           aria-label="Inaccurate"
         >
-          <ThumbsDown className={cn("h-4 w-4", userVote === "down" && "fill-current")} />
+          <ThumbsDown
+            className={cn("h-4 w-4", userVote === "down" && "fill-current")}
+          />
           <span>{downs}</span>
         </button>
 

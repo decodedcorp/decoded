@@ -28,6 +28,10 @@ fn sample_post(m: &str) -> PostModel {
         post_magazine_id: None,
         ai_summary: None,
         style_tags: None,
+        image_width: None,
+        image_height: None,
+        parent_post_id: None,
+        post_type: None,
         created_at: t,
         updated_at: t,
     }
@@ -45,6 +49,8 @@ fn sample_user() -> UsersModel {
         rank: "gold".into(),
         total_points: 0,
         is_admin: false,
+        ink_credits: 0,
+        style_dna: None,
         created_at: t,
         updated_at: t,
     }
@@ -127,6 +133,8 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         artist_name: None,
         artist_id: None,
         context: None,
+        image_width: None,
+        image_height: None,
         spots: vec![spot_ok()],
     }
     .validate()
@@ -140,6 +148,8 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         artist_name: None,
         artist_id: None,
         context: None,
+        image_width: None,
+        image_height: None,
         spots: vec![],
     }
     .validate()
@@ -153,6 +163,8 @@ fn posts_dto_validation_serde_and_entity_helpers() {
         artist_name: None,
         artist_id: None,
         context: None,
+        image_width: None,
+        image_height: None,
         spots: vec![spot_ok()],
     }
     .validate()

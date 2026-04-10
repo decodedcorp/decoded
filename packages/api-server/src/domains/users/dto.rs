@@ -96,6 +96,13 @@ pub struct UpdateUserDto {
     pub bio: Option<String>,
 }
 
+/// 팔로우 상태 응답
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct FollowStatusResponse {
+    /// 팔로우 여부
+    pub is_following: bool,
+}
+
 /// 사용자 통계 응답
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserStatsResponse {
@@ -277,6 +284,8 @@ mod tests {
             rank: "Member".to_string(),
             total_points: 100,
             is_admin: false,
+            ink_credits: 0,
+            style_dna: None,
             created_at: now,
             updated_at: now,
         };
@@ -305,6 +314,8 @@ mod tests {
             rank: "Gold".to_string(),
             total_points: 42,
             is_admin: true,
+            ink_credits: 0,
+            style_dna: None,
             followers_count: 0,
             following_count: 0,
         };
@@ -336,6 +347,8 @@ mod tests {
             rank: "Gold".to_string(),
             total_points: 0,
             is_admin: false,
+            ink_credits: 0,
+            style_dna: None,
             followers_count: 42,
             following_count: 7,
         };
@@ -361,6 +374,8 @@ mod tests {
             rank: "Member".to_string(),
             total_points: 0,
             is_admin: false,
+            ink_credits: 0,
+            style_dna: None,
             created_at: now,
             updated_at: now,
         };

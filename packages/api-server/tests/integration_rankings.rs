@@ -15,7 +15,7 @@ use uuid::Uuid;
 async fn get_test_category_id(state: &AppState) -> Uuid {
     entities::Categories::find()
         .filter(entities::categories::Column::Code.eq("fashion"))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap()
@@ -37,7 +37,7 @@ async fn create_test_user(
         is_admin: Set(false),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -51,7 +51,7 @@ async fn create_test_post(state: &AppState, user_id: Uuid) -> entities::PostsMod
         status: Set("published".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -66,7 +66,7 @@ async fn create_test_spot(
     // 서브카테고리 조회 (해당 카테고리의 첫 번째 서브카테고리 사용)
     let subcategory = entities::Subcategories::find()
         .filter(entities::subcategories::Column::CategoryId.eq(category_id))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -80,7 +80,7 @@ async fn create_test_spot(
         subcategory_id: Set(Some(subcategory.id)),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -106,7 +106,7 @@ async fn create_test_solution(
         status: Set("active".to_string()),
         ..Default::default()
     }
-    .insert(&state.db)
+    .insert(state.db.as_ref())
     .await
     .unwrap()
 }
@@ -119,7 +119,7 @@ async fn test_add_points_creates_log_and_updates_user() {
 
     // 포인트 적립
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "PostCreated",
         ActivityPoints::PostCreated as i32,
@@ -133,7 +133,7 @@ async fn test_add_points_creates_log_and_updates_user() {
     // PointLog 생성 확인
     let logs = entities::PointLogs::find()
         .filter(entities::point_logs::Column::UserId.eq(user.id))
-        .all(&state.db)
+        .all(state.db.as_ref())
         .await
         .unwrap();
 
@@ -143,7 +143,7 @@ async fn test_add_points_creates_log_and_updates_user() {
 
     // User total_points 업데이트 확인
     let updated_user = entities::Users::find_by_id(user.id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -159,7 +159,7 @@ async fn test_add_points_accumulates_correctly() {
 
     // 여러 번 포인트 적립
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "PostCreated",
         ActivityPoints::PostCreated as i32,
@@ -171,7 +171,7 @@ async fn test_add_points_accumulates_correctly() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SpotCreated",
         ActivityPoints::SpotCreated as i32,
@@ -183,7 +183,7 @@ async fn test_add_points_accumulates_correctly() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionRegistered",
         ActivityPoints::SolutionRegistered as i32,
@@ -196,7 +196,7 @@ async fn test_add_points_accumulates_correctly() {
 
     // 총 포인트 확인 (5 + 3 + 10 = 18)
     let updated_user = entities::Users::find_by_id(user.id)
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -235,7 +235,7 @@ async fn test_get_rankings_with_period_filter() {
 
     // 최근 포인트 적립
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "VoteAccurate",
         ActivityPoints::VoteAccurate as i32,
@@ -367,7 +367,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     // beauty 카테고리 조회
     let beauty = entities::Categories::find()
         .filter(entities::categories::Column::Code.eq("beauty"))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -389,7 +389,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     // 포인트 적립 (각 Solution에 대해)
     // User1 fashion 포인트: 10 + 30 + 10 + 20 + 10 = 80점
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user1.id,
         "SolutionRegistered",
         10,
@@ -401,7 +401,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user1.id,
         "SolutionAdopted",
         30,
@@ -413,7 +413,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user1.id,
         "SolutionRegistered",
         10,
@@ -425,7 +425,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user1.id,
         "SolutionVerified",
         20,
@@ -437,7 +437,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user1.id,
         "SolutionRegistered",
         10,
@@ -450,7 +450,7 @@ async fn test_get_category_rankings_calculates_category_points() {
 
     // User2 beauty 포인트: 10 + 30 + 20 + 10 = 70점
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user2.id,
         "SolutionRegistered",
         10,
@@ -462,7 +462,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user2.id,
         "SolutionAdopted",
         30,
@@ -474,7 +474,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user2.id,
         "SolutionVerified",
         20,
@@ -486,7 +486,7 @@ async fn test_get_category_rankings_calculates_category_points() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user2.id,
         "SolutionRegistered",
         10,
@@ -530,7 +530,7 @@ async fn test_get_my_ranking_detail_calculates_periods() {
 
     // 최근 포인트 적립 (주간, 월간에 포함됨)
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionAdopted",
         ActivityPoints::SolutionAdopted as i32,
@@ -593,7 +593,7 @@ async fn test_get_my_ranking_detail_includes_category_rankings() {
     // beauty 카테고리 활동
     let beauty = entities::Categories::find()
         .filter(entities::categories::Column::Code.eq("beauty"))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await
         .unwrap()
         .unwrap();
@@ -605,7 +605,7 @@ async fn test_get_my_ranking_detail_includes_category_rankings() {
 
     // 포인트 적립 (fashion: 40점, beauty: 30점)
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionRegistered",
         10,
@@ -617,7 +617,7 @@ async fn test_get_my_ranking_detail_includes_category_rankings() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionAdopted",
         30,
@@ -629,7 +629,7 @@ async fn test_get_my_ranking_detail_includes_category_rankings() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionRegistered",
         10,
@@ -641,7 +641,7 @@ async fn test_get_my_ranking_detail_includes_category_rankings() {
     .unwrap();
 
     RankingsService::add_points(
-        &state.db,
+        state.db.as_ref(),
         user.id,
         "SolutionVerified",
         20,

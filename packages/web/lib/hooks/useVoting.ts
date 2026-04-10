@@ -3,11 +3,7 @@
  * React Query hooks for solution vote CRUD with optimistic updates
  */
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 
 // ============================================================
@@ -30,7 +26,8 @@ export type VoteType = "up" | "down";
 
 export const voteKeys = {
   all: ["votes"] as const,
-  stats: (solutionId: string) => [...voteKeys.all, "stats", solutionId] as const,
+  stats: (solutionId: string) =>
+    [...voteKeys.all, "stats", solutionId] as const,
 };
 
 // ============================================================
@@ -96,10 +93,7 @@ export function useCreateVote() {
     },
     onError: (_err, { solutionId }, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          voteKeys.stats(solutionId),
-          context.previous
-        );
+        queryClient.setQueryData(voteKeys.stats(solutionId), context.previous);
       }
     },
     onSettled: (_, __, { solutionId }) => {
@@ -150,10 +144,7 @@ export function useDeleteVote() {
     },
     onError: (_err, { solutionId }, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          voteKeys.stats(solutionId),
-          context.previous
-        );
+        queryClient.setQueryData(voteKeys.stats(solutionId), context.previous);
       }
     },
     onSettled: (_, __, { solutionId }) => {

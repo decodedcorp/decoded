@@ -4,6 +4,405 @@
 
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
+mod mock_db_tests {
+    use crate::domains::users::service;
+    use crate::tests::fixtures;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    #[tokio::test]
+    async fn get_user_by_id_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::user_model()]])
+            .into_connection();
+        let result = service::get_user_by_id(&db, fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().username, "testuser");
+    }
+
+    #[tokio::test]
+    async fn get_user_by_id_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result = service::get_user_by_id(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn update_user_profile_success() {
+        use crate::domains::users::dto::UpdateUserDto;
+
+        let mut updated = fixtures::user_model();
+        updated.display_name = Some("New Name".to_string());
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::user_model()]])
+            .append_query_results([[updated.clone()]])
+            .into_connection();
+        let dto = UpdateUserDto {
+            display_name: Some("New Name".to_string()),
+            avatar_url: None,
+            bio: None,
+        };
+        let result = service::update_user_profile(&db, fixtures::test_uuid(10), dto).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn update_user_profile_user_not_found() {
+        use crate::domains::users::dto::UpdateUserDto;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let dto = UpdateUserDto {
+            display_name: Some("X".to_string()),
+            avatar_url: None,
+            bio: None,
+        };
+        let result = service::update_user_profile(&db, fixtures::test_uuid(99), dto).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn get_user_stats_success() {
+        let mk_cnt = |n: i64| {
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("cnt".to_string(), sea_orm::Value::BigInt(Some(n)));
+            m
+        };
+        // user lookup + 3 count queries (posts, comments, likes_received)
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::user_model()]])
+            .append_query_results([[mk_cnt(0)]])
+            .append_query_results([[mk_cnt(0)]])
+            .append_query_results([[mk_cnt(0)]])
+            .into_connection();
+        let result = service::get_user_stats(&db, fixtures::test_uuid(10)).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let stats = result.unwrap();
+        assert_eq!(stats.user_id, fixtures::test_uuid(10));
+        assert_eq!(stats.total_points, 100);
+        assert_eq!(stats.rank, "user");
+        assert_eq!(stats.total_posts, 0);
+        assert_eq!(stats.total_comments, 0);
+        assert_eq!(stats.total_likes_received, 0);
+    }
+
+    #[tokio::test]
+    async fn get_user_stats_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result = service::get_user_stats(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn list_user_activities_returns_empty() {
+        // dev 버전은 실제 UNION 쿼리 사용: 1st query count, 2nd query rows
+        let mk_cnt = |n: i64| {
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("cnt".to_string(), sea_orm::Value::BigInt(Some(n)));
+            m
+        };
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[mk_cnt(0)]])
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let pagination = crate::utils::pagination::Pagination::new(1, 20);
+        let result =
+            service::list_user_activities(&db, fixtures::test_uuid(10), None, pagination).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+        assert_eq!(resp.pagination.total_items, 0);
+    }
+
+    #[tokio::test]
+    async fn list_my_tries_empty() {
+        // 1st query: count → 0
+        // 2nd query: tryon history list → empty
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(0)]])
+            .append_query_results([Vec::<crate::entities::user_tryon_history::Model>::new()])
+            .into_connection();
+        let pagination = crate::utils::pagination::Pagination::new(1, 20);
+        let result = service::list_my_tries(&db, fixtures::test_uuid(10), pagination).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert!(resp.data.is_empty());
+        assert_eq!(resp.pagination.total_items, 0);
+    }
+
+    #[tokio::test]
+    async fn list_my_tries_with_data() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::count_row(1)]])
+            .append_query_results([[fixtures::try_history_model()]])
+            .into_connection();
+        let pagination = crate::utils::pagination::Pagination::new(1, 20);
+        let result = service::list_my_tries(&db, fixtures::test_uuid(10), pagination).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.data.len(), 1);
+        assert_eq!(resp.pagination.total_items, 1);
+        assert_eq!(resp.data[0].image_url, "https://example.com/tryon.webp");
+    }
+
+    #[tokio::test]
+    async fn get_user_with_follow_counts_success() {
+        // get_user_by_id + count_followers (raw SQL) + count_following (raw SQL)
+        let mk_cnt = |n: i64| {
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("cnt".to_string(), sea_orm::Value::BigInt(Some(n)));
+            m
+        };
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::user_model()]])
+            .append_query_results([[mk_cnt(5)]])
+            .append_query_results([[mk_cnt(7)]])
+            .into_connection();
+        let result = service::get_user_with_follow_counts(&db, fixtures::test_uuid(10)).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let resp = result.unwrap();
+        assert_eq!(resp.followers_count, 5);
+        assert_eq!(resp.following_count, 7);
+        assert_eq!(resp.username, "testuser");
+    }
+
+    #[tokio::test]
+    async fn get_user_with_follow_counts_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result = service::get_user_with_follow_counts(&db, fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    // ── follow / unfollow ──
+
+    #[tokio::test]
+    async fn follow_user_self_returns_bad_request() {
+        let db = crate::tests::helpers::empty_mock_db();
+        let result =
+            service::follow_user(&db, fixtures::test_uuid(10), fixtures::test_uuid(10)).await;
+        assert!(matches!(result, Err(crate::AppError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn follow_user_target_not_found() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let result =
+            service::follow_user(&db, fixtures::test_uuid(10), fixtures::test_uuid(99)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn follow_user_success() {
+        use sea_orm::MockExecResult;
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[fixtures::user_model()]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result =
+            service::follow_user(&db, fixtures::test_uuid(11), fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn unfollow_user_success() {
+        use sea_orm::MockExecResult;
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let result =
+            service::unfollow_user(&db, fixtures::test_uuid(11), fixtures::test_uuid(10)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn check_is_following_returns_true() {
+        let mut row = std::collections::BTreeMap::new();
+        row.insert("is_following".to_string(), sea_orm::Value::Bool(Some(true)));
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[row]])
+            .into_connection();
+        let result =
+            service::check_is_following(&db, fixtures::test_uuid(11), fixtures::test_uuid(10))
+                .await;
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn check_is_following_returns_false_when_empty() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let result =
+            service::check_is_following(&db, fixtures::test_uuid(11), fixtures::test_uuid(10))
+                .await;
+        assert!(!result.unwrap());
+    }
+
+    // ── follow handlers ──
+
+    #[tokio::test]
+    async fn follow_user_handler_target_not_found() {
+        use crate::domains::users::handlers::follow_user_handler;
+        use crate::tests::helpers::{mock_user, test_app_state};
+        use axum::extract::{Path, State};
+        use axum::Extension;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_user();
+        let result =
+            follow_user_handler(State(state), Extension(user), Path(fixtures::test_uuid(99))).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn unfollow_user_handler_success() {
+        use crate::domains::users::handlers::unfollow_user_handler;
+        use crate::tests::helpers::{mock_user, test_app_state};
+        use axum::extract::{Path, State};
+        use axum::Extension;
+        use sea_orm::MockExecResult;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_user();
+        let result =
+            unfollow_user_handler(State(state), Extension(user), Path(fixtures::test_uuid(11)))
+                .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn get_follow_status_handler_returns_false() {
+        use crate::domains::users::handlers::get_follow_status;
+        use crate::tests::helpers::{mock_user, test_app_state};
+        use axum::extract::{Path, State};
+        use axum::Extension;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([
+                Vec::<std::collections::BTreeMap<String, sea_orm::Value>>::new(),
+            ])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_user();
+        let result =
+            get_follow_status(State(state), Extension(user), Path(fixtures::test_uuid(11))).await;
+        assert!(result.is_ok());
+        let body = result.unwrap();
+        assert!(!body.is_following);
+    }
+
+    #[tokio::test]
+    async fn get_user_profile_handler_not_found() {
+        use crate::domains::users::handlers::get_user_profile;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Path, State};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let result = get_user_profile(State(state), Path(fixtures::test_uuid(99))).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn get_my_profile_handler_not_found() {
+        use crate::domains::users::handlers::get_my_profile;
+        use crate::tests::helpers::{mock_user, test_app_state};
+        use axum::extract::State;
+        use axum::Extension;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_user();
+        let result = get_my_profile(State(state), Extension(user)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn get_my_stats_handler_not_found() {
+        use crate::domains::users::handlers::get_my_stats;
+        use crate::tests::helpers::{mock_user, test_app_state};
+        use axum::extract::State;
+        use axum::Extension;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::users::Model>::new()])
+            .into_connection();
+        let state = test_app_state(db);
+        let user = mock_user();
+        let result = get_my_stats(State(state), Extension(user)).await;
+        assert!(matches!(result, Err(crate::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn list_user_spots_empty() {
+        let mk_cnt = |n: i64| {
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("num_items".to_string(), sea_orm::Value::BigInt(Some(n)));
+            m
+        };
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[mk_cnt(0)]])
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let pagination = crate::utils::pagination::Pagination::new(1, 20);
+        let result = service::list_user_spots(&db, fixtures::test_uuid(10), pagination).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        assert!(result.unwrap().data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_user_solutions_empty() {
+        let mk_cnt = |n: i64| {
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("num_items".to_string(), sea_orm::Value::BigInt(Some(n)));
+            m
+        };
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[mk_cnt(0)]])
+            .append_query_results([Vec::<crate::entities::solutions::Model>::new()])
+            .into_connection();
+        let pagination = crate::utils::pagination::Pagination::new(1, 20);
+        let result = service::list_user_solutions(&db, fixtures::test_uuid(10), pagination).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().data.is_empty());
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
 mod unit_tests {
     use super::super::dto::{UpdateUserDto, UserActivitiesQuery, UserActivityType};
 
@@ -208,14 +607,81 @@ mod service_tests {
 
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
-mod integration_tests {
-    // 통합 테스트는 실제 DB 연결이 필요하므로
-    // 별도의 통합 테스트 파일에서 수행
-    // 예: tests/integration/test_users.rs
+mod dto_conversion_tests {
+    use crate::domains::users::dto::UserResponse;
+    use crate::tests::fixtures::*;
+    use validator::Validate;
 
     #[test]
-    #[ignore = "실제 통합 테스트는 tests/integration 및 DB 환경에서 수행"]
-    fn test_placeholder() {
-        // 통합 테스트 플레이스홀더
+    fn user_model_to_user_response_conversion() {
+        let model = user_model();
+        let response: UserResponse = model.clone().into();
+        assert_eq!(response.id, model.id);
+        assert_eq!(response.email, "test@example.com");
+        assert_eq!(response.username, "testuser");
+        assert_eq!(response.display_name, Some("Test User".to_string()));
+        assert_eq!(response.rank, "user");
+        assert_eq!(response.total_points, 100);
+        assert!(!response.is_admin);
+        // From impl sets these to 0 (no DB query for counts)
+        assert_eq!(response.followers_count, 0);
+        assert_eq!(response.following_count, 0);
+    }
+
+    #[test]
+    fn admin_user_model_to_response() {
+        let model = admin_user_model();
+        let response: UserResponse = model.into();
+        assert!(response.is_admin);
+        assert_eq!(response.rank, "admin");
+    }
+
+    #[test]
+    fn user_response_serializes_to_json() {
+        let response: UserResponse = user_model().into();
+        let v = serde_json::to_value(&response).unwrap();
+        assert!(v["id"].is_string());
+        assert_eq!(v["username"], "testuser");
+        assert_eq!(v["total_points"], 100);
+    }
+
+    #[test]
+    fn update_user_dto_validation_max_lengths() {
+        use super::super::dto::UpdateUserDto;
+
+        // display_name max 200
+        let long_name = "a".repeat(201);
+        let dto = UpdateUserDto {
+            display_name: Some(long_name),
+            avatar_url: None,
+            bio: None,
+        };
+        assert!(dto.validate().is_err());
+
+        // avatar_url max 2048
+        let long_url = format!("https://example.com/{}", "a".repeat(2040));
+        let dto = UpdateUserDto {
+            display_name: None,
+            avatar_url: Some(long_url),
+            bio: None,
+        };
+        assert!(dto.validate().is_err());
+
+        // bio max 2000
+        let long_bio = "b".repeat(2001);
+        let dto = UpdateUserDto {
+            display_name: None,
+            avatar_url: None,
+            bio: Some(long_bio),
+        };
+        assert!(dto.validate().is_err());
+
+        // all within limits
+        let dto = UpdateUserDto {
+            display_name: Some("OK".to_string()),
+            avatar_url: Some("https://example.com/avatar.jpg".to_string()),
+            bio: Some("Short bio".to_string()),
+        };
+        assert!(dto.validate().is_ok());
     }
 }

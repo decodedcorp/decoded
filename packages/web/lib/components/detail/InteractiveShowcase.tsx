@@ -95,7 +95,9 @@ export function InteractiveShowcase({
         scrollerTarget.removeEventListener("scroll", markScrolled);
         ScrollTrigger.update();
       };
-      scrollerTarget.addEventListener("scroll", markScrolled, { passive: true });
+      scrollerTarget.addEventListener("scroll", markScrolled, {
+        passive: true,
+      });
 
       cards.forEach((card, index) => {
         ScrollTrigger.create({
@@ -104,8 +106,12 @@ export function InteractiveShowcase({
           start: "top 70%",
           end: "bottom center",
           invalidateOnRefresh: true,
-          onEnter: () => { if (hasScrolled) handleActiveIndexChange(index); },
-          onEnterBack: () => { if (hasScrolled) handleActiveIndexChange(index); },
+          onEnter: () => {
+            if (hasScrolled) handleActiveIndexChange(index);
+          },
+          onEnterBack: () => {
+            if (hasScrolled) handleActiveIndexChange(index);
+          },
           onLeave: () => {
             if (hasScrolled && activeIndexRef.current === index) {
               handleActiveIndexChange(null);
@@ -129,7 +135,10 @@ export function InteractiveShowcase({
         const checkReady = () => {
           if (cancelled) return;
           attempts++;
-          if (scrollerEl.scrollHeight > scrollerEl.clientHeight || attempts >= maxAttempts) {
+          if (
+            scrollerEl.scrollHeight > scrollerEl.clientHeight ||
+            attempts >= maxAttempts
+          ) {
             ScrollTrigger.refresh();
           } else {
             requestAnimationFrame(checkReady);

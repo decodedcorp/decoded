@@ -224,7 +224,7 @@ impl AppConfig {
 /// Trait 기반으로 외부 서비스를 추상화하여 구현체에 종속되지 않도록 합니다.
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DatabaseConnection,
+    pub db: Arc<DatabaseConnection>,
     pub config: AppConfig,
 
     // Category Cache
@@ -251,10 +251,10 @@ impl AppState {
         config: AppConfig,
         db: Option<DatabaseConnection>,
     ) -> Result<Self, sea_orm::DbErr> {
-        let db = match db {
+        let db = Arc::new(match db {
             Some(conn) => conn,
             None => config.create_db_connection().await?,
-        };
+        });
 
         let storage_client: Arc<dyn StorageClient> =
             match CloudflareR2Client::new(&config.storage).await {
@@ -352,5 +352,366 @@ impl AppState {
             embedding_client,
             decoded_ai_client,
         })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    /// Serializes env-var mutating tests within this module so they don't race.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Set all required env vars for AppConfig::from_env()
+    fn set_required_env() {
+        std::env::set_var("DATABASE_URL", "postgres://test:test@localhost/test");
+        std::env::set_var("SUPABASE_JWT_SECRET", "test-secret");
+        std::env::set_var("SUPABASE_URL", "https://test.supabase.co");
+        std::env::set_var("SUPABASE_ANON_KEY", "anon-key");
+        std::env::set_var("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+    }
+
+    #[test]
+    fn from_env_with_required_vars_succeeds() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        let config = AppConfig::from_env();
+        assert!(config.is_ok());
+    }
+
+    #[test]
+    fn default_port_is_8000() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("PORT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.port, 8000);
+    }
+
+    #[test]
+    fn port_override_from_env() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("PORT", "9090");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.port, 9090);
+        std::env::remove_var("PORT");
+    }
+
+    #[test]
+    fn default_log_format_is_text_for_development() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("ENV");
+        std::env::remove_var("LOG_FORMAT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.log_format, "text");
+    }
+
+    #[test]
+    fn log_format_json_for_production() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("ENV", "production");
+        std::env::remove_var("LOG_FORMAT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.log_format, "json");
+        std::env::remove_var("ENV");
+    }
+
+    #[test]
+    fn default_database_config_values() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("DB_MAX_CONNECTIONS");
+        std::env::remove_var("DB_MIN_CONNECTIONS");
+        std::env::remove_var("DB_CONNECT_TIMEOUT");
+        std::env::remove_var("DB_IDLE_TIMEOUT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.database.max_connections, 100);
+        assert_eq!(config.database.min_connections, 5);
+        assert_eq!(config.database.connect_timeout, Duration::from_secs(30));
+        assert_eq!(config.database.idle_timeout, Duration::from_secs(600));
+    }
+
+    #[test]
+    fn default_search_url() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("MEILISEARCH_URL");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.search.url, "http://localhost:7700");
+    }
+
+    #[test]
+    fn default_embedding_config() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("OPENAI_EMBEDDING_MODEL");
+        std::env::remove_var("OPENAI_EMBEDDING_DIMENSIONS");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.embedding.model, "text-embedding-3-small");
+        assert_eq!(config.embedding.dimensions, 256);
+    }
+
+    #[test]
+    fn env_primary_or_legacy_prefers_primary() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::set_var("TEST_PRIMARY_CFG", "primary_val");
+        std::env::set_var("TEST_LEGACY_CFG", "legacy_val");
+        assert_eq!(
+            env_primary_or_legacy("TEST_PRIMARY_CFG", "TEST_LEGACY_CFG"),
+            Some("primary_val".to_string())
+        );
+        std::env::remove_var("TEST_PRIMARY_CFG");
+        std::env::remove_var("TEST_LEGACY_CFG");
+    }
+
+    #[test]
+    fn env_primary_or_legacy_falls_back_to_legacy() {
+        std::env::remove_var("TEST_PRIMARY2_CFG");
+        std::env::set_var("TEST_LEGACY2_CFG", "legacy_val");
+        assert_eq!(
+            env_primary_or_legacy("TEST_PRIMARY2_CFG", "TEST_LEGACY2_CFG"),
+            Some("legacy_val".to_string())
+        );
+        std::env::remove_var("TEST_LEGACY2_CFG");
+    }
+
+    #[test]
+    fn log_format_json_for_staging() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("ENV", "staging");
+        std::env::remove_var("LOG_FORMAT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.log_format, "json");
+        std::env::remove_var("ENV");
+    }
+
+    #[test]
+    fn log_format_explicit_override() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("ENV", "production");
+        std::env::set_var("LOG_FORMAT", "text");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.log_format, "text");
+        std::env::remove_var("ENV");
+        std::env::remove_var("LOG_FORMAT");
+    }
+
+    #[test]
+    fn default_grpc_port_is_50052() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("API_SERVER_GRPC_PORT");
+        std::env::remove_var("GRPC_PORT");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.grpc_port, 50052);
+    }
+
+    #[test]
+    fn grpc_port_primary_env_wins() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("API_SERVER_GRPC_PORT", "51000");
+        std::env::set_var("GRPC_PORT", "52000");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.grpc_port, 51000);
+        std::env::remove_var("API_SERVER_GRPC_PORT");
+        std::env::remove_var("GRPC_PORT");
+    }
+
+    #[test]
+    fn grpc_port_legacy_fallback() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("API_SERVER_GRPC_PORT");
+        std::env::set_var("GRPC_PORT", "52000");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.grpc_port, 52000);
+        std::env::remove_var("GRPC_PORT");
+    }
+
+    #[test]
+    fn default_ai_service_url() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("AI_SERVER_GRPC_URL");
+        std::env::remove_var("DECODED_AI_GRPC_URL");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.ai_service.url, "http://localhost:50051");
+    }
+
+    #[test]
+    fn default_agent_service_url() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("AGENT_SERVICE_URL");
+        std::env::remove_var("DECODED_AGENT_URL");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.agent_service.url, "http://localhost:11000");
+    }
+
+    #[test]
+    fn storage_endpoint_built_from_r2_account_id() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("R2_ACCOUNT_ID", "acc123");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(
+            config.storage.endpoint,
+            "https://acc123.r2.cloudflarestorage.com"
+        );
+        assert_eq!(config.storage.account_id, "acc123");
+        std::env::remove_var("R2_ACCOUNT_ID");
+    }
+
+    #[test]
+    fn default_bucket_name_when_unset() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("R2_BUCKET_NAME");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.storage.bucket_name, "decoded-images");
+    }
+
+    #[test]
+    fn db_connect_and_idle_timeout_overrides() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("DB_CONNECT_TIMEOUT", "10");
+        std::env::set_var("DB_IDLE_TIMEOUT", "120");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.database.connect_timeout, Duration::from_secs(10));
+        assert_eq!(config.database.idle_timeout, Duration::from_secs(120));
+        std::env::remove_var("DB_CONNECT_TIMEOUT");
+        std::env::remove_var("DB_IDLE_TIMEOUT");
+    }
+
+    #[test]
+    fn invalid_port_returns_err() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("PORT", "not-a-number");
+        let config = AppConfig::from_env();
+        assert!(config.is_err());
+        std::env::remove_var("PORT");
+    }
+
+    #[test]
+    fn embedding_dimensions_override() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("OPENAI_EMBEDDING_DIMENSIONS", "512");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.embedding.dimensions, 512);
+        std::env::remove_var("OPENAI_EMBEDDING_DIMENSIONS");
+    }
+
+    #[tokio::test]
+    async fn create_db_connection_fails_on_invalid_url() {
+        let config = {
+            let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+            set_required_env();
+            std::env::set_var(
+                "DATABASE_URL",
+                "postgres://bogus:bogus@127.0.0.1:1/none_exist",
+            );
+            std::env::set_var("DB_CONNECT_TIMEOUT", "1");
+            let config = AppConfig::from_env().expect("config should parse");
+            std::env::remove_var("DB_CONNECT_TIMEOUT");
+            config
+        };
+        let result = config.create_db_connection().await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn host_override_from_env() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("HOST", "10.0.0.1");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.host, "10.0.0.1");
+        std::env::remove_var("HOST");
+    }
+
+    #[test]
+    fn default_host_is_all_interfaces() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("HOST");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.server.host, "0.0.0.0");
+    }
+
+    #[test]
+    fn allowed_origins_captured_when_set() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("ALLOWED_ORIGINS", "https://a.com,https://b.com");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(
+            config.server.allowed_origins.as_deref(),
+            Some("https://a.com,https://b.com")
+        );
+        std::env::remove_var("ALLOWED_ORIGINS");
+    }
+
+    #[test]
+    fn agent_service_legacy_fallback() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("AGENT_SERVICE_URL");
+        std::env::set_var("DECODED_AGENT_URL", "http://legacy-agent:11000");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.agent_service.url, "http://legacy-agent:11000");
+        std::env::remove_var("DECODED_AGENT_URL");
+    }
+
+    #[test]
+    fn ai_service_legacy_fallback() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("AI_SERVER_GRPC_URL");
+        std::env::set_var("DECODED_AI_GRPC_URL", "http://legacy-ai:50051");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert_eq!(config.ai_service.url, "http://legacy-ai:50051");
+        std::env::remove_var("DECODED_AI_GRPC_URL");
+    }
+
+    #[test]
+    fn embedding_invalid_dimensions_falls_back_to_default() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::set_var("OPENAI_EMBEDDING_DIMENSIONS", "not-a-number");
+        let config = AppConfig::from_env().expect("config should parse");
+        // parse().unwrap_or(256) branch
+        assert_eq!(config.embedding.dimensions, 256);
+        std::env::remove_var("OPENAI_EMBEDDING_DIMENSIONS");
+    }
+
+    #[test]
+    fn storage_endpoint_empty_when_r2_account_id_missing() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("R2_ACCOUNT_ID");
+        let config = AppConfig::from_env().expect("config should parse");
+        assert!(config.storage.endpoint.is_empty());
+        assert!(config.storage.account_id.is_empty());
+    }
+
+    #[test]
+    fn env_primary_or_legacy_returns_none_when_both_missing() {
+        std::env::remove_var("MISSING_CFG_A");
+        std::env::remove_var("MISSING_CFG_B");
+        assert_eq!(
+            env_primary_or_legacy("MISSING_CFG_A", "MISSING_CFG_B"),
+            None
+        );
     }
 }

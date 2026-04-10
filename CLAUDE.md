@@ -45,6 +45,7 @@ Next.js 16.2 / React 19 / TypeScript 5.9 · Tailwind 3.4 · Zustand · TanStack 
 - **Package manager**: **bun** with Turborepo — use `bun` commands (not yarn/npm)
 - **Task runner**: [`Justfile`](Justfile) — `just local-fe`, `just local-be`, `just --list`
 - **ESLint**: flat config (`eslint.config.mjs`), Node 22+
+- **Git hooks**: clone 후 `just hook` 실행 필요 — `main` 직접 push 차단, 로컬 CI 활성화
 - **Env**: `packages/web/.env.local` from `.env.local.example` (gitignored)
 - **Supabase**: public schema (앱 데이터) + warehouse schema (ETL/Seed 파이프라인)
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions

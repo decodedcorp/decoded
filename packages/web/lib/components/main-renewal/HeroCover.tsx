@@ -146,7 +146,10 @@ export function HeroCover({ onRevealed }: HeroCoverProps) {
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         {/* Logo — Three.js ASCII art, matches brand */}
-        <div ref={logoRef} className="invisible relative w-[320px] h-[80px] sm:w-[400px] sm:h-[100px] md:w-[600px] md:h-[140px] lg:w-[800px] lg:h-[180px]">
+        <div
+          ref={logoRef}
+          className="invisible relative w-[320px] h-[80px] sm:w-[400px] sm:h-[100px] md:w-[600px] md:h-[140px] lg:w-[800px] lg:h-[180px]"
+        >
           <DecodedLogo
             asciiFontSize={6}
             textFontSize={300}

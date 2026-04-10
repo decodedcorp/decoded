@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, ArrowLeft } from "lucide-react";
+import { X, ArrowLeft, Trash2 } from "lucide-react";
 import {
   useRequestStore,
   selectCurrentStep,
@@ -45,7 +45,16 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
   const resetRequestFlow = useRequestStore((s) => s.resetRequestFlow);
   const startDetection = useRequestStore((s) => s.startDetection);
   const selectSpot = useRequestStore((s) => s.selectSpot);
+  const addSpot = useRequestStore((s) => s.addSpot);
+  const removeSpot = useRequestStore((s) => s.removeSpot);
   const setStep = useRequestStore((s) => s.setStep);
+
+  const handleImageClick = useCallback(
+    (x: number, y: number) => {
+      addSpot(x, y);
+    },
+    [addSpot]
+  );
 
   const { images, isMaxImages, handleFilesSelected, removeImage, retryUpload } =
     useImageUpload();
@@ -209,7 +218,14 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
                       isDetecting={isDetecting}
                       isRevealing={isRevealing}
                       selectedSpotId={selectedSpotId}
-                      onSpotClick={(spot) => selectSpot(spot.id)}
+                      onSpotClick={(spot) => {
+                        if (selectedSpotId === spot.id) {
+                          removeSpot(spot.id);
+                        } else {
+                          selectSpot(spot.id);
+                        }
+                      }}
+                      onImageClick={handleImageClick}
                     />
                   </div>
 
@@ -226,12 +242,24 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
                       </div>
                       <div className="space-y-2">
                         {detectedSpots.map((spot) => (
-                          <DetectedItemCard
-                            key={spot.id}
-                            spot={spot}
-                            isSelected={selectedSpotId === spot.id}
-                            onClick={() => selectSpot(spot.id)}
-                          />
+                          <div key={spot.id} className="flex items-start gap-2">
+                            <div className="flex-1">
+                              <DetectedItemCard
+                                key={spot.id}
+                                spot={spot}
+                                isSelected={selectedSpotId === spot.id}
+                                onClick={() => selectSpot(spot.id)}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeSpot(spot.id)}
+                              className="flex-shrink-0 mt-3 p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label="Remove spot"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>

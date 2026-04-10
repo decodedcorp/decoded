@@ -15,7 +15,7 @@ use uuid::Uuid;
 pub async fn run(state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Starting trending calculation batch job");
 
-    let db = &state.db;
+    let db = state.db.as_ref();
     let twenty_four_hours_ago = chrono::Utc::now() - chrono::Duration::hours(24);
 
     // 최근 24시간 내 게시된 Post 조회
@@ -164,5 +164,69 @@ mod tests {
     #[test]
     fn trending_time_weight_clamps_below_zero() {
         assert_eq!(trending_time_weight_for_hours_ago(30.0), 0.0);
+    }
+
+    #[test]
+    fn trending_time_weight_at_6_hours() {
+        let weight = trending_time_weight_for_hours_ago(6.0);
+        assert!((weight - 75.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn trending_time_weight_negative_hours_above_100() {
+        // Negative hours (future) should give > 100
+        let weight = trending_time_weight_for_hours_ago(-1.0);
+        assert!(weight > 100.0);
+    }
+
+    #[test]
+    fn base_trending_score_large_values() {
+        let score = base_trending_score(1000, 100, 50);
+        // 1000 + 500 + 150 = 1650
+        assert_eq!(score, 1650.0);
+    }
+
+    #[test]
+    fn calculate_trending_score_combines_base_and_time() {
+        use chrono::Utc;
+        let now = Utc::now();
+        let score = calculate_trending_score(10, 2, 1, now);
+        // base = 23.0, time weight ≈ 100.0 (just created)
+        assert!(score > 120.0 && score < 125.0);
+    }
+
+    #[test]
+    fn calculate_trending_score_old_post_no_time_bonus() {
+        use chrono::{Duration, Utc};
+        let old = Utc::now() - Duration::hours(48);
+        let score = calculate_trending_score(10, 2, 1, old);
+        // base = 23.0, time weight = 0.0
+        assert_eq!(score, 23.0);
+    }
+
+    #[tokio::test]
+    async fn run_with_empty_posts_succeeds() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+        use std::sync::Arc;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::posts::Model>::new()])
+            .into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_returns_err_on_db_failure() {
+        use crate::tests::helpers;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+        use std::sync::Arc;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = Arc::new(helpers::test_app_state(db));
+        let result = super::run(state).await;
+        assert!(result.is_err());
     }
 }

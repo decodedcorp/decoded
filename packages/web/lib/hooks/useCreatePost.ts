@@ -110,6 +110,12 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
           ...(artistName && { artist_name: artistName }),
           ...(groupName && { group_name: groupName }),
           ...(context && { context }),
+          ...(uploadedImage.imageWidth && {
+            image_width: uploadedImage.imageWidth,
+          }),
+          ...(uploadedImage.imageHeight && {
+            image_height: uploadedImage.imageHeight,
+          }),
         };
 
         return createPostWithSolution(request);
@@ -144,6 +150,12 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
           ...(artistName && { artist_name: artistName }),
           ...(groupName && { group_name: groupName }),
           ...(context && { context }),
+          ...(uploadedImage.imageWidth && {
+            image_width: uploadedImage.imageWidth,
+          }),
+          ...(uploadedImage.imageHeight && {
+            image_height: uploadedImage.imageHeight,
+          }),
         };
 
         return createPost(request);

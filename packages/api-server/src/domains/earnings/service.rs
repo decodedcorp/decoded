@@ -58,7 +58,7 @@ async fn check_ip_rate_limit(db: &DatabaseConnection, ip_address: &str) -> AppRe
 }
 
 /// User Agent 검증: 정상적인 브라우저 요청인지 확인
-fn validate_user_agent(user_agent: Option<&String>) -> bool {
+pub(crate) fn validate_user_agent(user_agent: Option<&String>) -> bool {
     let user_agent = match user_agent {
         Some(ua) => ua.to_lowercase(),
         None => return false, // User Agent가 없으면 거부

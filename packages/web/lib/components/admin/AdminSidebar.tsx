@@ -62,7 +62,11 @@ const SIDEBAR_ENTRIES: SidebarEntry[] = [
     items: [
       { href: "/admin/entities/artists", label: "Artists", icon: Mic2 },
       { href: "/admin/entities/brands", label: "Brands", icon: Tag },
-      { href: "/admin/entities/group-members", label: "Groups", icon: UsersRound },
+      {
+        href: "/admin/entities/group-members",
+        label: "Groups",
+        icon: UsersRound,
+      },
     ],
   },
   { href: "/admin/audit-log", label: "Audit Log", icon: History },
@@ -78,8 +82,18 @@ interface AdminSidebarProps {
   adminName: string;
 }
 
-function NavLink({ item, pathname, onClose }: { item: NavItem; pathname: string; onClose: () => void }) {
-  const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+function NavLink({
+  item,
+  pathname,
+  onClose,
+}: {
+  item: NavItem;
+  pathname: string;
+  onClose: () => void;
+}) {
+  const active = item.exact
+    ? pathname === item.href
+    : pathname.startsWith(item.href);
   const Icon = item.icon;
   return (
     <Link
@@ -170,7 +184,11 @@ export function AdminSidebar({
                     <ul className="space-y-0.5">
                       {entry.items.map((item) => (
                         <li key={item.href}>
-                          <NavLink item={item} pathname={pathname} onClose={onClose} />
+                          <NavLink
+                            item={item}
+                            pathname={pathname}
+                            onClose={onClose}
+                          />
                         </li>
                       ))}
                     </ul>
