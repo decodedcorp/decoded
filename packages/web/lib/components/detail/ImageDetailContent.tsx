@@ -569,25 +569,20 @@ export function ImageDetailContent({
       />
       */}
 
-        {/* TODO: Social Actions & Comments — temporarily disabled
-      <div className="px-6 py-6 md:px-10 border-t border-border">
-        <SocialActions
-          initialLiked={initialLiked}
-          initialSaved={initialSaved}
-          likeCount={likeCount}
-          commentCount={commentCount}
-          showComment
-          variant="default"
-          onLike={handleLike}
-          onSave={handleSave}
-          onShare={handleShare}
-          onComment={scrollToComments}
-        />
-      </div>
-      <div ref={commentSectionRef}>
-        <ImageCommentSection imageId={image.id} />
-      </div>
-      */}
+        <div className="px-6 py-6 md:px-10 border-t border-border">
+          <SocialActions
+            initialLiked={initialLiked}
+            initialSaved={initialSaved}
+            likeCount={likeCount}
+            commentCount={commentCount}
+            showComment
+            variant="default"
+            onLike={handleLike}
+            onSave={handleSave}
+            onShare={handleShare}
+            onComment={scrollToComments}
+          />
+        </div>
 
         {/* Magazine: Related Editorials - 맨 마지막 */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
