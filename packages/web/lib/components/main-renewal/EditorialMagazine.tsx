@@ -138,6 +138,7 @@ export default function EditorialMagazine({
           {active && (
             <Link
               href={active.link || "#"}
+              prefetch={false}
               className="group relative flex-none w-full md:w-[calc(25%-9px)] aspect-[3/4] rounded-xl overflow-hidden block"
             >
               {active.imageUrl ? (
@@ -209,6 +210,7 @@ export default function EditorialMagazine({
               <div className="p-4 border-t border-white/[0.06]">
                 <Link
                   href={active.link || "#"}
+                  prefetch={false}
                   className="block w-full text-center text-xs font-medium text-white/60 hover:text-white py-2.5 border border-white/10 hover:border-white/30 rounded-lg transition-all"
                 >
                   View more
@@ -308,6 +310,7 @@ export default function EditorialMagazine({
             <div className="px-4 py-3 border-t border-white/[0.06]">
               <Link
                 href={active.link || "#"}
+                prefetch={false}
                 className="block w-full text-center text-xs font-medium text-white/60 py-2 border border-white/10 rounded-lg"
               >
                 View more

@@ -141,6 +141,7 @@ export function EditorialCarousel({ items }: EditorialCarouselProps) {
             <Link
               key={item.id}
               href={item.link}
+              prefetch={false}
               className="group flex-none w-[72vw] sm:w-[45vw] md:w-[22vw] lg:w-[18vw] snap-start rounded-xl overflow-hidden bg-[#111] border border-white/[0.06] block"
             >
               <div className="relative aspect-[3/4] overflow-hidden">

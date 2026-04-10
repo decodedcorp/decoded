@@ -53,6 +53,7 @@ export default defineConfig({
         /auth\.setup\.ts/,
         /login\.spec\.ts/,
         /api-migration\.spec\.ts/,
+        /post-navigation-perf\.spec\.ts/,
       ],
     },
 
@@ -60,7 +61,11 @@ export default defineConfig({
     {
       name: "chromium-no-auth",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: [/login\.spec\.ts/, /api-migration\.spec\.ts/],
+      testMatch: [
+        /login\.spec\.ts/,
+        /api-migration\.spec\.ts/,
+        /post-navigation-perf\.spec\.ts/,
+      ],
     },
   ],
 

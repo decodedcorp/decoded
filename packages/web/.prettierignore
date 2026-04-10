@@ -39,3 +39,9 @@ next-env.d.ts
 # Generated files
 **/generated
 
+# Local ephemeral state (not committed)
+.omc
+.playwright
+test-results
+playwright-report
+
