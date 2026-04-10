@@ -66,11 +66,44 @@ pub async fn get_user_stats(
 ) -> AppResult<UserStatsResponse> {
     let user = get_user_by_id(db, user_id).await?;
 
+    let count_query = |table: &str| {
+        format!(
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.{} WHERE user_id = $1",
+            table
+        )
+    };
+
+    let query_count = |sql: String| async move {
+        db.query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            &sql,
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)
+        .map(|r| r.map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0)).unwrap_or(0))
+    };
+
+    let total_posts = query_count(count_query("posts")).await?;
+    let total_comments = query_count(count_query("comments")).await?;
+
+    let likes_sql = "SELECT COUNT(*)::BIGINT AS cnt FROM public.post_likes pl JOIN public.posts p ON pl.post_id = p.id WHERE p.user_id = $1";
+    let total_likes_received = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            likes_sql,
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?
+        .map(|row| row.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0);
+
     Ok(UserStatsResponse {
         user_id,
-        total_posts: 0,
-        total_comments: 0,
-        total_likes_received: 0,
+        total_posts,
+        total_comments,
+        total_likes_received,
         total_points: user.total_points,
         rank: user.rank,
     })

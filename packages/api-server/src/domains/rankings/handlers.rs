@@ -20,6 +20,7 @@ use crate::{
 
 use super::dto::{
     CategoryRankingResponse, MyRankingDetailResponse, RankingListResponse, RankingPeriodQuery,
+    TrendingArtistItem, TrendingArtistsQuery,
 };
 use super::service::RankingsService;
 
@@ -28,6 +29,7 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .route("/", get(list_rankings))
         .route("/me", get(my_ranking_detail))
+        .route("/artists", get(trending_artists))
         .route("/{category}", get(category_rankings))
         .route_layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
@@ -90,6 +92,33 @@ async fn category_rankings(
     let pagination = Pagination::new(query.page, query.per_page);
 
     let result = RankingsService::get_category_rankings(&state, &category, pagination).await;
+
+    match result {
+        Ok(response) => Ok(Json(response)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+/// 트렌딩 아티스트 조회 (공개)
+#[utoipa::path(
+    get,
+    path = "/api/v1/rankings/artists",
+    params(
+        ("period" = Option<String>, Query, description = "Period (weekly, monthly, all_time)"),
+        ("limit" = Option<u64>, Query, description = "Number of artists to return (max 50)"),
+    ),
+    responses(
+        (status = 200, description = "Trending artists", body = Vec<TrendingArtistItem>),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    ),
+    tag = "rankings"
+)]
+async fn trending_artists(
+    State(state): State<AppState>,
+    Query(query): Query<TrendingArtistsQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let result =
+        RankingsService::get_trending_artists(&state.db, &query.period, query.limit).await;
 
     match result {
         Ok(response) => Ok(Json(response)),

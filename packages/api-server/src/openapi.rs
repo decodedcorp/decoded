@@ -75,6 +75,7 @@ use utoipa::OpenApi;
         crate::domains::rankings::handlers::list_rankings,
         crate::domains::rankings::handlers::category_rankings,
         crate::domains::rankings::handlers::my_ranking_detail,
+        crate::domains::rankings::handlers::trending_artists,
         // Earnings 도메인 핸들러
         crate::domains::earnings::handlers::create_click,
         crate::domains::earnings::handlers::get_click_stats,
@@ -230,6 +231,8 @@ use utoipa::OpenApi;
                 crate::domains::rankings::dto::RankingUser,
                 crate::domains::rankings::dto::MyRanking,
                 crate::domains::rankings::dto::CategoryRankingResponse,
+                crate::domains::rankings::dto::TrendingArtistItem,
+                crate::domains::rankings::dto::TrendingArtistsQuery,
                 crate::domains::rankings::dto::CategoryRankingItem,
                 crate::domains::rankings::dto::MyRankingDetailResponse,
                 crate::domains::rankings::dto::SolutionStats,
