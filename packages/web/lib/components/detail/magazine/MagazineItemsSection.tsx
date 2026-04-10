@@ -24,10 +24,6 @@ type Props = {
   compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   onActiveIndexChange?: (index: number | null) => void;
-  brandProfiles?: Record<
-    string,
-    { name: string; profileImageUrl: string | null }
-  >;
 };
 
 export function MagazineItemsSection({
@@ -38,7 +34,6 @@ export function MagazineItemsSection({
   compact = false,
   scrollContainerRef,
   onActiveIndexChange,
-  brandProfiles,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [sectionWidth, setSectionWidth] = useState(0);
@@ -309,17 +304,15 @@ export function MagazineItemsSection({
                     <div
                       className={`flex items-center gap-2 ${compact ? "mb-1" : "mb-2"}`}
                     >
-                      {(() => {
-                        const bp = brandProfiles?.[item.brand.toLowerCase()];
-                        if (!bp?.profileImageUrl) return null;
-                        return (
+                      {"brand_logo_url" in item &&
+                        (item as { brand_logo_url?: string })
+                          .brand_logo_url && (
                           <img
-                            src={`/api/v1/image-proxy?url=${encodeURIComponent(bp.profileImageUrl)}`}
-                            alt={bp.name}
+                            src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
+                            alt={item.brand ?? ""}
                             className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                           />
-                        );
-                      })()}
+                        )}
                       <p className="typography-overline text-muted-foreground">
                         {item.brand}
                       </p>

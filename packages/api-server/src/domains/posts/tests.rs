@@ -7,6 +7,7 @@ mod tests {
     use crate::domains::posts::service::{compute_search_fields, PostRelatedData};
     use crate::tests::fixtures::*;
     use serde_json::json;
+    use std::collections::HashMap;
     use validator::Validate;
 
     // ── MediaSourceDto ──
@@ -114,6 +115,38 @@ mod tests {
         assert_eq!(detail.user_has_liked, Some(true));
         assert_eq!(detail.user_has_saved, Some(false));
         assert!(detail.spots.is_empty());
+        assert!(
+            detail.artist_profile_image_url.is_none(),
+            "from_post_model sets profile images to None by default"
+        );
+        assert!(detail.group_profile_image_url.is_none());
+    }
+
+    #[test]
+    fn post_detail_response_profile_images_can_be_set_after_construction() {
+        let mut detail = PostDetailResponse::from_post_model(
+            post_model(),
+            user_model(),
+            MediaSourceDto {
+                media_type: "mv".to_string(),
+                description: None,
+            },
+            None,
+            0,
+            0,
+            None,
+            None,
+        );
+        detail.artist_profile_image_url = Some("https://img/artist.jpg".into());
+        detail.group_profile_image_url = Some("https://img/group.jpg".into());
+        assert_eq!(
+            detail.artist_profile_image_url.as_deref(),
+            Some("https://img/artist.jpg")
+        );
+        assert_eq!(
+            detail.group_profile_image_url.as_deref(),
+            Some("https://img/group.jpg")
+        );
     }
 
     #[test]
@@ -145,6 +178,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.category_codes.is_empty());
@@ -160,6 +194,7 @@ mod tests {
             solutions: vec![solution_model()],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert_eq!(fields.spot_count, 1);
@@ -177,6 +212,7 @@ mod tests {
             solutions: vec![sol],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.has_adopted_solution);
@@ -191,6 +227,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.category_codes.is_empty());
@@ -206,6 +243,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![subcategory_model()],
             categories: vec![category_model()],
+            brand_logos: HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert_eq!(fields.category_codes.len(), 1);

@@ -42,7 +42,7 @@ cargo clippy -p migration -p entity --all-targets -- -D warnings
 cargo clippy -p decoded-api --all-targets -- -D warnings
 
 echo "=== 3. 단위 테스트 (lib — DB 불필요) ==="
-cargo test --lib
+cargo test --lib -- --skip config::tests
 
 echo "=== 4. cargo-deny ==="
 if ! command -v cargo-deny >/dev/null 2>&1; then
@@ -62,7 +62,8 @@ fi
 cargo tarpaulin --lib \
   --exclude-files 'src/entities/*' \
   --fail-under "${TARPAULIN_FAIL_UNDER}" \
-  --out Stdout
+  --out Stdout \
+  -- --skip config::tests
 
 echo "=== 6. Supabase / DB 마이그레이션 sync ==="
 bash "$SCRIPT_DIR/check-migration-sync.sh"

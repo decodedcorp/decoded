@@ -41,6 +41,7 @@ export default function EditorPicks({ items }: EditorPicksProps) {
             <Link
               key={item.id}
               href={item.link}
+              prefetch={false}
               className="group relative block aspect-[3/4] overflow-hidden rounded-sm bg-white/5"
             >
               {item.imageUrl && (

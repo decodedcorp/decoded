@@ -29,6 +29,10 @@ export type ImageDetailWithPostOwner = ImageDetail & {
   user_has_liked?: boolean | null;
   /** 현재 사용자가 저장했는지 */
   user_has_saved?: boolean | null;
+  /** 아티스트 프로필 이미지 URL (백엔드에서 warehouse 조회) */
+  artist_profile_image_url?: string | null;
+  /** 그룹 프로필 이미지 URL (백엔드에서 warehouse 조회) */
+  group_profile_image_url?: string | null;
 };
 
 function parsePosition(val: string): number {
@@ -53,7 +57,11 @@ export function postDetailToImageDetail(
         image_id: post.id,
         spot_id: spot.id,
         spot_index: idx + 1,
-        brand: null,
+        brand: (() => {
+          const m = top?.metadata as { brand?: string } | undefined;
+          return m?.brand ?? null;
+        })(),
+        brand_logo_url: top?.brand_logo_url ?? null,
         product_name: top?.title ?? null,
         cropped_image_path: top?.thumbnail_url ?? null,
         price: (() => {
@@ -95,6 +103,8 @@ export function postDetailToImageDetail(
     ai_summary: post.ai_summary ?? null,
     artist_name: post.artist_name ?? null,
     group_name: post.group_name ?? null,
+    artist_profile_image_url: post.artist_profile_image_url ?? null,
+    group_profile_image_url: post.group_profile_image_url ?? null,
     status: post.status as
       | "pending"
       | "extracted"

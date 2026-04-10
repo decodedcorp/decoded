@@ -370,6 +370,7 @@ pub(crate) struct PostRelatedData {
     pub solutions: Vec<crate::entities::solutions::Model>,
     pub subcategories: Vec<crate::entities::subcategories::Model>,
     pub categories: Vec<crate::entities::categories::Model>,
+    pub brand_logos: std::collections::HashMap<Uuid, String>,
 }
 
 /// Meilisearch 색인용 검색 필드
@@ -431,12 +432,12 @@ pub(crate) async fn load_post_related_data(
         .map_err(AppError::DatabaseError)?;
 
     if spots.is_empty() {
-        // Spots가 없으면 빈 데이터로 반환
         return Ok(PostRelatedData {
             spots: vec![],
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: std::collections::HashMap::new(),
         });
     }
 
@@ -475,11 +476,29 @@ pub(crate) async fn load_post_related_data(
             .map_err(AppError::DatabaseError)?
     };
 
+    // 5. Brand logos 배치 조회 (solutions.brand_id → warehouse.brands.logo_image_url)
+    let brand_ids: Vec<Uuid> = solutions.iter().filter_map(|s| s.brand_id).collect();
+    let brand_logos = if brand_ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        use crate::entities::warehouse_brands::{Column as BrandCol, Entity as WBrands};
+        let brands = WBrands::find()
+            .filter(BrandCol::Id.is_in(brand_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?;
+        brands
+            .into_iter()
+            .filter_map(|b| b.logo_image_url.map(|url| (b.id, url)))
+            .collect()
+    };
+
     Ok(PostRelatedData {
         spots,
         solutions,
         subcategories,
         categories,
+        brand_logos,
     })
 }
 
@@ -519,7 +538,7 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
             .unwrap_or(&[]);
         let solution_count = solutions_for_spot.len() as i32;
 
-        let top_solution = select_top_solution(solutions_for_spot);
+        let top_solution = select_top_solution(solutions_for_spot, &related_data.brand_logos);
 
         // 배치 로드된 category 데이터에서 직접 조회 (subcategory_id가 있는 경우만)
         let category = if let Some(subcategory_id) = spot.subcategory_id {
@@ -546,6 +565,37 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
     Ok(spots_with_solutions)
 }
 
+/// Warehouse에서 아티스트/그룹 프로필 이미지를 조회
+async fn load_entity_profile_images(
+    db: &DatabaseConnection,
+    artist_id: Option<Uuid>,
+    group_id: Option<Uuid>,
+) -> (Option<String>, Option<String>) {
+    let artist_img = if let Some(aid) = artist_id {
+        crate::entities::WarehouseArtists::find_by_id(aid)
+            .one(db)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|a| a.profile_image_url)
+    } else {
+        None
+    };
+
+    let group_img = if let Some(gid) = group_id {
+        crate::entities::WarehouseGroups::find_by_id(gid)
+            .one(db)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|g| g.profile_image_url)
+    } else {
+        None
+    };
+
+    (artist_img, group_img)
+}
+
 /// Post 상세 조회 (Spots + 대표 Solution 포함)
 pub async fn get_post_detail(
     db: &DatabaseConnection,
@@ -561,7 +611,7 @@ pub async fn get_post_detail(
     let user = get_user_by_id(db, post.user_id).await?;
     let related_data = load_post_related_data(db, post_id).await?;
 
-    // 2. Like/Saved 상태 조회
+    // 2. Like/Saved 상태 + warehouse 프로필 이미지 조회
     let like_stats = get_post_like_stats(db, post_id, user_id).await?;
     let user_has_saved = if let Some(uid) = user_id {
         crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
@@ -570,6 +620,8 @@ pub async fn get_post_detail(
     } else {
         false
     };
+    let (artist_profile_image_url, group_profile_image_url) =
+        load_entity_profile_images(db, post.artist_id, post.group_id).await;
 
     // 3. Spots이 없으면 빈 응답 반환
     if related_data.spots.is_empty() {
@@ -595,6 +647,8 @@ pub async fn get_post_detail(
             user_id.map(|_| user_has_saved),
         );
         response.try_count = try_count;
+        response.artist_profile_image_url = artist_profile_image_url;
+        response.group_profile_image_url = group_profile_image_url;
         return Ok(response);
     }
 
@@ -629,6 +683,8 @@ pub async fn get_post_detail(
         user_id.map(|_| user_has_saved),
     );
     response.try_count = try_count;
+    response.artist_profile_image_url = artist_profile_image_url;
+    response.group_profile_image_url = group_profile_image_url;
 
     Ok(response)
 }
@@ -636,31 +692,30 @@ pub async fn get_post_detail(
 /// 대표 Solution 선택 (우선순위: is_adopted > is_verified > vote score)
 fn select_top_solution(
     solutions: &[crate::entities::solutions::Model],
+    brand_logos: &std::collections::HashMap<Uuid, String>,
 ) -> Option<TopSolutionSummary> {
     if solutions.is_empty() {
         return None;
     }
 
-    // 우선순위에 따라 정렬
     let mut sorted = solutions.to_vec();
     sorted.sort_by(|a, b| {
-        // 1. is_adopted 우선
         match b.is_adopted.cmp(&a.is_adopted) {
             std::cmp::Ordering::Equal => {}
             other => return other,
         }
-        // 2. is_verified 우선
         match b.is_verified.cmp(&a.is_verified) {
             std::cmp::Ordering::Equal => {}
             other => return other,
         }
-        // 3. vote score (accurate_count - different_count) 높은 순
         let score_a = a.accurate_count - a.different_count;
         let score_b = b.accurate_count - b.different_count;
         score_b.cmp(&score_a)
     });
 
     let top = &sorted[0];
+    let brand_logo_url = top.brand_id.and_then(|bid| brand_logos.get(&bid).cloned());
+
     Some(TopSolutionSummary {
         id: top.id,
         title: top.title.clone(),
@@ -670,6 +725,7 @@ fn select_top_solution(
         affiliate_url: top.affiliate_url.clone(),
         is_verified: top.is_verified,
         is_adopted: top.is_adopted,
+        brand_logo_url,
     })
 }
 
@@ -1983,25 +2039,28 @@ mod tests {
 
     #[test]
     fn select_top_solution_empty() {
-        assert!(select_top_solution(&[]).is_none());
+        let empty_brands = std::collections::HashMap::new();
+        assert!(select_top_solution(&[], &empty_brands).is_none());
     }
 
     #[test]
     fn select_top_solution_prefers_adopted() {
+        let empty_brands = std::collections::HashMap::new();
         let sid = Uuid::new_v4();
         let a = mk_solution(sid, true, false, 0, 0);
         let b = mk_solution(sid, false, true, 100, 0);
-        let top = select_top_solution(&[b, a]).expect("some");
+        let top = select_top_solution(&[b, a], &empty_brands).expect("some");
         assert!(top.is_adopted);
     }
 
     #[test]
     fn select_top_solution_tie_breaks_by_vote_score() {
+        let empty_brands = std::collections::HashMap::new();
         let sid = Uuid::new_v4();
         let lower = mk_solution(sid, false, false, 1, 0);
         let higher = mk_solution(sid, false, false, 10, 0);
         let higher_id = higher.id;
-        let top = select_top_solution(&[lower, higher]).expect("some");
+        let top = select_top_solution(&[lower, higher], &empty_brands).expect("some");
         assert_eq!(top.id, higher_id);
     }
 
@@ -2083,6 +2142,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: std::collections::HashMap::new(),
         };
         assert!(build_spots_response(&data).unwrap().is_empty());
     }
@@ -2130,6 +2190,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: std::collections::HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(fields.category_codes.is_empty());
@@ -2304,30 +2365,135 @@ mod tests {
 
     #[test]
     fn select_top_solution_verified_beats_unverified_when_neither_adopted() {
+        let empty_brands = std::collections::HashMap::new();
         let sid = Uuid::new_v4();
         let unverified = mk_solution(sid, false, false, 10, 0);
         let verified = mk_solution(sid, false, true, 0, 0);
         let verified_id = verified.id;
-        let top = select_top_solution(&[unverified, verified]).expect("some");
+        let top = select_top_solution(&[unverified, verified], &empty_brands).expect("some");
         assert_eq!(top.id, verified_id);
     }
 
     #[test]
     fn select_top_solution_single_solution() {
+        let empty_brands = std::collections::HashMap::new();
         let sid = Uuid::new_v4();
         let only = mk_solution(sid, false, false, 3, 1);
         let only_id = only.id;
-        let top = select_top_solution(&[only]).expect("some");
+        let top = select_top_solution(&[only], &empty_brands).expect("some");
         assert_eq!(top.id, only_id);
     }
 
     #[test]
     fn select_top_solution_adopted_beats_verified() {
+        let empty_brands = std::collections::HashMap::new();
         let sid = Uuid::new_v4();
         let adopted = mk_solution(sid, true, false, 0, 0);
         let verified = mk_solution(sid, false, true, 100, 0);
-        let top = select_top_solution(&[verified, adopted]).expect("some");
+        let top = select_top_solution(&[verified, adopted], &empty_brands).expect("some");
         assert!(top.is_adopted);
+    }
+
+    #[test]
+    fn select_top_solution_includes_brand_logo_url_when_mapped() {
+        let sid = Uuid::new_v4();
+        let brand_id = Uuid::new_v4();
+        let mut sol = mk_solution(sid, false, false, 5, 0);
+        sol.brand_id = Some(brand_id);
+        let mut brands = std::collections::HashMap::new();
+        brands.insert(brand_id, "https://logo.example.com/brand.png".to_string());
+        let top = select_top_solution(&[sol], &brands).expect("some");
+        assert_eq!(
+            top.brand_logo_url.as_deref(),
+            Some("https://logo.example.com/brand.png")
+        );
+    }
+
+    #[test]
+    fn select_top_solution_brand_logo_none_when_not_mapped() {
+        let sid = Uuid::new_v4();
+        let mut sol = mk_solution(sid, false, false, 5, 0);
+        sol.brand_id = Some(Uuid::new_v4());
+        let empty_brands = std::collections::HashMap::new();
+        let top = select_top_solution(&[sol], &empty_brands).expect("some");
+        assert!(top.brand_logo_url.is_none());
+    }
+
+    #[test]
+    fn select_top_solution_brand_logo_none_when_no_brand_id() {
+        let sid = Uuid::new_v4();
+        let sol = mk_solution(sid, false, false, 5, 0);
+        let mut brands = std::collections::HashMap::new();
+        brands.insert(Uuid::new_v4(), "https://logo.example.com/x.png".to_string());
+        let top = select_top_solution(&[sol], &brands).expect("some");
+        assert!(top.brand_logo_url.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_both_none_ids() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist_img, group_img) = load_entity_profile_images(&db, None, None).await;
+        assert!(artist_img.is_none());
+        assert!(group_img.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_artist_found() {
+        use crate::entities::warehouse_artists;
+        let t = ts();
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[warehouse_artists::Model {
+                id: Uuid::nil(),
+                name_ko: Some("카리나".into()),
+                name_en: Some("Karina".into()),
+                profile_image_url: Some("https://img.example.com/karina.jpg".into()),
+                primary_instagram_account_id: None,
+                metadata: None,
+                created_at: t,
+                updated_at: t,
+            }]])
+            .into_connection();
+        let (artist_img, group_img) =
+            load_entity_profile_images(&db, Some(Uuid::nil()), None).await;
+        assert_eq!(
+            artist_img.as_deref(),
+            Some("https://img.example.com/karina.jpg")
+        );
+        assert!(group_img.is_none());
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_group_found() {
+        use crate::entities::warehouse_groups;
+        let t = ts();
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[warehouse_groups::Model {
+                id: Uuid::nil(),
+                name_ko: Some("에스파".into()),
+                name_en: Some("aespa".into()),
+                profile_image_url: Some("https://img.example.com/aespa.jpg".into()),
+                primary_instagram_account_id: None,
+                metadata: None,
+                created_at: t,
+                updated_at: t,
+            }]])
+            .into_connection();
+        let (artist_img, group_img) =
+            load_entity_profile_images(&db, None, Some(Uuid::nil())).await;
+        assert!(artist_img.is_none());
+        assert_eq!(
+            group_img.as_deref(),
+            Some("https://img.example.com/aespa.jpg")
+        );
+    }
+
+    #[tokio::test]
+    async fn load_entity_profile_images_artist_not_found() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .into_connection();
+        let (artist_img, _) = load_entity_profile_images(&db, Some(Uuid::new_v4()), None).await;
+        assert!(artist_img.is_none());
     }
 
     // ── build_spots_response additional tests ──
@@ -2341,6 +2507,7 @@ mod tests {
             solutions: vec![fixtures::solution_model()],
             subcategories: vec![fixtures::subcategory_model()],
             categories: vec![fixtures::category_model()],
+            brand_logos: std::collections::HashMap::new(),
         };
         let result = build_spots_response(&data).unwrap();
         assert_eq!(result.len(), 1);
@@ -2362,6 +2529,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![mismatched_subcategory],
             categories: vec![fixtures::category_model()],
+            brand_logos: std::collections::HashMap::new(),
         };
         let result = build_spots_response(&data).unwrap();
         assert_eq!(result.len(), 1);
@@ -2381,6 +2549,7 @@ mod tests {
             solutions: vec![],
             subcategories: vec![],
             categories: vec![],
+            brand_logos: std::collections::HashMap::new(),
         };
         let result = build_spots_response(&data).unwrap();
         assert_eq!(result.len(), 1);
@@ -2404,11 +2573,39 @@ mod tests {
             solutions: vec![fixtures::solution_model(), sol_for_spot2],
             subcategories: vec![fixtures::subcategory_model()],
             categories: vec![fixtures::category_model()],
+            brand_logos: std::collections::HashMap::new(),
         };
         let result = build_spots_response(&data).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].solution_count, 1);
         assert_eq!(result[1].solution_count, 1);
+    }
+
+    #[test]
+    fn build_spots_response_propagates_brand_logo_url() {
+        use crate::tests::fixtures;
+
+        let brand_id = Uuid::new_v4();
+        let mut sol = fixtures::solution_model();
+        sol.brand_id = Some(brand_id);
+
+        let mut brand_logos = std::collections::HashMap::new();
+        brand_logos.insert(brand_id, "https://logo.example.com/b.png".to_string());
+
+        let data = PostRelatedData {
+            spots: vec![fixtures::spot_model()],
+            solutions: vec![sol],
+            subcategories: vec![fixtures::subcategory_model()],
+            categories: vec![fixtures::category_model()],
+            brand_logos,
+        };
+        let result = build_spots_response(&data).unwrap();
+        assert_eq!(result.len(), 1);
+        let top = result[0].top_solution.as_ref().expect("top solution");
+        assert_eq!(
+            top.brand_logo_url.as_deref(),
+            Some("https://logo.example.com/b.png")
+        );
     }
 
     // ── admin_update_post_status tests ──
@@ -2460,6 +2657,7 @@ mod tests {
             solutions: vec![adopted_solution],
             subcategories: vec![fixtures::subcategory_model()],
             categories: vec![fixtures::category_model()],
+            brand_logos: std::collections::HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert_eq!(fields.spot_count, 1);
@@ -2477,12 +2675,99 @@ mod tests {
             solutions: vec![fixtures::solution_model()], // is_adopted = false
             subcategories: vec![fixtures::subcategory_model()],
             categories: vec![fixtures::category_model()],
+            brand_logos: std::collections::HashMap::new(),
         };
         let fields = compute_search_fields(&data);
         assert!(!fields.has_adopted_solution);
     }
 
     // ── build_media_source_from_post additional test ──
+
+    // ── load_post_related_data tests ──
+
+    #[tokio::test]
+    async fn load_post_related_data_empty_spots_returns_early() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert!(data.spots.is_empty());
+        assert!(data.solutions.is_empty());
+        assert!(data.subcategories.is_empty());
+        assert!(data.categories.is_empty());
+        assert!(data.brand_logos.is_empty());
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_with_spots_no_subcategories() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut spot = fixtures::spot_model();
+        spot.subcategory_id = None;
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[spot.clone()]]) // spots query
+            .append_query_results([Vec::<crate::entities::solutions::Model>::new()]) // solutions query
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert_eq!(data.spots.len(), 1);
+        assert!(data.solutions.is_empty());
+        assert!(data.subcategories.is_empty());
+        assert!(data.categories.is_empty());
+        assert!(data.brand_logos.is_empty());
+    }
+
+    #[tokio::test]
+    async fn load_post_related_data_with_spots_solutions_and_brands() {
+        use crate::tests::fixtures;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let spot = fixtures::spot_model();
+        let mut sol = fixtures::solution_model();
+        let brand_id = Uuid::new_v4();
+        sol.brand_id = Some(brand_id);
+
+        let wb = crate::entities::warehouse_brands::Model {
+            id: brand_id,
+            name_ko: Some("나이키".into()),
+            name_en: Some("Nike".into()),
+            logo_image_url: Some("https://logo.test/nike.png".into()),
+            primary_instagram_account_id: None,
+            metadata: None,
+            created_at: ts(),
+            updated_at: ts(),
+        };
+
+        let subcat = fixtures::subcategory_model();
+        let cat = fixtures::category_model();
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[spot.clone()]])
+            .append_query_results([[sol.clone()]])
+            .append_query_results([[subcat.clone()]])
+            .append_query_results([[cat.clone()]])
+            .append_query_results([[wb]])
+            .into_connection();
+        let data = load_post_related_data(&db, fixtures::test_uuid(1))
+            .await
+            .unwrap();
+        assert_eq!(data.spots.len(), 1);
+        assert_eq!(data.solutions.len(), 1);
+        assert_eq!(data.subcategories.len(), 1);
+        assert_eq!(data.categories.len(), 1);
+        assert_eq!(
+            data.brand_logos.get(&brand_id).map(String::as_str),
+            Some("https://logo.test/nike.png")
+        );
+    }
 
     // ── get_post_detail tests ──
 

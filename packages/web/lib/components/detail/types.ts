@@ -14,6 +14,7 @@ export interface ItemRow {
   spot_index?: number;
   brand: string | null;
   brand_account_id?: string | null;
+  brand_logo_url?: string | null;
   product_name: string | null;
   cropped_image_path: string | null;
   price: string | null;
