@@ -39,3 +39,8 @@ next-env.d.ts
 # Generated files
 **/generated
 
+# Tool state / test artifacts
+.omc
+.playwright
+test-results
+

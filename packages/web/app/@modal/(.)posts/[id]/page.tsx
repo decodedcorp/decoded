@@ -1,8 +1,6 @@
 import { ImageDetailModal } from "@/lib/components/detail/ImageDetailModal";
-import {
-  buildArtistProfileMap,
-  buildBrandProfileMap,
-} from "@/lib/supabase/queries/warehouse-entities.server";
+import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -18,25 +16,36 @@ export default async function ModalPostDetailPage({
   params,
   searchParams,
 }: Props) {
-  const [{ id }, { from }, artistProfileMap, brandProfileMap] =
-    await Promise.all([
-      params,
-      searchParams,
-      buildArtistProfileMap(),
-      buildBrandProfileMap(),
-    ]);
+  const [{ id }, { from }, artistProfileMap] = await Promise.all([
+    params,
+    searchParams,
+    buildArtistProfileMap(),
+  ]);
   const variant = from === "explore" ? "explore-preview" : "full";
 
-  // TODO: filter to only relevant entries for this post to reduce RSC payload
-  const artistProfiles = Object.fromEntries(artistProfileMap);
-  const brandProfiles = Object.fromEntries(brandProfileMap);
+  const supabase = await createSupabaseServerClient();
+  const { data: post } = await supabase
+    .from("posts")
+    .select("artist_name, group_name")
+    .eq("id", id)
+    .single();
+
+  const artistProfiles: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  > = {};
+  for (const raw of [post?.artist_name, post?.group_name]) {
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    const entry = artistProfileMap.get(key);
+    if (entry) artistProfiles[key] = entry;
+  }
 
   return (
     <ImageDetailModal
       imageId={id}
       variant={variant}
       artistProfiles={artistProfiles}
-      brandProfiles={brandProfiles}
     />
   );
 }
