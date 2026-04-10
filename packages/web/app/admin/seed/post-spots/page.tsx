@@ -83,7 +83,9 @@ function PostSpotsPageContent() {
         <p className="text-sm text-gray-400 mt-1">
           Item annotation spots on seed posts
           {pagination && (
-            <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+            <span className="ml-2 text-gray-500">
+              ({pagination.total_items} total)
+            </span>
           )}
         </p>
       </div>
@@ -111,7 +113,9 @@ function PostSpotsPageContent() {
 
 export default function PostSpotsPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <PostSpotsPageContent />
     </Suspense>
   );

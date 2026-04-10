@@ -8,7 +8,11 @@
 
 import { cache } from "react";
 import { createWarehouseServerClient } from "@/lib/supabase/warehouse";
-import type { ArtistRow, GroupRow, BrandRow } from "@/lib/supabase/warehouse-types";
+import type {
+  ArtistRow,
+  GroupRow,
+  BrandRow,
+} from "@/lib/supabase/warehouse-types";
 
 /**
  * Fetches artists from warehouse.artists with profile images.
@@ -21,7 +25,9 @@ export async function fetchWarehouseArtists(limit = 500): Promise<ArtistRow[]> {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
       .from("artists")
-      .select("id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at")
+      .select(
+        "id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
+      )
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -32,7 +38,10 @@ export async function fetchWarehouseArtists(limit = 500): Promise<ArtistRow[]> {
 
     return (data ?? []) as ArtistRow[];
   } catch (err) {
-    console.error("[warehouse-entities] fetchWarehouseArtists unexpected error:", err);
+    console.error(
+      "[warehouse-entities] fetchWarehouseArtists unexpected error:",
+      err
+    );
     return [];
   }
 }
@@ -48,7 +57,9 @@ export async function fetchWarehouseGroups(limit = 500): Promise<GroupRow[]> {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
       .from("groups")
-      .select("id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at")
+      .select(
+        "id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
+      )
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -59,7 +70,10 @@ export async function fetchWarehouseGroups(limit = 500): Promise<GroupRow[]> {
 
     return (data ?? []) as GroupRow[];
   } catch (err) {
-    console.error("[warehouse-entities] fetchWarehouseGroups unexpected error:", err);
+    console.error(
+      "[warehouse-entities] fetchWarehouseGroups unexpected error:",
+      err
+    );
     return [];
   }
 }
@@ -82,54 +96,59 @@ export interface ArtistProfileEntry {
  *
  * @returns Map keyed by lowercased name, empty Map on error
  */
-export const buildArtistProfileMap = cache(async (): Promise<Map<string, ArtistProfileEntry>> => {
-  const map = new Map<string, ArtistProfileEntry>();
+export const buildArtistProfileMap = cache(
+  async (): Promise<Map<string, ArtistProfileEntry>> => {
+    const map = new Map<string, ArtistProfileEntry>();
 
-  try {
-    const [artists, groups] = await Promise.all([
-      fetchWarehouseArtists(),
-      fetchWarehouseGroups(),
-    ]);
+    try {
+      const [artists, groups] = await Promise.all([
+        fetchWarehouseArtists(),
+        fetchWarehouseGroups(),
+      ]);
 
-    const addEntity = (
-      name_ko: string | null,
-      name_en: string | null,
-      profile_image_url: string | null
-    ) => {
-      // Prefer Korean name as display name (primary market), fall back to English
-      const displayName = name_ko || name_en || "";
-      if (!displayName) return;
+      const addEntity = (
+        name_ko: string | null,
+        name_en: string | null,
+        profile_image_url: string | null
+      ) => {
+        // Prefer Korean name as display name (primary market), fall back to English
+        const displayName = name_ko || name_en || "";
+        if (!displayName) return;
 
-      const entry: ArtistProfileEntry = {
-        name: displayName,
-        profileImageUrl: profile_image_url,
-      };
-
-      if (name_ko) {
-        map.set(name_ko.toLowerCase(), entry);
-      }
-      if (name_en) {
-        // English name uses English display name for readability
-        const enEntry: ArtistProfileEntry = {
-          name: name_en,
+        const entry: ArtistProfileEntry = {
+          name: displayName,
           profileImageUrl: profile_image_url,
         };
-        map.set(name_en.toLowerCase(), enEntry);
+
+        if (name_ko) {
+          map.set(name_ko.toLowerCase(), entry);
+        }
+        if (name_en) {
+          // English name uses English display name for readability
+          const enEntry: ArtistProfileEntry = {
+            name: name_en,
+            profileImageUrl: profile_image_url,
+          };
+          map.set(name_en.toLowerCase(), enEntry);
+        }
+      };
+
+      for (const artist of artists) {
+        addEntity(artist.name_ko, artist.name_en, artist.profile_image_url);
       }
-    };
+      for (const group of groups) {
+        addEntity(group.name_ko, group.name_en, group.profile_image_url);
+      }
+    } catch (err) {
+      console.error(
+        "[warehouse-entities] buildArtistProfileMap unexpected error:",
+        err
+      );
+    }
 
-    for (const artist of artists) {
-      addEntity(artist.name_ko, artist.name_en, artist.profile_image_url);
-    }
-    for (const group of groups) {
-      addEntity(group.name_ko, group.name_en, group.profile_image_url);
-    }
-  } catch (err) {
-    console.error("[warehouse-entities] buildArtistProfileMap unexpected error:", err);
+    return map;
   }
-
-  return map;
-});
+);
 
 /**
  * Fetches brands from warehouse.brands with logo images.
@@ -142,7 +161,9 @@ export async function fetchWarehouseBrands(limit = 500): Promise<BrandRow[]> {
     const wh = await createWarehouseServerClient();
     const { data, error } = await wh
       .from("brands")
-      .select("id, name_ko, name_en, logo_image_url, primary_instagram_account_id, metadata, created_at, updated_at")
+      .select(
+        "id, name_ko, name_en, logo_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
+      )
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -153,7 +174,10 @@ export async function fetchWarehouseBrands(limit = 500): Promise<BrandRow[]> {
 
     return (data ?? []) as BrandRow[];
   } catch (err) {
-    console.error("[warehouse-entities] fetchWarehouseBrands unexpected error:", err);
+    console.error(
+      "[warehouse-entities] fetchWarehouseBrands unexpected error:",
+      err
+    );
     return [];
   }
 }
@@ -172,29 +196,31 @@ export interface BrandProfileEntry {
  *
  * @returns Map keyed by lowercased name or brand ID, empty Map on error
  */
-export const buildBrandProfileMap = cache(async (): Promise<Map<string, BrandProfileEntry>> => {
-  const map = new Map<string, BrandProfileEntry>();
+export const buildBrandProfileMap = cache(
+  async (): Promise<Map<string, BrandProfileEntry>> => {
+    const map = new Map<string, BrandProfileEntry>();
 
-  try {
-    const brands = await fetchWarehouseBrands();
+    try {
+      const brands = await fetchWarehouseBrands();
 
-    for (const brand of brands) {
-      const displayName = brand.name_en || brand.name_ko || "";
-      if (!displayName) continue;
+      for (const brand of brands) {
+        const displayName = brand.name_en || brand.name_ko || "";
+        if (!displayName) continue;
 
-      const entry: BrandProfileEntry = {
-        name: displayName,
-        profileImageUrl: brand.logo_image_url,
-      };
+        const entry: BrandProfileEntry = {
+          name: displayName,
+          profileImageUrl: brand.logo_image_url,
+        };
 
-      if (brand.name_ko) map.set(brand.name_ko.toLowerCase(), entry);
-      if (brand.name_en) map.set(brand.name_en.toLowerCase(), entry);
-      // Also key by ID for brand_id lookup
-      if (brand.id) map.set(brand.id, entry);
+        if (brand.name_ko) map.set(brand.name_ko.toLowerCase(), entry);
+        if (brand.name_en) map.set(brand.name_en.toLowerCase(), entry);
+        // Also key by ID for brand_id lookup
+        if (brand.id) map.set(brand.id, entry);
+      }
+    } catch (err) {
+      console.error("[warehouse-entities] buildBrandProfileMap error:", err);
     }
-  } catch (err) {
-    console.error("[warehouse-entities] buildBrandProfileMap error:", err);
-  }
 
-  return map;
-});
+    return map;
+  }
+);

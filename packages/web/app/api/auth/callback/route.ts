@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
   // OAuth provider가 에러를 반환한 경우
   if (errorCode) {
     console.error("[auth/callback] OAuth error:", errorCode, errorDescription);
-    const message = ERROR_MESSAGES[errorCode] ?? "로그인 중 오류가 발생했습니다.";
+    const message =
+      ERROR_MESSAGES[errorCode] ?? "로그인 중 오류가 발생했습니다.";
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("error", message);
     return NextResponse.redirect(loginUrl);

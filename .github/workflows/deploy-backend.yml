@@ -1,0 +1,131 @@
+name: Deploy backend (prod)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/api-server/**'
+      - 'packages/ai-server/**'
+      - 'scripts/deploy-backend.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  API_IMAGE: decoded-backend-prod-api
+  AI_IMAGE: decoded-backend-prod-ai
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy env file
+        run: cp /Users/decoded/dev/decoded/.env.backend.prod .env.backend.prod
+
+      - name: Tag current images as :prev
+        run: |
+          for img in "$API_IMAGE" "$AI_IMAGE"; do
+            if docker image inspect "$img:latest" >/dev/null 2>&1; then
+              docker tag "$img:latest" "$img:prev"
+              echo "Tagged $img:latest -> $img:prev"
+            else
+              echo "No existing $img:latest to tag"
+            fi
+          done
+
+      - name: Deploy
+        run: bash scripts/deploy-backend.sh prod up --build
+
+      - name: Health check — api
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/health; then
+              echo ""
+              echo "api healthy"
+              exit 0
+            fi
+            echo "Waiting for api... ($i/30)"
+            sleep 10
+          done
+          echo "::error::api health check failed after 300s"
+          exit 1
+
+      - name: Health check — ai
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec decoded-backend-ai-prod curl -sf http://127.0.0.1:10000/health; then
+              echo ""
+              echo "ai healthy"
+              exit 0
+            fi
+            echo "Waiting for ai... ($i/30)"
+            sleep 10
+          done
+          echo "::error::ai health check failed after 300s"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Rolling back to :prev images..."
+          for img in "$API_IMAGE" "$AI_IMAGE"; do
+            if docker image inspect "$img:prev" >/dev/null 2>&1; then
+              docker tag "$img:prev" "$img:latest"
+              echo "Restored $img:prev -> $img:latest"
+            fi
+          done
+          bash scripts/deploy-backend.sh prod up
+          echo "Rollback complete"
+
+      - name: Notify Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "Telegram secrets not set, skipping notification"
+            exit 0
+          fi
+
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          COMMIT_MSG=$(git log -1 --pretty=%s | head -c 200)
+
+          if [ "${{ job.status }}" = "success" ]; then
+            MSG="🚀 Backend deployed to prod
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${SHORT_SHA} ${COMMIT_MSG}
+          by ${{ github.actor }}
+
+          ${{ github.server_url }}/${{ github.repository }}/commit/${GITHUB_SHA}"
+          else
+            MSG="💥 Backend deploy FAILED (rolled back)
+          ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+          ${SHORT_SHA} ${COMMIT_MSG}
+          by ${{ github.actor }}
+
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+          MSG=$(echo "$MSG" | sed 's/^[[:space:]]*//')
+
+          PAYLOAD=$(jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --arg text "$MSG" \
+            '{chat_id: $chat_id, text: ($text | if length > 4096 then .[0:4096] else . end), disable_web_page_preview: true}')
+
+          RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          echo "$RESP" | jq .
+          echo "$RESP" | jq -e '.ok == true' >/dev/null || echo "::warning::Telegram notification failed"

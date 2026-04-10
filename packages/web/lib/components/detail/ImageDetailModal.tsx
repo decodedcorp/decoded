@@ -18,21 +18,36 @@ import { useImageModalAnimation } from "@/lib/hooks/useImageModalAnimation";
 type Props = {
   imageId: string;
   variant?: "full" | "explore-preview";
-  artistProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
-  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  artistProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
+  brandProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
 };
 
 /**
  * Side Drawer version of image detail page
  * Used when navigating from grid (intercepting route)
  */
-export function ImageDetailModal({ imageId, variant = "full", artistProfiles, brandProfiles }: Props) {
+export function ImageDetailModal({
+  imageId,
+  variant = "full",
+  artistProfiles,
+  brandProfiles,
+}: Props) {
   const router = useRouter();
   const { data: image, isLoading, error } = usePostDetailForImage(imageId);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
   const { data: magazine } = usePostMagazine(magazineId);
   const { originRect, reset, imgSrc } = useTransitionStore(
-    useShallow((s) => ({ originRect: s.originRect, reset: s.reset, imgSrc: s.imgSrc }))
+    useShallow((s) => ({
+      originRect: s.originRect,
+      reset: s.reset,
+      imgSrc: s.imgSrc,
+    }))
   );
   const track = useTrackEvent();
 

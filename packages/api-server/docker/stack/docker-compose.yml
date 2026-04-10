@@ -1,6 +1,6 @@
 # Decoded backend: api + ai + Meilisearch + Redis + SearXNG (multi-container).
 # From repo root: bash scripts/deploy-backend.sh dev up --build
-# Requires packages/api-server/.env.dev + packages/ai-server/.dev.env
+# Requires .env.backend.dev (repo root, unified)
 
 name: decoded-backend
 
@@ -14,10 +14,12 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ../../.env.dev
+      - ../../../../.env.backend.dev
     environment:
       PORT: "8080"
       HOST: "0.0.0.0"
+      LOG_FORMAT: text
+      ENV: development
       MEILISEARCH_URL: http://meilisearch:7700
       AI_SERVER_GRPC_URL: http://ai:50051
       API_SERVER_GRPC_PORT: "50052"
@@ -44,8 +46,9 @@ services:
     expose:
       - "50051"
     env_file:
-      - ../../../ai-server/.dev.env
+      - ../../../../.env.backend.dev
     environment:
+      LOG_FORMAT: json
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       SEARXNG_API_URL: http://searxng:8080
@@ -53,7 +56,7 @@ services:
       API_SERVER_GRPC_HOST: api
       API_SERVER_GRPC_PORT: "50052"
       AI_GRPC_LISTEN_PORT: "50051"
-      APP_ENV: prod
+      APP_ENV: dev
     depends_on:
       api:
         condition: service_healthy
@@ -98,7 +101,7 @@ services:
     networks:
       - decoded-backend
     env_file:
-      - ../../../ai-server/.dev.env
+      - ../../../../.env.backend.dev
     command:
       - /bin/sh
       - -c

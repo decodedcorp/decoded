@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Backend failed → fall back to Supabase
-    console.warn(`[Posts GET] Backend returned ${response.status}, falling back to Supabase`);
+    console.warn(
+      `[Posts GET] Backend returned ${response.status}, falling back to Supabase`
+    );
     return supabaseFallback(searchParams);
   } catch (error) {
     // Backend unreachable → fall back to Supabase
@@ -83,7 +85,10 @@ async function supabaseFallback(searchParams: URLSearchParams) {
 
     let query = supabase
       .from("posts")
-      .select("*, users:user_id(id, username, avatar_url, rank), post_magazines:post_magazine_id(title)", { count: "exact" })
+      .select(
+        "*, users:user_id(id, username, avatar_url, rank), post_magazines:post_magazine_id(title)",
+        { count: "exact" }
+      )
       .eq("status", "active")
       .not("image_url", "is", null);
 
@@ -135,7 +140,12 @@ async function supabaseFallback(searchParams: URLSearchParams) {
       post_magazine_title: post.post_magazines?.title ?? null,
       media_source: { type: post.media_type ?? "unknown", description: null },
       user: post.users
-        ? { id: post.users.id, username: post.users.username ?? "", avatar_url: post.users.avatar_url ?? null, rank: post.users.rank ?? "member" }
+        ? {
+            id: post.users.id,
+            username: post.users.username ?? "",
+            avatar_url: post.users.avatar_url ?? null,
+            rank: post.users.rank ?? "member",
+          }
         : { id: post.user_id, username: "", avatar_url: null, rank: "member" },
     }));
 
@@ -150,7 +160,10 @@ async function supabaseFallback(searchParams: URLSearchParams) {
     });
   } catch (error) {
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Supabase fallback error" },
+      {
+        message:
+          error instanceof Error ? error.message : "Supabase fallback error",
+      },
       { status: 500 }
     );
   }

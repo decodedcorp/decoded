@@ -55,9 +55,7 @@ function GroupMembersPageContent() {
       key: "is_active",
       label: "Active",
       render: (row) => (
-        <AdminStatusBadge
-          status={row.is_active ? "active" : "hidden"}
-        />
+        <AdminStatusBadge status={row.is_active ? "active" : "hidden"} />
       ),
     },
     {
@@ -86,7 +84,9 @@ function GroupMembersPageContent() {
         <p className="text-sm text-gray-400 mt-1">
           Read-only view of artist–group relationships
           {pagination && (
-            <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+            <span className="ml-2 text-gray-500">
+              ({pagination.total_items} total)
+            </span>
           )}
         </p>
       </div>
@@ -114,7 +114,9 @@ function GroupMembersPageContent() {
 
 export default function GroupMembersPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <GroupMembersPageContent />
     </Suspense>
   );

@@ -23,7 +23,9 @@ export function toDecodeShowcaseData({
     .filter((item) => item.normalizedCenter !== null)
     .slice(0, 4)
     .map((item) => {
-      const meta = item.metadata as unknown as Record<string, unknown> | undefined;
+      const meta = item.metadata as unknown as
+        | Record<string, unknown>
+        | undefined;
       const croppedUrl = item.cropped_image_path;
       return {
         id: String(item.id),

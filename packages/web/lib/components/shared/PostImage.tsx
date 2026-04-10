@@ -115,7 +115,10 @@ export function PostImage({
   // When image fits naturally → no blur visible. When capped by maxHeight → blur fills gaps.
   return (
     <div
-      className={cn("relative overflow-hidden bg-black flex items-center justify-center", className)}
+      className={cn(
+        "relative overflow-hidden bg-black flex items-center justify-center",
+        className
+      )}
       style={{ maxHeight }}
     >
       {/* Blurred background — fills container, visible when image doesn't fill */}

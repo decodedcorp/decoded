@@ -25,7 +25,10 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const page = Math.max(1, Number(params.get("page") || 1));
-  const perPage = Math.min(50, Math.max(1, Number(params.get("per_page") || 20)));
+  const perPage = Math.min(
+    50,
+    Math.max(1, Number(params.get("per_page") || 20))
+  );
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 

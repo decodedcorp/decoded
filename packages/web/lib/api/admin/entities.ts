@@ -18,7 +18,12 @@ async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 interface EntityListResponse<T> {
   data: T[];
-  pagination: { current_page: number; per_page: number; total_items: number; total_pages: number };
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total_items: number;
+    total_pages: number;
+  };
 }
 
 // ─── Artists ─────────────────────────────────────────────
@@ -38,7 +43,10 @@ export function useArtistList(page: number, perPage = 20, search = "") {
   return useQuery<EntityListResponse<Artist>>({
     queryKey: ["admin", "artists", "list", page, perPage, search],
     queryFn: ({ signal }) => {
-      const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+      });
       if (search) params.set("search", search);
       return adminFetch(`/api/admin/entities/artists?${params}`, { signal });
     },
@@ -97,7 +105,10 @@ export function useBrandList(page: number, perPage = 20, search = "") {
   return useQuery<EntityListResponse<Brand>>({
     queryKey: ["admin", "brands", "list", page, perPage, search],
     queryFn: ({ signal }) => {
-      const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+      });
       if (search) params.set("search", search);
       return adminFetch(`/api/admin/entities/brands?${params}`, { signal });
     },
@@ -154,8 +165,13 @@ export function useGroupMemberList(page: number, perPage = 20) {
   return useQuery<EntityListResponse<GroupMember>>({
     queryKey: ["admin", "group-members", "list", page, perPage],
     queryFn: ({ signal }) => {
-      const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
-      return adminFetch(`/api/admin/entities/group-members?${params}`, { signal });
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+      });
+      return adminFetch(`/api/admin/entities/group-members?${params}`, {
+        signal,
+      });
     },
     staleTime: 30_000,
     placeholderData: keepPreviousData,

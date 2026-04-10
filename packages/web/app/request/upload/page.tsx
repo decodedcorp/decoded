@@ -92,7 +92,7 @@ export default function RequestUploadPage() {
       },
       duration: 10000,
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-save draft (spots/metadata 변경 시)
   useEffect(() => {
@@ -119,7 +119,15 @@ export default function RequestUploadPage() {
     // 이미지 썸네일도 저장
     const file = images[0]?.file;
     if (file) saveDraftThumbnail(file);
-  }, [detectedSpots, userKnowsItems, mediaSource, artistName, groupName, context, images]);
+  }, [
+    detectedSpots,
+    userKnowsItems,
+    mediaSource,
+    artistName,
+    groupName,
+    context,
+    images,
+  ]);
 
   // canProceed: 모르는 유저는 spots만, 알고 있는 유저는 spots + 모든 스팟에 솔루션(링크)
   const canProceed =

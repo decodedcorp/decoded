@@ -13,7 +13,9 @@ import {
 
 const DecodedLogo = dynamic(() => import("@/lib/components/DecodedLogo"), {
   ssr: false,
-  loading: () => <span className="font-bold text-[#eafd67] tracking-tight">decoded</span>,
+  loading: () => (
+    <span className="font-bold text-[#eafd67] tracking-tight">decoded</span>
+  ),
 });
 
 /**
@@ -38,7 +40,8 @@ export const mobileHeaderVariants = cva(
 );
 
 export interface MobileHeaderProps
-  extends React.HTMLAttributes<HTMLElement>,
+  extends
+    React.HTMLAttributes<HTMLElement>,
     VariantProps<typeof mobileHeaderVariants> {}
 
 /**

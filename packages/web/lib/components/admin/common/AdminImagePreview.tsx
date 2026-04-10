@@ -17,13 +17,24 @@ const SIZES = {
   lg: "w-40 h-40",
 };
 
-export function AdminImagePreview({ src, alt = "", size = "sm", className }: AdminImagePreviewProps) {
+export function AdminImagePreview({
+  src,
+  alt = "",
+  size = "sm",
+  className,
+}: AdminImagePreviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState(false);
 
   if (error) {
     return (
-      <div className={cn(SIZES[size], "rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-xs", className)}>
+      <div
+        className={cn(
+          SIZES[size],
+          "rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-xs",
+          className
+        )}
+      >
         N/A
       </div>
     );
@@ -35,7 +46,11 @@ export function AdminImagePreview({ src, alt = "", size = "sm", className }: Adm
       <img
         src={src}
         alt={alt}
-        className={cn(SIZES[size], "rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity", className)}
+        className={cn(
+          SIZES[size],
+          "rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity",
+          className
+        )}
         onClick={() => setExpanded(true)}
         onError={() => setError(true)}
       />
@@ -52,7 +67,11 @@ export function AdminImagePreview({ src, alt = "", size = "sm", className }: Adm
             <X className="w-6 h-6" />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={alt} className="max-h-[80vh] max-w-[90vw] rounded-xl" />
+          <img
+            src={src}
+            alt={alt}
+            className="max-h-[80vh] max-w-[90vw] rounded-xl"
+          />
         </div>
       )}
     </>

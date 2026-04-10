@@ -108,10 +108,9 @@ export function useDeletePick() {
 
   return useMutation({
     mutationFn: async (pickId: string) => {
-      return adminFetch<{ success: boolean }>(
-        `/api/v1/admin/picks/${pickId}`,
-        { method: "DELETE" }
-      );
+      return adminFetch<{ success: boolean }>(`/api/v1/admin/picks/${pickId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PICKS_KEY });

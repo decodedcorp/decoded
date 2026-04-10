@@ -9,6 +9,8 @@ use sea_orm::{
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use sea_orm::{ConnectionTrait, DbBackend, Statement};
+
 use crate::{
     config::AppState,
     entities,
@@ -510,6 +512,59 @@ impl RankingsService {
             data,
             pagination: pagination_meta,
         })
+    }
+
+    /// 트렌딩 아티스트 조회
+    pub async fn get_trending_artists(
+        db: &DatabaseConnection,
+        period: &str,
+        limit: u64,
+    ) -> AppResult<Vec<super::dto::TrendingArtistItem>> {
+        let limit = limit.min(50);
+        let now = chrono::Utc::now();
+        let period_start = match period {
+            "monthly" => now - chrono::Duration::days(30),
+            "all_time" => chrono::DateTime::<chrono::Utc>::MIN_UTC,
+            _ => now - chrono::Duration::weeks(1), // weekly default
+        };
+
+        let sql = r#"
+            SELECT
+                artist_name,
+                COUNT(*)::BIGINT AS post_count,
+                (ARRAY_AGG(image_url ORDER BY view_count DESC))[1] AS top_image_url
+            FROM public.posts
+            WHERE status = 'active'
+              AND artist_name IS NOT NULL
+              AND image_url IS NOT NULL
+              AND created_at >= $1
+            GROUP BY artist_name
+            ORDER BY post_count DESC
+            LIMIT $2
+        "#;
+
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                sql,
+                [period_start.into(), (limit as i64).into()],
+            ))
+            .await
+            .map_err(AppError::DatabaseError)?;
+
+        let items = rows
+            .into_iter()
+            .map(|row| super::dto::TrendingArtistItem {
+                artist_name: row.try_get::<String>("", "artist_name").unwrap_or_default(),
+                post_count: row.try_get::<i64>("", "post_count").unwrap_or(0),
+                image_url: row
+                    .try_get::<Option<String>>("", "top_image_url")
+                    .ok()
+                    .flatten(),
+            })
+            .collect();
+
+        Ok(items)
     }
 
     /// 내 랭킹 상세 조회

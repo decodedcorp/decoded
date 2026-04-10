@@ -225,6 +225,7 @@ export function ExploreClient({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => query.length > 0 && setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
+            data-testid="explore-search-input"
             placeholder="Search people, shows, items..."
             className="w-full rounded-full border border-border bg-card/80 py-2 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
@@ -256,6 +257,7 @@ export function ExploreClient({
         {/* Sort dropdown — always visible */}
         <div className="relative flex-shrink-0">
           <select
+            data-testid="explore-sort-select"
             value={activeSort}
             onChange={(e) => setSort(e.target.value)}
             className={cn(

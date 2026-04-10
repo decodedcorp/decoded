@@ -161,7 +161,10 @@ export function ImageDetailPreview({
             </p>
           ))}
           {magazineLayout.editorial.pull_quote && (
-            <blockquote className="relative my-6 py-4 border-l-2 pl-4" style={{ borderColor: "var(--mag-accent)" }}>
+            <blockquote
+              className="relative my-6 py-4 border-l-2 pl-4"
+              style={{ borderColor: "var(--mag-accent)" }}
+            >
               <p className="font-serif text-base italic text-foreground md:text-lg">
                 {magazineLayout.editorial.pull_quote}
               </p>

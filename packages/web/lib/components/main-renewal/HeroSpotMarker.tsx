@@ -85,16 +85,24 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
         className="absolute pointer-events-none opacity-0"
         style={{
           height: 0,
-          borderTop: "1.5px solid rgba(234,253,103,0.6)", /* matches --mag-accent */
+          borderTop:
+            "1.5px solid rgba(234,253,103,0.6)" /* matches --mag-accent */,
           transformOrigin: "0 0",
-          filter: "drop-shadow(0 0 3px rgba(234,253,103,0.3))", /* matches --mag-accent; CSS var unreliable in filter */
+          filter:
+            "drop-shadow(0 0 3px rgba(234,253,103,0.3))" /* matches --mag-accent; CSS var unreliable in filter */,
         }}
       />
 
       {/* Spot dot */}
       <div ref={dotRef} className="relative">
-        <div className="w-3.5 h-3.5 rounded-full border-2 border-white/80 shadow-[0_0_8px_rgba(234,253,103,0.6)] cursor-pointer" style={{ backgroundColor: "var(--mag-accent)" }} />
-        <div className="absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-30" style={{ backgroundColor: "var(--mag-accent)" }} />
+        <div
+          className="w-3.5 h-3.5 rounded-full border-2 border-white/80 shadow-[0_0_8px_rgba(234,253,103,0.6)] cursor-pointer"
+          style={{ backgroundColor: "var(--mag-accent)" }}
+        />
+        <div
+          className="absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-30"
+          style={{ backgroundColor: "var(--mag-accent)" }}
+        />
       </div>
 
       {/* Item card — smart positioned, flips if off-screen */}
@@ -137,7 +145,10 @@ export function HeroSpotMarker({ spot }: HeroSpotMarkerProps) {
               </p>
             )}
             {spot.price && (
-              <p className="text-[10px] mt-0.5 font-medium" style={{ color: "var(--mag-accent)" }}>
+              <p
+                className="text-[10px] mt-0.5 font-medium"
+                style={{ color: "var(--mag-accent)" }}
+              >
                 {spot.price}
               </p>
             )}

@@ -61,7 +61,9 @@ function writeToLS(url: string, dims: { w: number; h: number }): void {
     );
     if (allKeys.length >= LS_MAX_ENTRIES) {
       // Remove the first LS_EVICT_COUNT entries (insertion order approximation)
-      allKeys.slice(0, LS_EVICT_COUNT).forEach((k) => localStorage.removeItem(k));
+      allKeys
+        .slice(0, LS_EVICT_COUNT)
+        .forEach((k) => localStorage.removeItem(k));
     }
     localStorage.setItem(lsKey(url), JSON.stringify(dims));
   } catch {
@@ -151,7 +153,6 @@ export function useImageDimensions(
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
   return state;

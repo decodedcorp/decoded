@@ -105,9 +105,7 @@ export function validateAddingImages(
  * 이미지 해상도 검증 (비동기)
  * 이미지를 로드하여 dimensions과 손상 여부를 확인합니다.
  */
-export function validateImageDimensions(
-  file: File
-): Promise<ValidationResult> {
+export function validateImageDimensions(file: File): Promise<ValidationResult> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const img = new window.Image();
@@ -116,10 +114,7 @@ export function validateImageDimensions(
       URL.revokeObjectURL(url);
       const { naturalWidth: w, naturalHeight: h } = img;
 
-      if (
-        w < UPLOAD_CONFIG.minDimension ||
-        h < UPLOAD_CONFIG.minDimension
-      ) {
+      if (w < UPLOAD_CONFIG.minDimension || h < UPLOAD_CONFIG.minDimension) {
         resolve({
           valid: false,
           error: `이미지가 너무 작습니다. 최소 ${UPLOAD_CONFIG.minDimension}x${UPLOAD_CONFIG.minDimension}px 이상이어야 합니다. (현재: ${w}x${h}px)`,
@@ -127,10 +122,7 @@ export function validateImageDimensions(
         return;
       }
 
-      if (
-        w > UPLOAD_CONFIG.maxDimension ||
-        h > UPLOAD_CONFIG.maxDimension
-      ) {
+      if (w > UPLOAD_CONFIG.maxDimension || h > UPLOAD_CONFIG.maxDimension) {
         resolve({
           valid: false,
           error: `이미지가 너무 큽니다. 최대 ${UPLOAD_CONFIG.maxDimension}x${UPLOAD_CONFIG.maxDimension}px 이하여야 합니다. (현재: ${w}x${h}px)`,

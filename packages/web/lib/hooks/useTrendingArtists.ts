@@ -7,7 +7,9 @@ export interface TrendingArtist {
   imageUrl: string;
 }
 
-async function fetchAllTimeTopArtists(limit: number): Promise<TrendingArtist[]> {
+async function fetchAllTimeTopArtists(
+  limit: number
+): Promise<TrendingArtist[]> {
   try {
     const { data, error } = await supabaseBrowserClient
       .from("posts")
@@ -20,14 +22,20 @@ async function fetchAllTimeTopArtists(limit: number): Promise<TrendingArtist[]> 
 
     if (error || !data) return [];
 
-    const artistMap = new Map<string, { postCount: number; imageUrl: string }>();
+    const artistMap = new Map<
+      string,
+      { postCount: number; imageUrl: string }
+    >();
     for (const post of data) {
       if (!post.artist_name || !post.image_url) continue;
       const existing = artistMap.get(post.artist_name);
       if (existing) {
         existing.postCount += 1;
       } else {
-        artistMap.set(post.artist_name, { postCount: 1, imageUrl: post.image_url });
+        artistMap.set(post.artist_name, {
+          postCount: 1,
+          imageUrl: post.image_url,
+        });
       }
     }
 
@@ -44,7 +52,9 @@ async function fetchTrendingArtists(
   dayWindow: number,
   limit: number
 ): Promise<TrendingArtist[]> {
-  const cutoff = new Date(Date.now() - dayWindow * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(
+    Date.now() - dayWindow * 24 * 60 * 60 * 1000
+  ).toISOString();
 
   const { data, error } = await supabaseBrowserClient
     .from("posts")
@@ -66,7 +76,10 @@ async function fetchTrendingArtists(
       existing.postCount += 1;
     } else {
       // Use first (most recent) image_url as representative
-      artistMap.set(post.artist_name, { postCount: 1, imageUrl: post.image_url });
+      artistMap.set(post.artist_name, {
+        postCount: 1,
+        imageUrl: post.image_url,
+      });
     }
   }
 

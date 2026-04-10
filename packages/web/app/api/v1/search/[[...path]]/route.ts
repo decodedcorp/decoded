@@ -17,7 +17,10 @@ type RouteParams = {
   params: Promise<{ path?: string[] }>;
 };
 
-function buildBackendSearchUrl(request: NextRequest, pathSegments: string[] | undefined) {
+function buildBackendSearchUrl(
+  request: NextRequest,
+  pathSegments: string[] | undefined
+) {
   const suffix =
     pathSegments && pathSegments.length > 0 ? `/${pathSegments.join("/")}` : "";
   const { searchParams } = new URL(request.url);

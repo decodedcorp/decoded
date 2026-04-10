@@ -40,11 +40,17 @@ interface BrandFormRowProps {
   isSaving: boolean;
 }
 
-function BrandFormRow({ initial, onSave, onCancel, isSaving }: BrandFormRowProps) {
+function BrandFormRow({
+  initial,
+  onSave,
+  onCancel,
+  isSaving,
+}: BrandFormRowProps) {
   const [form, setForm] = useState(initial);
 
-  const set = (key: keyof BrandFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const set =
+    (key: keyof BrandFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   return (
     <div className="rounded-xl border border-blue-500/40 bg-gray-800/60 p-4 space-y-3">
@@ -68,7 +74,9 @@ function BrandFormRow({ initial, onSave, onCancel, isSaving }: BrandFormRowProps
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Logo Image URL</label>
+          <label className="block text-xs text-gray-400 mb-1">
+            Logo Image URL
+          </label>
           <input
             value={form.logo_image_url}
             onChange={set("logo_image_url")}
@@ -77,7 +85,9 @@ function BrandFormRow({ initial, onSave, onCancel, isSaving }: BrandFormRowProps
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Instagram Account ID</label>
+          <label className="block text-xs text-gray-400 mb-1">
+            Instagram Account ID
+          </label>
           <input
             value={form.primary_instagram_account_id}
             onChange={set("primary_instagram_account_id")}
@@ -164,7 +174,8 @@ function BrandsPageContent() {
   };
 
   const handleDelete = (brand: Brand) => {
-    if (!window.confirm(`Delete brand "${brand.name_en ?? brand.name_ko}"?`)) return;
+    if (!window.confirm(`Delete brand "${brand.name_en ?? brand.name_ko}"?`))
+      return;
     deleteBrand.mutate(brand.id);
   };
 
@@ -174,7 +185,11 @@ function BrandsPageContent() {
       label: "Logo",
       render: (row) =>
         row.logo_image_url ? (
-          <AdminImagePreview src={row.logo_image_url} alt={row.name_en ?? ""} size="sm" />
+          <AdminImagePreview
+            src={row.logo_image_url}
+            alt={row.name_en ?? ""}
+            size="sm"
+          />
         ) : (
           <div className="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-gray-500 text-xs">
             N/A
@@ -191,7 +206,9 @@ function BrandsPageContent() {
     {
       key: "name_ko",
       label: "Name (KO)",
-      render: (row) => <span className="text-gray-300">{row.name_ko ?? "—"}</span>,
+      render: (row) => (
+        <span className="text-gray-300">{row.name_ko ?? "—"}</span>
+      ),
     },
     {
       key: "instagram",
@@ -209,7 +226,10 @@ function BrandsPageContent() {
       key: "actions",
       label: "",
       render: (row) => (
-        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1 justify-end"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={() => setEditingId(row.id)}
             className="p-1.5 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-700 transition-colors"
@@ -241,12 +261,17 @@ function BrandsPageContent() {
           <p className="text-sm text-gray-400 mt-1">
             Manage warehouse brand entities
             {pagination && (
-              <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+              <span className="ml-2 text-gray-500">
+                ({pagination.total_items} total)
+              </span>
             )}
           </p>
         </div>
         <button
-          onClick={() => { setShowCreate(true); setEditingId(null); }}
+          onClick={() => {
+            setShowCreate(true);
+            setEditingId(null);
+          }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -277,23 +302,25 @@ function BrandsPageContent() {
       )}
 
       {/* Edit form */}
-      {editingId && (() => {
-        const brand = brands.find((b) => b.id === editingId);
-        if (!brand) return null;
-        return (
-          <BrandFormRow
-            initial={{
-              name_en: brand.name_en ?? "",
-              name_ko: brand.name_ko ?? "",
-              logo_image_url: brand.logo_image_url ?? "",
-              primary_instagram_account_id: brand.primary_instagram_account_id ?? "",
-            }}
-            onSave={(form) => handleUpdate(brand, form)}
-            onCancel={() => setEditingId(null)}
-            isSaving={updateBrand.isPending}
-          />
-        );
-      })()}
+      {editingId &&
+        (() => {
+          const brand = brands.find((b) => b.id === editingId);
+          if (!brand) return null;
+          return (
+            <BrandFormRow
+              initial={{
+                name_en: brand.name_en ?? "",
+                name_ko: brand.name_ko ?? "",
+                logo_image_url: brand.logo_image_url ?? "",
+                primary_instagram_account_id:
+                  brand.primary_instagram_account_id ?? "",
+              }}
+              onSave={(form) => handleUpdate(brand, form)}
+              onCancel={() => setEditingId(null)}
+              isSaving={updateBrand.isPending}
+            />
+          );
+        })()}
 
       {/* Table */}
       <AdminDataTable
@@ -319,7 +346,9 @@ function BrandsPageContent() {
 
 export default function BrandsPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <BrandsPageContent />
     </Suspense>
   );

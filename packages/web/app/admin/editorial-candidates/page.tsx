@@ -36,9 +36,7 @@ function EditorialCandidatesContent() {
           newParams.set(key, value);
         }
       });
-      router.replace(
-        `/admin/editorial-candidates?${newParams.toString()}`
-      );
+      router.replace(`/admin/editorial-candidates?${newParams.toString()}`);
     },
     [searchParams, router]
   );

@@ -9,7 +9,11 @@ import {
   selectStats,
   formatCurrency,
 } from "@/lib/stores/profileStore";
-import { useAuthStore, selectLogout, selectIsLoading } from "@/lib/stores/authStore";
+import {
+  useAuthStore,
+  selectLogout,
+  selectIsLoading,
+} from "@/lib/stores/authStore";
 import { ProfileHeaderCard } from "@/lib/design-system/profile-header-card";
 
 interface ProfileHeaderProps {

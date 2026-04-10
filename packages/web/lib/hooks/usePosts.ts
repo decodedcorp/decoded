@@ -5,12 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  fetchPostWithSpotsAndSolutions,
-  fetchPostWithImagesAndItems,
-  type PostDetail,
-  type LegacyPostDetail,
-} from "@/lib/supabase/queries/posts";
-import {
+  getPost,
   listPosts,
   updatePost as updatePostGenerated,
   deletePost as deletePostGenerated,
@@ -20,7 +15,10 @@ import type {
   PostsListResponse,
   PostsListParams,
 } from "@/lib/api/mutation-types";
-import type { UpdatePostDto, PostResponse } from "@/lib/api/generated/models";
+import type {
+  UpdatePostDto,
+  PostDetailResponse,
+} from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -41,29 +39,15 @@ export const postKeys = {
 
 /**
  * React Query hook for fetching a single post with its spots and solutions
+ * Uses backend REST API instead of direct Supabase queries
  *
  * @param id - Post ID to fetch
  * @returns React Query result with data, loading, error states
  */
 export function usePostById(id: string) {
-  return useQuery<PostDetail | null>({
+  return useQuery<PostDetailResponse>({
     queryKey: postKeys.detail(id),
-    queryFn: () => fetchPostWithSpotsAndSolutions(id),
-    enabled: !!id,
-  });
-}
-
-/**
- * React Query hook for fetching a single post in legacy format
- * @deprecated Use usePostById instead
- *
- * @param id - Post ID to fetch
- * @returns React Query result with legacy data format
- */
-export function usePostByIdLegacy(id: string) {
-  return useQuery<LegacyPostDetail | null>({
-    queryKey: ["posts", "detail", "legacy", id],
-    queryFn: () => fetchPostWithImagesAndItems(id),
+    queryFn: () => getPost(id),
     enabled: !!id,
   });
 }
@@ -189,10 +173,4 @@ export function useDeletePost() {
 }
 
 // Re-export types for convenience
-export type {
-  Post,
-  PostsListResponse,
-  PostsListParams,
-  PostDetail,
-  LegacyPostDetail,
-};
+export type { Post, PostsListResponse, PostsListParams, PostDetailResponse };

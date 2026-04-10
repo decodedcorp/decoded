@@ -69,9 +69,7 @@ function AiAuditContent() {
   );
 
   const isEmpty =
-    !listQuery.isLoading &&
-    listQuery.data?.data.length === 0 &&
-    !currentStatus;
+    !listQuery.isLoading && listQuery.data?.data.length === 0 && !currentStatus;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 

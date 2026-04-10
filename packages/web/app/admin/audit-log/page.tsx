@@ -243,38 +243,39 @@ export default function AuditLogPage() {
         />
 
         {/* Expanded detail rows rendered below table */}
-        {expandedId && (() => {
-          const entry = entries.find((e) => e.id === expandedId);
-          if (!entry) return null;
-          return (
-            <div className="border border-t-0 border-gray-200 dark:border-gray-800 rounded-b-xl p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  State diff for{" "}
-                  <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">
-                    {entry.target_table}/{truncate(entry.target_id, 8)}
-                  </code>
-                </span>
-                <button
-                  onClick={() => setExpandedId(null)}
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Close
-                </button>
-              </div>
-              <AuditDiffViewer
-                before={entry.before_state}
-                after={entry.after_state}
-              />
-              {entry.metadata && (
-                <div className="text-xs font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 rounded p-2">
-                  <span className="font-medium">Metadata: </span>
-                  {JSON.stringify(entry.metadata).slice(0, 200)}
+        {expandedId &&
+          (() => {
+            const entry = entries.find((e) => e.id === expandedId);
+            if (!entry) return null;
+            return (
+              <div className="border border-t-0 border-gray-200 dark:border-gray-800 rounded-b-xl p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    State diff for{" "}
+                    <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                      {entry.target_table}/{truncate(entry.target_id, 8)}
+                    </code>
+                  </span>
+                  <button
+                    onClick={() => setExpandedId(null)}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Close
+                  </button>
                 </div>
-              )}
-            </div>
-          );
-        })()}
+                <AuditDiffViewer
+                  before={entry.before_state}
+                  after={entry.after_state}
+                />
+                {entry.metadata && (
+                  <div className="text-xs font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 rounded p-2">
+                    <span className="font-medium">Metadata: </span>
+                    {JSON.stringify(entry.metadata).slice(0, 200)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
       </div>
 
       {pagination && (

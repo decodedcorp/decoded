@@ -31,7 +31,6 @@ function clampHeight(aspectRatio: number, index: number): number {
   return Math.min(v.max, Math.max(v.min, Math.round(v.base * aspectRatio)));
 }
 
-
 /* ------------------------------------------------------------------ */
 /*  Spot Marker + Tooltip                                              */
 /* ------------------------------------------------------------------ */

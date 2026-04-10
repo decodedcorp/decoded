@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
   const results: { id: string; success: boolean; error?: string }[] = [];
   // Dynamic table name requires type assertion
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wh = supabase.schema("warehouse") as any;
 
   for (const id of ids) {
@@ -53,10 +54,7 @@ export async function POST(req: NextRequest) {
           .select("*")
           .eq("id", id)
           .single();
-        const { error } = await wh
-          .from(table)
-          .delete()
-          .eq("id", id);
+        const { error } = await wh.from(table).delete().eq("id", id);
         if (error) throw error;
         await writeAuditLog({
           adminUserId: user.id,
@@ -87,7 +85,11 @@ export async function POST(req: NextRequest) {
         });
         results.push({ id, success: true });
       } else {
-        results.push({ id, success: false, error: `Unknown action: ${action}` });
+        results.push({
+          id,
+          success: false,
+          error: `Unknown action: ${action}`,
+        });
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";

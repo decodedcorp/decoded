@@ -14,6 +14,7 @@ export async function writeAuditLog(entry: AuditLogEntry) {
   const supabase = await createSupabaseServerClient();
 
   // Dynamic warehouse schema insert requires type assertion
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.schema("warehouse") as any)
     .from("admin_audit_log")
     .insert({
@@ -33,6 +34,8 @@ export async function writeAuditLog(entry: AuditLogEntry) {
 
 export async function getAdminUserId(): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.id ?? null;
 }

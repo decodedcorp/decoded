@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 
 async function adminFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -25,14 +30,27 @@ export interface Candidate {
 
 interface CandidateListResponse {
   data: Candidate[];
-  pagination: { current_page: number; per_page: number; total_items: number; total_pages: number };
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total_items: number;
+    total_pages: number;
+  };
 }
 
-export function useCandidateList(page: number, perPage = 20, status = "", search = "") {
+export function useCandidateList(
+  page: number,
+  perPage = 20,
+  status = "",
+  search = ""
+) {
   return useQuery<CandidateListResponse>({
     queryKey: ["admin", "candidates", "list", page, perPage, status, search],
     queryFn: ({ signal }) => {
-      const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+      });
       if (status) params.set("status", status);
       if (search) params.set("search", search);
       return adminFetch(`/api/admin/candidates?${params}`, { signal });
@@ -45,7 +63,8 @@ export function useCandidateList(page: number, perPage = 20, status = "", search
 export function useCandidate(id: string) {
   return useQuery<{ data: Candidate }>({
     queryKey: ["admin", "candidates", "detail", id],
-    queryFn: ({ signal }) => adminFetch(`/api/admin/candidates/${id}`, { signal }),
+    queryFn: ({ signal }) =>
+      adminFetch(`/api/admin/candidates/${id}`, { signal }),
     enabled: !!id,
   });
 }
@@ -55,7 +74,8 @@ export function useApproveCandidate() {
   return useMutation({
     mutationFn: (id: string) =>
       adminFetch(`/api/admin/candidates/${id}/approve`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "candidates"] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["admin", "candidates"] }),
   });
 }
 
@@ -64,6 +84,7 @@ export function useRejectCandidate() {
   return useMutation({
     mutationFn: (id: string) =>
       adminFetch(`/api/admin/candidates/${id}/reject`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "candidates"] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["admin", "candidates"] }),
   });
 }
