@@ -32,42 +32,41 @@ const MOCK_POSTS_RESPONSE = {
   },
 };
 
-/** Mock response for post detail */
+/** Mock response matching PostDetailResponse */
 const MOCK_POST_DETAIL = {
-  doc_id: "post-1",
+  id: "post-1",
   image_url: "https://placehold.co/800x1200",
   like_count: 10,
-  is_liked: false,
-  is_saved: false,
+  comment_count: 0,
+  view_count: 100,
+  status: "extracted",
   created_at: "2025-01-01T00:00:00Z",
-  post_account: { name: "test-user", profile_image: null },
-  items: [
+  updated_at: "2025-01-01T00:00:00Z",
+  user_has_liked: false,
+  user_has_saved: false,
+  user: { id: "user-1", username: "test-user", profile_image: null },
+  media_source: { type: "upload", source_url: null },
+  spots: [
     {
-      doc_id: "item-1",
-      label: "Dress",
-      position: { x: 0.5, y: 0.3 },
-      solutions: [
-        {
-          doc_id: "sol-1",
-          brand: "TestBrand",
-          name: "Test Dress",
-          link: "https://example.com",
-          is_adopted: false,
-        },
-      ],
+      id: "spot-1",
+      position_left: "50%",
+      position_top: "30%",
+      status: "matched",
+      created_at: "2025-01-01T00:00:00Z",
+      top_solution: {
+        id: "sol-1",
+        title: "Test Dress",
+        thumbnail_url: "https://placehold.co/100x100",
+        original_url: "https://example.com",
+        affiliate_url: null,
+        metadata: { brand: "TestBrand" },
+      },
     },
   ],
 };
 
-/** Mock search response */
-const MOCK_SEARCH_RESPONSE = {
-  data: MOCK_POSTS_RESPONSE.data,
-  pagination: MOCK_POSTS_RESPONSE.pagination,
-};
-
 /**
  * Set up common API mocks for content consumption tests.
- * Mocks posts listing, search, post detail, and feed endpoints.
  */
 export async function mockContentAPIs(page: Page) {
   // Search endpoint
@@ -75,7 +74,7 @@ export async function mockContentAPIs(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(MOCK_SEARCH_RESPONSE),
+      body: JSON.stringify(MOCK_POSTS_RESPONSE),
     });
   });
 
@@ -92,8 +91,8 @@ export async function mockContentAPIs(page: Page) {
     }
   });
 
-  // Post detail — match /api/v1/posts/{id} (not /api/v1/posts?query)
-  await page.route(/\/api\/v1\/posts\/[^?]+$/, async (route) => {
+  // Post detail — match /api/v1/posts/{id} but NOT /api/v1/posts?query
+  await page.route(/\/api\/v1\/posts\/[\w-]+$/, async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -147,4 +146,4 @@ export async function mockEngagementAPIs(page: Page) {
   });
 }
 
-export { MOCK_POSTS_RESPONSE, MOCK_POST_DETAIL, MOCK_SEARCH_RESPONSE };
+export { MOCK_POSTS_RESPONSE, MOCK_POST_DETAIL };

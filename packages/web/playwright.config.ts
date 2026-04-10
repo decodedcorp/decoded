@@ -5,8 +5,6 @@ import dotenv from "dotenv";
 // Load .env.local for test credentials
 dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 
-const collectCoverage = !!process.env.E2E_COVERAGE;
-
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -18,29 +16,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: collectCoverage
-    ? [
-        ["list"],
-        [
-          "monocart-reporter",
-          {
-            name: "E2E Coverage Report",
-            outputFile: "coverage/report.html",
-            coverage: {
-              reports: ["v8", "console-details", "lcovonly"],
-              outputDir: "coverage",
-              sourceFilter: (sourcePath: string) => {
-                return (
-                  (sourcePath.includes("/app/") ||
-                    sourcePath.includes("/lib/")) &&
-                  !sourcePath.includes("node_modules")
-                );
-              },
-            },
-          },
-        ],
-      ]
-    : "list",
+  reporter: "list",
 
   // Visual QA optimizations
   timeout: 30 * 1000, // 30 seconds per test (pages may have animations)

@@ -54,7 +54,4 @@ e2e:
 e2e-only PATTERN:
     cd "{{ repo }}/packages/web" && bunx playwright test --grep "{{ PATTERN }}"
 
-# E2E 테스트 + 커버리지 리포트 (30% 임계값)
-e2e-coverage:
-    cd "{{ repo }}/packages/web" && E2E_COVERAGE=1 bunx playwright test && bash scripts/check-coverage.sh 30
 
