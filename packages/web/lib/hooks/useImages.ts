@@ -253,9 +253,14 @@ export function useInfinitePosts(params: {
 
 /**
  * Fetch post detail and convert to ImageDetail for ImageDetailContent.
- * Tries REST API first (production), falls back to Supabase direct (dev without backend).
+ *
+ * When `serverData` is provided (prefetched by RSC), the query starts with
+ * that data immediately — no client-side fetch waterfall.
  */
-export function usePostDetailForImage(postId: string) {
+export function usePostDetailForImage(
+  postId: string,
+  serverData?: ImageDetail
+) {
   return useQuery<ImageDetail | null>({
     queryKey: ["posts", "detail", "image", postId],
     queryFn: async () => {
@@ -265,6 +270,7 @@ export function usePostDetailForImage(postId: string) {
     enabled: !!postId,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 5,
+    initialData: serverData ?? undefined,
   });
 }
 
