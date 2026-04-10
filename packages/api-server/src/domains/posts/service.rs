@@ -629,29 +629,41 @@ pub async fn get_post_detail(
     };
     let saved_fut = async {
         match user_id {
-            Some(uid) => Ok(crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
-                .await
-                .unwrap_or(false)),
+            Some(uid) => Ok(
+                crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
+                    .await
+                    .unwrap_or(false),
+            ),
             None => Ok::<bool, crate::error::AppError>(false),
         }
     };
 
-    let (user, related_data, like_count, user_has_liked_val, user_has_saved, (artist_img, group_img)) =
-        tokio::try_join!(
-            user_fut,
-            related_fut,
-            like_count_fut,
-            user_liked_fut,
-            saved_fut,
-            async { Ok(profile_fut.await) },
-        )?;
+    let (
+        user,
+        related_data,
+        like_count,
+        user_has_liked_val,
+        user_has_saved,
+        (artist_img, group_img),
+    ) = tokio::try_join!(
+        user_fut,
+        related_fut,
+        like_count_fut,
+        user_liked_fut,
+        saved_fut,
+        async { Ok(profile_fut.await) },
+    )?;
 
     // 3. Spots이 없으면 빈 응답 반환
     if related_data.spots.is_empty() {
         let media_source = build_media_source_from_post(&post);
         let try_count = if post.post_type.as_deref() != Some(POST_TYPE_TRY) {
             let c = count_tries(db, post_id).await?;
-            if c.count > 0 { Some(c.count) } else { None }
+            if c.count > 0 {
+                Some(c.count)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -677,12 +689,18 @@ pub async fn get_post_detail(
 
     let is_try = post.post_type.as_deref() == Some(POST_TYPE_TRY);
     let (comment_count, try_count_result) = tokio::try_join!(
-        async { count_comments_by_post_id(db, post_id).await.map(|c| c as i64) },
+        async {
+            count_comments_by_post_id(db, post_id)
+                .await
+                .map(|c| c as i64)
+        },
         async {
             if is_try {
                 return Ok(None);
             }
-            count_tries(db, post_id).await.map(|c| if c.count > 0 { Some(c.count) } else { None })
+            count_tries(db, post_id)
+                .await
+                .map(|c| if c.count > 0 { Some(c.count) } else { None })
         },
     )?;
 
@@ -3405,13 +3423,16 @@ mod tests {
     }
 
     // ── get_post_detail success path: empty spots branch ──
-    // Query order in get_post_detail when spots are empty:
+    // Query order in get_post_detail (parallelized with tokio::try_join!):
     //   1. get_post_by_id            → posts
-    //   2. get_user_by_id            → users
-    //   3. load_post_related_data    → spots (empty → early return inside)
-    //   4. get_like_stats            → posts find_by_id, then post_likes count
-    //   5. (user_has_saved if user)  → saved_posts find
-    //   6. count_tries               → posts count
+    //   2. tokio::try_join! (poll order: user, related, likes, liked, saved, profile):
+    //      a) get_user_by_id         → users
+    //      b) load_post_related_data → spots (empty → early return)
+    //      c) count_likes_by_post_id → post_likes count
+    //      d) user_has_liked (None)  → no query
+    //      e) user_has_saved (None)  → no query
+    //      f) profile images (None)  → no query
+    //   3. count_tries               → posts count
 
     #[tokio::test]
     async fn get_post_detail_empty_spots_no_user_success() {
@@ -3420,17 +3441,15 @@ mod tests {
 
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]]) // 1) get_post_by_id
-            .append_query_results([[fixtures::user_model()]]) // 2) get_user_by_id
-            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 3) spots
-            .append_query_results([[fixtures::post_model()]]) // 4a) like_stats: post find
-            .append_query_results([vec![fixtures::count_row(0)]]) // 4b) like count
-            .append_query_results([vec![fixtures::count_row(0)]]) // 6) count_tries
+            .append_query_results([[fixtures::user_model()]]) // 2a) get_user_by_id
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 2b) spots (empty)
+            .append_query_results([vec![fixtures::count_row(0)]]) // 2c) count_likes_by_post_id
+            .append_query_results([vec![fixtures::count_row(0)]]) // 3) count_tries
             .into_connection();
         let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
         let resp = result.unwrap();
         assert_eq!(resp.id, fixtures::test_uuid(1));
-        // try_count is None when count == 0
         assert!(resp.try_count.is_none());
     }
 
@@ -3441,24 +3460,24 @@ mod tests {
         use crate::tests::fixtures;
         use sea_orm::{DatabaseBackend, MockDatabase};
 
-        // Query order when spots populated:
+        // Query order (parallelized with tokio::try_join!):
         //  1) get_post_by_id
-        //  2) get_user_by_id
-        //  3) load_post_related_data: spots → solutions → subcategories → categories
-        //  4) get_like_stats: post find + count
-        //  5) count_comments_by_post_id
-        //  6) count_tries
+        //  2) tokio::try_join! poll order:
+        //     a) get_user_by_id
+        //     b) load_post_related_data: spots → solutions → subcategories → categories
+        //     c) count_likes_by_post_id
+        //     d-f) no query (no user_id, no artist/group_id)
+        //  3) tokio::try_join! for comment_count + count_tries
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]]) // 1
-            .append_query_results([[fixtures::user_model()]]) // 2
-            .append_query_results([[fixtures::spot_model()]]) // 3a spots
-            .append_query_results([[fixtures::solution_model()]]) // 3b solutions
-            .append_query_results([[fixtures::subcategory_model()]]) // 3c subcategories
-            .append_query_results([[fixtures::category_model()]]) // 3d categories
-            .append_query_results([[fixtures::post_model()]]) // 4a like: post find
-            .append_query_results([vec![fixtures::count_row(0)]]) // 4b like count
-            .append_query_results([vec![fixtures::count_row(2)]]) // 5 comment count
-            .append_query_results([vec![fixtures::count_row(0)]]) // 6 count_tries
+            .append_query_results([[fixtures::user_model()]]) // 2a
+            .append_query_results([[fixtures::spot_model()]]) // 2b-i spots
+            .append_query_results([[fixtures::solution_model()]]) // 2b-ii solutions
+            .append_query_results([[fixtures::subcategory_model()]]) // 2b-iii subcategories
+            .append_query_results([[fixtures::category_model()]]) // 2b-iv categories
+            .append_query_results([vec![fixtures::count_row(0)]]) // 2c like count
+            .append_query_results([vec![fixtures::count_row(2)]]) // 3a comment count
+            .append_query_results([vec![fixtures::count_row(0)]]) // 3b count_tries
             .into_connection();
         let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -3898,15 +3917,15 @@ mod tests {
         use crate::tests::fixtures;
         use sea_orm::{DatabaseBackend, MockDatabase};
 
+        // With user_id: user_has_liked + user_has_saved queries fire
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]]) // 1) get_post_by_id
-            .append_query_results([[fixtures::user_model()]]) // 2) get_user_by_id
-            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 3) spots
-            .append_query_results([[fixtures::post_model()]]) // 4a) like_stats: post find
-            .append_query_results([vec![fixtures::count_row(2)]]) // 4b) like count
-            .append_query_results([Vec::<crate::entities::post_likes::Model>::new()]) // 4c) user_has_liked check
-            .append_query_results([Vec::<crate::entities::saved_posts::Model>::new()]) // 5) user_has_saved
-            .append_query_results([vec![fixtures::count_row(3)]]) // 6) count_tries
+            .append_query_results([[fixtures::user_model()]]) // 2a) get_user_by_id
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // 2b) spots (empty)
+            .append_query_results([vec![fixtures::count_row(2)]]) // 2c) count_likes_by_post_id
+            .append_query_results([Vec::<crate::entities::post_likes::Model>::new()]) // 2d) user_has_liked
+            .append_query_results([Vec::<crate::entities::saved_posts::Model>::new()]) // 2e) user_has_saved
+            .append_query_results([vec![fixtures::count_row(3)]]) // 3) count_tries
             .into_connection();
         let result =
             get_post_detail(&db, fixtures::test_uuid(1), Some(fixtures::test_uuid(10))).await;
