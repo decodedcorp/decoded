@@ -39,8 +39,9 @@ next-env.d.ts
 # Generated files
 **/generated
 
-# Tool state / test artifacts
+# Local ephemeral state (not committed)
 .omc
 .playwright
 test-results
+playwright-report
 
