@@ -574,6 +574,8 @@ mod tests {
     fn image_upload_response_serialization() {
         let r = ImageUploadResponse {
             image_url: "https://cdn.test.com/posts/uuid/img.webp".to_string(),
+            image_width: None,
+            image_height: None,
         };
         let v = serde_json::to_value(&r).unwrap();
         assert_eq!(v["image_url"], "https://cdn.test.com/posts/uuid/img.webp");

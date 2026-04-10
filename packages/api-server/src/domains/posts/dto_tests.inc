@@ -49,6 +49,8 @@ fn sample_user() -> UsersModel {
         rank: "gold".into(),
         total_points: 0,
         is_admin: false,
+        ink_credits: 0,
+        style_dna: None,
         created_at: t,
         updated_at: t,
     }
