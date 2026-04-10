@@ -60,9 +60,12 @@ function PostImagesPageContent() {
     {
       key: "image_url",
       label: "Image",
-      render: (row) => (
-        row.image_url ? <AdminImagePreview src={row.image_url} alt="post image" size="sm" /> : <span className="text-gray-400 text-xs">N/A</span>
-      ),
+      render: (row) =>
+        row.image_url ? (
+          <AdminImagePreview src={row.image_url} alt="post image" size="sm" />
+        ) : (
+          <span className="text-gray-400 text-xs">N/A</span>
+        ),
     },
     {
       key: "status",
@@ -113,7 +116,9 @@ function PostImagesPageContent() {
         <p className="text-sm text-gray-400 mt-1">
           ETL-collected images from artist posts
           {pagination && (
-            <span className="ml-2 text-gray-500">({pagination.total_items} total)</span>
+            <span className="ml-2 text-gray-500">
+              ({pagination.total_items} total)
+            </span>
           )}
         </p>
       </div>
@@ -123,7 +128,9 @@ function PostImagesPageContent() {
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => updateUrl({ status: tab.value || undefined, page: "1" })}
+            onClick={() =>
+              updateUrl({ status: tab.value || undefined, page: "1" })
+            }
             className={[
               "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
               currentStatus === tab.value
@@ -143,7 +150,9 @@ function PostImagesPageContent() {
           {WITH_ITEMS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => updateUrl({ with_items: opt.value || undefined, page: "1" })}
+              onClick={() =>
+                updateUrl({ with_items: opt.value || undefined, page: "1" })
+              }
               className={[
                 "px-3 py-1 rounded text-xs font-medium transition-colors",
                 currentWithItems === opt.value
@@ -180,7 +189,9 @@ function PostImagesPageContent() {
 
 export default function PostImagesPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}>
+    <Suspense
+      fallback={<div className="text-gray-400 text-sm p-4">Loading…</div>}
+    >
       <PostImagesPageContent />
     </Suspense>
   );

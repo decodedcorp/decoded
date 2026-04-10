@@ -18,7 +18,10 @@ interface EditorialMagazineProps {
   className?: string;
 }
 
-export default function EditorialMagazine({ data, className }: EditorialMagazineProps) {
+export default function EditorialMagazine({
+  data,
+  className,
+}: EditorialMagazineProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -32,7 +35,9 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
     }, 5000);
     return () => clearInterval(timer);
   }, [cards.length]);
-  const nextCards = [1, 2].map((offset) => cards[(activeIdx + offset) % cards.length]);
+  const nextCards = [1, 2].map(
+    (offset) => cards[(activeIdx + offset) % cards.length]
+  );
 
   useGSAP(
     () => {
@@ -41,7 +46,10 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
         headerRef.current,
         { opacity: 0, y: 24 },
         {
-          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: "power2.out",
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top 85%",
@@ -69,13 +77,20 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
       >
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>Editorial</p>
+            <p
+              className="text-[10px] uppercase tracking-[0.3em] mb-2"
+              style={{ color: "#eafd67" }}
+            >
+              Editorial
+            </p>
             <h2
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
               The{" "}
-              <span className="italic font-normal text-white/60">Editorial</span>
+              <span className="italic font-normal text-white/60">
+                Editorial
+              </span>
             </h2>
           </div>
           <Link
@@ -83,7 +98,13 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
             className="hidden md:flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-white/40 hover:text-white/70 transition-colors pb-2"
           >
             View All
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="ml-0.5">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              className="ml-0.5"
+            >
               <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </Link>
@@ -93,16 +114,23 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
       {/* Slider */}
       <div className="pb-20 md:pb-28">
         <div className="relative flex gap-3 items-start px-6 md:px-12 lg:px-20">
-
           {/* ← Arrow — on active card left edge */}
           <button
-            onClick={() => setActiveIdx((i) => (i - 1 + cards.length) % cards.length)}
+            onClick={() =>
+              setActiveIdx((i) => (i - 1 + cards.length) % cards.length)
+            }
             disabled={false}
             aria-label="Previous"
             className="hidden md:flex absolute left-6 md:left-12 lg:left-20 top-1/2 -translate-y-1/2 z-30 w-11 h-16 items-center justify-center bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white disabled:opacity-0 disabled:pointer-events-none transition-all rounded-r-xl"
           >
             <svg width="14" height="22" viewBox="0 0 14 22" fill="none">
-              <path d="M11 2L3 11L11 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M11 2L3 11L11 20"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
 
@@ -133,7 +161,9 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
                   {active.title}
                 </h3>
                 {active.subtitle && (
-                  <p className="text-xs text-white/50 mt-1.5 line-clamp-1">{active.subtitle}</p>
+                  <p className="text-xs text-white/50 mt-1.5 line-clamp-1">
+                    {active.subtitle}
+                  </p>
                 )}
               </div>
             </Link>
@@ -193,7 +223,9 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
               key={card.id}
               onClick={() => setActiveIdx(activeIdx + 1 + i)}
               className={`group relative flex-none hidden md:block w-[calc(25%-9px)] aspect-[3/4] rounded-xl overflow-hidden text-left transition-opacity duration-300 ${
-                i === 0 ? "opacity-70 hover:opacity-90" : "opacity-40 hover:opacity-60"
+                i === 0
+                  ? "opacity-70 hover:opacity-90"
+                  : "opacity-40 hover:opacity-60"
               }`}
             >
               {card.imageUrl ? (
@@ -216,7 +248,9 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
                   {card.title}
                 </h3>
                 {card.subtitle && (
-                  <p className="text-[11px] text-white/40 mt-1 line-clamp-1">{card.subtitle}</p>
+                  <p className="text-[11px] text-white/40 mt-1 line-clamp-1">
+                    {card.subtitle}
+                  </p>
                 )}
               </div>
             </button>
@@ -230,7 +264,13 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
             className="hidden md:flex absolute right-6 md:right-12 lg:right-20 top-1/2 -translate-y-1/2 z-30 w-11 h-16 items-center justify-center bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white disabled:opacity-0 disabled:pointer-events-none transition-all rounded-l-xl"
           >
             <svg width="14" height="22" viewBox="0 0 14 22" fill="none">
-              <path d="M3 2L11 11L3 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M3 2L11 11L3 20"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -243,20 +283,33 @@ export default function EditorialMagazine({ data, className }: EditorialMagazine
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
                   <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-neutral-800">
                     {item.imageUrl && (
-                      <Image src={item.imageUrl} alt={item.title} fill sizes="48px" className="object-cover" />
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     {item.brand && (
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-white/40 mb-0.5">{item.brand}</p>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-white/40 mb-0.5">
+                        {item.brand}
+                      </p>
                     )}
-                    <p className="text-xs font-medium text-white leading-snug line-clamp-1">{item.title}</p>
+                    <p className="text-xs font-medium text-white leading-snug line-clamp-1">
+                      {item.title}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
             <div className="px-4 py-3 border-t border-white/[0.06]">
-              <Link href={active.link || "#"} className="block w-full text-center text-xs font-medium text-white/60 py-2 border border-white/10 rounded-lg">
+              <Link
+                href={active.link || "#"}
+                className="block w-full text-center text-xs font-medium text-white/60 py-2 border border-white/10 rounded-lg"
+              >
                 View more
               </Link>
             </div>

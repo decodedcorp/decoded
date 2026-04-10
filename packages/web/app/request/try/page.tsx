@@ -68,8 +68,7 @@ function TryUploadContent() {
       await createTry.mutateAsync({
         file: compressed.file,
         parent_post_id: parentId,
-        spot_ids:
-          selectedSpotIds.length > 0 ? selectedSpotIds : undefined,
+        spot_ids: selectedSpotIds.length > 0 ? selectedSpotIds : undefined,
         media_title: comment.trim() || undefined,
       });
 
@@ -144,10 +143,7 @@ function TryUploadContent() {
 
         {/* Image Upload */}
         {!hasImage ? (
-          <DropZone
-            onFilesSelected={handleFilesSelected}
-            disabled={false}
-          />
+          <DropZone onFilesSelected={handleFilesSelected} disabled={false} />
         ) : (
           <div className="space-y-2">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg">

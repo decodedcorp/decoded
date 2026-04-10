@@ -22,7 +22,7 @@ interface MasonryGridProps {
 export default function MasonryGrid({ items, className }: MasonryGridProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-const gridRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -44,7 +44,7 @@ const gridRef = useRef<HTMLDivElement>(null);
         }
       );
 
-// Grid container: subtle fade up
+      // Grid container: subtle fade up
       gsap.fromTo(
         gridRef.current,
         { opacity: 0, y: 40 },
@@ -72,7 +72,9 @@ const gridRef = useRef<HTMLDivElement>(null);
       {/* Section header */}
       <div className="mx-auto mb-8 max-w-7xl">
         <div ref={headerRef} style={{ opacity: 0 }}>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Curated</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">
+            Curated
+          </p>
           <h2
             className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}

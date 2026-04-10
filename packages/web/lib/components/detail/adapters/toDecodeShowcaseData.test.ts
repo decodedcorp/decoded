@@ -11,7 +11,10 @@ describe("toDecodeShowcaseData", () => {
     description: null,
     center: null,
     cropped_image_path: null,
-    metadata: { brand: "COS", sub_category: "Outerwear" } as unknown as string[],
+    metadata: {
+      brand: "COS",
+      sub_category: "Outerwear",
+    } as unknown as string[],
     created_at: "2026-01-01",
     spot_id: "spot-1",
     normalizedCenter: { x: 0.25, y: 0.35 },

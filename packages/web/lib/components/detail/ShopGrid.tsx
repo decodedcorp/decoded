@@ -24,7 +24,10 @@ type Props = {
   /** CTA 클릭 시 솔루션 등록 시트 열기 (postId 필요) */
   onAddSolutionClick?: (spotId: string) => void;
   /** Brand profile lookup for displaying brand logos */
-  brandProfiles?: Record<string, { name: string; profileImageUrl: string | null }>;
+  brandProfiles?: Record<
+    string,
+    { name: string; profileImageUrl: string | null }
+  >;
 };
 
 /**
@@ -278,7 +281,8 @@ export function ShopGrid({
                               }`}
                             >
                               {(() => {
-                                const brandProfile = brandProfiles?.[item.brand.toLowerCase()];
+                                const brandProfile =
+                                  brandProfiles?.[item.brand.toLowerCase()];
                                 if (!brandProfile?.profileImageUrl) return null;
                                 return (
                                   <img

@@ -132,7 +132,8 @@ export function ImageCanvas({
   useEffect(() => {
     if (imageRef.current) gsap.set(imageRef.current, { scale: 1, x: 0, y: 0 });
     if (boxesRef.current) gsap.set(boxesRef.current, { scale: 1, x: 0, y: 0 });
-    if (overlayRef.current) gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0 });
+    if (overlayRef.current)
+      gsap.set(overlayRef.current, { scale: 1, x: 0, y: 0 });
   }, []);
 
   // Pan & Zoom effect: Calculate scale and translation
@@ -339,9 +340,12 @@ export function ImageCanvas({
               if (!rect) return null;
 
               const isActive = index === activeIndex;
-              const pixelLeft = rect.left + rect.width * item.normalizedCenter.x;
+              const pixelLeft =
+                rect.left + rect.width * item.normalizedCenter.x;
               const pixelTop = rect.top + rect.height * item.normalizedCenter.y;
-              const meta = item.metadata as unknown as Record<string, unknown> | undefined;
+              const meta = item.metadata as unknown as
+                | Record<string, unknown>
+                | undefined;
 
               return (
                 <div
@@ -349,7 +353,12 @@ export function ImageCanvas({
                   className={`transition-all duration-300 ${
                     isActive ? "opacity-100 scale-125" : "opacity-0 scale-100"
                   }`}
-                  style={{ position: "absolute", left: 0, top: 0, transformOrigin: `${pixelLeft}px ${pixelTop}px` }}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    transformOrigin: `${pixelLeft}px ${pixelTop}px`,
+                  }}
                 >
                   <SpotDot
                     mode="pixel"

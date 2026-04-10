@@ -15,7 +15,10 @@ import type {
   PostsListResponse,
   PostsListParams,
 } from "@/lib/api/mutation-types";
-import type { UpdatePostDto, PostDetailResponse } from "@/lib/api/generated/models";
+import type {
+  UpdatePostDto,
+  PostDetailResponse,
+} from "@/lib/api/generated/models";
 
 // ============================================================
 // Query Keys
@@ -170,9 +173,4 @@ export function useDeletePost() {
 }
 
 // Re-export types for convenience
-export type {
-  Post,
-  PostsListResponse,
-  PostsListParams,
-  PostDetailResponse,
-};
+export type { Post, PostsListResponse, PostsListParams, PostDetailResponse };

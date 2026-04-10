@@ -206,7 +206,12 @@ export function TrendingListSection({
       {/* Section Header */}
       <div className="flex items-end justify-between px-6 md:px-12 lg:px-20 py-8 md:py-10">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] mb-2" style={{ color: "#eafd67" }}>Discover</p>
+          <p
+            className="text-[10px] uppercase tracking-[0.3em] mb-2"
+            style={{ color: "#eafd67" }}
+          >
+            Discover
+          </p>
           <h2
             className="text-3xl md:text-5xl font-bold text-white leading-[1.1]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -234,7 +239,6 @@ export function TrendingListSection({
           />
         ))}
       </nav>
-
     </section>
   );
 }

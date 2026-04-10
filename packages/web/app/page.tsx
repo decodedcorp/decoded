@@ -1,23 +1,23 @@
-import {
-  EditorialMagazine,
-} from "@/lib/components/main-renewal";
+/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase raw query results lack typed shapes */
+import { EditorialMagazine } from "@/lib/components/main-renewal";
 import type {
   MainHeroData,
   GridItemData,
   HeroSpotAnnotation,
   EditorialMagazineData,
 } from "@/lib/components/main-renewal";
-import {
-  HeroItemSync,
-  EditorialCarousel,
-} from "@/lib/components/main";
+import { HeroItemSync, EditorialCarousel } from "@/lib/components/main";
 import {
   DynamicStyleMoods as StyleMoods,
   DynamicEditorPicks as EditorPicks,
   DynamicDomeGallerySection as DomeGallerySection,
 } from "./home-dynamic-sections";
 import { TrendingListSection } from "@/lib/components/main/TrendingListSection";
-import type { LatestPostCardData, StyleCardData, ItemCardData } from "@/lib/components/main";
+import type {
+  LatestPostCardData,
+  StyleCardData,
+  ItemCardData,
+} from "@/lib/components/main";
 import type { TrendingKeywordItem } from "@/lib/components/main/TrendingListSection";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
@@ -41,30 +41,65 @@ const proxyImg = (url: string) =>
   `/api/v1/image-proxy?url=${encodeURIComponent(url)}`;
 
 /** Convert Supabase PostData to ApiPost shape */
-function toApiPost(p: { id: string; imageUrl: string | null; artistName: string | null; groupName: string | null; context: string | null; mediaTitle: string | null; viewCount: number; createdAt: string }): ApiPost {
+function toApiPost(p: {
+  id: string;
+  imageUrl: string | null;
+  artistName: string | null;
+  groupName: string | null;
+  context: string | null;
+  mediaTitle: string | null;
+  viewCount: number;
+  createdAt: string;
+}): ApiPost {
   return {
-    id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
-    group_name: p.groupName, context: p.context, title: p.mediaTitle,
-    view_count: p.viewCount, created_at: p.createdAt, status: "published" as const,
-    comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
+    id: p.id,
+    image_url: p.imageUrl || "",
+    artist_name: p.artistName,
+    group_name: p.groupName,
+    context: p.context,
+    title: p.mediaTitle,
+    view_count: p.viewCount,
+    created_at: p.createdAt,
+    status: "published" as const,
+    comment_count: 0,
+    spot_count: 0,
+    media_source: {} as any,
+    user: {} as any,
   };
 }
 
 /** Convert MagazinePostData to ApiPost shape */
-function magazineToApiPost(p: import("@/lib/supabase/queries/main-page.server").MagazinePostData): ApiPost {
+function magazineToApiPost(
+  p: import("@/lib/supabase/queries/main-page.server").MagazinePostData
+): ApiPost {
   return {
-    id: p.id, image_url: p.imageUrl || "", artist_name: p.artistName,
-    group_name: p.groupName, context: p.context, title: p.magazineTitle,
-    post_magazine_title: p.magazineTitle, view_count: 0, created_at: "", status: "published" as const,
-    comment_count: 0, spot_count: 0, media_source: {} as any, user: {} as any,
+    id: p.id,
+    image_url: p.imageUrl || "",
+    artist_name: p.artistName,
+    group_name: p.groupName,
+    context: p.context,
+    title: p.magazineTitle,
+    post_magazine_title: p.magazineTitle,
+    view_count: 0,
+    created_at: "",
+    status: "published" as const,
+    comment_count: 0,
+    spot_count: 0,
+    media_source: {} as any,
+    user: {} as any,
     _magazineItems: p.items,
   } as any;
 }
 
 /** REST API fetch with Supabase fallback when backend unavailable */
-async function fetchPosts(params: string, fallback?: () => Promise<ApiPost[]>): Promise<ApiPost[]> {
+async function fetchPosts(
+  params: string,
+  fallback?: () => Promise<ApiPost[]>
+): Promise<ApiPost[]> {
   try {
-    const res = await serverApiGet<PaginatedResponsePostListItem>(`/api/v1/posts?${params}`);
+    const res = await serverApiGet<PaginatedResponsePostListItem>(
+      `/api/v1/posts?${params}`
+    );
     return res.data ?? [];
   } catch {
     if (fallback) return fallback();
@@ -94,7 +129,7 @@ export default async function Home({
     fetchPosts("sort=recent&per_page=50", async () =>
       (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
     ),
-    fetchMagazinePostsServer(50),  // Supabase direct — includes layout_json items
+    fetchMagazinePostsServer(50), // Supabase direct — includes layout_json items
     // fetchDecodedPickServer(),  // #91: temporarily disabled
     buildArtistProfileMap(),
     fetchEditorPicksServer(),
@@ -102,20 +137,30 @@ export default async function Home({
 
   // --- Helpers ---
 
-  function enrichArtistName(
-    name: string | null | undefined
-  ): { displayName: string; profileImageUrl: string | null } {
+  function enrichArtistName(name: string | null | undefined): {
+    displayName: string;
+    profileImageUrl: string | null;
+  } {
     if (!name) return { displayName: "", profileImageUrl: null };
-    const entry: ArtistProfileEntry | undefined = artistProfileMap.get(name.toLowerCase());
+    const entry: ArtistProfileEntry | undefined = artistProfileMap.get(
+      name.toLowerCase()
+    );
     return {
       displayName: entry?.name ?? name,
       profileImageUrl: entry?.profileImageUrl ?? null,
     };
   }
 
-  function buildHeroFromApiPost(post: ApiPost, spots?: HeroSpotAnnotation[]): MainHeroData {
+  function buildHeroFromApiPost(
+    post: ApiPost,
+    spots?: HeroSpotAnnotation[]
+  ): MainHeroData {
     return {
-      celebrityName: (post.artist_name || post.group_name || "DECODED").toUpperCase(),
+      celebrityName: (
+        post.artist_name ||
+        post.group_name ||
+        "DECODED"
+      ).toUpperCase(),
       editorialTitle: post.context || post.title || "Today's Featured Look",
       editorialSubtitle: post.group_name
         ? `${post.group_name} — Curated by AI`
@@ -128,7 +173,13 @@ export default async function Home({
   }
 
   function buildSpots(
-    items: { id: number | string; name?: string | null; label: string; brand?: string | null; imageUrl?: string | null }[]
+    items: {
+      id: number | string;
+      name?: string | null;
+      label: string;
+      brand?: string | null;
+      imageUrl?: string | null;
+    }[]
   ): HeroSpotAnnotation[] {
     const positions = [
       { x: 25, y: 22, side: "left" as const },
@@ -139,7 +190,9 @@ export default async function Home({
     return items.slice(0, 4).map((item, i) => {
       const pos = positions[i % positions.length];
       return {
-        id: String(item.id), x: pos.x, y: pos.y,
+        id: String(item.id),
+        x: pos.x,
+        y: pos.y,
         label: item.name || item.label,
         brand: item.brand || undefined,
         imageUrl: item.imageUrl || undefined,
@@ -157,7 +210,9 @@ export default async function Home({
     if (heroIds.has(post.id)) continue;
     heroIds.add(post.id);
     heroPosts.push({
-      id: post.id, heroData: buildHeroFromApiPost(post), items: [],
+      id: post.id,
+      heroData: buildHeroFromApiPost(post),
+      items: [],
       galleryImage: proxyImg(post.image_url),
       galleryLabel: post.artist_name || post.group_name || "New Style",
     });
@@ -167,7 +222,9 @@ export default async function Home({
     if (heroIds.has(post.id)) continue;
     heroIds.add(post.id);
     heroPosts.push({
-      id: post.id, heroData: buildHeroFromApiPost(post), items: [],
+      id: post.id,
+      heroData: buildHeroFromApiPost(post),
+      items: [],
       galleryImage: proxyImg(post.image_url),
       galleryLabel: post.artist_name || post.group_name || "Popular",
     });
@@ -177,7 +234,9 @@ export default async function Home({
     const fallback = popularPosts[0] || recentPosts[0];
     if (fallback) {
       heroPosts.push({
-        id: fallback.id, heroData: buildHeroFromApiPost(fallback), items: [],
+        id: fallback.id,
+        heroData: buildHeroFromApiPost(fallback),
+        items: [],
         galleryImage: proxyImg(fallback.image_url),
         galleryLabel: fallback.artist_name || "Featured",
       });
@@ -190,7 +249,9 @@ export default async function Home({
     const heroPostIds = heroPosts.map((hp) => hp.id);
     const { data: heroSpots } = await supabase
       .from("spots")
-      .select("id, post_id, position_top, position_left, solutions(id, title, thumbnail_url, metadata)")
+      .select(
+        "id, post_id, position_top, position_left, solutions(id, title, thumbnail_url, metadata)"
+      )
       .in("post_id", heroPostIds);
 
     if (heroSpots) {
@@ -202,19 +263,23 @@ export default async function Home({
       }
       for (const hp of heroPosts) {
         const spots = spotsByPost.get(hp.id) ?? [];
-        hp.items = spots.flatMap((spot: any) =>
-          (spot.solutions || [])
-            .filter((sol: any) => sol.thumbnail_url)
-            .map((sol: any) => ({
-              id: sol.id,
-              label: sol.title,
-              name: sol.title,
-              brand: (sol.metadata as any)?.brand || "",
-              imageUrl: proxyImg(sol.thumbnail_url),
-            }))
-        ).slice(0, 4);
+        hp.items = spots
+          .flatMap((spot: any) =>
+            (spot.solutions || [])
+              .filter((sol: any) => sol.thumbnail_url)
+              .map((sol: any) => ({
+                id: sol.id,
+                label: sol.title,
+                name: sol.title,
+                brand: (sol.metadata as any)?.brand || "",
+                imageUrl: proxyImg(sol.thumbnail_url),
+              }))
+          )
+          .slice(0, 4);
         if (hp.items.length > 0) {
-          const post = recentPosts.find((p) => p.id === hp.id) ?? popularPosts.find((p) => p.id === hp.id);
+          const post =
+            recentPosts.find((p) => p.id === hp.id) ??
+            popularPosts.find((p) => p.id === hp.id);
           if (post) {
             hp.heroData = buildHeroFromApiPost(
               post,
@@ -224,7 +289,9 @@ export default async function Home({
         }
       }
     }
-  } catch { /* hero spots enrichment failed — show without items */ }
+  } catch {
+    /* hero spots enrichment failed — show without items */
+  }
 
   // --- Trending on Decoded --- (#88: temporarily disabled)
   // const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
@@ -338,9 +405,10 @@ export default async function Home({
     }));
 
   // Pick up to 4 diverse editorial posts (deduplicate by artist)
-  const editorialPool = popularPosts.length > 0
-    ? [...popularPosts].sort(() => Math.random() - 0.5)
-    : [];
+  const editorialPool =
+    popularPosts.length > 0
+      ? [...popularPosts].sort(() => Math.random() - 0.5)
+      : [];
   const editorialPosts: typeof editorialPool = [];
   const seenEditorialArtists = new Set<string>();
   for (const p of editorialPool) {
@@ -364,19 +432,23 @@ export default async function Home({
           .select("*, solutions(*)")
           .eq("post_id", post.id);
         if (spots) {
-          items = spots.flatMap((spot: any) =>
-            (spot.solutions || [])
-              .filter((sol: any) => sol.thumbnail_url)
-              .map((sol: any) => ({
-                id: sol.id,
-                label: sol.title,
-                name: sol.title,
-                brand: (sol.metadata as any)?.brand || "",
-                imageUrl: proxyImg(sol.thumbnail_url),
-              }))
-          ).slice(0, 3);
+          items = spots
+            .flatMap((spot: any) =>
+              (spot.solutions || [])
+                .filter((sol: any) => sol.thumbnail_url)
+                .map((sol: any) => ({
+                  id: sol.id,
+                  label: sol.title,
+                  name: sol.title,
+                  brand: (sol.metadata as any)?.brand || "",
+                  imageUrl: proxyImg(sol.thumbnail_url),
+                }))
+            )
+            .slice(0, 3);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return {
         id: post.id,
         title: displayName || "Featured",
@@ -392,12 +464,16 @@ export default async function Home({
   // --- MasonryGrid ---
 
   const gridItems: GridItemData[] = popularPosts.slice(0, 16).map((post, i) => {
-    const { displayName } = enrichArtistName(post.artist_name || post.group_name);
+    const { displayName } = enrichArtistName(
+      post.artist_name || post.group_name
+    );
     return {
-      id: post.id, imageUrl: post.image_url,
+      id: post.id,
+      imageUrl: post.image_url,
       title: displayName || "Unknown",
       subtitle: post.context || post.title || undefined,
-      category: post.context || "other", link: `/posts/${post.id}`,
+      category: post.context || "other",
+      link: `/posts/${post.id}`,
       aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
     };
   });
@@ -434,9 +510,7 @@ export default async function Home({
 
       <TrendingListSection keywords={trendingKeywords} />
 
-      {domeImages.length > 0 && (
-        <DomeGallerySection images={domeImages} />
-      )}
+      {domeImages.length > 0 && <DomeGallerySection images={domeImages} />}
     </div>
   );
 }

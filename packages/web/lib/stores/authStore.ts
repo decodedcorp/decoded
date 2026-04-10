@@ -281,7 +281,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error: unknown) {
       // 404 = new user not yet in users table
-      if (error && typeof error === "object" && "status" in error && (error as { status: number }).status === 404) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        (error as { status: number }).status === 404
+      ) {
         console.log("[authStore] New user detected, needs onboarding");
         set({ needsOnboarding: true, profile: null });
         return;
@@ -330,7 +335,8 @@ export const selectIsLoggedIn = (state: AuthState) => !!state.user;
 export const selectIsGuest = (state: AuthState) => state.isGuest;
 export const selectIsLoading = (state: AuthState) => state.isLoading;
 export const selectIsInitialized = (state: AuthState) => state.isInitialized;
-export const selectLoadingProvider = (state: AuthState) => state.loadingProvider;
+export const selectLoadingProvider = (state: AuthState) =>
+  state.loadingProvider;
 export const selectError = (state: AuthState) => state.error;
 export const selectSessionExpired = (state: AuthState) => state.sessionExpired;
 export const selectLogout = (state: AuthState) => state.logout;

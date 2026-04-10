@@ -105,7 +105,8 @@ export async function fetchMagazinePostsServer(
     .limit(limit);
 
   if (magError || !magazines || magazines.length === 0) {
-    if (magError) console.error("[fetchMagazinePostsServer] Magazine error:", magError);
+    if (magError)
+      console.error("[fetchMagazinePostsServer] Magazine error:", magError);
     return [];
   }
 
@@ -127,32 +128,41 @@ export async function fetchMagazinePostsServer(
   }
 
   const magazineMap = new Map(
-    magazines.map((m) => [m.id, { title: m.title, keyword: m.keyword, layout_json: m.layout_json }])
+    magazines.map((m) => [
+      m.id,
+      { title: m.title, keyword: m.keyword, layout_json: m.layout_json },
+    ])
   );
 
-  return posts
-    .map((row) => {
-      const mag = magazineMap.get(row.post_magazine_id!);
-      const layout = mag?.layout_json as { items?: { title: string; brand: string | null; image_url: string | null; original_url: string | null }[] } | null;
-      const items: MagazinePostItem[] = (layout?.items ?? [])
-        .filter((it) => it.image_url)
-        .map((it) => ({
-          title: it.title,
-          brand: it.brand,
-          imageUrl: it.image_url,
-          originalUrl: it.original_url,
-        }));
-      return {
-        id: row.id,
-        imageUrl: row.image_url,
-        artistName: row.artist_name,
-        groupName: row.group_name,
-        context: row.context,
-        magazineTitle: mag?.title || row.context || "Editorial",
-        magazineKeyword: mag?.keyword ?? null,
-        items,
-      };
-    });
+  return posts.map((row) => {
+    const mag = magazineMap.get(row.post_magazine_id!);
+    const layout = mag?.layout_json as {
+      items?: {
+        title: string;
+        brand: string | null;
+        image_url: string | null;
+        original_url: string | null;
+      }[];
+    } | null;
+    const items: MagazinePostItem[] = (layout?.items ?? [])
+      .filter((it) => it.image_url)
+      .map((it) => ({
+        title: it.title,
+        brand: it.brand,
+        imageUrl: it.image_url,
+        originalUrl: it.original_url,
+      }));
+    return {
+      id: row.id,
+      imageUrl: row.image_url,
+      artistName: row.artist_name,
+      groupName: row.group_name,
+      context: row.context,
+      magazineTitle: mag?.title || row.context || "Editorial",
+      magazineKeyword: mag?.keyword ?? null,
+      items,
+    };
+  });
 }
 
 /**
@@ -293,7 +303,7 @@ export async function fetchDecodedPickServer(): Promise<DecodedPickServerData | 
     .limit(1)
     .single();
 
-  let postId: string | null = pickRow?.post_id ?? null;
+  const postId: string | null = pickRow?.post_id ?? null;
   let pickDate: string | null = pickRow?.pick_date ?? null;
   let curatedBy: string | null = pickRow?.curated_by ?? null;
   let note: string | null = pickRow?.note ?? null;
@@ -781,25 +791,30 @@ export async function fetchItemsByAccountServer(
   return [];
 }
 
-export async function fetchEditorPicksServer(): Promise<Array<{
-  id: string;
-  imageUrl: string;
-  title: string;
-  link: string;
-  artistName: string;
-}>> {
+export async function fetchEditorPicksServer(): Promise<
+  Array<{
+    id: string;
+    imageUrl: string;
+    title: string;
+    link: string;
+    artistName: string;
+  }>
+> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("curation_posts")
-    .select(`
+    .select(
+      `
       post_id,
       posts!inner(id, image_url, title, context, artist_name, group_name)
-    `)
+    `
+    )
     .order("order_index", { ascending: true })
     .limit(8);
 
   if (!data || data.length === 0) return [];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data.map((cp: any) => ({
     id: cp.posts.id,
     imageUrl: cp.posts.image_url,

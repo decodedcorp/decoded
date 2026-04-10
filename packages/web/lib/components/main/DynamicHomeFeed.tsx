@@ -305,7 +305,6 @@ interface DomeGallerySectionProps {
 
 /** Full-bleed dome gallery with centered CTA */
 export function DomeGallerySection({ images }: DomeGallerySectionProps) {
-
   return (
     <motion.section
       initial={{ opacity: 0 }}

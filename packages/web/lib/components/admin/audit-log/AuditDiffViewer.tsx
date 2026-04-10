@@ -43,9 +43,7 @@ export function AuditDiffViewer({ before, after }: AuditDiffViewerProps) {
             return (
               <tr
                 key={key}
-                className={cn(
-                  changed && "bg-yellow-50 dark:bg-yellow-900/10"
-                )}
+                className={cn(changed && "bg-yellow-50 dark:bg-yellow-900/10")}
               >
                 <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400 font-medium">
                   {key}

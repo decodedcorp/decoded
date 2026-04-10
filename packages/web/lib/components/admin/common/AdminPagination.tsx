@@ -9,12 +9,20 @@ interface AdminPaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function AdminPagination({ currentPage, totalPages, onPageChange }: AdminPaginationProps) {
+export function AdminPagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: AdminPaginationProps) {
   if (totalPages <= 1) return null;
 
   const pages: (number | "ellipsis")[] = [];
   for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - 1 && i <= currentPage + 1)
+    ) {
       pages.push(i);
     } else if (pages[pages.length - 1] !== "ellipsis") {
       pages.push("ellipsis");
@@ -33,7 +41,9 @@ export function AdminPagination({ currentPage, totalPages, onPageChange }: Admin
       </button>
       {pages.map((p, i) =>
         p === "ellipsis" ? (
-          <span key={`e-${i}`} className="px-2 text-gray-400">...</span>
+          <span key={`e-${i}`} className="px-2 text-gray-400">
+            ...
+          </span>
         ) : (
           <button
             key={p}

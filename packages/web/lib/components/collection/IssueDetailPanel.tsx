@@ -20,10 +20,17 @@ import { CollectionShareSheet } from "./CollectionShareSheet";
 export function IssueDetailPanel() {
   const router = useRouter();
   const { cameraState, focusedIssueId, unfocus } = useStudioStore(
-    useShallow((s) => ({ cameraState: s.cameraState, focusedIssueId: s.focusedIssueId, unfocus: s.unfocus }))
+    useShallow((s) => ({
+      cameraState: s.cameraState,
+      focusedIssueId: s.focusedIssueId,
+      unfocus: s.unfocus,
+    }))
   );
   const { collectionIssues, removeFromCollection } = useMagazineStore(
-    useShallow((s) => ({ collectionIssues: s.collectionIssues, removeFromCollection: s.removeFromCollection }))
+    useShallow((s) => ({
+      collectionIssues: s.collectionIssues,
+      removeFromCollection: s.removeFromCollection,
+    }))
   );
   const isDesktop = useMediaQuery("(min-width: 768px)");
 

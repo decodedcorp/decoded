@@ -27,7 +27,11 @@ export function MagazineEditorialSection({
   const [isRevealed, setIsRevealed] = useState(isModal ?? false);
 
   // Pretext.js: measure pull quote for layout stability; also provides containerWidth
-  const { containerRef: quoteRef, height: quoteHeight, containerWidth: editorialWidth } = useTextLayout({
+  const {
+    containerRef: quoteRef,
+    height: quoteHeight,
+    containerWidth: editorialWidth,
+  } = useTextLayout({
     text: editorial.pull_quote ?? "",
     font: 'italic 20px "Playfair Display", serif',
     lineHeight: 28,
@@ -76,7 +80,9 @@ export function MagazineEditorialSection({
   }, [isModal]);
 
   // D-08: Always use brand color — component is self-sufficient regardless of prop
-  const accentStyle = { "--magazine-accent": "var(--mag-accent)" } as React.CSSProperties;
+  const accentStyle = {
+    "--magazine-accent": "var(--mag-accent)",
+  } as React.CSSProperties;
 
   return (
     <section

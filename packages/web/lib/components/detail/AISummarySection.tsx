@@ -18,7 +18,9 @@ export function AISummarySection({ summary, isModal = false }: Props) {
     <div className="flex flex-col w-full">
       <div
         className={`relative overflow-hidden rounded-sm border border-border/40 bg-muted/5 p-6 md:p-8 w-full transition-opacity duration-700 ${summaryHeight > 0 ? "opacity-100" : "opacity-0"}`}
-        style={summaryHeight > 0 ? { minHeight: summaryHeight + 48 } : undefined}
+        style={
+          summaryHeight > 0 ? { minHeight: summaryHeight + 48 } : undefined
+        }
       >
         <p
           ref={summaryRef as React.RefObject<HTMLParagraphElement>}

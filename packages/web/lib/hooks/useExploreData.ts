@@ -75,7 +75,7 @@ function buildFacets(items: SearchResultItem[]): {
 }
 
 export function useExploreData(
-  options: UseExploreDataOptions = {},
+  options: UseExploreDataOptions = {}
 ): UseExploreDataReturn {
   const { hasMagazine = false } = options;
 
@@ -86,7 +86,7 @@ export function useExploreData(
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const toggleArtist = useCallback((name: string) => {
     setSelectedArtists((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
     );
   }, []);
   const clearArtistFilters = useCallback(() => setSelectedArtists([]), []);
@@ -106,7 +106,11 @@ export function useExploreData(
     enabled: !isSearchMode,
     limit: 40,
     hasMagazine,
-    sort: (activeSort === "recent" ? "recent" : activeSort === "popular" ? "popular" : "recent") as "recent" | "popular" | "trending",
+    sort: (activeSort === "recent"
+      ? "recent"
+      : activeSort === "popular"
+        ? "popular"
+        : "recent") as "recent" | "popular" | "trending",
   });
 
   // Search mode: Meilisearch with API filters
@@ -146,11 +150,11 @@ export function useExploreData(
   const items: PostGridItem[] = useMemo(() => {
     if (isSearchMode) {
       const allItems = (searchResult.data?.pages ?? []).flatMap((page) =>
-        page.data.map(mapSearchResultToGridItem),
+        page.data.map(mapSearchResultToGridItem)
       );
       if (selectedArtists.length > 0) {
         return allItems.filter((item) =>
-          selectedArtists.includes(item.postAccount),
+          selectedArtists.includes(item.postAccount)
         );
       }
       return allItems;

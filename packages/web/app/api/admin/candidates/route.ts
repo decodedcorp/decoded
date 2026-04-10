@@ -4,7 +4,9 @@ import { checkIsAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user || !(await checkIsAdmin(supabase, user.id))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -32,7 +34,8 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
     .range((page - 1) * perPage, page * perPage - 1);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({
     data,

@@ -140,7 +140,9 @@ export function StyleDNAEditModal({
                     type="text"
                     value={newKeyword}
                     onChange={(e) => setNewKeyword(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), addKeyword())
+                    }
                     placeholder="Add keyword..."
                     maxLength={20}
                     className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"

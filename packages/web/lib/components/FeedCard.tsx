@@ -191,7 +191,10 @@ export const FeedCard = memo(
 
     const cardContent = (
       // dwellRef tracks 3-second viewport visibility for dwell_time event
-      <article data-testid="feed-card" ref={dwellRef as React.RefObject<HTMLElement>}>
+      <article
+        data-testid="feed-card"
+        ref={dwellRef as React.RefObject<HTMLElement>}
+      >
         <Card
           data-flip-id={id ? `feed-card-${id}` : undefined}
           interactive

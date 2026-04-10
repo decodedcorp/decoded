@@ -34,10 +34,7 @@ function SavedGridItemCard({ item }: { item: SavedItem }) {
       href={`/images/${item.post_id}`}
       className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/30 block"
     >
-      <div
-        className="relative"
-        style={{ aspectRatio: aspectRatio ?? "3/4" }}
-      >
+      <div className="relative" style={{ aspectRatio: aspectRatio ?? "3/4" }}>
         {item.post_thumbnail_url ? (
           <Image
             src={item.post_thumbnail_url}

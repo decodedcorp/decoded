@@ -28,7 +28,11 @@ interface RankingItem {
 interface RankingListResponse {
   data: RankingItem[];
   my_ranking?: { rank: number; total_points: number; weekly_points: number };
-  pagination: { current_page: number; total_pages: number; total_items: number };
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    total_items: number;
+  };
 }
 
 type Period = "weekly" | "monthly" | "all_time";
@@ -49,7 +53,11 @@ function RankIcon({ rank }: { rank: number }) {
   if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
   if (rank === 2) return <Medal className="w-5 h-5 text-gray-300" />;
   if (rank === 3) return <Medal className="w-5 h-5 text-amber-600" />;
-  return <span className="text-sm font-mono text-muted-foreground w-5 text-center">{rank}</span>;
+  return (
+    <span className="text-sm font-mono text-muted-foreground w-5 text-center">
+      {rank}
+    </span>
+  );
 }
 
 export function RankingsClient() {
@@ -86,12 +94,20 @@ export function RankingsClient() {
         {data?.my_ranking && (
           <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-6 flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground font-mono uppercase">Your Rank</p>
-              <p className="text-2xl font-bold text-foreground">#{data.my_ranking.rank}</p>
+              <p className="text-xs text-muted-foreground font-mono uppercase">
+                Your Rank
+              </p>
+              <p className="text-2xl font-bold text-foreground">
+                #{data.my_ranking.rank}
+              </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground font-mono uppercase">Points</p>
-              <p className="text-2xl font-bold text-primary">{data.my_ranking.total_points.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground font-mono uppercase">
+                Points
+              </p>
+              <p className="text-2xl font-bold text-primary">
+                {data.my_ranking.total_points.toLocaleString()}
+              </p>
             </div>
           </div>
         )}
@@ -117,7 +133,10 @@ export function RankingsClient() {
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border animate-pulse">
+              <div
+                key={i}
+                className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border animate-pulse"
+              >
                 <div className="w-5 h-5 bg-muted rounded" />
                 <div className="w-10 h-10 bg-muted rounded-full" />
                 <div className="flex-1 space-y-1">
@@ -156,7 +175,8 @@ export function RankingsClient() {
                     {item.user.username}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.solution_count} solutions · {item.adopted_count} adopted
+                    {item.solution_count} solutions · {item.adopted_count}{" "}
+                    adopted
                   </p>
                 </div>
                 <div className="text-right">

@@ -84,7 +84,15 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
       gsap.fromTo(
         modalRef.current,
         { opacity: 0, scale: 0.97, y: 8 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: "power2.out", delay: 0.05, immediateRender: true }
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.25,
+          ease: "power2.out",
+          delay: 0.05,
+          immediateRender: true,
+        }
       );
     }, containerRef);
 

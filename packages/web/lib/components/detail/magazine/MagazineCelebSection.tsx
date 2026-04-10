@@ -27,17 +27,20 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(([entry]) => setGridWidth(entry.contentRect.width));
+    const obs = new ResizeObserver(([entry]) =>
+      setGridWidth(entry.contentRect.width)
+    );
     obs.observe(el);
     setGridWidth(el.getBoundingClientRect().width);
     return () => obs.disconnect();
   }, []);
 
   // Card width based on container (45% mobile, 30% md, 23% lg)
-  const cardRatio = gridWidth >= 1024 ? 0.23 : gridWidth >= 768 ? 0.30 : 0.45;
-  const cardTextWidth = gridWidth > 0
-    ? gridWidth * cardRatio - 24  // subtract p-3 padding (12*2)
-    : 0;
+  const cardRatio = gridWidth >= 1024 ? 0.23 : gridWidth >= 768 ? 0.3 : 0.45;
+  const cardTextWidth =
+    gridWidth > 0
+      ? gridWidth * cardRatio - 24 // subtract p-3 padding (12*2)
+      : 0;
 
   const nameLayouts = useBatchTextLayout({
     items: celebs.map((c, i) => ({
@@ -94,7 +97,8 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {celebs.slice(0, 4).map((celeb, i) => {
-          const nameHeight = nameLayouts[`${celeb.celeb_name}-${i}`]?.height ?? 0;
+          const nameHeight =
+            nameLayouts[`${celeb.celeb_name}-${i}`]?.height ?? 0;
           return (
             <Link
               key={`${celeb.celeb_name}-${i}`}
@@ -134,7 +138,6 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
                   </p>
                 )}
               </div>
-
             </Link>
           );
         })}

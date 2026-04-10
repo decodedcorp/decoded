@@ -42,9 +42,7 @@ test.describe("API migration — backend health", () => {
   });
 
   test("backend health check passes", async ({ request }) => {
-    const response = await request.get(
-      "http://localhost:8000/health"
-    );
+    const response = await request.get("http://localhost:8000/health");
     expect(response.ok()).toBeTruthy();
   });
 });

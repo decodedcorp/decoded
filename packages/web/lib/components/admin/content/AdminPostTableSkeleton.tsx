@@ -18,16 +18,23 @@ export function AdminPostTableSkeleton() {
         </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            {["", "Title / Artist", "User", "Status", "Views", "Spots", "Date", ""].map(
-              (h, i) => (
-                <th
-                  key={h || `spacer-${i}`}
-                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              )
-            )}
+            {[
+              "",
+              "Title / Artist",
+              "User",
+              "Status",
+              "Views",
+              "Spots",
+              "Date",
+              "",
+            ].map((h, i) => (
+              <th
+                key={h || `spacer-${i}`}
+                className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

@@ -53,7 +53,12 @@ vi.mock("@/lib/api/generated/posts/posts", () => ({
     listPostsCalls.push(params);
     return {
       data: [],
-      pagination: { current_page: 1, total_pages: 0, total_items: 0, per_page: 40 },
+      pagination: {
+        current_page: 1,
+        total_pages: 0,
+        total_items: 0,
+        per_page: 40,
+      },
     };
   }),
 }));

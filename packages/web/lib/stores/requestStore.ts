@@ -112,7 +112,12 @@ interface RequestState {
     progress?: number,
     error?: string
   ) => void;
-  setImageUploadedUrl: (id: string, url: string, width?: number | null, height?: number | null) => void;
+  setImageUploadedUrl: (
+    id: string,
+    url: string,
+    width?: number | null,
+    height?: number | null
+  ) => void;
   clearImages: () => void;
 
   // Actions - Detection / Manual Spot Creation

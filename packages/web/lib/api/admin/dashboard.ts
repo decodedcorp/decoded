@@ -268,26 +268,23 @@ export async function fetchTodaySummary(): Promise<TodaySummary> {
   const supabase = await createSupabaseServerClient();
 
   try {
-    const [
-      { count: newPosts },
-      { count: newSolutions },
-      { count: clicks },
-    ] = await Promise.all([
-      supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from("post" as any)
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayIso),
-      supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from("item" as any)
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayIso),
-      supabase
-        .from("click_logs")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayIso),
-    ]);
+    const [{ count: newPosts }, { count: newSolutions }, { count: clicks }] =
+      await Promise.all([
+        supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .from("post" as any)
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", todayIso),
+        supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .from("item" as any)
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", todayIso),
+        supabase
+          .from("click_logs")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", todayIso),
+      ]);
 
     return {
       newPosts: newPosts ?? 0,

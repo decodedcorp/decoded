@@ -117,7 +117,9 @@ interface AdminPostTableProps {
 
 export function AdminPostTable({ data }: AdminPostTableProps) {
   const mutation = useUpdatePostStatus();
-  const [editingPost, setEditingPost] = useState<AdminPostListItem | null>(null);
+  const [editingPost, setEditingPost] = useState<AdminPostListItem | null>(
+    null
+  );
 
   function handleStatusChange(postId: string, status: PostStatus) {
     if (
@@ -152,16 +154,23 @@ export function AdminPostTable({ data }: AdminPostTableProps) {
         </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            {["", "Title / Artist", "User", "Status", "Views", "Spots", "Date", ""].map(
-              (h) => (
-                <th
-                  key={h || "spacer"}
-                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              )
-            )}
+            {[
+              "",
+              "Title / Artist",
+              "User",
+              "Status",
+              "Views",
+              "Spots",
+              "Date",
+              "",
+            ].map((h) => (
+              <th
+                key={h || "spacer"}
+                className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

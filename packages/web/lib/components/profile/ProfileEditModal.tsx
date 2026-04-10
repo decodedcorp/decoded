@@ -217,7 +217,6 @@ export function ProfileEditModal({ isOpen, onClose }: ProfileEditModalProps) {
                       {bio.length}/200
                     </p>
                   </div>
-
                 </>
               )}
 

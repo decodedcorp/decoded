@@ -13,7 +13,10 @@ export function TrendingArtistsSection() {
         <div className="h-2.5 w-24 bg-muted rounded mb-2" />
         <div className="flex gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="w-12 h-12 rounded-full bg-muted flex-shrink-0" />
+            <div
+              key={i}
+              className="w-12 h-12 rounded-full bg-muted flex-shrink-0"
+            />
           ))}
         </div>
       </section>

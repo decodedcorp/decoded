@@ -278,15 +278,31 @@ export function useImageModalAnimation({
             });
           },
         });
-        tl.to(drawerRef.current, { y: "100%", duration: 0.25, ease: "power2.in" }, 0);
-        tl.to(backdropRef.current, { opacity: 0, duration: 0.25, ease: "power2.in" }, 0);
+        tl.to(
+          drawerRef.current,
+          { y: "100%", duration: 0.25, ease: "power2.in" },
+          0
+        );
+        tl.to(
+          backdropRef.current,
+          { opacity: 0, duration: 0.25, ease: "power2.in" },
+          0
+        );
       });
     } else if (drawerRef.current && ctxRef.current) {
       // Snap back with spring
       ctxRef.current.add(() => {
-        gsap.to(drawerRef.current, { y: 0, duration: 0.35, ease: "back.out(1.2)" });
+        gsap.to(drawerRef.current, {
+          y: 0,
+          duration: 0.35,
+          ease: "back.out(1.2)",
+        });
         if (backdropRef.current) {
-          gsap.to(backdropRef.current, { opacity: 1, duration: 0.35, ease: "power2.out" });
+          gsap.to(backdropRef.current, {
+            opacity: 1,
+            duration: 0.35,
+            ease: "power2.out",
+          });
         }
       });
     }
@@ -303,7 +319,8 @@ export function useImageModalAnimation({
     // Instant transition — hide modal elements and navigate immediately.
     // The full page has its own fade-in animation for a smooth entry.
     if (drawerRef.current) drawerRef.current.style.opacity = "0";
-    if (leftImageContainerRef.current) leftImageContainerRef.current.style.opacity = "0";
+    if (leftImageContainerRef.current)
+      leftImageContainerRef.current.style.opacity = "0";
     reset();
     window.location.href = `/posts/${imageId}`;
   }, [isClosing, isMaximizing, imageId, reset]);

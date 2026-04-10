@@ -22,7 +22,10 @@ export function useFlipEnter(
   imageId: string
 ) {
   const { originState, originRect } = useTransitionStore(
-    useShallow((s) => ({ originState: s.originState, originRect: s.originRect }))
+    useShallow((s) => ({
+      originState: s.originState,
+      originRect: s.originRect,
+    }))
   );
 
   useEffect(() => {
@@ -86,7 +89,11 @@ export function useFlipExit(
   onComplete?: () => void
 ) {
   const { originState, originRect, reset } = useTransitionStore(
-    useShallow((s) => ({ originState: s.originState, originRect: s.originRect, reset: s.reset }))
+    useShallow((s) => ({
+      originState: s.originState,
+      originRect: s.originRect,
+      reset: s.reset,
+    }))
   );
 
   const playExitAnimation = async (): Promise<void> => {
