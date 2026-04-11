@@ -35,6 +35,61 @@ struct SolutionInfo {
     site_name: String,
 }
 
+/// 이름 문자열로 warehouse.artists / warehouse.groups의 FK를 찾아 반환.
+/// create_post 시점에 dto.artist_id / dto.group_id가 비어 있을 때 자동 lookup에
+/// 사용한다. 매칭은 case-insensitive + BTRIM — 레거시 post는 소문자 Instagram
+/// 핸들("jennie")을 저장하는 반면 warehouse는 정규 표기("Jennie")를 쓰므로
+/// 완전 일치로는 매칭이 거의 되지 않는다. 실패는 graceful (None 반환) — 매칭
+/// 실패가 post 생성을 차단해서는 안 된다.
+async fn resolve_warehouse_ids_from_names<C>(
+    conn: &C,
+    artist_name: Option<&str>,
+    group_name: Option<&str>,
+) -> (Option<Uuid>, Option<Uuid>)
+where
+    C: sea_orm::ConnectionTrait,
+{
+    use crate::entities::warehouse_artists::Entity as WarehouseArtists;
+    use crate::entities::warehouse_groups::Entity as WarehouseGroups;
+    use sea_orm::sea_query::Expr;
+
+    let artist_fut = async {
+        let name = artist_name?.trim();
+        if name.is_empty() {
+            return None;
+        }
+        let lower = name.to_lowercase();
+        WarehouseArtists::find()
+            .filter(Expr::cust_with_values(
+                "LOWER(BTRIM(name_ko)) = $1 OR LOWER(BTRIM(name_en)) = $1",
+                [lower],
+            ))
+            .one(conn)
+            .await
+            .ok()
+            .flatten()
+            .map(|a| a.id)
+    };
+    let group_fut = async {
+        let name = group_name?.trim();
+        if name.is_empty() {
+            return None;
+        }
+        let lower = name.to_lowercase();
+        WarehouseGroups::find()
+            .filter(Expr::cust_with_values(
+                "LOWER(BTRIM(name_ko)) = $1 OR LOWER(BTRIM(name_en)) = $1",
+                [lower],
+            ))
+            .one(conn)
+            .await
+            .ok()
+            .flatten()
+            .map(|g| g.id)
+    };
+    tokio::join!(artist_fut, group_fut)
+}
+
 /// Post 생성 트랜잭션 (공통 로직)
 async fn create_post_transaction(
     db: &DatabaseConnection,
@@ -52,10 +107,37 @@ async fn create_post_transaction(
 
             // dto에서 직접 전달된 group_name, artist_name, context 및 optional warehouse FK 사용
             let group_name = dto.group_name;
-            let group_id = dto.group_id;
+            let mut group_id = dto.group_id;
             let artist_name = dto.artist_name;
-            let artist_id = dto.artist_id;
+            let mut artist_id = dto.artist_id;
             let context = dto.context;
+
+            // 클라이언트가 warehouse FK를 명시하지 않은 경우(대부분의 업로드),
+            // artist_name / group_name 문자열로 warehouse를 자동 lookup해서
+            // posts.artist_id / group_id를 채운다. 이미 값이 있으면 사용자 지정을
+            // 우선해 lookup을 생략한다.
+            if artist_id.is_none() || group_id.is_none() {
+                let (resolved_artist, resolved_group) = resolve_warehouse_ids_from_names(
+                    txn,
+                    if artist_id.is_none() {
+                        artist_name.as_deref()
+                    } else {
+                        None
+                    },
+                    if group_id.is_none() {
+                        group_name.as_deref()
+                    } else {
+                        None
+                    },
+                )
+                .await;
+                if artist_id.is_none() {
+                    artist_id = resolved_artist;
+                }
+                if group_id.is_none() {
+                    group_id = resolved_group;
+                }
+            }
 
             // ActiveModel 생성
             let post = ActiveModel {
@@ -2656,6 +2738,60 @@ mod tests {
         let ((a_en, a_ko, a_img), _) =
             load_entity_display_data(&db, Some(Uuid::new_v4()), None).await;
         assert!(a_en.is_none() && a_ko.is_none() && a_img.is_none());
+    }
+
+    // ── resolve_warehouse_ids_from_names ──
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_returns_none_for_none_inputs() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, None, None).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_skips_empty_strings() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, Some("  "), Some("")).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_case_insensitive_artist_match() {
+        use crate::entities::warehouse_artists;
+        let t = ts();
+        let artist_row = warehouse_artists::Model {
+            id: Uuid::nil(),
+            name_ko: Some("제니".into()),
+            name_en: Some("Jennie".into()),
+            profile_image_url: None,
+            primary_instagram_account_id: None,
+            metadata: None,
+            created_at: t,
+            updated_at: t,
+        };
+        // Client sends lowercase "jennie" — should still match via LOWER().
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[artist_row]])
+            // group lookup is skipped when group_name is None
+            .into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, Some("jennie"), None).await;
+        assert_eq!(artist, Some(Uuid::nil()));
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_unmatched_name_returns_none() {
+        // Empty warehouse result → fallback to None, no error.
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .into_connection();
+        let (artist, group) =
+            resolve_warehouse_ids_from_names(&db, Some("unknown-artist"), None).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
     }
 
     // ── build_spots_response additional tests ──
