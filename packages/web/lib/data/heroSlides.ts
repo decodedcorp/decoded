@@ -10,22 +10,22 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "1",
     imageUrl: "/images/hero/hero-1.jpg",
-    title: "젠틀몬스터 + 제니",
-    subtitle: "제품 살펴보기",
+    title: "Gentle Monster × Jennie",
+    subtitle: "Browse the drop",
     link: "/feed",
   },
   {
     id: "2",
     imageUrl: "/images/hero/hero-2.jpg",
-    title: "IVE 장원영",
-    subtitle: "스타일 컬렉션",
+    title: "IVE Jang Wonyoung",
+    subtitle: "Style collection",
     link: "/feed",
   },
   {
     id: "3",
     imageUrl: "/images/hero/hero-3.jpg",
-    title: "BLACKPINK 로제",
-    subtitle: "패션 아이템",
+    title: "BLACKPINK Rosé",
+    subtitle: "Fashion items",
     link: "/feed",
   },
 ];

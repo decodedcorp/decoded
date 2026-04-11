@@ -100,10 +100,10 @@ function OGPreviewCard({ meta }: { meta: MetadataResponse }) {
           <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              수익을 얻을 수 있습니다
+              You can earn revenue from this link
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1">
-              제휴 링크로 변환 후 등록됩니다.
+              It will be converted to an affiliate link before saving.
             </p>
           </div>
         </div>
@@ -112,10 +112,10 @@ function OGPreviewCard({ meta }: { meta: MetadataResponse }) {
           <AlertTriangle className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-              제휴 링크가 아니다
+              Not an affiliate link
             </p>
             <p className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">
-              추후 제휴 링크로 등록되면 알려드리겠습니다.
+              We'll let you know if it becomes eligible for affiliate later.
             </p>
           </div>
         </div>
@@ -201,12 +201,12 @@ export const SolutionLinkForm = memo(
         {!meta && (
           <>
             <p className="text-sm text-muted-foreground mb-4">
-              아이템 관련 링크를 입력한 뒤 등록을 눌러 주세요.
+              Paste an item link and tap Submit.
             </p>
             <div className="space-y-3">
               <label className="text-xs text-muted-foreground flex items-center gap-1">
                 <Link2 className="w-3 h-3" />
-                링크
+                Link
               </label>
               <div className="flex gap-3">
                 <input
@@ -233,7 +233,7 @@ export const SolutionLinkForm = memo(
                   {isExtracting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "등록"
+                    "Submit"
                   )}
                 </button>
               </div>
@@ -256,7 +256,7 @@ export const SolutionLinkForm = memo(
                          hover:bg-muted transition-colors"
               >
                 <X className="w-4 h-4" />
-                취소
+                Cancel
               </button>
               <button
                 type="button"
@@ -272,7 +272,11 @@ export const SolutionLinkForm = memo(
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                {isConverting ? "변환 중..." : isSaving ? "저장 중..." : "저장"}
+                {isConverting
+                  ? "Converting..."
+                  : isSaving
+                    ? "Saving..."
+                    : "Save"}
               </button>
             </div>
           </>

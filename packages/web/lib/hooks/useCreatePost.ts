@@ -57,12 +57,12 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
       // 업로드된 이미지 URL 가져오기
       const uploadedImage = images.find((img) => img.status === "uploaded");
       if (!uploadedImage?.uploadedUrl) {
-        throw new Error("업로드된 이미지가 없습니다.");
+        throw new Error("No uploaded image available.");
       }
 
       // 필수 필드 검증
       if (!mediaSource?.type || !mediaSource?.title) {
-        throw new Error("미디어 소스 정보가 필요합니다.");
+        throw new Error("Media source info is required.");
       }
 
       // Solution이 있는 spot이 하나라도 있는지 확인
@@ -167,7 +167,7 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
     },
     onSuccess: (response) => {
       setSubmitting(false);
-      toast.success("Post가 성공적으로 생성되었습니다!");
+      toast.success("Post created successfully!");
 
       // 사용자 콜백 호출
       options.onSuccess?.(response);

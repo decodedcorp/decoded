@@ -19,7 +19,7 @@ interface CelebrityGridProps {
 export function CelebrityGrid({
   items,
   showCTA = true,
-  ctaText = "아이템 둘러보기",
+  ctaText = "Browse items",
 }: CelebrityGridProps) {
   // Ensure we have exactly 3 items for the grid
   const gridItems = items.slice(0, 3);

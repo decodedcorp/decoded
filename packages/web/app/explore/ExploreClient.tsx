@@ -395,12 +395,12 @@ export function ExploreClient({
                   </div>
                   <h2 className="mb-2 text-xl font-semibold text-foreground">
                     {debouncedQuery.trim().length > 0
-                      ? `'${debouncedQuery}'에 대한 결과가 없습니다`
+                      ? `No results for '${debouncedQuery}'`
                       : "No posts found yet."}
                   </h2>
                   <p className="text-sm text-muted-foreground mb-6">
                     {debouncedQuery.trim().length > 0
-                      ? "검색어를 변경하거나 아래 추천 검색어를 시도해보세요."
+                      ? "Try different keywords or the suggestions below."
                       : "Check back later."}
                   </p>
                   {debouncedQuery.trim().length > 0 && (

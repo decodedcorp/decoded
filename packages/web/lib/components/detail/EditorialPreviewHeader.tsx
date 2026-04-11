@@ -46,7 +46,7 @@ export function EditorialPreviewHeader({
           href={`/posts/${postId}`}
           className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#eafd67] px-5 py-2 text-xs font-semibold text-[#050505] transition-colors hover:bg-[#eafd67]/80"
         >
-          전체 에디토리얼 보기
+          View full editorial
           <ArrowRight className="h-3 w-3" />
         </a>
       )}

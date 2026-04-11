@@ -184,7 +184,7 @@ export const DetectedItemCard = memo(
                     className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground
                                bg-muted rounded transition-colors"
                   >
-                    수정
+                    Edit
                   </button>
                 </div>
               </div>
@@ -199,7 +199,7 @@ export const DetectedItemCard = memo(
               className="mt-3 w-full py-2 text-sm text-primary border border-dashed border-primary/50
                          rounded-lg hover:bg-primary/5 transition-colors"
             >
-              + 상품 정보 추가
+              + Add product info
             </button>
           )}
 

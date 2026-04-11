@@ -101,7 +101,7 @@ function DesktopPostSolutionBlock({
         >
           <Image
             src={postDetail.image_url}
-            alt={postDetail.title || `${artistName} 스타일`}
+            alt={postDetail.title || `${artistName}'s style`}
             fill
             className="object-cover transition duration-500 group-hover:scale-105"
           />
@@ -164,7 +164,7 @@ function MobilePostWithSpots({
       >
         <Image
           src={postDetail.image_url}
-          alt={postDetail.title || `${artistName} 스타일`}
+          alt={postDetail.title || `${artistName}'s style`}
           fill
           className="object-cover"
         />
@@ -227,7 +227,7 @@ function MobilePostWithSpots({
                 href={`/posts/${postDetail.id}?spot=${activeSpot.id}`}
                 className="mt-1 inline-block text-xs font-medium text-primary"
               >
-                자세히 보기 →
+                See details →
               </Link>
             </div>
           </div>
@@ -290,7 +290,7 @@ export function DecodedSolutionsSection({
               Community Solutions
             </h2>
             <p className="mt-3 text-white/50 font-sans text-base max-w-md">
-              스팟별로 커뮤니티가 찾아낸 아이템을 확인하세요.
+              See the items our community has tracked down, spot by spot.
             </p>
           </div>
           <Link

@@ -56,7 +56,7 @@ export function MagazineNewsSection({
   // Group by matched_item
   const grouped = new Map<string, PostMagazineNewsReference[]>();
   for (const ref of newsReferences) {
-    const key = ref.matched_item || "기타";
+    const key = ref.matched_item || "Other";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(ref);
   }
@@ -68,7 +68,7 @@ export function MagazineNewsSection({
     >
       <h2 className="typography-h3 mb-2 text-center">Related News</h2>
       <p className="mb-10 text-center text-sm text-muted-foreground">
-        이 에디토리얼에 등장하는 아이템 관련 뉴스
+        News about the items featured in this editorial
       </p>
 
       <div className="space-y-8">

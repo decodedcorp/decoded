@@ -10,8 +10,8 @@ interface CTASectionProps {
 }
 
 export function CTASection({
-  title = "좋아하는 셀럽의 아이템이 궁금하다면?",
-  buttonText = "요청하기",
+  title = "Curious about your favorite celeb's look?",
+  buttonText = "Request",
   buttonLink = "/request",
 }: CTASectionProps) {
   return (

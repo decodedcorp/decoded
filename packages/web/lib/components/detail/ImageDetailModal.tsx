@@ -10,7 +10,6 @@ import { normalizeItem } from "./types";
 import type { UiItem } from "./types";
 import type { Json } from "@/lib/supabase/types";
 import { useTransitionStore } from "@/lib/stores/transitionStore";
-import { useShallow } from "zustand/react/shallow";
 import { useTrackEvent } from "@/lib/hooks/useTrackEvent";
 import type { ImageDetailWithPostOwner } from "@/lib/api/adapters/postDetailToImageDetail";
 import type { ImageDetail } from "@/lib/supabase/queries/images";
@@ -21,6 +20,33 @@ type Props = {
   variant?: "full" | "explore-preview";
   serverData?: ImageDetail | null;
 };
+
+function DrawerSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 px-6 py-12 animate-pulse">
+      <div className="flex flex-col items-center gap-2">
+        <div className="h-14 w-14 rounded-full bg-white/10" />
+        <div className="h-4 w-24 rounded bg-white/10" />
+        <div className="h-3 w-16 rounded bg-white/10" />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <div className="h-6 w-3/4 rounded bg-white/10" />
+        <div className="h-4 w-1/2 rounded bg-white/10" />
+      </div>
+      <div className="mt-4 flex flex-col gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex gap-3">
+            <div className="h-16 w-16 shrink-0 rounded bg-white/10" />
+            <div className="flex flex-1 flex-col justify-center gap-2">
+              <div className="h-4 w-1/2 rounded bg-white/10" />
+              <div className="h-3 w-3/4 rounded bg-white/10" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Side Drawer version of image detail page
@@ -39,13 +65,7 @@ export function ImageDetailModal({
   } = usePostDetailForImage(imageId, serverData ?? undefined);
   const magazineId = (image as ImageDetailWithPostOwner)?.post_magazine_id;
   const { data: magazine } = usePostMagazine(magazineId);
-  const { originRect, reset, imgSrc } = useTransitionStore(
-    useShallow((s) => ({
-      originRect: s.originRect,
-      reset: s.reset,
-      imgSrc: s.imgSrc,
-    }))
-  );
+  const reset = useTransitionStore((s) => s.reset);
   const track = useTrackEvent();
 
   // Refs for animation targets
@@ -65,12 +85,12 @@ export function ImageDetailModal({
   // Active item index for scroll-spot sync
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  // Image source: store (immediate) -> fetched data
-  const activeImageSrc =
-    imgSrc ||
-    (image as { image_url?: string })?.image_url ||
+  // Image source from fetched data (null until loaded → skeleton covers it)
+  const imageSrc =
+    (image as { image_url?: string } | null)?.image_url ||
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (image as any)?.postImages?.[0]?.post?.image_url;
+    (image as any)?.postImages?.[0]?.post?.image_url ||
+    null;
 
   // Normalize items for ImageCanvas (same logic as ImageDetailContent)
   const normalizedItems: UiItem[] = useMemo(() => {
@@ -111,8 +131,6 @@ export function ImageDetailModal({
     handleMaximize,
   } = useImageModalAnimation({
     imageId,
-    activeImageSrc,
-    originRect,
     reset,
     backdropRef,
     drawerRef,
@@ -171,11 +189,7 @@ export function ImageDetailModal({
       );
     }
     if (isLoading) {
-      return (
-        <div className="flex h-full items-center justify-center">
-          <div className="text-muted-foreground">Loading image data...</div>
-        </div>
-      );
+      return <DrawerSkeleton />;
     }
     if (error) {
       return (
@@ -282,55 +296,74 @@ export function ImageDetailModal({
         aria-hidden="true"
       />
 
-      {/* Floating Image / Left Side Image (desktop only) */}
-      {activeImageSrc && (
-        <div
-          ref={leftImageContainerRef}
-          className="hidden md:block fixed z-60 shadow-2xl rounded-lg overflow-hidden"
-          style={{ opacity: 0 }}
-        >
-          {/* Blur backdrop */}
-          <div
-            className="absolute inset-0 -z-10"
-            style={{
-              backgroundImage: `url(${activeImageSrc})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              filter: "blur(24px)",
-              transform: "scale(1.08)",
-            }}
-          />
-          {/* ImageCanvas with contain mode for scroll-spot sync */}
+      {/* Floating Image / Left Side Image (desktop only).
+          Always rendered at final position via CSS (no GSAP entrance).
+          Outer = pointer-events-none so empty area passes clicks through to backdrop.
+          Inner = pointer-events-auto for interactive canvas. */}
+      <div
+        ref={leftImageContainerRef}
+        className="hidden md:flex absolute inset-y-0 left-0 z-[60] items-center justify-center p-8 pointer-events-none md:right-[50vw] lg:right-[600px] xl:right-[700px]"
+      >
+        <div className="pointer-events-auto relative w-full max-w-[500px] h-[75vh] rounded-lg overflow-hidden shadow-2xl bg-white/5">
           {image && hasItemsWithCoordinates ? (
-            <ImageCanvas
-              image={image}
-              items={normalizedItems}
-              activeIndex={activeIndex}
-              objectFit="contain"
-            />
+            <>
+              {imageSrc && (
+                <div
+                  className="absolute inset-0 -z-10"
+                  style={{
+                    backgroundImage: `url(${imageSrc})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    filter: "blur(24px)",
+                    transform: "scale(1.08)",
+                  }}
+                />
+              )}
+              <ImageCanvas
+                image={image}
+                items={normalizedItems}
+                activeIndex={activeIndex}
+                objectFit="contain"
+              />
+            </>
+          ) : imageSrc ? (
+            <>
+              <div
+                className="absolute inset-0 -z-10"
+                style={{
+                  backgroundImage: `url(${imageSrc})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "blur(24px)",
+                  transform: "scale(1.08)",
+                }}
+              />
+              <img
+                data-testid="image-detail-image"
+                ref={floatingImageRef}
+                src={imageSrc}
+                alt="Post image"
+                className="w-full h-full object-contain pointer-events-none"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  setNaturalSize({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                  });
+                }}
+              />
+            </>
           ) : (
-            <img
-              data-testid="image-detail-image"
-              ref={floatingImageRef}
-              src={activeImageSrc}
-              alt="Post image"
-              className="w-full h-full object-contain pointer-events-none"
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                setNaturalSize({
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                });
-              }}
-            />
+            <div className="w-full h-full animate-pulse bg-white/10" />
           )}
         </div>
-      )}
+      </div>
 
-      {/* Drawer (mobile: bottom sheet ~90vh, desktop: right-side drawer full height) */}
+      {/* Drawer (mobile: bottom sheet ~90vh, desktop: right-side drawer full height).
+          No entrance animation — mounts at final position; skeleton covers data load. */}
       <aside
         ref={drawerRef}
-        className="relative z-[70] flex h-[90vh] md:h-full w-full flex-col bg-background shadow-2xl rounded-t-[20px] md:rounded-none md:w-[50vw] lg:w-[600px] xl:w-[700px] translate-y-full md:translate-x-full md:translate-y-0 overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
+        className="relative z-[70] flex h-[90vh] md:h-full w-full flex-col bg-background shadow-2xl rounded-t-[20px] md:rounded-none md:w-[50vw] lg:w-[600px] xl:w-[700px] overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

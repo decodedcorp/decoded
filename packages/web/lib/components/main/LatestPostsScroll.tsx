@@ -60,8 +60,8 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
                   }`}
                 >
                   {post.createdWithSolutions
-                    ? "아이템을 공유해요"
-                    : "아이템이 궁금해요"}
+                    ? "Sharing items"
+                    : "Curious"}
                 </span>
               )}
             </div>

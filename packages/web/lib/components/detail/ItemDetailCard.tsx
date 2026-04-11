@@ -233,19 +233,19 @@ export function ItemDetailCard({
                   </div>
                 ) : (
                   <p className="font-serif text-sm italic text-muted-foreground/40">
-                    쇼핑 링크가 없습니다.
+                    No shopping links yet.
                   </p>
                 )
               ) : solutionsLoading ? (
                 <p className="font-serif text-sm text-muted-foreground/60">
-                  로딩 중…
+                  Loading…
                 </p>
               ) : solutions.length === 0 ? (
                 spotId && onAddSolution ? (
                   <div className="flex flex-col gap-3 py-3">
                     <p className="font-serif text-sm text-muted-foreground/70">
-                      쇼핑 링크가 없습니다. 링크를 등록하면 사용자가 상품을 찾을
-                      수 있습니다.
+                      No shopping links yet. Add a link to help others find
+                      this item.
                     </p>
                     <button
                       type="button"
@@ -253,12 +253,12 @@ export function ItemDetailCard({
                       className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:border-primary/60"
                     >
                       <Plus className="w-4 h-4" />
-                      솔루션 등록하기
+                      Add a solution
                     </button>
                   </div>
                 ) : (
                   <p className="font-serif text-sm italic text-muted-foreground/40">
-                    등록된 솔루션이 없습니다.
+                    No solutions yet.
                   </p>
                 )
               ) : (

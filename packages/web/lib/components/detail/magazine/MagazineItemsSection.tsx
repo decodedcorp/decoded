@@ -210,7 +210,7 @@ export function MagazineItemsSection({
         <>
           <h2 className="typography-h3 mb-2 text-center">The Look</h2>
           <p className="mb-10 text-center text-sm text-muted-foreground">
-            아이템 상세 & 에디토리얼
+            Item details & editorial
           </p>
         </>
       )}

@@ -69,9 +69,9 @@ export default function RequestUploadPage() {
     const draft = loadDraft();
     if (!draft || draft.spots.length === 0) return;
 
-    toast("이전에 작성 중이던 요청이 있습니다.", {
+    toast("You have an unsaved request draft.", {
       action: {
-        label: "복원하기",
+        label: "Restore",
         onClick: () => {
           const actions = getRequestActions();
           if (draft.userKnowsItems !== null) {
@@ -87,7 +87,7 @@ export default function RequestUploadPage() {
           if (draft.artistName) actions.setArtistName(draft.artistName);
           if (draft.groupName) actions.setGroupName(draft.groupName);
           if (draft.context) actions.setContext(draft.context);
-          toast.success("복원되었습니다. 이미지를 다시 선택해주세요.");
+          toast.success("Draft restored. Please choose the image again.");
         },
       },
       duration: 10000,
@@ -179,7 +179,7 @@ export default function RequestUploadPage() {
 
     const localImage = images[0];
     if (!localImage?.file) {
-      toast.error("이미지를 선택해주세요.");
+      toast.error("Please select an image.");
       return;
     }
 
@@ -188,7 +188,7 @@ export default function RequestUploadPage() {
 
     try {
       // 1. 이미지 압축
-      toast.loading("이미지 준비 중...", { id: "prepare" });
+      toast.loading("Preparing image...", { id: "prepare" });
       const { file: compressedFile } = await compressImage(localImage.file);
       toast.dismiss("prepare");
 
@@ -199,7 +199,7 @@ export default function RequestUploadPage() {
       }));
 
       // 3. POST API 호출 (userKnowsItems에 따라 분기)
-      toast.loading("포스트 생성 중...", { id: "create" });
+      toast.loading("Creating post...", { id: "create" });
       const mediaSourcePayload = {
         type: mediaSource?.type ?? "user_upload",
         description:
@@ -242,7 +242,7 @@ export default function RequestUploadPage() {
             });
       toast.dismiss("create");
 
-      toast.success("포스트가 생성되었습니다!");
+      toast.success("Post created!");
 
       // 4. 완료 후 draft 삭제 + 리다이렉트
       clearDraft();
@@ -252,7 +252,7 @@ export default function RequestUploadPage() {
       toast.dismiss("upload");
       toast.dismiss("create");
       const message =
-        error instanceof Error ? error.message : "포스트 생성에 실패했습니다.";
+        error instanceof Error ? error.message : "Failed to create post.";
       setSubmitError(message);
       toast.error(message);
     } finally {
@@ -343,7 +343,7 @@ export default function RequestUploadPage() {
         {localImage && userKnowsItems === null && (
           <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-8 py-12">
             <p className="text-lg font-medium text-center">
-              이 사진 속 아이템을 알고 계신가요?
+              Do you know the items in this photo?
             </p>
             <div className="flex gap-4 w-full">
               <button
@@ -351,14 +351,14 @@ export default function RequestUploadPage() {
                 onClick={() => handleUserTypeSelect(true)}
                 className="flex-1 py-4 px-6 rounded-xl font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors"
               >
-                네, 링크를 알고 있어요
+                Yes, I have links
               </button>
               <button
                 type="button"
                 onClick={() => handleUserTypeSelect(false)}
                 className="flex-1 py-4 px-6 rounded-xl font-medium border-2 border-foreground text-foreground hover:bg-foreground/5 transition-colors"
               >
-                아니요, 궁금해요
+                No, I'm curious
               </button>
             </div>
           </div>
@@ -403,8 +403,8 @@ export default function RequestUploadPage() {
                     {detectedSpots.length > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {userKnowsItems
-                          ? "스팟 탭하여 링크 입력"
-                          : "궁금한 위치가 표시됨"}
+                          ? "Tap a spot to add a link"
+                          : "Curious locations marked"}
                       </p>
                     )}
                   </div>
@@ -414,8 +414,8 @@ export default function RequestUploadPage() {
                       <Plus className="w-8 h-8 mx-auto text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
                         {userKnowsItems
-                          ? "이미지에서 아이템 위치를 탭하세요"
-                          : "이미지에서 궁금한 위치를 탭하세요"}
+                          ? "Tap on the image where items appear"
+                          : "Tap on the image where you're curious"}
                       </p>
                     </div>
                   )}
@@ -458,10 +458,10 @@ export default function RequestUploadPage() {
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {spot.solution
-                                  ? "링크 입력됨"
+                                  ? "Link added"
                                   : userKnowsItems
-                                    ? "탭하여 상품 링크 입력"
-                                    : "위치 표시됨"}
+                                    ? "Tap to add product link"
+                                    : "Location marked"}
                               </p>
                             </div>
                             <button
@@ -512,7 +512,7 @@ export default function RequestUploadPage() {
                     className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    재시도
+                    Retry
                   </button>
                 </div>
               )}

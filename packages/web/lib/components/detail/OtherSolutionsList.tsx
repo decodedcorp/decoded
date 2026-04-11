@@ -64,7 +64,7 @@ export function OtherSolutionsList({
           className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-dashed border-primary/30 px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
         >
           <Plus className="w-3 h-3" />
-          솔루션 더 추가하기
+          Add another solution
         </button>
       );
     }
@@ -81,7 +81,9 @@ export function OtherSolutionsList({
         <ChevronRight
           className={`w-3 h-3 transition-transform ${othersExpanded ? "rotate-90" : ""}`}
         />
-        다른 {otherSolutions.length}개 솔루션 {othersExpanded ? "접기" : "보기"}
+        {otherSolutions.length} more solution
+        {otherSolutions.length === 1 ? "" : "s"}{" "}
+        {othersExpanded ? "(collapse)" : "(show)"}
       </button>
       {othersExpanded && (
         <div className="flex flex-col gap-2 pl-1">
@@ -139,7 +141,7 @@ export function OtherSolutionsList({
                               ""
                             );
                           } catch {
-                            return "링크";
+                            return "Link";
                           }
                         })()}
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -165,7 +167,7 @@ export function OtherSolutionsList({
                     (sol.is_adopted ? (
                       <>
                         <span className="text-[10px] text-primary shrink-0">
-                          채택됨
+                          Adopted
                           {sol.match_type === "perfect" && " · Perfect"}
                           {sol.match_type === "close" && " · Close"}
                         </span>
@@ -175,7 +177,7 @@ export function OtherSolutionsList({
                           disabled={unadoptMutation.isPending}
                           className="shrink-0 rounded border px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
                         >
-                          취소
+                          Undo
                         </button>
                       </>
                     ) : (
@@ -195,7 +197,7 @@ export function OtherSolutionsList({
                           }
                           className="inline-flex items-center gap-0.5 rounded border border-primary/40 px-2 py-0.5 text-[10px] font-medium hover:bg-primary/10 disabled:opacity-50"
                         >
-                          채택
+                          Adopt
                           <ChevronDown
                             className={`w-2.5 h-2.5 ${isAdopting ? "rotate-180" : ""}`}
                           />
@@ -253,7 +255,7 @@ export function OtherSolutionsList({
           className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-dashed border-primary/30 px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
         >
           <Plus className="w-3 h-3" />
-          솔루션 더 추가하기
+          Add another solution
         </button>
       )}
     </div>
