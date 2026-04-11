@@ -205,10 +205,10 @@ export const DetectionView = memo(
                 </svg>
               </div>
               <p className="text-sm text-white/90 font-medium drop-shadow-md">
-                아이템 위치를 탭하세요
+                Tap where an item appears
               </p>
               <p className="text-xs text-white/60 drop-shadow-md">
-                최소 1개 이상 표시해주세요
+                Mark at least one spot
               </p>
             </div>
           </div>
@@ -219,8 +219,8 @@ export const DetectionView = memo(
           <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
             <p className="text-xs text-white text-center">
               {spots.length > 0
-                ? `${spots.length}개의 스팟 추가됨 · 더 추가하거나 다음으로 진행하세요`
-                : "이미지를 탭하여 아이템 위치를 표시하세요"}
+                ? `${spots.length} spot${spots.length === 1 ? "" : "s"} added · add more or continue`
+                : "Tap the image to mark item locations"}
             </p>
           </div>
         )}

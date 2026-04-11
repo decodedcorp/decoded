@@ -87,14 +87,14 @@ export function TryGallerySection({ postId, items = [] }: Props) {
       {!isLoading && tries.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            아직 시도한 사람이 없어요
+            No one has tried this yet
           </p>
           <button
             type="button"
             onClick={handleCTA}
             className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
           >
-            첫 번째로 시도하기
+            Be the first to try
           </button>
         </div>
       )}
@@ -137,7 +137,7 @@ export function TryGallerySection({ postId, items = [] }: Props) {
               onClick={handleCTA}
               className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
-              나도 해봤어
+              I tried this too
             </button>
           </div>
         </>

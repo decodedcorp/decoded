@@ -27,7 +27,7 @@ export function validateFileSize(file: File): ValidationResult {
     const maxSizeMB = UPLOAD_CONFIG.maxFileSize / (1024 * 1024);
     return {
       valid: false,
-      error: `파일 크기가 ${maxSizeMB}MB를 초과합니다.`,
+      error: `File exceeds the ${maxSizeMB}MB size limit.`,
     };
   }
   return { valid: true };
@@ -44,7 +44,7 @@ export function validateFileFormat(file: File): ValidationResult {
   if (!isSupported) {
     return {
       valid: false,
-      error: `지원하지 않는 파일 형식입니다. JPG, PNG, WebP만 지원합니다.`,
+      error: `Unsupported file format. Only JPG, PNG, and WebP are allowed.`,
     };
   }
   return { valid: true };
@@ -74,7 +74,7 @@ export function validateImageCount(currentCount: number): ValidationResult {
   if (currentCount >= UPLOAD_CONFIG.maxImages) {
     return {
       valid: false,
-      error: `최대 ${UPLOAD_CONFIG.maxImages}장까지만 업로드할 수 있습니다.`,
+      error: `You can upload at most ${UPLOAD_CONFIG.maxImages} image(s).`,
     };
   }
   return { valid: true };
@@ -94,8 +94,8 @@ export function validateAddingImages(
       valid: false,
       error:
         remaining > 0
-          ? `${remaining}장만 더 추가할 수 있습니다.`
-          : `최대 ${UPLOAD_CONFIG.maxImages}장까지만 업로드할 수 있습니다.`,
+          ? `You can add ${remaining} more image(s).`
+          : `You can upload at most ${UPLOAD_CONFIG.maxImages} image(s).`,
     };
   }
   return { valid: true };
@@ -117,7 +117,7 @@ export function validateImageDimensions(file: File): Promise<ValidationResult> {
       if (w < UPLOAD_CONFIG.minDimension || h < UPLOAD_CONFIG.minDimension) {
         resolve({
           valid: false,
-          error: `이미지가 너무 작습니다. 최소 ${UPLOAD_CONFIG.minDimension}x${UPLOAD_CONFIG.minDimension}px 이상이어야 합니다. (현재: ${w}x${h}px)`,
+          error: `Image is too small. Minimum size is ${UPLOAD_CONFIG.minDimension}x${UPLOAD_CONFIG.minDimension}px (current: ${w}x${h}px).`,
         });
         return;
       }
@@ -125,7 +125,7 @@ export function validateImageDimensions(file: File): Promise<ValidationResult> {
       if (w > UPLOAD_CONFIG.maxDimension || h > UPLOAD_CONFIG.maxDimension) {
         resolve({
           valid: false,
-          error: `이미지가 너무 큽니다. 최대 ${UPLOAD_CONFIG.maxDimension}x${UPLOAD_CONFIG.maxDimension}px 이하여야 합니다. (현재: ${w}x${h}px)`,
+          error: `Image is too large. Maximum size is ${UPLOAD_CONFIG.maxDimension}x${UPLOAD_CONFIG.maxDimension}px (current: ${w}x${h}px).`,
         });
         return;
       }
@@ -137,7 +137,7 @@ export function validateImageDimensions(file: File): Promise<ValidationResult> {
       URL.revokeObjectURL(url);
       resolve({
         valid: false,
-        error: "손상된 이미지 파일입니다. 다른 파일을 선택해주세요.",
+        error: "The image file is corrupted. Please choose another file.",
       });
     };
 

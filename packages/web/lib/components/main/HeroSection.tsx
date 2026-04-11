@@ -19,7 +19,7 @@ interface HeroSectionProps {
 
 const defaultHeroData: HeroData = {
   artistName: "NEWJEANS",
-  title: "뉴진스 'Supernatural' 컨셉 엿보기",
+  title: "A peek into NewJeans' 'Supernatural' concept",
   subtitle: "",
   imageUrl:
     "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&q=80",

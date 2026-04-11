@@ -50,11 +50,11 @@ export function AddSolutionSheet({
         await queryClient.invalidateQueries({
           queryKey: ["posts", "detail", "image-view", postId],
         });
-        toast.success("솔루션이 등록되었습니다.");
+        toast.success("Solution added.");
         onClose();
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "솔루션 등록에 실패했습니다."
+          err instanceof Error ? err.message : "Failed to add solution."
         );
       }
     },
@@ -65,7 +65,7 @@ export function AddSolutionSheet({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="솔루션 등록하기"
+      title="Add a solution"
       snapPoints={[0.55, 0.75, 0.9]}
       defaultSnapPoint={0.75}
     >

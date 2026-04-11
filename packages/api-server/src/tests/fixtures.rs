@@ -324,6 +324,34 @@ pub fn failed_batch_item_model() -> crate::entities::failed_batch_items::Model {
     }
 }
 
+/// warehouse.artists row — default: id=test_uuid(200), name_en="Danielle", name_ko="다니엘"
+pub fn warehouse_artist_model() -> crate::entities::warehouse_artists::Model {
+    crate::entities::warehouse_artists::Model {
+        id: test_uuid(200),
+        name_ko: Some("다니엘".to_string()),
+        name_en: Some("Danielle".to_string()),
+        profile_image_url: Some("https://warehouse.test/artist.webp".to_string()),
+        primary_instagram_account_id: None,
+        metadata: None,
+        created_at: test_timestamp(),
+        updated_at: test_timestamp(),
+    }
+}
+
+/// warehouse.groups row — default: id=test_uuid(201), name_en="NewJeans", name_ko="뉴진스"
+pub fn warehouse_group_model() -> crate::entities::warehouse_groups::Model {
+    crate::entities::warehouse_groups::Model {
+        id: test_uuid(201),
+        name_ko: Some("뉴진스".to_string()),
+        name_en: Some("NewJeans".to_string()),
+        profile_image_url: Some("https://warehouse.test/group.webp".to_string()),
+        primary_instagram_account_id: None,
+        metadata: None,
+        created_at: test_timestamp(),
+        updated_at: test_timestamp(),
+    }
+}
+
 pub fn subcategory_model() -> crate::entities::subcategories::Model {
     crate::entities::subcategories::Model {
         id: test_uuid(21),

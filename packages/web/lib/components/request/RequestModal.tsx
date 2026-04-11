@@ -94,7 +94,7 @@ export function RequestModal({ isOpen, onClose }: RequestModalProps) {
   const handleClose = useCallback(() => {
     if (hasImages || detectedSpots.length > 0) {
       const confirmed = window.confirm(
-        "진행 중인 내용이 있습니다. 닫으시겠습니까?"
+        "You have unsaved changes. Close anyway?"
       );
       if (!confirmed) return;
     }

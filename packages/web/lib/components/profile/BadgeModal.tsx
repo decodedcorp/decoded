@@ -66,11 +66,11 @@ function SingleBadgeContent({ badge }: { badge: Badge }) {
       </div>
       <h3 className="text-xl font-bold text-foreground mb-2">{badge.name}</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        {badge.description || `${badge.category} 카테고리 뱃지`}
+        {badge.description || `${badge.category} category badge`}
       </p>
       {!isLocked && (
         <p className="text-xs text-muted-foreground">
-          획득일: {formatDate(badge.earnedAt)}
+          Earned: {formatDate(badge.earnedAt)}
         </p>
       )}
     </div>
@@ -87,7 +87,7 @@ function AllBadgesContent({
   return (
     <div>
       <h3 className="text-lg font-bold text-foreground mb-4 text-center">
-        내 뱃지 ({badges.length})
+        My Badges ({badges.length})
       </h3>
       <div className="grid grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">
         {badges.map((badge) => {
@@ -180,7 +180,7 @@ function ModalContent({ onClose }: BadgeModalContentProps) {
           ref={closeButtonRef}
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-lg hover:bg-accent transition-colors"
-          aria-label="닫기"
+          aria-label="Close"
         >
           <X className="w-5 h-5 text-muted-foreground" />
         </button>

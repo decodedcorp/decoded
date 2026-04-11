@@ -26,7 +26,7 @@ interface AuthGateProps {
  */
 export function AuthGate({
   children,
-  message = "이 기능을 사용하려면 로그인이 필요합니다.",
+  message = "You need to sign in to use this feature.",
 }: AuthGateProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isAuthenticated = useAuthStore((s) => !!s.user);
@@ -71,13 +71,13 @@ export function AuthGate({
         onClose={handleClose}
         snapPoints={[0.4]}
         defaultSnapPoint={0.4}
-        title="로그인"
+        title="Sign in"
         contentCenter
       >
         <div className="flex flex-col items-center gap-6 px-6 py-4">
           <div className="text-center space-y-2">
             <h3 className="text-lg font-semibold text-foreground">
-              로그인이 필요합니다
+              Sign in required
             </h3>
             <p className="text-sm text-muted-foreground">{message}</p>
           </div>
@@ -96,7 +96,7 @@ export function AuthGate({
             onClick={handleClose}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            나중에 하기
+            Maybe later
           </button>
         </div>
       </BottomSheet>

@@ -1442,4 +1442,201 @@ mod tests {
             .expect("list_posts ok");
         assert!(response.0.data.is_empty());
     }
+
+    // ── Warehouse-sourced artist/group name (English-first fallback) ──
+    //
+    // get_post_detail은 posts.artist_name/group_name (비정규화 레거시 문자열)을 직접 내려주는
+    // 대신, artist_id/group_id로 warehouse 테이블을 조회해 name_en → name_ko → legacy 순
+    // fallback을 적용해야 한다. 아래 3개 테스트는 각 fallback 단계를 검증한다.
+
+    fn post_model_with_warehouse_ids() -> crate::entities::posts::Model {
+        let mut p = post_model();
+        p.artist_id = Some(test_uuid(200));
+        p.group_id = Some(test_uuid(201));
+        p.artist_name = Some("Legacy Artist".to_string());
+        p.group_name = Some("Legacy Group".to_string());
+        p
+    }
+
+    /// 주어진 warehouse 옵션으로 get_post_handler_success_no_user 스타일의 mock DB를 구성.
+    /// query 순서: post → user → spots(empty) → likes → warehouse_artists → warehouse_groups → count_tries
+    ///             + background task(post find + update)
+    fn build_get_post_mock_db_with_warehouse(
+        post: crate::entities::posts::Model,
+        warehouse_artist: Option<crate::entities::warehouse_artists::Model>,
+        warehouse_group: Option<crate::entities::warehouse_groups::Model>,
+    ) -> sea_orm::DatabaseConnection {
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![post.clone()]]) // detail: get_post_by_id
+            .append_query_results([vec![user_model()]]) // detail: get_user_by_id
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // spots
+            .append_query_results([vec![count_row(0)]]); // count_likes_by_post_id
+
+        db = match warehouse_artist {
+            Some(m) => db.append_query_results([vec![m]]),
+            None => {
+                db.append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            }
+        };
+        db = match warehouse_group {
+            Some(m) => db.append_query_results([vec![m]]),
+            None => {
+                db.append_query_results([Vec::<crate::entities::warehouse_groups::Model>::new()])
+            }
+        };
+
+        db.append_query_results([vec![count_row(0)]]) // count_tries
+            // Background task extras (best-effort)
+            .append_query_results([vec![post.clone()]])
+            .append_query_results([vec![post]])
+            .into_connection()
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_prefers_warehouse_name_en() {
+        use crate::domains::posts::handlers::get_post;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Path, State};
+
+        let post = post_model_with_warehouse_ids();
+        let db = build_get_post_mock_db_with_warehouse(
+            post,
+            Some(warehouse_artist_model()), // name_en=Danielle, name_ko=다니엘
+            Some(warehouse_group_model()),  // name_en=NewJeans, name_ko=뉴진스
+        );
+        let state = test_app_state(db);
+
+        let result = get_post(State(state), Path(test_uuid(1)), None).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let body = result.unwrap().0;
+        assert_eq!(
+            body.artist_name.as_deref(),
+            Some("Danielle"),
+            "warehouse name_en must override legacy posts.artist_name"
+        );
+        assert_eq!(
+            body.group_name.as_deref(),
+            Some("NewJeans"),
+            "warehouse name_en must override legacy posts.group_name"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_falls_back_to_name_ko_when_en_null() {
+        use crate::domains::posts::handlers::get_post;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Path, State};
+
+        let post = post_model_with_warehouse_ids();
+        let mut wa = warehouse_artist_model();
+        wa.name_en = None; // only name_ko present
+        let mut wg = warehouse_group_model();
+        wg.name_en = None;
+        let db = build_get_post_mock_db_with_warehouse(post, Some(wa), Some(wg));
+        let state = test_app_state(db);
+
+        let result = get_post(State(state), Path(test_uuid(1)), None).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let body = result.unwrap().0;
+        assert_eq!(
+            body.artist_name.as_deref(),
+            Some("다니엘"),
+            "when warehouse name_en is null, fall back to name_ko"
+        );
+        assert_eq!(body.group_name.as_deref(), Some("뉴진스"));
+    }
+
+    #[tokio::test]
+    async fn get_post_detail_falls_back_to_legacy_when_warehouse_missing() {
+        use crate::domains::posts::handlers::get_post;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Path, State};
+
+        let post = post_model_with_warehouse_ids();
+        // warehouse queries return empty rows (artist_id set but no matching warehouse row)
+        let db = build_get_post_mock_db_with_warehouse(post, None, None);
+        let state = test_app_state(db);
+
+        let result = get_post(State(state), Path(test_uuid(1)), None).await;
+        assert!(result.is_ok(), "unexpected err: {:?}", result.err());
+        let body = result.unwrap().0;
+        assert_eq!(
+            body.artist_name.as_deref(),
+            Some("Legacy Artist"),
+            "when warehouse row missing, fall back to posts.artist_name"
+        );
+        assert_eq!(body.group_name.as_deref(), Some("Legacy Group"));
+    }
+
+    #[tokio::test]
+    async fn list_posts_resolves_warehouse_artist_and_group_display() {
+        use crate::domains::posts::dto::PostListQuery;
+        use crate::domains::posts::handlers::list_posts;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Query, State};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Post with warehouse FKs set + legacy Korean artist/group name
+        let mut post = post_model();
+        post.artist_id = Some(test_uuid(200));
+        post.group_id = Some(test_uuid(201));
+        post.artist_name = Some("레거시".to_string());
+        post.group_name = Some("레거시 그룹".to_string());
+
+        // Mock DB query order (list_posts pipeline):
+        //   1) count (paginator)
+        //   2) posts.all
+        //   3) users batch
+        //   4) spot counts (group by)
+        //   5) comment counts (group by)
+        //   6) magazines batch — skipped because post_magazine_id is None
+        //   7) warehouse_artists batch
+        //   8) warehouse_groups batch
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![count_row(1)]])
+            .append_query_results([vec![post.clone()]])
+            .append_query_results([vec![user_model()]])
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .append_query_results([vec![warehouse_artist_model()]])
+            .append_query_results([vec![warehouse_group_model()]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: None,
+        };
+        let response = list_posts(State(state), Query(query))
+            .await
+            .expect("list_posts ok");
+        assert_eq!(response.0.data.len(), 1);
+        let item = &response.0.data[0];
+        assert_eq!(
+            item.artist_name.as_deref(),
+            Some("Danielle"),
+            "warehouse name_en must override legacy posts.artist_name"
+        );
+        assert_eq!(item.group_name.as_deref(), Some("NewJeans"));
+        assert_eq!(
+            item.artist_profile_image_url.as_deref(),
+            Some("https://warehouse.test/artist.webp")
+        );
+        assert_eq!(
+            item.group_profile_image_url.as_deref(),
+            Some("https://warehouse.test/group.webp")
+        );
+    }
 }

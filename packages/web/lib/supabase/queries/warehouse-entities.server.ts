@@ -111,8 +111,9 @@ export const buildArtistProfileMap = cache(
         name_en: string | null,
         profile_image_url: string | null
       ) => {
-        // Prefer Korean name as display name (primary market), fall back to English
-        const displayName = name_ko || name_en || "";
+        // English-first display name: the product UI is English, so prefer
+        // name_en and fall back to name_ko when the English name is missing.
+        const displayName = name_en || name_ko || "";
         if (!displayName) return;
 
         const entry: ArtistProfileEntry = {
@@ -120,16 +121,14 @@ export const buildArtistProfileMap = cache(
           profileImageUrl: profile_image_url,
         };
 
+        // Key the same English-first display entry by both name_ko and name_en
+        // lookups so callers hitting the map with either language still get
+        // the English display name back.
         if (name_ko) {
           map.set(name_ko.toLowerCase(), entry);
         }
         if (name_en) {
-          // English name uses English display name for readability
-          const enEntry: ArtistProfileEntry = {
-            name: name_en,
-            profileImageUrl: profile_image_url,
-          };
-          map.set(name_en.toLowerCase(), enEntry);
+          map.set(name_en.toLowerCase(), entry);
         }
       };
 

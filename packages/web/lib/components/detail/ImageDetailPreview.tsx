@@ -107,7 +107,7 @@ export function ImageDetailPreview({
           )}
           {itemCount > 0 && (
             <p className="text-sm text-muted-foreground">
-              {itemCount}개의 아이템이 포함된 룩
+              Look featuring {itemCount} item{itemCount === 1 ? "" : "s"}
             </p>
           )}
         </div>
@@ -262,7 +262,7 @@ export function ImageDetailPreview({
         className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-6 py-3.5 text-sm font-medium transition-colors hover:bg-foreground hover:text-background"
       >
         <Maximize2 className="h-4 w-4" />
-        전체 에디토리얼 보기
+        View full editorial
       </button>
     </div>
   );

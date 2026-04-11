@@ -229,7 +229,7 @@ export function SmartNav({ className }: SmartNavProps) {
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                       onClick={() => setIsProfileOpen(false)}
                     >
-                      프로필 보기
+                      View Profile
                     </Link>
                     <button
                       onClick={() => {
@@ -238,13 +238,13 @@ export function SmartNav({ className }: SmartNavProps) {
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
-                      업로드
+                      Upload
                     </button>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
                     >
-                      로그아웃
+                      Logout
                     </button>
                   </div>
                 </div>

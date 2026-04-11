@@ -35,6 +35,61 @@ struct SolutionInfo {
     site_name: String,
 }
 
+/// 이름 문자열로 warehouse.artists / warehouse.groups의 FK를 찾아 반환.
+/// create_post 시점에 dto.artist_id / dto.group_id가 비어 있을 때 자동 lookup에
+/// 사용한다. 매칭은 case-insensitive + BTRIM — 레거시 post는 소문자 Instagram
+/// 핸들("jennie")을 저장하는 반면 warehouse는 정규 표기("Jennie")를 쓰므로
+/// 완전 일치로는 매칭이 거의 되지 않는다. 실패는 graceful (None 반환) — 매칭
+/// 실패가 post 생성을 차단해서는 안 된다.
+async fn resolve_warehouse_ids_from_names<C>(
+    conn: &C,
+    artist_name: Option<&str>,
+    group_name: Option<&str>,
+) -> (Option<Uuid>, Option<Uuid>)
+where
+    C: sea_orm::ConnectionTrait,
+{
+    use crate::entities::warehouse_artists::Entity as WarehouseArtists;
+    use crate::entities::warehouse_groups::Entity as WarehouseGroups;
+    use sea_orm::sea_query::Expr;
+
+    let artist_fut = async {
+        let name = artist_name?.trim();
+        if name.is_empty() {
+            return None;
+        }
+        let lower = name.to_lowercase();
+        WarehouseArtists::find()
+            .filter(Expr::cust_with_values(
+                "LOWER(BTRIM(name_ko)) = $1 OR LOWER(BTRIM(name_en)) = $1",
+                [lower],
+            ))
+            .one(conn)
+            .await
+            .ok()
+            .flatten()
+            .map(|a| a.id)
+    };
+    let group_fut = async {
+        let name = group_name?.trim();
+        if name.is_empty() {
+            return None;
+        }
+        let lower = name.to_lowercase();
+        WarehouseGroups::find()
+            .filter(Expr::cust_with_values(
+                "LOWER(BTRIM(name_ko)) = $1 OR LOWER(BTRIM(name_en)) = $1",
+                [lower],
+            ))
+            .one(conn)
+            .await
+            .ok()
+            .flatten()
+            .map(|g| g.id)
+    };
+    tokio::join!(artist_fut, group_fut)
+}
+
 /// Post 생성 트랜잭션 (공통 로직)
 async fn create_post_transaction(
     db: &DatabaseConnection,
@@ -52,10 +107,37 @@ async fn create_post_transaction(
 
             // dto에서 직접 전달된 group_name, artist_name, context 및 optional warehouse FK 사용
             let group_name = dto.group_name;
-            let group_id = dto.group_id;
+            let mut group_id = dto.group_id;
             let artist_name = dto.artist_name;
-            let artist_id = dto.artist_id;
+            let mut artist_id = dto.artist_id;
             let context = dto.context;
+
+            // 클라이언트가 warehouse FK를 명시하지 않은 경우(대부분의 업로드),
+            // artist_name / group_name 문자열로 warehouse를 자동 lookup해서
+            // posts.artist_id / group_id를 채운다. 이미 값이 있으면 사용자 지정을
+            // 우선해 lookup을 생략한다.
+            if artist_id.is_none() || group_id.is_none() {
+                let (resolved_artist, resolved_group) = resolve_warehouse_ids_from_names(
+                    txn,
+                    if artist_id.is_none() {
+                        artist_name.as_deref()
+                    } else {
+                        None
+                    },
+                    if group_id.is_none() {
+                        group_name.as_deref()
+                    } else {
+                        None
+                    },
+                )
+                .await;
+                if artist_id.is_none() {
+                    artist_id = resolved_artist;
+                }
+                if group_id.is_none() {
+                    group_id = resolved_group;
+                }
+            }
 
             // ActiveModel 생성
             let post = ActiveModel {
@@ -565,12 +647,107 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
     Ok(spots_with_solutions)
 }
 
-/// Warehouse에서 아티스트/그룹 프로필 이미지를 병렬 조회
-async fn load_entity_profile_images(
+/// Warehouse 배치 조회: posts 목록에서 artist_id/group_id를 모아 한 번의 쿼리로
+/// (name_en, name_ko, profile_image_url) 디스플레이 데이터를 로드한다.
+/// list_posts / admin_list_posts에서 공유한다. 응답 DTO 쪽에서 English-first fallback
+/// 적용 (name_en → name_ko → posts.*_name legacy).
+#[allow(clippy::type_complexity)]
+async fn load_warehouse_display_maps(
+    db: &DatabaseConnection,
+    posts: &[crate::entities::posts::Model],
+) -> AppResult<(
+    std::collections::HashMap<Uuid, EntityDisplay>,
+    std::collections::HashMap<Uuid, EntityDisplay>,
+)> {
+    use crate::entities::warehouse_artists::{Column as ArtistCol, Entity as WarehouseArtists};
+    use crate::entities::warehouse_groups::{Column as GroupCol, Entity as WarehouseGroups};
+
+    let artist_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.artist_id).collect();
+    let group_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.group_id).collect();
+
+    let artist_fut = async {
+        if artist_ids.is_empty() {
+            Ok::<_, AppError>(std::collections::HashMap::new())
+        } else {
+            let rows = WarehouseArtists::find()
+                .filter(ArtistCol::Id.is_in(artist_ids))
+                .all(db)
+                .await
+                .map_err(AppError::DatabaseError)?;
+            Ok(rows
+                .into_iter()
+                .map(|a| (a.id, (a.name_en, a.name_ko, a.profile_image_url)))
+                .collect())
+        }
+    };
+    let group_fut = async {
+        if group_ids.is_empty() {
+            Ok::<_, AppError>(std::collections::HashMap::new())
+        } else {
+            let rows = WarehouseGroups::find()
+                .filter(GroupCol::Id.is_in(group_ids))
+                .all(db)
+                .await
+                .map_err(AppError::DatabaseError)?;
+            Ok(rows
+                .into_iter()
+                .map(|g| (g.id, (g.name_en, g.name_ko, g.profile_image_url)))
+                .collect())
+        }
+    };
+
+    let (artists, groups) = tokio::join!(artist_fut, group_fut);
+    Ok((artists?, groups?))
+}
+
+/// 단일 post의 artist/group display fallback: (artist_name, profile), (group_name, profile).
+/// `name_en → name_ko → legacy posts.*_name` 순서로 이름을 선택하고, profile image는
+/// warehouse 값을 그대로 전달한다 (없으면 None).
+#[allow(clippy::type_complexity)]
+fn resolve_display_from_maps(
+    post: &crate::entities::posts::Model,
+    artist_display_map: &std::collections::HashMap<Uuid, EntityDisplay>,
+    group_display_map: &std::collections::HashMap<Uuid, EntityDisplay>,
+) -> (
+    (Option<String>, Option<String>),
+    (Option<String>, Option<String>),
+) {
+    let (artist_name, artist_img) = match post
+        .artist_id
+        .and_then(|id| artist_display_map.get(&id).cloned())
+    {
+        Some((name_en, name_ko, img)) => {
+            let name = name_en.or(name_ko).or_else(|| post.artist_name.clone());
+            (name, img)
+        }
+        None => (post.artist_name.clone(), None),
+    };
+    let (group_name, group_img) = match post
+        .group_id
+        .and_then(|id| group_display_map.get(&id).cloned())
+    {
+        Some((name_en, name_ko, img)) => {
+            let name = name_en.or(name_ko).or_else(|| post.group_name.clone());
+            (name, img)
+        }
+        None => (post.group_name.clone(), None),
+    };
+    ((artist_name, artist_img), (group_name, group_img))
+}
+
+/// Warehouse에서 아티스트/그룹의 display data(name_en, name_ko, profile image)를 병렬 조회.
+/// 반환 순서: ((artist_name_en, artist_name_ko, artist_profile_image_url),
+///            (group_name_en, group_name_ko, group_profile_image_url))
+///
+/// artist_id/group_id가 None이거나 warehouse row가 없으면 해당 튜플은 전부 None.
+/// 응답 DTO 쪽에서 `name_en → name_ko → posts.artist_name(legacy)` 순으로 fallback을 적용한다.
+type EntityDisplay = (Option<String>, Option<String>, Option<String>);
+
+async fn load_entity_display_data(
     db: &DatabaseConnection,
     artist_id: Option<Uuid>,
     group_id: Option<Uuid>,
-) -> (Option<String>, Option<String>) {
+) -> (EntityDisplay, EntityDisplay) {
     let artist_fut = async {
         match artist_id {
             Some(aid) => crate::entities::WarehouseArtists::find_by_id(aid)
@@ -578,8 +755,9 @@ async fn load_entity_profile_images(
                 .await
                 .ok()
                 .flatten()
-                .and_then(|a| a.profile_image_url),
-            None => None,
+                .map(|a| (a.name_en, a.name_ko, a.profile_image_url))
+                .unwrap_or((None, None, None)),
+            None => (None, None, None),
         }
     };
 
@@ -590,8 +768,9 @@ async fn load_entity_profile_images(
                 .await
                 .ok()
                 .flatten()
-                .and_then(|g| g.profile_image_url),
-            None => None,
+                .map(|g| (g.name_en, g.name_ko, g.profile_image_url))
+                .unwrap_or((None, None, None)),
+            None => (None, None, None),
         }
     };
 
@@ -619,7 +798,7 @@ pub async fn get_post_detail(
     let user_fut = get_user_by_id(db, post.user_id);
     let related_fut = load_post_related_data(db, post_id);
     let like_count_fut = count_likes_by_post_id(db, post_id);
-    let profile_fut = load_entity_profile_images(db, post.artist_id, post.group_id);
+    let display_fut = load_entity_display_data(db, post.artist_id, post.group_id);
 
     let user_liked_fut = async {
         match user_id {
@@ -644,14 +823,14 @@ pub async fn get_post_detail(
         like_count,
         user_has_liked_val,
         user_has_saved,
-        (artist_img, group_img),
+        ((artist_name_en, artist_name_ko, artist_img), (group_name_en, group_name_ko, group_img)),
     ) = tokio::try_join!(
         user_fut,
         related_fut,
         like_count_fut,
         user_liked_fut,
         saved_fut,
-        async { Ok(profile_fut.await) },
+        async { Ok(display_fut.await) },
     )?;
 
     // 3. Spots이 없으면 빈 응답 반환
@@ -680,6 +859,15 @@ pub async fn get_post_detail(
         response.try_count = try_count;
         response.artist_profile_image_url = artist_img;
         response.group_profile_image_url = group_img;
+        // English-first fallback: warehouse name_en → name_ko → posts.artist_name(legacy).
+        // legacy 값은 from_post_model()이 이미 response.*_name에 넣어뒀으므로, warehouse 값이
+        // 있을 때만 덮어쓴다.
+        if let Some(name) = artist_name_en.or(artist_name_ko) {
+            response.artist_name = Some(name);
+        }
+        if let Some(name) = group_name_en.or(group_name_ko) {
+            response.group_name = Some(name);
+        }
         return Ok(response);
     }
 
@@ -718,6 +906,13 @@ pub async fn get_post_detail(
     response.try_count = try_count_result;
     response.artist_profile_image_url = artist_img;
     response.group_profile_image_url = group_img;
+    // English-first fallback (see empty-spots branch above for rationale)
+    if let Some(name) = artist_name_en.or(artist_name_ko) {
+        response.artist_name = Some(name);
+    }
+    if let Some(name) = group_name_en.or(group_name_ko) {
+        response.group_name = Some(name);
+    }
 
     Ok(response)
 }
@@ -977,6 +1172,9 @@ pub async fn list_posts(
             .collect()
     };
 
+    // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
+    let (artist_display_map, group_display_map) = load_warehouse_display_maps(db, &posts).await?;
+
     // PostListItem으로 변환 (배치 로딩 데이터 사용)
     let items: Vec<PostListItem> = posts
         .into_iter()
@@ -1005,14 +1203,17 @@ pub async fn list_posts(
                 .post_magazine_id
                 .and_then(|id| magazine_titles_map.get(&id).cloned());
 
+            let ((artist_name, artist_profile_image_url), (group_name, group_profile_image_url)) =
+                resolve_display_from_maps(&post, &artist_display_map, &group_display_map);
+
             PostListItem {
                 id: post.id,
                 user,
                 image_url: post.image_url,
                 media_source,
                 title: post.title.clone(),
-                artist_name: post.artist_name,
-                group_name: post.group_name,
+                artist_name,
+                group_name,
                 artist_id: post.artist_id,
                 group_id: post.group_id,
                 context: post.context,
@@ -1025,6 +1226,8 @@ pub async fn list_posts(
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
+                artist_profile_image_url,
+                group_profile_image_url,
             }
         })
         .collect();
@@ -1267,6 +1470,9 @@ pub async fn admin_list_posts(
             .collect()
     };
 
+    // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
+    let (artist_display_map, group_display_map) = load_warehouse_display_maps(db, &posts).await?;
+
     // PostListItem으로 변환 (배치 로딩 데이터 사용)
     let items: Vec<PostListItem> = posts
         .into_iter()
@@ -1295,14 +1501,17 @@ pub async fn admin_list_posts(
                 .post_magazine_id
                 .and_then(|id| magazine_titles_map.get(&id).cloned());
 
+            let ((artist_name, artist_profile_image_url), (group_name, group_profile_image_url)) =
+                resolve_display_from_maps(&post, &artist_display_map, &group_display_map);
+
             PostListItem {
                 id: post.id,
                 user,
                 image_url: post.image_url,
                 media_source,
                 title: post.title.clone(),
-                artist_name: post.artist_name,
-                group_name: post.group_name,
+                artist_name,
+                group_name,
                 artist_id: post.artist_id,
                 group_id: post.group_id,
                 context: post.context,
@@ -1315,6 +1524,8 @@ pub async fn admin_list_posts(
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
+                artist_profile_image_url,
+                group_profile_image_url,
             }
         })
         .collect();
@@ -2463,15 +2674,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_both_none_ids() {
+    async fn load_entity_display_data_both_none_ids() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
-        let (artist_img, group_img) = load_entity_profile_images(&db, None, None).await;
-        assert!(artist_img.is_none());
-        assert!(group_img.is_none());
+        let ((a_en, a_ko, a_img), (g_en, g_ko, g_img)) =
+            load_entity_display_data(&db, None, None).await;
+        assert!(a_en.is_none() && a_ko.is_none() && a_img.is_none());
+        assert!(g_en.is_none() && g_ko.is_none() && g_img.is_none());
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_artist_found() {
+    async fn load_entity_display_data_artist_found() {
         use crate::entities::warehouse_artists;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
@@ -2486,17 +2698,16 @@ mod tests {
                 updated_at: t,
             }]])
             .into_connection();
-        let (artist_img, group_img) =
-            load_entity_profile_images(&db, Some(Uuid::nil()), None).await;
-        assert_eq!(
-            artist_img.as_deref(),
-            Some("https://img.example.com/karina.jpg")
-        );
-        assert!(group_img.is_none());
+        let ((a_en, a_ko, a_img), (_, _, g_img)) =
+            load_entity_display_data(&db, Some(Uuid::nil()), None).await;
+        assert_eq!(a_en.as_deref(), Some("Karina"));
+        assert_eq!(a_ko.as_deref(), Some("카리나"));
+        assert_eq!(a_img.as_deref(), Some("https://img.example.com/karina.jpg"));
+        assert!(g_img.is_none());
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_group_found() {
+    async fn load_entity_display_data_group_found() {
         use crate::entities::warehouse_groups;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
@@ -2511,22 +2722,76 @@ mod tests {
                 updated_at: t,
             }]])
             .into_connection();
-        let (artist_img, group_img) =
-            load_entity_profile_images(&db, None, Some(Uuid::nil())).await;
-        assert!(artist_img.is_none());
-        assert_eq!(
-            group_img.as_deref(),
-            Some("https://img.example.com/aespa.jpg")
-        );
+        let ((_, _, a_img), (g_en, g_ko, g_img)) =
+            load_entity_display_data(&db, None, Some(Uuid::nil())).await;
+        assert!(a_img.is_none());
+        assert_eq!(g_en.as_deref(), Some("aespa"));
+        assert_eq!(g_ko.as_deref(), Some("에스파"));
+        assert_eq!(g_img.as_deref(), Some("https://img.example.com/aespa.jpg"));
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_artist_not_found() {
+    async fn load_entity_display_data_artist_not_found() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
             .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
             .into_connection();
-        let (artist_img, _) = load_entity_profile_images(&db, Some(Uuid::new_v4()), None).await;
-        assert!(artist_img.is_none());
+        let ((a_en, a_ko, a_img), _) =
+            load_entity_display_data(&db, Some(Uuid::new_v4()), None).await;
+        assert!(a_en.is_none() && a_ko.is_none() && a_img.is_none());
+    }
+
+    // ── resolve_warehouse_ids_from_names ──
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_returns_none_for_none_inputs() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, None, None).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_skips_empty_strings() {
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, Some("  "), Some("")).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_case_insensitive_artist_match() {
+        use crate::entities::warehouse_artists;
+        let t = ts();
+        let artist_row = warehouse_artists::Model {
+            id: Uuid::nil(),
+            name_ko: Some("제니".into()),
+            name_en: Some("Jennie".into()),
+            profile_image_url: None,
+            primary_instagram_account_id: None,
+            metadata: None,
+            created_at: t,
+            updated_at: t,
+        };
+        // Client sends lowercase "jennie" — should still match via LOWER().
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([[artist_row]])
+            // group lookup is skipped when group_name is None
+            .into_connection();
+        let (artist, group) = resolve_warehouse_ids_from_names(&db, Some("jennie"), None).await;
+        assert_eq!(artist, Some(Uuid::nil()));
+        assert!(group.is_none());
+    }
+
+    #[tokio::test]
+    async fn resolve_warehouse_ids_unmatched_name_returns_none() {
+        // Empty warehouse result → fallback to None, no error.
+        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
+            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .into_connection();
+        let (artist, group) =
+            resolve_warehouse_ids_from_names(&db, Some("unknown-artist"), None).await;
+        assert!(artist.is_none());
+        assert!(group.is_none());
     }
 
     // ── build_spots_response additional tests ──

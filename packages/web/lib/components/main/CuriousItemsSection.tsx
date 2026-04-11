@@ -14,11 +14,11 @@ interface CuriousItemsSectionProps {
 export function CuriousItemsSection({ styles }: CuriousItemsSectionProps) {
   return (
     <StyleListSection
-      title="디코디드 유저들이 아이템을 궁금해요"
-      subtitle="아직 디코딩되지 않은 스타일이에요. 궁금한 아이템을 찾아보세요."
+      title="Decoded users are curious"
+      subtitle="Styles that haven't been decoded yet. Discover the items they're curious about."
       styles={styles}
       linkHref="/request"
-      ctaLinkLabel="디코딩 요청하기"
+      ctaLinkLabel="Request decoding"
     />
   );
 }

@@ -104,17 +104,17 @@ export const SolutionInputForm = memo(
       <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Tag className="w-3 h-3" />
-          <span>상품 정보 추가 (선택)</span>
+          <span>Add product info (optional)</span>
         </div>
 
-        {/* 상품명 */}
+        {/* Product name */}
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">상품명 *</label>
+          <label className="text-xs text-muted-foreground">Product name *</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: Nike Air Force 1"
+            placeholder="e.g., Nike Air Force 1"
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
                        placeholder:text-muted-foreground/50"
@@ -125,7 +125,7 @@ export const SolutionInputForm = memo(
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground flex items-center gap-1">
             <Link2 className="w-3 h-3" />
-            구매 링크 *
+            Purchase link *
             {isExtracting && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
           </label>
           <input
@@ -145,7 +145,7 @@ export const SolutionInputForm = memo(
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
-            가격
+            Price
           </label>
           <div className="flex gap-2">
             <input
@@ -173,7 +173,7 @@ export const SolutionInputForm = memo(
                        hover:bg-muted/80 transition-colors"
           >
             <X className="w-4 h-4" />
-            취소
+            Cancel
           </button>
           <button
             type="button"
@@ -185,7 +185,7 @@ export const SolutionInputForm = memo(
                        disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check className="w-4 h-4" />
-            저장
+            Save
           </button>
         </div>
       </div>

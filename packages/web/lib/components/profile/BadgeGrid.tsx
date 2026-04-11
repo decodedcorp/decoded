@@ -108,7 +108,7 @@ function MoreBadgesButton({
       transition={{ duration: 0.3, delay }}
       onClick={onClick}
       className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors"
-      aria-label={`${count}개 더 보기`}
+      aria-label={`See ${count} more`}
     >
       <span className="text-lg md:text-xl font-bold text-primary">
         +{count}
@@ -154,7 +154,7 @@ export function BadgeGrid() {
           </h3>
         </div>
         <div className="text-center py-8 text-muted-foreground text-sm">
-          아직 획득한 뱃지가 없습니다
+          No badges earned yet
         </div>
       </motion.section>
     );
@@ -172,7 +172,7 @@ export function BadgeGrid() {
           <Trophy className="w-5 h-5 text-primary" />
           My Badges
           <span className="text-sm text-muted-foreground font-normal">
-            ({badges.filter((b) => !b.isLocked).length} 획득)
+            ({badges.filter((b) => !b.isLocked).length} earned)
           </span>
         </h3>
         <button

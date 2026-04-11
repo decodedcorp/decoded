@@ -21,7 +21,7 @@ export function HelpFindSection({ posts }: HelpFindSectionProps) {
               Community
             </span>
             <h2 className="text-4xl md:text-6xl font-serif font-bold italic tracking-tighter text-white">
-              아이템 찾아주세요
+              Help identify items
             </h2>
           </div>
           <Link
@@ -55,7 +55,7 @@ export function HelpFindSection({ posts }: HelpFindSectionProps) {
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide backdrop-blur-md bg-white/15 text-white/90">
-                  아이템이 궁금해요
+                  Curious
                 </span>
               </div>
 

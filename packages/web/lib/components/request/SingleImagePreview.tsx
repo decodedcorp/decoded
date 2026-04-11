@@ -40,7 +40,7 @@ export const SingleImagePreview = memo(
               />
             </div>
             <span className="text-sm text-foreground/80 mt-2">
-              업로드 중... {progress}%
+              Uploading... {progress}%
             </span>
           </div>
         )}
@@ -49,7 +49,7 @@ export const SingleImagePreview = memo(
         {status === "error" && (
           <div className="absolute inset-0 bg-red-500/20 backdrop-blur-sm flex flex-col items-center justify-center p-4">
             <p className="text-sm text-red-600 text-center mb-3">
-              {error || "업로드 실패"}
+              {error || "Upload failed"}
             </p>
             {onRetry && (
               <button
@@ -58,7 +58,7 @@ export const SingleImagePreview = memo(
                 className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
               >
                 <RefreshCw className="h-4 w-4" />
-                다시 시도
+                Retry
               </button>
             )}
           </div>

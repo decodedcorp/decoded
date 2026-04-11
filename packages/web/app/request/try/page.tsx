@@ -28,7 +28,7 @@ function TryUploadContent() {
   // Invalid parent → side effect를 useEffect로 처리
   useEffect(() => {
     if (!isValidParent) {
-      toast.error("포스트를 찾을 수 없습니다.");
+      toast.error("Post not found.");
       router.push("/");
     }
   }, [isValidParent, router]);
@@ -72,13 +72,13 @@ function TryUploadContent() {
         media_title: comment.trim() || undefined,
       });
 
-      toast.success("Try가 공유되었습니다!");
+      toast.success("Try shared!");
       router.push(`/posts/${parentId}`);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "업로드에 실패했습니다. 다시 시도해주세요."
+          : "Upload failed. Please try again."
       );
     }
   }, [
@@ -124,14 +124,14 @@ function TryUploadContent() {
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded">
               <Image
                 src={parentPost.image_url}
-                alt="원본 포스트"
+                alt="Original post"
                 fill
                 className="object-cover"
               />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
-                {parentPost.title || "원본 포스트"}
+                {parentPost.title || "Original post"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {parentPost.artist_name && `@${parentPost.artist_name}`}
@@ -149,7 +149,7 @@ function TryUploadContent() {
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg">
               <Image
                 src={selectedImage.previewUrl}
-                alt="Try 이미지"
+                alt="Try image"
                 fill
                 className="object-cover"
               />
@@ -159,7 +159,7 @@ function TryUploadContent() {
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <RefreshCw className="h-4 w-4" />
-              다시 선택
+              Choose another
             </button>
           </div>
         )}
@@ -177,7 +177,7 @@ function TryUploadContent() {
             type="text"
             value={comment}
             onChange={(e) => setComment(e.target.value.slice(0, 100))}
-            placeholder="한줄 코멘트 (선택)"
+            placeholder="One-line comment (optional)"
             className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             maxLength={100}
           />
@@ -197,10 +197,10 @@ function TryUploadContent() {
           {createTry.isPending ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              업로드 중...
+              Uploading...
             </span>
           ) : (
-            "Try 공유하기"
+            "Share Try"
           )}
         </button>
       </div>

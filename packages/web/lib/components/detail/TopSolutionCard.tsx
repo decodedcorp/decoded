@@ -103,7 +103,7 @@ export function TopSolutionCard({
               {topSolution.is_adopted && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-medium text-primary shrink-0">
                   <Check className="w-2.5 h-2.5" />
-                  채택됨
+                  Adopted
                   {topSolution.match_type === "perfect" && (
                     <span className="text-primary/80">· Perfect Match</span>
                   )}
@@ -125,7 +125,7 @@ export function TopSolutionCard({
                   try {
                     return new URL(linkUrl).hostname.replace("www.", "");
                   } catch {
-                    return "링크";
+                    return "Link";
                   }
                 })()}
                 <ExternalLink className="w-3 h-3 opacity-60" />
@@ -154,7 +154,7 @@ export function TopSolutionCard({
                   disabled={unadoptMutation.isPending}
                   className="rounded border border-border/60 px-2 py-1 text-xs text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
                 >
-                  채택 취소
+                  Unadopt
                 </button>
               ) : (
                 <div
@@ -178,7 +178,7 @@ export function TopSolutionCard({
                     }
                     className="inline-flex items-center gap-1 rounded border border-primary/50 bg-primary/10 px-2.5 py-1 text-xs font-medium hover:bg-primary/20 disabled:opacity-50"
                   >
-                    채택하기
+                    Adopt
                     <ChevronDown
                       className={`w-3 h-3 transition-transform ${
                         adoptTargetId === topSolution.id ? "rotate-180" : ""

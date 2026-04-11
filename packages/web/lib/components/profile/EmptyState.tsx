@@ -21,30 +21,30 @@ const EMPTY_STATES: Record<
 > = {
   posts: {
     icon: FileText,
-    message: "아직 게시물이 없습니다",
-    ctaLabel: "첫 게시물 작성하기",
+    message: "No posts yet",
+    ctaLabel: "Create your first post",
     ctaHref: "/request",
   },
   spots: {
     icon: MapPin,
-    message: "아직 스팟이 없습니다",
-    ctaLabel: "스팟 추가하기",
+    message: "No spots yet",
+    ctaLabel: "Add a spot",
   },
   solutions: {
     icon: Lightbulb,
-    message: "아직 솔루션이 없습니다",
-    ctaLabel: "솔루션 제안하기",
+    message: "No solutions yet",
+    ctaLabel: "Suggest a solution",
   },
   tries: {
     icon: Sparkles,
-    message: "아직 시도한 결과가 없습니다",
-    ctaLabel: "가상 피팅 해보기",
+    message: "No tries yet",
+    ctaLabel: "Try virtual fitting",
     ctaHref: "/explore",
   },
   saved: {
     icon: Bookmark,
-    message: "저장된 항목이 없습니다",
-    ctaLabel: "피드 둘러보기",
+    message: "No saved items",
+    ctaLabel: "Browse the feed",
     ctaHref: "/feed",
   },
 };
