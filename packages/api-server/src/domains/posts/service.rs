@@ -565,6 +565,94 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
     Ok(spots_with_solutions)
 }
 
+/// Warehouse 배치 조회: posts 목록에서 artist_id/group_id를 모아 한 번의 쿼리로
+/// (name_en, name_ko, profile_image_url) 디스플레이 데이터를 로드한다.
+/// list_posts / admin_list_posts에서 공유한다. 응답 DTO 쪽에서 English-first fallback
+/// 적용 (name_en → name_ko → posts.*_name legacy).
+#[allow(clippy::type_complexity)]
+async fn load_warehouse_display_maps(
+    db: &DatabaseConnection,
+    posts: &[crate::entities::posts::Model],
+) -> AppResult<(
+    std::collections::HashMap<Uuid, EntityDisplay>,
+    std::collections::HashMap<Uuid, EntityDisplay>,
+)> {
+    use crate::entities::warehouse_artists::{Column as ArtistCol, Entity as WarehouseArtists};
+    use crate::entities::warehouse_groups::{Column as GroupCol, Entity as WarehouseGroups};
+
+    let artist_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.artist_id).collect();
+    let group_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.group_id).collect();
+
+    let artist_fut = async {
+        if artist_ids.is_empty() {
+            Ok::<_, AppError>(std::collections::HashMap::new())
+        } else {
+            let rows = WarehouseArtists::find()
+                .filter(ArtistCol::Id.is_in(artist_ids))
+                .all(db)
+                .await
+                .map_err(AppError::DatabaseError)?;
+            Ok(rows
+                .into_iter()
+                .map(|a| (a.id, (a.name_en, a.name_ko, a.profile_image_url)))
+                .collect())
+        }
+    };
+    let group_fut = async {
+        if group_ids.is_empty() {
+            Ok::<_, AppError>(std::collections::HashMap::new())
+        } else {
+            let rows = WarehouseGroups::find()
+                .filter(GroupCol::Id.is_in(group_ids))
+                .all(db)
+                .await
+                .map_err(AppError::DatabaseError)?;
+            Ok(rows
+                .into_iter()
+                .map(|g| (g.id, (g.name_en, g.name_ko, g.profile_image_url)))
+                .collect())
+        }
+    };
+
+    let (artists, groups) = tokio::join!(artist_fut, group_fut);
+    Ok((artists?, groups?))
+}
+
+/// 단일 post의 artist/group display fallback: (artist_name, profile), (group_name, profile).
+/// `name_en → name_ko → legacy posts.*_name` 순서로 이름을 선택하고, profile image는
+/// warehouse 값을 그대로 전달한다 (없으면 None).
+#[allow(clippy::type_complexity)]
+fn resolve_display_from_maps(
+    post: &crate::entities::posts::Model,
+    artist_display_map: &std::collections::HashMap<Uuid, EntityDisplay>,
+    group_display_map: &std::collections::HashMap<Uuid, EntityDisplay>,
+) -> (
+    (Option<String>, Option<String>),
+    (Option<String>, Option<String>),
+) {
+    let (artist_name, artist_img) = match post
+        .artist_id
+        .and_then(|id| artist_display_map.get(&id).cloned())
+    {
+        Some((name_en, name_ko, img)) => {
+            let name = name_en.or(name_ko).or_else(|| post.artist_name.clone());
+            (name, img)
+        }
+        None => (post.artist_name.clone(), None),
+    };
+    let (group_name, group_img) = match post
+        .group_id
+        .and_then(|id| group_display_map.get(&id).cloned())
+    {
+        Some((name_en, name_ko, img)) => {
+            let name = name_en.or(name_ko).or_else(|| post.group_name.clone());
+            (name, img)
+        }
+        None => (post.group_name.clone(), None),
+    };
+    ((artist_name, artist_img), (group_name, group_img))
+}
+
 /// Warehouse에서 아티스트/그룹의 display data(name_en, name_ko, profile image)를 병렬 조회.
 /// 반환 순서: ((artist_name_en, artist_name_ko, artist_profile_image_url),
 ///            (group_name_en, group_name_ko, group_profile_image_url))
@@ -1002,6 +1090,9 @@ pub async fn list_posts(
             .collect()
     };
 
+    // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
+    let (artist_display_map, group_display_map) = load_warehouse_display_maps(db, &posts).await?;
+
     // PostListItem으로 변환 (배치 로딩 데이터 사용)
     let items: Vec<PostListItem> = posts
         .into_iter()
@@ -1030,14 +1121,17 @@ pub async fn list_posts(
                 .post_magazine_id
                 .and_then(|id| magazine_titles_map.get(&id).cloned());
 
+            let ((artist_name, artist_profile_image_url), (group_name, group_profile_image_url)) =
+                resolve_display_from_maps(&post, &artist_display_map, &group_display_map);
+
             PostListItem {
                 id: post.id,
                 user,
                 image_url: post.image_url,
                 media_source,
                 title: post.title.clone(),
-                artist_name: post.artist_name,
-                group_name: post.group_name,
+                artist_name,
+                group_name,
                 artist_id: post.artist_id,
                 group_id: post.group_id,
                 context: post.context,
@@ -1050,6 +1144,8 @@ pub async fn list_posts(
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
+                artist_profile_image_url,
+                group_profile_image_url,
             }
         })
         .collect();
@@ -1292,6 +1388,9 @@ pub async fn admin_list_posts(
             .collect()
     };
 
+    // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
+    let (artist_display_map, group_display_map) = load_warehouse_display_maps(db, &posts).await?;
+
     // PostListItem으로 변환 (배치 로딩 데이터 사용)
     let items: Vec<PostListItem> = posts
         .into_iter()
@@ -1320,14 +1419,17 @@ pub async fn admin_list_posts(
                 .post_magazine_id
                 .and_then(|id| magazine_titles_map.get(&id).cloned());
 
+            let ((artist_name, artist_profile_image_url), (group_name, group_profile_image_url)) =
+                resolve_display_from_maps(&post, &artist_display_map, &group_display_map);
+
             PostListItem {
                 id: post.id,
                 user,
                 image_url: post.image_url,
                 media_source,
                 title: post.title.clone(),
-                artist_name: post.artist_name,
-                group_name: post.group_name,
+                artist_name,
+                group_name,
                 artist_id: post.artist_id,
                 group_id: post.group_id,
                 context: post.context,
@@ -1340,6 +1442,8 @@ pub async fn admin_list_posts(
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
+                artist_profile_image_url,
+                group_profile_image_url,
             }
         })
         .collect();

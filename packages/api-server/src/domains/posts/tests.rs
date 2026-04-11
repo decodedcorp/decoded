@@ -1569,4 +1569,74 @@ mod tests {
         );
         assert_eq!(body.group_name.as_deref(), Some("Legacy Group"));
     }
+
+    #[tokio::test]
+    async fn list_posts_resolves_warehouse_artist_and_group_display() {
+        use crate::domains::posts::dto::PostListQuery;
+        use crate::domains::posts::handlers::list_posts;
+        use crate::tests::helpers::test_app_state;
+        use axum::extract::{Query, State};
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        // Post with warehouse FKs set + legacy Korean artist/group name
+        let mut post = post_model();
+        post.artist_id = Some(test_uuid(200));
+        post.group_id = Some(test_uuid(201));
+        post.artist_name = Some("레거시".to_string());
+        post.group_name = Some("레거시 그룹".to_string());
+
+        // Mock DB query order (list_posts pipeline):
+        //   1) count (paginator)
+        //   2) posts.all
+        //   3) users batch
+        //   4) spot counts (group by)
+        //   5) comment counts (group by)
+        //   6) magazines batch — skipped because post_magazine_id is None
+        //   7) warehouse_artists batch
+        //   8) warehouse_groups batch
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![count_row(1)]])
+            .append_query_results([vec![post.clone()]])
+            .append_query_results([vec![user_model()]])
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()])
+            .append_query_results([Vec::<crate::entities::comments::Model>::new()])
+            .append_query_results([vec![warehouse_artist_model()]])
+            .append_query_results([vec![warehouse_group_model()]])
+            .into_connection();
+        let state = test_app_state(db);
+
+        let query = PostListQuery {
+            artist_name: None,
+            group_name: None,
+            context: None,
+            category: None,
+            user_id: None,
+            artist_id: None,
+            group_id: None,
+            sort: "recent".to_string(),
+            page: 1,
+            per_page: 20,
+            has_solutions: None,
+            has_magazine: None,
+        };
+        let response = list_posts(State(state), Query(query))
+            .await
+            .expect("list_posts ok");
+        assert_eq!(response.0.data.len(), 1);
+        let item = &response.0.data[0];
+        assert_eq!(
+            item.artist_name.as_deref(),
+            Some("Danielle"),
+            "warehouse name_en must override legacy posts.artist_name"
+        );
+        assert_eq!(item.group_name.as_deref(), Some("NewJeans"));
+        assert_eq!(
+            item.artist_profile_image_url.as_deref(),
+            Some("https://warehouse.test/artist.webp")
+        );
+        assert_eq!(
+            item.group_profile_image_url.as_deref(),
+            Some("https://warehouse.test/group.webp")
+        );
+    }
 }
