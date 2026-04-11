@@ -140,7 +140,7 @@ export function DescriptionInput() {
           value={localValue}
           onChange={handleChange}
           onBlur={handleBlur}
-          placeholder="예: 넷플릭스 드라마 OOO 시즌2 3화에서 주인공이 카페에서 입은 옷..."
+          placeholder="e.g., Outfit from Netflix drama XYZ, Season 2 Episode 3 café scene..."
           className="w-full px-3 py-2 min-h-[100px] text-sm bg-background border border-border rounded-lg
                      focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
                      placeholder:text-muted-foreground/50 resize-none"

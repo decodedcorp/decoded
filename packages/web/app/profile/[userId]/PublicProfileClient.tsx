@@ -117,17 +117,17 @@ function PublicProfileError({
         <div className="text-center">
           <div className="mb-4 text-4xl">&#9888;&#65039;</div>
           <h2 className="mb-2 text-xl font-semibold text-foreground">
-            프로필을 불러올 수 없습니다
+            Couldn't load profile
           </h2>
           <p className="mb-6 text-sm text-muted-foreground max-w-sm">
-            {error.message || "잠시 후 다시 시도해주세요."}
+            {error.message || "Please try again shortly."}
           </p>
           <button
             onClick={onRetry}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             <RefreshCw className="w-4 h-4" />
-            다시 시도
+            Retry
           </button>
         </div>
       </div>

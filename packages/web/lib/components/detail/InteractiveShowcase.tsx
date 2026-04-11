@@ -19,6 +19,8 @@ type Props = {
   image: ImageRow;
   items: UiItem[];
   isModal?: boolean;
+  /** Dense preview layout for explore-preview modal — smaller image + typography */
+  compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   // Controlled mode props
   activeIndex?: number | null;
@@ -42,6 +44,7 @@ export function InteractiveShowcase({
   image,
   items,
   isModal = false,
+  compact = false,
   scrollContainerRef,
   activeIndex: controlledActiveIndex,
   onActiveIndexChange,
@@ -204,6 +207,7 @@ export function InteractiveShowcase({
             item={item}
             index={index}
             isModal={isModal}
+            compact={compact}
             onActivate={() => handleActiveIndexChange(index)}
             onDeactivate={() => handleActiveIndexChange(null)}
             spotId={item.spot_id ?? null}

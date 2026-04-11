@@ -305,7 +305,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     const uploadedImage = images.find((img) => img.status === "uploaded");
 
     if (!uploadedImage?.uploadedUrl) {
-      toast.error("업로드된 이미지가 없습니다.");
+      toast.error("No uploaded image available.");
       return;
     }
 
@@ -345,7 +345,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       }, 1500);
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "AI 분석에 실패했습니다.";
+        error instanceof Error ? error.message : "AI analysis failed.";
       set({
         isDetecting: false,
         detectionError: errorMessage,

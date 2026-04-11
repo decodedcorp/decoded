@@ -20,6 +20,8 @@ type Props = {
   onActivate: () => void;
   onDeactivate: () => void;
   isModal?: boolean;
+  /** Dense preview layout for explore-preview modal */
+  compact?: boolean;
   /** 스팟 ID - 솔루션 등록 CTA 표시 시 사용 */
   spotId?: string | null;
   /** 솔루션 등록 버튼 클릭 시 (spotId 전달) */
@@ -39,6 +41,7 @@ export function ItemDetailCard({
   onActivate,
   onDeactivate,
   isModal = false,
+  compact = false,
   spotId,
   onAddSolution,
   postOwnerId = null,
@@ -99,39 +102,61 @@ export function ItemDetailCard({
       ref={cardRef}
       data-testid="item-detail-card"
       data-item-index={index}
-      className="group relative mb-8 md:mb-12 flex min-h-auto flex-col justify-center py-4 md:py-6 lg:mb-16"
+      className={`group relative flex min-h-auto flex-col justify-center ${
+        compact
+          ? "mb-4 py-2"
+          : "mb-8 md:mb-12 py-4 md:py-6 lg:mb-16"
+      }`}
       onMouseEnter={onActivate}
       onMouseLeave={onDeactivate}
     >
-      {/* Decorative Background Index */}
-      <div
-        className={`absolute z-0 select-none font-serif font-black leading-none text-foreground/[0.04] pointer-events-none transition-all duration-700 ${
-          isModal
-            ? "text-[8rem] md:text-[10rem] lg:text-[12rem] right-0 -top-10"
-            : "text-[10rem] md:text-[15rem] lg:text-[20rem] -left-12 -top-10 md:-left-20 lg:-left-32"
-        }`}
-        aria-hidden="true"
-      >
-        {formattedIndex}
-      </div>
+      {/* Decorative Background Index — hidden in compact preview */}
+      {!compact && (
+        <div
+          className={`absolute z-0 select-none font-serif font-black leading-none text-foreground/[0.04] pointer-events-none transition-all duration-700 ${
+            isModal
+              ? "text-[8rem] md:text-[10rem] lg:text-[12rem] right-0 -top-10"
+              : "text-[10rem] md:text-[15rem] lg:text-[20rem] -left-12 -top-10 md:-left-20 lg:-left-32"
+          }`}
+          aria-hidden="true"
+        >
+          {formattedIndex}
+        </div>
+      )}
 
       <div
         ref={contentRef}
-        className="relative z-10 flex flex-col gap-4 md:gap-6"
+        className={`relative z-10 flex ${
+          compact
+            ? "flex-row items-start gap-3"
+            : "flex-col gap-4 md:gap-6"
+        }`}
       >
         {/* Item Image */}
-        <div className="group/image">
+        <div
+          className={`group/image shrink-0 ${
+            compact ? "w-24 md:w-28 lg:w-32" : ""
+          }`}
+        >
           <ItemImage
             src={item.imageUrl || ""}
             alt={item.product_name || `Item ${formattedIndex}`}
-            size="detail"
-            className="rounded-xl transition-transform duration-700 ease-out group-hover/image:scale-105 group-hover/image:-translate-y-2"
-            imgClassName="drop-shadow-2xl"
+            size={compact ? "card" : "detail"}
+            className={`rounded-xl ${
+              compact
+                ? ""
+                : "transition-transform duration-700 ease-out group-hover/image:scale-105 group-hover/image:-translate-y-2"
+            }`}
+            imgClassName={compact ? "" : "drop-shadow-2xl"}
           />
         </div>
 
         {/* Text Content */}
-        <div className="flex flex-col relative z-30 px-2">
+        <div
+          className={`flex flex-col relative z-30 ${
+            compact ? "min-w-0 flex-1 px-0" : "px-2"
+          }`}
+        >
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -233,19 +258,19 @@ export function ItemDetailCard({
                   </div>
                 ) : (
                   <p className="font-serif text-sm italic text-muted-foreground/40">
-                    쇼핑 링크가 없습니다.
+                    No shopping links yet.
                   </p>
                 )
               ) : solutionsLoading ? (
                 <p className="font-serif text-sm text-muted-foreground/60">
-                  로딩 중…
+                  Loading…
                 </p>
               ) : solutions.length === 0 ? (
                 spotId && onAddSolution ? (
                   <div className="flex flex-col gap-3 py-3">
                     <p className="font-serif text-sm text-muted-foreground/70">
-                      쇼핑 링크가 없습니다. 링크를 등록하면 사용자가 상품을 찾을
-                      수 있습니다.
+                      No shopping links yet. Add a link to help others find
+                      this item.
                     </p>
                     <button
                       type="button"
@@ -253,12 +278,12 @@ export function ItemDetailCard({
                       className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:border-primary/60"
                     >
                       <Plus className="w-4 h-4" />
-                      솔루션 등록하기
+                      Add a solution
                     </button>
                   </div>
                 ) : (
                   <p className="font-serif text-sm italic text-muted-foreground/40">
-                    등록된 솔루션이 없습니다.
+                    No solutions yet.
                   </p>
                 )
               ) : (

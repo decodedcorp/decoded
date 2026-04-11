@@ -9,7 +9,7 @@ interface CelebritySectionProps {
 
 export function CelebritySection({
   celebrityName,
-  subtitle = "아이템 둘러보기",
+  subtitle = "Browse items",
 }: CelebritySectionProps) {
   return (
     <section className="py-16 md:py-24 px-6 md:px-12 lg:px-20 bg-main-bg">

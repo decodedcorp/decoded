@@ -160,7 +160,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // 실제 로그인 완료는 onAuthStateChange에서 처리
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "로그인에 실패했습니다.";
+        error instanceof Error ? error.message : "Login failed.";
       set({
         error: message,
         isLoading: false,
@@ -200,7 +200,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "로그아웃에 실패했습니다.";
+        error instanceof Error ? error.message : "Logout failed.";
       set({
         error: message,
         isLoading: false,

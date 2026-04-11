@@ -15,19 +15,19 @@ from ..gemini_retry import call_gemini_with_fallback
 
 logger = logging.getLogger(__name__)
 
-IMAGE_ANALYSIS_PROMPT = """You are a fashion editor analyzing a celebrity's Instagram post image.
-Extract visual details for editorial content. Be specific and observational.
+IMAGE_ANALYSIS_PROMPT = """You are a senior fashion editor at Decoded analyzing a celebrity's Instagram post image.
+Extract visual details for editorial content. Be specific and observational. Write all values in English.
 
 Output ONLY valid JSON matching this schema:
 {
-  "overall_mood": "전체적인 무드/분위기 (한국어, 예: 캐주얼 시크, 스트리트 무드)",
-  "color_palette": ["이미지에서 보이는 주요 색상 3-5개 (한국어)"],
-  "setting": "촬영 장소/배경 (한국어, 예: 공항, 스튜디오, 거리)",
-  "styling_details": "레이어링, 핏, 비율감, 착용 방식 등 시각적 관찰 (한국어, 2-3문장)",
-  "hidden_details": ["놓치기 쉬운 디테일 (한국어) — 액세서리, 로고, 텍스트, 네일, 헤어 등"]
+  "overall_mood": "overall mood/vibe in English (e.g., 'casual chic', 'streetwear mood')",
+  "color_palette": ["3-5 dominant colors visible in the image, in English"],
+  "setting": "shooting location/background in English (e.g., 'airport', 'studio', 'street')",
+  "styling_details": "visual observations on layering, fit, proportions, how pieces are worn (English, 2-3 sentences)",
+  "hidden_details": ["easily-missed details in English — accessories, logos, text, nails, hair, etc."]
 }
 
-Focus on what you SEE in the image, not assumptions."""
+Focus on what you SEE in the image, not assumptions. Every value must be English."""
 
 
 class ImageAnalysisOutput(BaseModel):
@@ -42,7 +42,9 @@ async def _download_image(url: str) -> tuple[bytes, str]:
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         resp = await client.get(url)
         resp.raise_for_status()
-        content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        content_type = (
+            resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        )
         return resp.content, content_type
 
 

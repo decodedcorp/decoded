@@ -88,7 +88,7 @@ export function MagazineCelebSection({ celebs, accentColor, isModal }: Props) {
     >
       <h2 className="typography-h3 mb-2 text-center">Style Archive</h2>
       <p className="mb-10 text-center text-sm text-muted-foreground">
-        같은 아이템을 착용한 셀럽들
+        Other celebrities wearing the same items
       </p>
 
       <div

@@ -102,7 +102,7 @@ export function HomeAnimatedContent({
         >
           <StyleListSection
             title="What's New"
-            subtitle="최근 업로드된 스타일이에요."
+            subtitle="Recently uploaded looks."
             styles={whatsNewStyles}
             linkHref="/feed"
           />

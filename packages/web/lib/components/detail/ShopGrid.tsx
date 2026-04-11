@@ -237,8 +237,8 @@ export function ShopGrid({
                           <Plus className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground/60 group-hover/cta:text-primary transition-colors" />
                           <p className="mt-2 text-xs md:text-sm font-medium text-muted-foreground group-hover/cta:text-foreground transition-colors text-center px-2">
                             {item.spot_index != null
-                              ? `#${item.spot_index} 아이템을 알고 계신가요?`
-                              : "이 아이템을 알고 계신가요?"}
+                              ? `Do you know item #${item.spot_index}?`
+                              : "Do you know this item?"}
                           </p>
                         </div>
                         <div className="flex flex-col items-center text-center flex-grow">
@@ -249,7 +249,7 @@ export function ShopGrid({
                                 : "mt-auto py-2"
                             }`}
                           >
-                            솔루션 등록하기
+                            Add a solution
                           </span>
                         </div>
                       </button>

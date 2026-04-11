@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const displayName = user?.display_name || user?.username || "User";
   const title = `${displayName} | DECODED`;
   const description =
-    user?.bio || `${displayName}의 스타일 컬렉션을 확인하세요.`;
+    user?.bio || `Explore ${displayName}'s style collection.`;
 
   return {
     title,
