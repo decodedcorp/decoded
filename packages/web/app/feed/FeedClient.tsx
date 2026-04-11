@@ -165,14 +165,12 @@ export function FeedClient() {
                 </svg>
               </div>
               <h2 className="mb-2 text-xl font-semibold text-foreground">
-                {hasFiltersApplied
-                  ? "검색 결과가 없습니다"
-                  : "아직 이미지가 없습니다"}
+                {hasFiltersApplied ? "No results found" : "No images yet"}
               </h2>
               <p className="mb-6 text-sm text-muted-foreground">
                 {hasFiltersApplied
-                  ? "다른 검색어나 필터를 사용해보세요."
-                  : "나중에 다시 확인해주세요."}
+                  ? "Try different keywords or filters."
+                  : "Check back later."}
               </p>
               {hasFiltersApplied && (
                 <button
@@ -180,7 +178,7 @@ export function FeedClient() {
                   className="rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
                   type="button"
                 >
-                  필터 초기화
+                  Reset filters
                 </button>
               )}
             </div>

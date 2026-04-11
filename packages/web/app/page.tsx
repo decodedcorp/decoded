@@ -164,7 +164,7 @@ export default async function Home({
       editorialTitle: post.context || post.title || "Today's Featured Look",
       editorialSubtitle: post.group_name
         ? `${post.group_name} — Curated by AI`
-        : "AI가 큐레이션한 오늘의 에디토리얼",
+        : "Today's AI-curated editorial",
       heroImageUrl: post.image_url,
       ctaLink: `/posts/${post.id}`,
       ctaLabel: "VIEW EDITORIAL",

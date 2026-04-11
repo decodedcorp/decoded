@@ -4,24 +4,24 @@ import { memo } from "react";
 import type { ContextType, MediaSourceType } from "@/lib/api/mutation-types";
 
 const MEDIA_TYPES = [
-  { value: "user_upload", label: "직접 촬영" },
-  { value: "youtube", label: "유튜브" },
-  { value: "drama", label: "드라마" },
-  { value: "music_video", label: "뮤직비디오" },
-  { value: "variety", label: "예능" },
-  { value: "event", label: "이벤트" },
-  { value: "other", label: "기타" },
+  { value: "user_upload", label: "Direct upload" },
+  { value: "youtube", label: "YouTube" },
+  { value: "drama", label: "TV Drama" },
+  { value: "music_video", label: "Music Video" },
+  { value: "variety", label: "Variety Show" },
+  { value: "event", label: "Event" },
+  { value: "other", label: "Other" },
 ] as const;
 
 const CONTEXT_OPTIONS: { value: ContextType; label: string }[] = [
-  { value: "airport", label: "공항" },
-  { value: "stage", label: "무대" },
-  { value: "drama", label: "드라마" },
-  { value: "variety", label: "예능" },
-  { value: "daily", label: "일상" },
-  { value: "photoshoot", label: "화보" },
-  { value: "event", label: "이벤트" },
-  { value: "other", label: "기타" },
+  { value: "airport", label: "Airport" },
+  { value: "stage", label: "Stage" },
+  { value: "drama", label: "TV Drama" },
+  { value: "variety", label: "Variety Show" },
+  { value: "daily", label: "Daily" },
+  { value: "photoshoot", label: "Editorial" },
+  { value: "event", label: "Event" },
+  { value: "other", label: "Other" },
 ];
 
 export interface MetadataFormValues {
@@ -45,11 +45,11 @@ export const MetadataInputForm = memo(
   ({ values, onChange }: MetadataInputFormProps) => {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">사진 정보 (선택)</h3>
+        <h3 className="text-sm font-medium">Photo info (optional)</h3>
 
-        {/* 미디어 유형 */}
+        {/* Source */}
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">출처 유형</label>
+          <label className="text-xs text-muted-foreground">Source type</label>
           <select
             value={values.mediaType}
             onChange={(e) =>
@@ -69,10 +69,10 @@ export const MetadataInputForm = memo(
           </select>
         </div>
 
-        {/* 미디어 설명 */}
+        {/* Media description */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
-            어디서/무엇에 관한 사진인가요?
+            Where or what is this photo from?
           </label>
           <input
             type="text"
@@ -80,31 +80,33 @@ export const MetadataInputForm = memo(
             onChange={(e) =>
               onChange({ ...values, mediaDescription: e.target.value })
             }
-            placeholder="예: 넷플릭스 드라마 ㅇㅇㅇ 시즌2 3화, 공항 직캠"
+            placeholder="e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam"
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
                        placeholder:text-muted-foreground/50"
           />
         </div>
 
-        {/* 그룹명 */}
+        {/* Group name */}
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">그룹/팀명</label>
+          <label className="text-xs text-muted-foreground">
+            Group / team name
+          </label>
           <input
             type="text"
             value={values.groupName}
             onChange={(e) => onChange({ ...values, groupName: e.target.value })}
-            placeholder="예: BLACKPINK"
+            placeholder="e.g., BLACKPINK"
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
                        placeholder:text-muted-foreground/50"
           />
         </div>
 
-        {/* 아티스트명 */}
+        {/* Artist name */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
-            아티스트/인물명
+            Artist / person name
           </label>
           <input
             type="text"
@@ -112,16 +114,16 @@ export const MetadataInputForm = memo(
             onChange={(e) =>
               onChange({ ...values, artistName: e.target.value })
             }
-            placeholder="예: Jennie"
+            placeholder="e.g., Jennie"
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
                        placeholder:text-muted-foreground/50"
           />
         </div>
 
-        {/* 상황 */}
+        {/* Context */}
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">상황</label>
+          <label className="text-xs text-muted-foreground">Context</label>
           <select
             value={values.context ?? ""}
             onChange={(e) =>
@@ -133,7 +135,7 @@ export const MetadataInputForm = memo(
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
           >
-            <option value="">선택 안 함</option>
+            <option value="">Not specified</option>
             {CONTEXT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

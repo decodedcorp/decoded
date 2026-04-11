@@ -5,10 +5,10 @@ import { motion } from "motion/react";
 import type { TrendingKeyword } from "@/lib/utils/main-page-mapper";
 
 const sampleKeywords: TrendingKeyword[] = [
-  { id: "1", label: "Newjeans Danielle", href: "/search?q=뉴진스+다니엘" },
-  { id: "2", label: "Nike", href: "/search?q=나이키" },
-  { id: "3", label: "Pink Anorak", href: "/search?q=핑크+아노락" },
-  { id: "4", label: "Blackpink Jennie", href: "/search?q=블랙핑크+제니" },
+  { id: "1", label: "Newjeans Danielle", href: "/search?q=Newjeans+Danielle" },
+  { id: "2", label: "Nike", href: "/search?q=Nike" },
+  { id: "3", label: "Pink Anorak", href: "/search?q=Pink+Anorak" },
+  { id: "4", label: "Blackpink Jennie", href: "/search?q=Blackpink+Jennie" },
   { id: "5", label: "Triomphe", href: "/search?q=Triomphe" },
   { id: "6", label: "RON ARAD STUDIO", href: "/search?q=RON+ARAD+STUDIO" },
   { id: "7", label: "Spring Bloom", href: "/search?q=Spring+Bloom" },

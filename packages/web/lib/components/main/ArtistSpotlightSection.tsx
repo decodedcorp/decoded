@@ -9,7 +9,7 @@ const sampleSpotlightData: StyleCardData[] = [
     id: "1",
     title: "ROSE x FUMA",
     description:
-      "뉴진스의 다니엘이 'How Sweet' 뮤비에서 Nike Cortes Nylon Midnight Navy, 핑크 아노락을 매치해 스타일을 완성했다.",
+      "Newjeans' Danielle pairs a Nike Cortez Nylon in Midnight Navy with a pink anorak in the 'How Sweet' music video.",
     artistName: "Newjeans Danielle",
     link: "/feed",
     imageUrl:
@@ -18,7 +18,8 @@ const sampleSpotlightData: StyleCardData[] = [
   {
     id: "2",
     title: "IVE Wonyoung Airport Look",
-    description: "IVE 장원영이 공항에서 착용한 럭셔리 브랜드 아이템들.",
+    description:
+      "IVE's Jang Wonyoung in luxury-brand pieces spotted at the airport.",
     artistName: "IVE Wonyoung",
     link: "/feed",
     imageUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800",
@@ -27,7 +28,7 @@ const sampleSpotlightData: StyleCardData[] = [
 
 interface ArtistSpotlightSectionProps {
   data?: StyleCardData[];
-  /** 어떤 아티스트 스포트라이트인지 (예: "Justin Bieber, 뉴진스 등") */
+  /** Which artists are being spotlighted (e.g., "Justin Bieber, Newjeans, etc.") */
   subtitle?: string;
 }
 

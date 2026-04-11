@@ -13,9 +13,9 @@ interface ActivityItemCardProps {
 }
 
 const TYPE_LABELS: Record<UserActivityType, string> = {
-  post: "게시물",
-  spot: "스팟",
-  solution: "솔루션",
+  post: "Post",
+  spot: "Spot",
+  solution: "Solution",
 };
 
 const TYPE_ICONS: Record<
@@ -29,7 +29,7 @@ const TYPE_ICONS: Record<
 
 function formatDate(iso: string): string {
   try {
-    return new Intl.DateTimeFormat("ko-KR", {
+    return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -75,7 +75,7 @@ export function ActivityItemCard({ item }: ActivityItemCardProps) {
           {item.is_adopted && (
             <>
               <span>·</span>
-              <span className="text-green-600">채택됨</span>
+              <span className="text-green-600">Adopted</span>
             </>
           )}
         </div>
