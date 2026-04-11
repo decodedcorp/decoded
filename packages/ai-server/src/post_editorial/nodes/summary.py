@@ -13,17 +13,17 @@ from ..utils import _llm_content_to_str
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_PROMPT_TEMPLATE = """패션 매거진 에디터로서 아래 포스트의 요약을 작성하세요.
+SUMMARY_PROMPT_TEMPLATE = """You are a senior fashion editor at Decoded. Write a concise summary of the post below.
 
-아티스트: {artist_info}
-컨텍스트: {context}
-아이템: {items_section}
+Artist: {artist_info}
+Context: {context}
+Items: {items_section}
 
-에디토리얼 참고:
+Editorial reference:
 {editorial_context}
 
-한국어 3-5문장(150~300자)으로 자연스러운 문체로 작성하세요.
-요약만 출력하세요:"""
+Write 3-5 natural sentences in English (roughly 150-300 characters).
+Output the summary only, without any prefix or quotation marks:"""
 
 
 def _build_items_brief(state: PostEditorialState) -> str:
@@ -42,37 +42,37 @@ def _build_items_brief(state: PostEditorialState) -> str:
             if sub_category:
                 entry += f" [{sub_category}]"
             lines.append(entry)
-    return "\n".join(lines) if lines else "(아이템 없음)"
+    return "\n".join(lines) if lines else "(no items)"
 
 
 def _build_editorial_context(state: PostEditorialState) -> str:
     parts: list[str] = []
     if state.get("title"):
-        parts.append(f"제목: {state['title']}")
+        parts.append(f"Title: {state['title']}")
     if state.get("subtitle"):
-        parts.append(f"부제: {state['subtitle']}")
+        parts.append(f"Subtitle: {state['subtitle']}")
     editorial = state.get("editorial_section")
     if editorial and isinstance(editorial, dict):
         paragraphs = editorial.get("paragraphs", [])
         if paragraphs:
-            parts.append("본문:\n" + "\n".join(paragraphs))
+            parts.append("Body:\n" + "\n".join(paragraphs))
     item_texts = state.get("item_editorial_texts")
     if item_texts and isinstance(item_texts, dict):
         for spot_id, paras in item_texts.items():
             if paras:
-                parts.append(f"아이템({spot_id}): " + " ".join(paras))
+                parts.append(f"Item({spot_id}): " + " ".join(paras))
     analysis = state.get("image_analysis")
     if analysis and isinstance(analysis, dict):
         mood = analysis.get("overall_mood", "")
         setting = analysis.get("setting", "")
         if mood or setting:
-            parts.append(f"이미지 분석: 무드={mood}, 장소={setting}")
+            parts.append(f"Image analysis: mood={mood}, setting={setting}")
     research = state.get("item_research")
     if research and isinstance(research, dict):
         ctx = research.get("artist_brand_context", "")
         if ctx:
-            parts.append(f"아티스트-브랜드: {ctx[:200]}")
-    return "\n\n".join(parts) if parts else "(에디토리얼 미생성)"
+            parts.append(f"Artist-brand: {ctx[:200]}")
+    return "\n\n".join(parts) if parts else "(no editorial generated)"
 
 
 async def _generate_summary_groq(prompt: str) -> str:
@@ -89,9 +89,9 @@ async def _generate_summary_groq(prompt: str) -> str:
     response = await llm.ainvoke([HumanMessage(content=prompt)])
     raw = response.content
     text = _llm_content_to_str(raw).strip()
-    for prefix in ["요약:", "요약 :"]:
+    for prefix in ["Summary:", "summary:", "요약:", "요약 :"]:
         if text.startswith(prefix):
-            text = text[len(prefix):].strip()
+            text = text[len(prefix) :].strip()
     return text.strip('"').strip("'")
 
 
@@ -99,8 +99,11 @@ async def summary_node(state: PostEditorialState) -> dict:
     """Generate a rich AI summary referencing editorial content."""
     try:
         post_data = state["post_data"]
-        artist_info = " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
-        context = post_data.context or post_data.title or "패션 포스트"
+        artist_info = (
+            " / ".join(filter(None, [post_data.artist_name, post_data.group_name]))
+            or "Unknown"
+        )
+        context = post_data.context or post_data.title or "fashion post"
         items_section = _build_items_brief(state)
         editorial_context = _build_editorial_context(state)
 

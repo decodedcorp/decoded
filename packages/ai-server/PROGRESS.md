@@ -1,5 +1,34 @@
 # Development Progress
 
+## Recent Refactoring (2026-04-12)
+
+### ✅ **Prompts switched to English (Decoded editorial voice)** (2026-04-12)
+
+- **Problem**: AI pipeline was producing Korean content (ai_summary, editorial,
+  image_analysis, post_context, link metadata) because every prompt was
+  hardcoded in Korean. The product UI is English-first, so mixed-language
+  content created UX inconsistency. The editorial persona also leaked the
+  phrase "Hypebeast 'Tagged'" into generated copy.
+- **Changes**:
+  - `src/post_editorial/nodes/summary.py`: English prompt + context fallback
+  - `src/post_editorial/nodes/editorial.py`: persona rewritten as
+    "senior fashion editor at Decoded"; explicit ban on mentioning
+    "Hypebeast" or "Tagged" in output; all section headers and output
+    field descriptions translated to English
+  - `src/post_editorial/nodes/image_analysis.py`: JSON schema field
+    descriptions and example values in English
+  - `src/services/post_context/post_context_service.py`: Ollama vision
+    prompt in English; style_tags/mood/setting must be English
+  - `src/services/metadata/processors/link_ai_analyzer.py`: link summary,
+    qna, and keyword instructions in English
+- **Scope**: new content only. Existing Korean rows in DB are untouched
+  (gradual transition — existing posts keep their legacy Korean summaries
+  until regenerated manually).
+- **Brand names unaffected**: prompt still encourages mentioning brand /
+  product names (Nike, Gucci, etc.) — only "Hypebeast"/"Tagged" are banned.
+
+---
+
 ## Recent Refactoring (2026-03-18)
 
 ### ✅ **Post Editorial LangGraph 파이프라인 추가** (2026-03-18)
