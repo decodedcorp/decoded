@@ -402,46 +402,41 @@ export function MagazineItemsSection({
                 </div>
               </div>
 
-              {/* Similar Items for this spot */}
+              {/* Similar Items for this spot — intentionally small & muted to
+                  stay visually subordinate to the main item above */}
               {spotRelated.length > 0 && (
                 <div
                   className={
                     compact
-                      ? "mt-3"
-                      : "mt-6 ml-0 md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"
+                      ? "mt-3 max-w-[220px]"
+                      : "mt-4 ml-0 max-w-xs md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"
                   }
                 >
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Similar Items
+                  <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/50">
+                    Similar
                   </p>
-                  <div
-                    className={`grid ${compact ? "grid-cols-3 gap-2" : "grid-cols-2 gap-4 sm:grid-cols-3"}`}
-                  >
+                  <div className="grid grid-cols-3 gap-1.5">
                     {spotRelated.slice(0, 3).map((ri, j) => (
                       <a
                         key={`${ri.title}-${j}`}
                         href={ri.original_url ?? "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group overflow-hidden rounded-lg border border-border/40 bg-card transition-all hover:border-border hover:shadow-md"
+                        className="group overflow-hidden rounded-md border border-border/20 bg-card/40 opacity-80 transition-all hover:border-border/60 hover:opacity-100"
                       >
                         <ItemImage
                           src={ri.image_url || ""}
                           alt={ri.title}
-                          size={compact ? "thumbnail" : "card"}
+                          size="thumbnail"
                           imgClassName="transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className={compact ? "p-1.5" : "p-2"}>
+                        <div className="px-1 py-0.5">
                           {ri.brand && (
-                            <p
-                              className={`font-medium uppercase tracking-wider text-muted-foreground ${compact ? "text-[8px]" : "text-[10px]"}`}
-                            >
+                            <p className="text-[8px] font-medium uppercase tracking-wider text-muted-foreground/70 truncate">
                               {ri.brand}
                             </p>
                           )}
-                          <p
-                            className={`mt-0.5 font-medium leading-snug line-clamp-1 ${compact ? "text-[10px]" : "text-xs line-clamp-2"}`}
-                          >
+                          <p className="text-[9px] font-medium leading-snug line-clamp-1">
                             {ri.title}
                           </p>
                         </div>

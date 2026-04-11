@@ -514,11 +514,13 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
-      <HeroItemSync posts={heroPosts} />
-
-      <EditorialCarousel items={editorialItems} />
+      <div className="hidden md:block">
+        <HeroItemSync posts={heroPosts} />
+      </div>
 
       <EditorialMagazine data={editorialMagazineData} />
+
+      <EditorialCarousel items={editorialItems} />
 
       {/* #91: Decoded's Pick temporarily disabled */}
       {/* <DecodedPickSection

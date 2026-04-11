@@ -428,6 +428,7 @@ export function ImageDetailContent({
             image={image}
             items={normalizedItems}
             isModal={isModal}
+            compact={isExplorePreview}
             scrollContainerRef={scrollContainerRef}
             activeIndex={activeIndex}
             onActiveIndexChange={onActiveIndexChange}

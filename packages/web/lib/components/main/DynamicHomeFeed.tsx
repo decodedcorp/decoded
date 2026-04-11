@@ -374,7 +374,7 @@ export function DomeGallerySection({ images }: DomeGallerySectionProps) {
           className="text-sm md:text-base text-white/60 text-center max-w-sm mb-10 font-light"
           style={{ textShadow: "0 1px 20px rgba(0,0,0,0.7)" }}
         >
-          셀럽의 스타일을 AI로 직접 입어보세요
+          Try your favorite celebrity's style on yourself with AI
         </p>
         <span
           className="pointer-events-auto relative px-10 py-3.5 text-sm font-semibold tracking-[0.15em] uppercase

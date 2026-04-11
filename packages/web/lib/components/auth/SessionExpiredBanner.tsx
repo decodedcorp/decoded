@@ -18,12 +18,12 @@ export function SessionExpiredBanner() {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/90 text-black px-4 py-3 text-center text-sm font-medium backdrop-blur-sm">
-      <span>세션이 만료되었습니다. </span>
+      <span>Your session has expired. </span>
       <button
         onClick={handleReLogin}
         className="underline font-bold hover:opacity-80"
       >
-        다시 로그인
+        Sign in again
       </button>
     </div>
   );
