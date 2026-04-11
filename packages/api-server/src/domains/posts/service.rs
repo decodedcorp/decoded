@@ -565,12 +565,19 @@ fn build_spots_response(related_data: &PostRelatedData) -> AppResult<Vec<SpotWit
     Ok(spots_with_solutions)
 }
 
-/// Warehouse에서 아티스트/그룹 프로필 이미지를 병렬 조회
-async fn load_entity_profile_images(
+/// Warehouse에서 아티스트/그룹의 display data(name_en, name_ko, profile image)를 병렬 조회.
+/// 반환 순서: ((artist_name_en, artist_name_ko, artist_profile_image_url),
+///            (group_name_en, group_name_ko, group_profile_image_url))
+///
+/// artist_id/group_id가 None이거나 warehouse row가 없으면 해당 튜플은 전부 None.
+/// 응답 DTO 쪽에서 `name_en → name_ko → posts.artist_name(legacy)` 순으로 fallback을 적용한다.
+type EntityDisplay = (Option<String>, Option<String>, Option<String>);
+
+async fn load_entity_display_data(
     db: &DatabaseConnection,
     artist_id: Option<Uuid>,
     group_id: Option<Uuid>,
-) -> (Option<String>, Option<String>) {
+) -> (EntityDisplay, EntityDisplay) {
     let artist_fut = async {
         match artist_id {
             Some(aid) => crate::entities::WarehouseArtists::find_by_id(aid)
@@ -578,8 +585,9 @@ async fn load_entity_profile_images(
                 .await
                 .ok()
                 .flatten()
-                .and_then(|a| a.profile_image_url),
-            None => None,
+                .map(|a| (a.name_en, a.name_ko, a.profile_image_url))
+                .unwrap_or((None, None, None)),
+            None => (None, None, None),
         }
     };
 
@@ -590,8 +598,9 @@ async fn load_entity_profile_images(
                 .await
                 .ok()
                 .flatten()
-                .and_then(|g| g.profile_image_url),
-            None => None,
+                .map(|g| (g.name_en, g.name_ko, g.profile_image_url))
+                .unwrap_or((None, None, None)),
+            None => (None, None, None),
         }
     };
 
@@ -619,7 +628,7 @@ pub async fn get_post_detail(
     let user_fut = get_user_by_id(db, post.user_id);
     let related_fut = load_post_related_data(db, post_id);
     let like_count_fut = count_likes_by_post_id(db, post_id);
-    let profile_fut = load_entity_profile_images(db, post.artist_id, post.group_id);
+    let display_fut = load_entity_display_data(db, post.artist_id, post.group_id);
 
     let user_liked_fut = async {
         match user_id {
@@ -644,14 +653,14 @@ pub async fn get_post_detail(
         like_count,
         user_has_liked_val,
         user_has_saved,
-        (artist_img, group_img),
+        ((artist_name_en, artist_name_ko, artist_img), (group_name_en, group_name_ko, group_img)),
     ) = tokio::try_join!(
         user_fut,
         related_fut,
         like_count_fut,
         user_liked_fut,
         saved_fut,
-        async { Ok(profile_fut.await) },
+        async { Ok(display_fut.await) },
     )?;
 
     // 3. Spots이 없으면 빈 응답 반환
@@ -680,6 +689,15 @@ pub async fn get_post_detail(
         response.try_count = try_count;
         response.artist_profile_image_url = artist_img;
         response.group_profile_image_url = group_img;
+        // English-first fallback: warehouse name_en → name_ko → posts.artist_name(legacy).
+        // legacy 값은 from_post_model()이 이미 response.*_name에 넣어뒀으므로, warehouse 값이
+        // 있을 때만 덮어쓴다.
+        if let Some(name) = artist_name_en.or(artist_name_ko) {
+            response.artist_name = Some(name);
+        }
+        if let Some(name) = group_name_en.or(group_name_ko) {
+            response.group_name = Some(name);
+        }
         return Ok(response);
     }
 
@@ -718,6 +736,13 @@ pub async fn get_post_detail(
     response.try_count = try_count_result;
     response.artist_profile_image_url = artist_img;
     response.group_profile_image_url = group_img;
+    // English-first fallback (see empty-spots branch above for rationale)
+    if let Some(name) = artist_name_en.or(artist_name_ko) {
+        response.artist_name = Some(name);
+    }
+    if let Some(name) = group_name_en.or(group_name_ko) {
+        response.group_name = Some(name);
+    }
 
     Ok(response)
 }
@@ -2463,15 +2488,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_both_none_ids() {
+    async fn load_entity_display_data_both_none_ids() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres).into_connection();
-        let (artist_img, group_img) = load_entity_profile_images(&db, None, None).await;
-        assert!(artist_img.is_none());
-        assert!(group_img.is_none());
+        let ((a_en, a_ko, a_img), (g_en, g_ko, g_img)) =
+            load_entity_display_data(&db, None, None).await;
+        assert!(a_en.is_none() && a_ko.is_none() && a_img.is_none());
+        assert!(g_en.is_none() && g_ko.is_none() && g_img.is_none());
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_artist_found() {
+    async fn load_entity_display_data_artist_found() {
         use crate::entities::warehouse_artists;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
@@ -2486,17 +2512,16 @@ mod tests {
                 updated_at: t,
             }]])
             .into_connection();
-        let (artist_img, group_img) =
-            load_entity_profile_images(&db, Some(Uuid::nil()), None).await;
-        assert_eq!(
-            artist_img.as_deref(),
-            Some("https://img.example.com/karina.jpg")
-        );
-        assert!(group_img.is_none());
+        let ((a_en, a_ko, a_img), (_, _, g_img)) =
+            load_entity_display_data(&db, Some(Uuid::nil()), None).await;
+        assert_eq!(a_en.as_deref(), Some("Karina"));
+        assert_eq!(a_ko.as_deref(), Some("카리나"));
+        assert_eq!(a_img.as_deref(), Some("https://img.example.com/karina.jpg"));
+        assert!(g_img.is_none());
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_group_found() {
+    async fn load_entity_display_data_group_found() {
         use crate::entities::warehouse_groups;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
@@ -2511,22 +2536,22 @@ mod tests {
                 updated_at: t,
             }]])
             .into_connection();
-        let (artist_img, group_img) =
-            load_entity_profile_images(&db, None, Some(Uuid::nil())).await;
-        assert!(artist_img.is_none());
-        assert_eq!(
-            group_img.as_deref(),
-            Some("https://img.example.com/aespa.jpg")
-        );
+        let ((_, _, a_img), (g_en, g_ko, g_img)) =
+            load_entity_display_data(&db, None, Some(Uuid::nil())).await;
+        assert!(a_img.is_none());
+        assert_eq!(g_en.as_deref(), Some("aespa"));
+        assert_eq!(g_ko.as_deref(), Some("에스파"));
+        assert_eq!(g_img.as_deref(), Some("https://img.example.com/aespa.jpg"));
     }
 
     #[tokio::test]
-    async fn load_entity_profile_images_artist_not_found() {
+    async fn load_entity_display_data_artist_not_found() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
             .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
             .into_connection();
-        let (artist_img, _) = load_entity_profile_images(&db, Some(Uuid::new_v4()), None).await;
-        assert!(artist_img.is_none());
+        let ((a_en, a_ko, a_img), _) =
+            load_entity_display_data(&db, Some(Uuid::new_v4()), None).await;
+        assert!(a_en.is_none() && a_ko.is_none() && a_img.is_none());
     }
 
     // ── build_spots_response additional tests ──
