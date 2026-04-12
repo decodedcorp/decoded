@@ -3,6 +3,7 @@
 import {
   RefObject,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -98,6 +99,7 @@ export function ImageDetailContent({
   // D-08: Always use brand color — per-post design_spec.accent_color override removed
   const accentColor = "var(--mag-accent)";
   const commentSectionRef = useRef<HTMLDivElement>(null);
+  const detailContentRef = useRef<HTMLDivElement>(null);
 
   const handleShare = useCallback(async () => {
     const url =
@@ -258,9 +260,9 @@ export function ImageDetailContent({
   );
   const commentCount = commentCountProp ?? fetchedCommentCount;
 
-  // Build DecodeShowcase data from normalized items (magazine mode)
+  // Build DecodeShowcase data whenever the post has item centers + hero image (all layouts)
   const decodeShowcaseData = useMemo(() => {
-    if (!hasMagazine || !imageUrl) return null;
+    if (!imageUrl) return null;
     const itemsWithCenter = normalizedItems.filter((i) => i.normalizedCenter);
     if (itemsWithCenter.length === 0) return null;
     return toDecodeShowcaseData({
@@ -270,21 +272,71 @@ export function ImageDetailContent({
         imageWithOwner.artist_name ?? imageWithOwner.group_name ?? "DECODED",
     });
   }, [
-    hasMagazine,
     imageUrl,
     normalizedItems,
     imageWithOwner.artist_name,
     imageWithOwner.group_name,
   ]);
 
+  const showDecodeShowcase =
+    !!decodeShowcaseData && !isModal && !isExplorePreview;
+
+  const scrollItemDetailIntoView = useCallback((itemId: string) => {
+    const root = detailContentRef.current;
+    if (!root || typeof document === "undefined") return;
+    const escaped =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(itemId)
+        : itemId.replace(/"/g, '\\"');
+    const el = root.querySelector<HTMLElement>(`[data-item-id="${escaped}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  /** DecodeShowcase taps scroll to item cards below (InteractiveShowcase or MagazineItemsSection) */
+  const decodeShowcaseItemNav = showDecodeShowcase
+    ? scrollItemDetailIntoView
+    : undefined;
+
+  const decodeShowcaseArtist = useMemo(() => {
+    if (!showDecodeShowcase) return null;
+    const displayName =
+      imageWithOwner.artist_name || imageWithOwner.group_name;
+    if (!displayName) return null;
+    return {
+      displayName,
+      profileImageUrl:
+        imageWithOwner.artist_profile_image_url ||
+        imageWithOwner.group_profile_image_url ||
+        null,
+    };
+  }, [
+    showDecodeShowcase,
+    imageWithOwner.artist_name,
+    imageWithOwner.group_name,
+    imageWithOwner.artist_profile_image_url,
+    imageWithOwner.group_profile_image_url,
+  ]);
+
+  const [showFloatingBar, setShowFloatingBar] = useState(false);
+
+  useEffect(() => {
+    if (isModal || isExplorePreview) return;
+    const onScroll = () => setShowFloatingBar(window.scrollY > 100);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isModal, isExplorePreview]);
+
   // D-08: Always set --magazine-accent to brand color (accentColor is always "var(--mag-accent)")
   const magazineCssVars = {
     "--magazine-accent": accentColor,
   } as React.CSSProperties;
-  // Note: PostBadge intentionally not rendered (D-06 — clean image-centric UX)
 
   return (
-    <div className="detail-content relative" style={magazineCssVars}>
+    <div
+      ref={detailContentRef}
+      className="detail-content relative"
+      style={magazineCssVars}
+    >
       <>
         {/* Editorial Preview Header — explore modal only */}
         {isExplorePreview && (
@@ -350,7 +402,20 @@ export function ImageDetailContent({
           </div>
         )}
 
-        {/* Section 1: Magazine Title (text header) or Hero Image */}
+        {/* DecodeShowcase first on full page (modal/preview unchanged) */}
+        {!isExplorePreview && showDecodeShowcase && (
+          <Suspense fallback={null}>
+            <DecodeShowcase
+              data={decodeShowcaseData}
+              artist={decodeShowcaseArtist}
+              aiSummary={aiSummary}
+              isModal={isModal}
+              onItemNavigate={decodeShowcaseItemNav}
+            />
+          </Suspense>
+        )}
+
+        {/* Section 1: Editorial title or Hero; artist row immediately after title/hero */}
         {!isExplorePreview && (
           <>
             {hasMagazine ? (
@@ -360,7 +425,8 @@ export function ImageDetailContent({
                 isModal={isModal}
               />
             ) : (
-              !hideImage && (
+              !hideImage &&
+              !showDecodeShowcase && (
                 <HeroSection
                   image={image}
                   isModal={isModal}
@@ -368,61 +434,56 @@ export function ImageDetailContent({
                 />
               )
             )}
+            {showDecodeShowcase
+              ? null
+              : (() => {
+                  const profileImageUrl =
+                    imageWithOwner.artist_profile_image_url ||
+                    imageWithOwner.group_profile_image_url;
+                  const displayName =
+                    imageWithOwner.artist_name || imageWithOwner.group_name;
+                  if (!displayName) return null;
+                  return (
+                    <div className="flex flex-col items-center gap-2 px-6 py-5">
+                      {profileImageUrl ? (
+                        <img
+                          src={`/api/v1/image-proxy?url=${encodeURIComponent(profileImageUrl)}`}
+                          alt=""
+                          className="h-12 w-12 rounded-full border border-white/10 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-base font-bold text-white/50">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-foreground">
+                          {displayName}
+                        </p>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          Artist
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
           </>
         )}
 
-        {/* Artist/Group profile — full page and magazine mode */}
-        {!isExplorePreview &&
-          (() => {
-            const profileImageUrl =
-              imageWithOwner.artist_profile_image_url ||
-              imageWithOwner.group_profile_image_url;
-            const displayName =
-              imageWithOwner.artist_name || imageWithOwner.group_name;
-            if (!displayName) return null;
-            return (
-              <div className="flex flex-col items-center gap-2 px-6 py-5">
-                {profileImageUrl ? (
-                  <img
-                    src={`/api/v1/image-proxy?url=${encodeURIComponent(profileImageUrl)}`}
-                    alt=""
-                    className="w-12 h-12 rounded-full object-cover border border-white/10"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white/50">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-foreground">
-                    {displayName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-                    Artist
-                  </p>
-                </div>
+        {/* AI Summary — inside DecodeShowcase when pinned decode runs; else below title/hero */}
+        {aiSummary &&
+          !isExplorePreview &&
+          !showDecodeShowcase && (
+            <section
+              className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
+            >
+              <div className="w-full">
+                <AISummarySection summary={aiSummary} isModal={isModal} />
               </div>
-            );
-          })()}
+            </section>
+          )}
 
-        {/* AI Summary Section — only rendered when summary exists */}
-        {aiSummary && !isExplorePreview && (
-          <section
-            className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
-          >
-            <div className="w-full">
-              <AISummarySection summary={aiSummary} isModal={isModal} />
-            </div>
-          </section>
-        )}
-
-        {/* Section 2: DecodeShowcase (magazine) or Interactive Showcase (non-magazine) */}
-        {/* In modal mode, skip — the floating left panel already shows this image */}
-        {decodeShowcaseData && !isModal && !isExplorePreview && (
-          <Suspense fallback={null}>
-            <DecodeShowcase data={decodeShowcaseData} />
-          </Suspense>
-        )}
+        {/* Interactive item cards (non-magazine); DecodeShowcase rendered above */}
         {!hasMagazine && hasItemsWithCoordinates && (
           <InteractiveShowcase
             image={image}
@@ -432,7 +493,6 @@ export function ImageDetailContent({
             scrollContainerRef={scrollContainerRef}
             activeIndex={activeIndex}
             onActiveIndexChange={onActiveIndexChange}
-            renderImage={!hideImage}
             onAddSolution={(spotId) => setSpotIdToAddSolution(spotId)}
             postOwnerId={
               (image as ImageDetailWithPostOwner).post_owner_id ?? null
@@ -590,20 +650,47 @@ export function ImageDetailContent({
       />
       */}
 
-        <div className="px-6 py-6 md:px-10 border-t border-border">
-          <SocialActions
-            initialLiked={initialLiked}
-            initialSaved={initialSaved}
-            likeCount={likeCount}
-            commentCount={commentCount}
-            showComment
-            variant="default"
-            onLike={handleLike}
-            onSave={handleSave}
-            onShare={handleShare}
-            onComment={scrollToComments}
-          />
-        </div>
+        {/* Floating social action bar — full page only */}
+        {!isModal && !isExplorePreview && (
+          <div
+            className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-background/80 px-2 py-1.5 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-[var(--mag-accent)]/60 hover:shadow-[0_0_16px_rgba(234,253,103,0.15)] ${
+              showFloatingBar
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0 pointer-events-none"
+            }`}
+          >
+            <SocialActions
+              initialLiked={initialLiked}
+              initialSaved={initialSaved}
+              likeCount={likeCount}
+              commentCount={commentCount}
+              showComment
+              variant="default"
+              onLike={handleLike}
+              onSave={handleSave}
+              onShare={handleShare}
+              onComment={scrollToComments}
+            />
+          </div>
+        )}
+
+        {/* Static social actions — modal / explore-preview */}
+        {(isModal || isExplorePreview) && (
+          <div className="px-6 py-6 md:px-10 border-t border-border">
+            <SocialActions
+              initialLiked={initialLiked}
+              initialSaved={initialSaved}
+              likeCount={likeCount}
+              commentCount={commentCount}
+              showComment
+              variant="default"
+              onLike={handleLike}
+              onSave={handleSave}
+              onShare={handleShare}
+              onComment={scrollToComments}
+            />
+          </div>
+        )}
 
         {/* Magazine: Related Editorials - 맨 마지막 (lazy loaded) */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (

@@ -5,6 +5,7 @@
  * in monorepo setup. They use query functions from shared package.
  */
 
+import { useRef } from "react";
 import {
   useQuery,
   useInfiniteQuery,
@@ -172,6 +173,8 @@ export function useInfinitePosts(params: {
   castName?: string;
   contextType?: string;
   enabled?: boolean;
+  /** When true, wraps back to page 1 after reaching the last page (duplicates expected) */
+  loop?: boolean;
 }) {
   const {
     limit = 40,
@@ -185,7 +188,10 @@ export function useInfinitePosts(params: {
     castName,
     contextType,
     enabled = true,
+    loop = false,
   } = params;
+
+  const totalPagesRef = useRef(0);
 
   return useInfiniteQuery<PostsPage>({
     queryKey: [
@@ -207,10 +213,12 @@ export function useInfinitePosts(params: {
     enabled,
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
+      const tp = totalPagesRef.current;
+      const actualPage =
+        loop && tp > 0 ? ((page - 1) % tp) + 1 : page;
 
-      // REST API
       const response = await listPosts({
-        page,
+        page: actualPage,
         per_page: limit,
         sort,
         has_magazine: true,
@@ -220,6 +228,9 @@ export function useInfinitePosts(params: {
           contextType ??
           (category && category !== "all" ? category : undefined),
       });
+
+      const totalPages = response.pagination.total_pages;
+      totalPagesRef.current = totalPages;
 
       const items: PostGridItem[] = response.data.map((post) => ({
         id: post.id,
@@ -239,9 +250,10 @@ export function useInfinitePosts(params: {
           | null,
       }));
 
-      const totalPages = response.pagination.total_pages;
-      const hasMore = page < totalPages;
-      return { items, nextPage: hasMore ? page + 1 : null, hasMore };
+      const atEnd = actualPage >= totalPages;
+      const hasMore = loop ? true : !atEnd;
+      const nextPage = loop ? page + 1 : atEnd ? null : page + 1;
+      return { items, nextPage, hasMore };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,

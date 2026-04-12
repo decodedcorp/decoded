@@ -26,7 +26,7 @@ const SIZE_CONFIG = {
   },
   detail: {
     aspectRatio: "3/4",
-    sizes: "(max-width: 768px) 100vw, 800px",
+    sizes: "(max-width: 768px) 100vw, (max-width: 1280px) 14rem, 15rem",
     blur: true,
   },
   hero: {

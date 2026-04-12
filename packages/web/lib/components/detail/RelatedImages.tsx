@@ -92,21 +92,23 @@ export function RelatedImages({
   );
 
   if (isLoading) {
+    const skeletonRatios = [4 / 5, 3 / 4, 1, 4 / 5, 3 / 4, 5 / 6];
     return (
       <section
         className={`py-12 md:py-16 ${
           isModal ? "px-4 md:px-6" : "px-4 md:px-6"
         }`}
       >
-        <div className={`mx-auto max-w-6xl`}>
+        <div className="mx-auto max-w-6xl">
           <div className="text-center mb-6">
             <div className="h-8 w-48 bg-muted rounded mx-auto animate-pulse" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="columns-2 md:columns-3 gap-3 md:gap-4">
+            {skeletonRatios.map((ratio, i) => (
               <div
                 key={i}
-                className="aspect-[4/5] bg-muted animate-pulse rounded-lg"
+                className="mb-3 md:mb-4 break-inside-avoid rounded-lg bg-muted animate-pulse"
+                style={{ aspectRatio: ratio }}
               />
             ))}
           </div>
@@ -138,31 +140,28 @@ export function RelatedImages({
     >
       <div ref={sectionRef} className="mx-auto max-w-6xl">
         <h2 className="text-2xl font-serif mb-6">More from this look</h2>
-        <p className="text-sm text-muted-foreground mb-6">From @{account}</p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
+        <div className="columns-2 md:columns-3 gap-3 md:gap-4 mb-8">
           {visiblePosts?.map((post) => {
             const CardWrapper = isModal ? "a" : Link;
-            const cardProps = isModal
-              ? { href: `/posts/${post.id}` }
-              : { href: `/posts/${post.id}` };
 
             return (
               <CardWrapper
                 key={post.id}
-                {...cardProps}
-                className="related-card group block relative aspect-[4/5] overflow-hidden rounded-lg bg-muted"
+                href={`/posts/${post.id}`}
+                className="related-card group block relative mb-3 md:mb-4 break-inside-avoid overflow-hidden rounded-lg bg-muted"
               >
                 <PostImage
                   src={post.image_url ?? ""}
                   alt={`Post by @${account}`}
+                  imageWidth={post.image_width}
+                  imageHeight={post.image_height}
                   flagKey="RelatedImages"
-                  className="w-full h-full"
+                  className="w-full"
                   imgClassName="transition-transform duration-700 group-hover:scale-105"
                 />
 
-                {/* Always-visible overlay with post info */}
-                <div className="absolute inset-0 z-20 flex flex-col justify-end bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                <div className="absolute inset-0 z-20 flex flex-col justify-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="p-3 md:p-4">
                     <p className="text-white/90 text-sm font-medium truncate">
                       {post.artist_name ?? account}

@@ -6,9 +6,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import type { ImageRow } from "@/lib/supabase/types";
 import type { UiItem } from "./types";
-import { ImageCanvas } from "./ImageCanvas";
 import { ItemDetailCard } from "./ItemDetailCard";
-import { ConnectorLayer } from "./ConnectorLayer";
 
 // Register GSAP ScrollTrigger plugin
 if (typeof window !== "undefined") {
@@ -19,13 +17,12 @@ type Props = {
   image: ImageRow;
   items: UiItem[];
   isModal?: boolean;
-  /** Dense preview layout for explore-preview modal — smaller image + typography */
+  /** Dense preview layout for explore-preview modal */
   compact?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   // Controlled mode props
   activeIndex?: number | null;
   onActiveIndexChange?: (index: number | null) => void;
-  renderImage?: boolean;
   /** 솔루션 등록 시트 열기 (spotId 전달) */
   onAddSolution?: (spotId: string) => void;
   /** 포스트 작성자 ID - 채택 UI 표시 여부 판단 */
@@ -33,22 +30,17 @@ type Props = {
 };
 
 /**
- * Interactive Showcase - The Core Feature
- *
- * Desktop: Sticky split layout (left image fixed / right text scrolls)
- * Mobile: Stack layout (top image fixed ~40vh / bottom text scrolls)
- *
- * Uses ScrollTrigger to sync active item with scroll position.
+ * Item detail cards with scroll-linked active state (highlights on hover).
+ * Post image / detection UX is handled by DecodeShowcase above on full page.
  */
 export function InteractiveShowcase({
-  image,
+  image: _image,
   items,
   isModal = false,
   compact = false,
   scrollContainerRef,
   activeIndex: controlledActiveIndex,
   onActiveIndexChange,
-  renderImage = true,
   onAddSolution,
   postOwnerId = null,
 }: Props) {
@@ -77,7 +69,6 @@ export function InteractiveShowcase({
   };
 
   const sectionRef = useRef<HTMLElement>(null);
-  const imageContainerRef = useRef<HTMLDivElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   // Setup ScrollTrigger for each card
@@ -176,29 +167,12 @@ export function InteractiveShowcase({
   }
 
   return (
-    <section
-      ref={sectionRef}
-      className={`flex flex-col relative h-auto ${isModal ? "" : "lg:flex-row lg:min-h-screen"}`}
-    >
-      {/* Left: Sticky Image Canvas (Desktop) / Top: Fixed Image (Mobile) */}
-      {renderImage && (
-        <div
-          ref={imageContainerRef}
-          className={`sticky top-0 w-full z-10 ${isModal ? "h-[30vh] md:h-[40vh]" : "h-[30vh] md:h-[40vh] lg:h-screen lg:w-1/2"}`}
-        >
-          <ImageCanvas image={image} items={items} activeIndex={activeIndex} />
-        </div>
-      )}
-
-      {/* Right: Scrollable Item Details (Desktop) / Bottom: Scrollable (Mobile) */}
+    <section ref={sectionRef} className="relative flex flex-col h-auto">
+      {/* Scrollable item cards — full width (post image: DecodeShowcase / modal chrome) */}
       <div
         ref={cardsContainerRef}
-        className={`w-full px-4 py-6 bg-background relative ${
-          isModal
-            ? renderImage
-              ? "overflow-visible"
-              : "w-full pt-0"
-            : "z-20 lg:w-1/2 lg:pl-8 lg:pt-12"
+        className={`relative z-20 w-full bg-background px-4 py-6 ${
+          isModal ? "overflow-visible pt-0" : "mx-auto max-w-6xl lg:px-8 lg:pt-12"
         }`}
       >
         {items.map((item, index) => (
@@ -216,17 +190,6 @@ export function InteractiveShowcase({
           />
         ))}
       </div>
-
-      {/* Connector Lines Layer - Only show if image is rendered internally */}
-      {renderImage && (
-        <ConnectorLayer
-          items={items}
-          activeIndex={activeIndex}
-          imageContainerRef={imageContainerRef}
-          cardsContainerRef={cardsContainerRef}
-          scrollContainerRef={scrollContainerRef}
-        />
-      )}
     </section>
   );
 }

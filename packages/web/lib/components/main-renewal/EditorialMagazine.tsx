@@ -175,7 +175,7 @@ export default function EditorialMagazine({
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent z-10" />
               <div className="absolute inset-x-0 bottom-0 p-5 z-20">
                 <h3
-                  className="text-xl md:text-2xl font-bold text-white leading-tight"
+                  className="text-xl md:text-2xl font-bold text-white leading-tight line-clamp-2"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
                 >
                   {active.title}
