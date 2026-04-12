@@ -6,13 +6,6 @@ import { gsap } from "gsap";
 
 interface UseImageModalAnimationOptions {
   imageId: string;
-  activeImageSrc: string | null | undefined;
-  originRect: {
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null;
   reset: () => void;
   backdropRef: React.RefObject<HTMLDivElement | null>;
   drawerRef: React.RefObject<HTMLElement | null>;
@@ -33,14 +26,17 @@ export interface UseImageModalAnimationReturn {
 }
 
 /**
- * Owns the GSAP context for ImageDetailModal.
- * Manages mount/close animation, touch swipe gesture, and maximize navigation.
- * The ctxRef is created in the mount effect and reverted on cleanup.
+ * Close-only GSAP controller for ImageDetailModal.
+ * Entrance is pure CSS layout — left image panel and drawer mount at final
+ * position immediately, with skeletons covering data load. This hook owns:
+ * - body scroll lock
+ * - fade-out close animation
+ * - mobile swipe-to-close gesture
+ * - escape key
+ * - maximize navigation
  */
 export function useImageModalAnimation({
   imageId,
-  activeImageSrc,
-  originRect,
   reset,
   backdropRef,
   drawerRef,
@@ -58,7 +54,7 @@ export function useImageModalAnimation({
   const touchCurrentY = useRef<number>(0);
   const touchStartTime = useRef<number>(0);
 
-  // Mount/Enter Animation — creates the GSAP context that all other animations add to
+  // Body scroll lock + GSAP context (used by close + swipe)
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
     const originalHtmlOverflow = document.documentElement.style.overflow;
@@ -66,26 +62,7 @@ export function useImageModalAnimation({
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
-    ctxRef.current = gsap.context(() => {
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-
-      // Backdrop visible immediately to prevent background flash
-      gsap.set(backdropRef.current, { opacity: 1 });
-
-      if (isDesktop) {
-        gsap.set(drawerRef.current, { x: "100%", y: 0 });
-      } else {
-        gsap.set(drawerRef.current, { x: 0, y: "100%" });
-      }
-
-      // Drawer slides in without delay
-      gsap.to(drawerRef.current, {
-        x: "0%",
-        y: "0%",
-        duration: 0.35,
-        ease: "power3.out",
-      });
-    }, containerRef);
+    ctxRef.current = gsap.context(() => {}, containerRef);
 
     return () => {
       document.body.style.overflow = originalBodyOverflow;
@@ -93,66 +70,6 @@ export function useImageModalAnimation({
       ctxRef.current?.revert();
     };
   }, []);
-
-  // Floating Image Entry Animation (runs when image source becomes available, desktop only)
-  useEffect(() => {
-    if (!activeImageSrc || !leftImageContainerRef.current) return;
-
-    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-    if (!isDesktop) return;
-
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let drawerWidth: number;
-    if (viewportWidth >= 1280) {
-      drawerWidth = 700;
-    } else if (viewportWidth >= 1024) {
-      drawerWidth = 600;
-    } else {
-      drawerWidth = viewportWidth * 0.5;
-    }
-
-    const leftSpace = viewportWidth - drawerWidth;
-    const targetWidth = Math.min(leftSpace * 0.7, 500);
-    const targetHeight = viewportHeight * 0.75;
-
-    const targetProps = {
-      top: (viewportHeight - targetHeight) / 2,
-      left: (leftSpace - targetWidth) / 2,
-      width: targetWidth,
-      height: targetHeight,
-      borderRadius: "0.5rem",
-    };
-
-    if (originRect) {
-      gsap.set(leftImageContainerRef.current, {
-        position: "fixed",
-        top: originRect.top,
-        left: originRect.left,
-        width: originRect.width,
-        height: originRect.height,
-        borderRadius: "0.75rem",
-        zIndex: 60,
-        opacity: 1,
-      });
-
-      gsap.to(leftImageContainerRef.current, {
-        ...targetProps,
-        duration: 0.4,
-        ease: "power3.out",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-      });
-    } else {
-      gsap.set(leftImageContainerRef.current, {
-        position: "fixed",
-        ...targetProps,
-        zIndex: 60,
-        opacity: 1,
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-      });
-    }
-  }, [activeImageSrc, originRect]);
 
   const handleClose = useCallback(() => {
     if (isClosing || isMaximizing || !ctxRef.current) return;
@@ -187,7 +104,7 @@ export function useImageModalAnimation({
 
       tl.to(targets, { opacity: 0, duration: 0.3, ease: "power3.in" }, 0);
     });
-  }, [isClosing, isMaximizing, router, originRect, reset]);
+  }, [isClosing, isMaximizing, router, reset]);
 
   // Escape key handler
   useEffect(() => {

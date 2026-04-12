@@ -51,7 +51,7 @@ export function MagazineRelatedSection({ relatedEditorials }: Props) {
     >
       <h2 className="typography-h3 mb-2 text-center">Related Editorials</h2>
       <p className="mb-10 text-center text-sm text-muted-foreground">
-        같은 아티스트의 다른 에디토리얼
+        More editorials featuring the same artist
       </p>
 
       <div className="space-y-6 md:space-y-8">

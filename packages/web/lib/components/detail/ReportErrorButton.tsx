@@ -40,7 +40,7 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
     e.preventDefault();
 
     if (!postId) {
-      toast.success("소중한 의견 감사합니다! 빠르게 확인해보겠습니다.");
+      toast.success("Thanks for the feedback — we'll review it soon.");
       setSuggestion("");
       setIsOpen(false);
       return;
@@ -55,15 +55,15 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
       },
       {
         onSuccess: () => {
-          toast.success("소중한 의견 감사합니다! 빠르게 확인해보겠습니다.");
+          toast.success("Thanks for the feedback — we'll review it soon.");
           setSuggestion("");
           setIsOpen(false);
         },
         onError: (error) => {
           toast.error(
             error.message === "You have already reported this content"
-              ? "이미 신고한 콘텐츠입니다."
-              : "신고 전송에 실패했습니다. 다시 시도해주세요."
+              ? "You've already reported this content."
+              : "Failed to submit the report. Please try again."
           );
         },
       }
@@ -82,7 +82,7 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
       <button
         onClick={() => setIsOpen(true)}
         className={buttonClasses}
-        title="오류 신고하기"
+        title="Report an issue"
         aria-label="Report issue"
       >
         <AlertCircle size={iconSize} />
@@ -101,10 +101,10 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
               <X size={20} />
             </button>
 
-            <h3 className="text-lg font-semibold mb-2">오류 신고</h3>
+            <h3 className="text-lg font-semibold mb-2">Report an issue</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              포스트 내용에 오류가 있나요? 내용을 남겨주시면 빠르게
-              수정하겠습니다.
+              Did you find a mistake in this post? Let us know and we'll fix
+              it.
             </p>
 
             <form onSubmit={handleSubmit}>
@@ -113,13 +113,13 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
                   htmlFor="suggestion"
                   className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide"
                 >
-                  내용
+                  Details
                 </label>
                 <textarea
                   id="suggestion"
                   value={suggestion}
                   onChange={(e) => setSuggestion(e.target.value)}
-                  placeholder="예: 아이템 정보가 이미지와 다릅니다..."
+                  placeholder="e.g., The item info doesn't match the image..."
                   className="w-full min-h-[100px] p-3 rounded-md bg-accent/50 border border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none resize-none text-sm"
                   required
                 />
@@ -131,7 +131,7 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
                   onClick={() => setIsOpen(false)}
                   className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  취소
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -139,10 +139,10 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
                   className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
-                    "전송 중..."
+                    "Sending..."
                   ) : (
                     <>
-                      보내기 <Send size={14} />
+                      Send <Send size={14} />
                     </>
                   )}
                 </button>

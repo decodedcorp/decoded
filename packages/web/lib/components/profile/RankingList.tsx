@@ -91,7 +91,7 @@ export function RankingList() {
           Rankings
         </h3>
         <div className="text-center py-8 text-muted-foreground text-sm">
-          활동을 시작하면 랭킹이 표시됩니다
+          Rankings appear once you start contributing
         </div>
       </motion.section>
     );

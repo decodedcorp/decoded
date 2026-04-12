@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  access_denied: "로그인이 취소되었습니다.",
-  invalid_request: "잘못된 로그인 요청입니다.",
-  server_error: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-  temporarily_unavailable: "서비스가 일시적으로 사용 불가합니다.",
+  access_denied: "Sign in was cancelled.",
+  invalid_request: "Invalid sign-in request.",
+  server_error: "A server error occurred. Please try again shortly.",
+  temporarily_unavailable: "The service is temporarily unavailable.",
 };
 
 export async function GET(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   if (errorCode) {
     console.error("[auth/callback] OAuth error:", errorCode, errorDescription);
     const message =
-      ERROR_MESSAGES[errorCode] ?? "로그인 중 오류가 발생했습니다.";
+      ERROR_MESSAGES[errorCode] ?? "An error occurred while signing in.";
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("error", message);
     return NextResponse.redirect(loginUrl);
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   if (!code) {
     console.error("[auth/callback] No code provided");
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("error", "인증 코드가 없습니다.");
+    loginUrl.searchParams.set("error", "Missing auth code.");
     return NextResponse.redirect(loginUrl);
   }
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   if (error) {
     console.error("[auth/callback] Exchange error:", error.message);
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("error", "세션 생성에 실패했습니다.");
+    loginUrl.searchParams.set("error", "Failed to create session.");
     return NextResponse.redirect(loginUrl);
   }
 

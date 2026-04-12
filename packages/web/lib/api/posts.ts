@@ -62,7 +62,7 @@ export async function uploadImage({
   const token = await getAuthToken();
 
   if (!token) {
-    throw new Error("로그인이 필요합니다.");
+    throw new Error("Sign in required.");
   }
 
   const formData = new FormData();
@@ -96,7 +96,7 @@ export async function uploadImage({
           errorData = await response.json();
         } catch {
           errorData = {
-            message: "서버가 일시적으로 응답하지 않습니다.",
+            message: "The server is temporarily unavailable.",
             retryable: true,
           };
         }
@@ -115,7 +115,7 @@ export async function uploadImage({
         // No more retries, throw the error
         throw new Error(
           errorData.message ||
-            "서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요."
+            "The server is temporarily unavailable. Please try again shortly."
         );
       }
 
@@ -164,7 +164,7 @@ export async function uploadImage({
   }
 
   // Should not reach here, but just in case
-  throw lastError || new Error("업로드에 실패했습니다.");
+  throw lastError || new Error("Upload failed.");
 }
 
 // ============================================================
@@ -271,7 +271,7 @@ export async function createPostWithFile(
   const token = await getAuthToken();
 
   if (!token) {
-    throw new Error("로그인이 필요합니다.");
+    throw new Error("Sign in required.");
   }
 
   // Send file directly via FormData to local proxy
@@ -302,7 +302,7 @@ export async function createPostWithFile(
 
   if (!response.ok) {
     const responseText = await response.text();
-    let errorMessage = "포스트 생성에 실패했습니다.";
+    let errorMessage = "Failed to create post.";
     try {
       const errorJson = JSON.parse(responseText);
       errorMessage =
@@ -328,7 +328,7 @@ export async function createPostWithFileAndSolutions(
   const token = await getAuthToken();
 
   if (!token) {
-    throw new Error("로그인이 필요합니다.");
+    throw new Error("Sign in required.");
   }
 
   const formData = new FormData();
@@ -355,7 +355,7 @@ export async function createPostWithFileAndSolutions(
 
   if (!response.ok) {
     const responseText = await response.text();
-    let errorMessage = "포스트 생성에 실패했습니다.";
+    let errorMessage = "Failed to create post.";
     try {
       const errorJson = JSON.parse(responseText);
       errorMessage =
@@ -464,7 +464,7 @@ export async function createTryPost(
   const token = await getAuthToken();
 
   if (!token) {
-    throw new Error("로그인이 필요합니다.");
+    throw new Error("Sign in required.");
   }
 
   const formData = new FormData();
@@ -489,7 +489,7 @@ export async function createTryPost(
 
   if (!response.ok) {
     const responseText = await response.text();
-    let errorMessage = "Try 포스트 생성에 실패했습니다.";
+    let errorMessage = "Failed to create try post.";
     try {
       const errorJson = JSON.parse(responseText);
       errorMessage =

@@ -30,16 +30,16 @@ export function SpotTagSelector({
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted-foreground">
-        이 아이템 갖고 있어요 (선택)
+        I have these items (optional)
       </p>
       <div className="flex flex-wrap gap-2">
         {spots.map((spot) => {
           const isSelected = selectedSpotIds.includes(spot.id);
           const label =
-            spot.category?.name?.ko ||
             spot.category?.name?.en ||
+            spot.category?.name?.ko ||
             spot.category?.code ||
-            "아이템";
+            "Item";
           return (
             <button
               key={spot.id}

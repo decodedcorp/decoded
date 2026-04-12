@@ -72,3 +72,4 @@ packages/backend/target/
 
 # Worktrees
 .claude/worktrees/
+.vercel

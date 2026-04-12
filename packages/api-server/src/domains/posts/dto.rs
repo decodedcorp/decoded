@@ -1,7 +1,4 @@
 //! Posts DTO (Data Transfer Objects)
-//!
-//! API 요청/응답에 사용되는 데이터 구조
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -441,6 +438,14 @@ pub struct PostListItem {
     /// 이미지 세로 크기 (픽셀)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_height: Option<i32>,
+
+    /// Warehouse에서 조인한 아티스트 프로필 이미지 URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_profile_image_url: Option<String>,
+
+    /// Warehouse에서 조인한 그룹 프로필 이미지 URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_profile_image_url: Option<String>,
 }
 
 /// Post에 포함된 사용자 정보 (간소화)

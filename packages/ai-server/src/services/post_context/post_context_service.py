@@ -43,23 +43,25 @@ OLLAMA_FORMAT_SCHEMA = {
     "required": ["context", "style_tags", "mood", "setting"],
 }
 
-PROMPT = """이 이미지의 촬영 상황(context)과 스타일을 분석해줘.
+PROMPT = """Analyze the shooting situation (context) and style of this image.
 
-context는 반드시 아래 목록 중 하나를 선택:
-- airport (공항 패션)
-- stage (무대/공연/콘서트/뮤직비디오)
-- drama (드라마/영화 촬영)
-- variety (예능/버라이어티 출연)
-- daily (일상/OOTD)
-- photoshoot (화보/매거진 촬영)
-- event (시상식/행사/레드카펫)
-- brand_campaign (브랜드 캠페인/광고)
-- sns (SNS/셀카)
-- street (거리/파파라치/스트리트)
-- fan_meeting (팬미팅/팬사인회)
-- interview (인터뷰/방송)
+The context must be exactly one of the following values:
+- airport (airport fashion)
+- stage (stage / concert / music video)
+- drama (drama or film shoot)
+- variety (variety / entertainment show)
+- daily (daily / OOTD)
+- photoshoot (editorial / magazine shoot)
+- event (awards / red carpet / official event)
+- brand_campaign (brand campaign / ad)
+- sns (social media / selfie)
+- street (street / paparazzi)
+- fan_meeting (fan meeting / fan signing)
+- interview (interview / broadcast)
 
-style_tags는 이미지에서 느껴지는 스타일 키워드를 자유롭게 추출 (한국어, 3~6개)"""
+style_tags: freely extract 3-6 style keywords in English that capture the look
+(e.g., "minimalist", "streetwear", "monochrome", "layered", "oversized").
+mood and setting must also be short English phrases."""
 
 
 class PostContextService:
@@ -71,9 +73,13 @@ class PostContextService:
         ollama_model: str | None = None,
         ollama_timeout: int | None = None,
     ):
-        self.base_url = ollama_base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.base_url = ollama_base_url or os.environ.get(
+            "OLLAMA_BASE_URL", "http://localhost:11434"
+        )
         self.model = ollama_model or os.environ.get("OLLAMA_VISION_MODEL", "gemma4:e4b")
-        self.timeout = ollama_timeout or int(os.environ.get("OLLAMA_VISION_TIMEOUT", "60"))
+        self.timeout = ollama_timeout or int(
+            os.environ.get("OLLAMA_VISION_TIMEOUT", "60")
+        )
 
     async def extract_context(self, image_url: str) -> dict:
         """이미지 URL에서 context와 style_tags를 추출.
@@ -103,12 +109,17 @@ class PostContextService:
 
         # Validate context is in enum
         if result.get("context") not in CONTEXT_ENUM:
-            logger.warning("Ollama returned invalid context: %s, defaulting to 'daily'", result.get("context"))
+            logger.warning(
+                "Ollama returned invalid context: %s, defaulting to 'daily'",
+                result.get("context"),
+            )
             result["context"] = "daily"
 
         return result
 
-    async def extract_and_update(self, post_id: str, image_url: str, supabase_url: str, supabase_key: str) -> dict:
+    async def extract_and_update(
+        self, post_id: str, image_url: str, supabase_url: str, supabase_key: str
+    ) -> dict:
         """이미지 분석 후 Supabase posts 테이블 업데이트."""
         from supabase import acreate_client
 
@@ -117,17 +128,21 @@ class PostContextService:
         client = await acreate_client(supabase_url, supabase_key)
         await (
             client.table("posts")
-            .update({
-                "context": result["context"],
-                "style_tags": json.dumps(result["style_tags"]),
-            })
+            .update(
+                {
+                    "context": result["context"],
+                    "style_tags": json.dumps(result["style_tags"]),
+                }
+            )
             .eq("id", post_id)
             .execute()
         )
 
         logger.info(
             "Post %s context updated: %s, style_tags: %s",
-            post_id, result["context"], result["style_tags"],
+            post_id,
+            result["context"],
+            result["style_tags"],
         )
         return result
 

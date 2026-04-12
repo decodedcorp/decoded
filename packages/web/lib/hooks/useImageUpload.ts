@@ -101,7 +101,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}) {
         rawMessage.includes("503") ||
         rawMessage.includes("504");
       const errorMessage = isServerError
-        ? "서버가 일시적으로 응답하지 않습니다. 다시 시도해주세요."
+        ? "The server is temporarily unavailable. Please try again."
         : rawMessage;
       updateImageStatus(id, "error", 0, errorMessage);
       onUploadError?.(id, errorMessage);

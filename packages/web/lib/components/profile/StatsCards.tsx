@@ -70,12 +70,12 @@ export function StatsCards() {
     console.log(
       "Navigate to /profile/activity?tab=posts - not yet implemented"
     );
-    alert("활동 내역 페이지는 아직 구현되지 않았습니다.");
+    alert("The activity page isn't implemented yet.");
   };
 
   const handleEarningsClick = () => {
     console.log("Navigate to /profile/earnings - not yet implemented");
-    alert("수익 페이지는 아직 구현되지 않았습니다.");
+    alert("The earnings page isn't implemented yet.");
   };
 
   return (
@@ -83,20 +83,20 @@ export function StatsCards() {
       <StatCard
         value={stats.totalContributions}
         label="Posts"
-        ariaLabel={`${stats.totalContributions}개의 게시물`}
+        ariaLabel={`${stats.totalContributions} posts`}
         onClick={handlePostsClick}
         delay={0.1}
       />
       <StatCard
         value={stats.totalAnswers}
         label="Solutions"
-        ariaLabel={`솔루션 ${stats.totalAnswers}개`}
+        ariaLabel={`${stats.totalAnswers} solutions`}
         delay={0.2}
       />
       <StatCard
         value={formatCurrency(stats.totalEarnings)}
         label="Points"
-        ariaLabel={`포인트 ${formatCurrency(stats.totalEarnings)}`}
+        ariaLabel={`${formatCurrency(stats.totalEarnings)} points`}
         onClick={handleEarningsClick}
         delay={0.3}
       />

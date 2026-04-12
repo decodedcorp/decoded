@@ -7230,6 +7230,13 @@
                   ],
                   "description": "아티스트명"
                 },
+                "artist_profile_image_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Warehouse에서 조인한 아티스트 프로필 이미지 URL"
+                },
                 "comment_count": {
                   "type": "integer",
                   "format": "int64",
@@ -7268,6 +7275,13 @@
                     "null"
                   ],
                   "description": "그룹명"
+                },
+                "group_profile_image_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Warehouse에서 조인한 그룹 프로필 이미지 URL"
                 },
                 "id": {
                   "type": "string",
@@ -8070,6 +8084,13 @@
             ],
             "description": "아티스트명"
           },
+          "artist_profile_image_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Warehouse에서 조인한 아티스트 프로필 이미지 URL"
+          },
           "comment_count": {
             "type": "integer",
             "format": "int64",
@@ -8108,6 +8129,13 @@
               "null"
             ],
             "description": "그룹명"
+          },
+          "group_profile_image_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Warehouse에서 조인한 그룹 프로필 이미지 URL"
           },
           "id": {
             "type": "string",

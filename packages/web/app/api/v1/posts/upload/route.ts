@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           message:
-            "서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.",
+            "The server is temporarily unavailable. Please try again shortly.",
           code: "GATEWAY_ERROR",
           retryable: true,
         },
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json(
         {
-          message: "서버 응답 형식이 올바르지 않습니다.",
+          message: "The server response format is invalid.",
           code: "INVALID_RESPONSE",
           retryable: true,
         },

@@ -325,27 +325,54 @@ export default async function Home({
 
   // --- Editorial + Trending 2-column (#89) ---
 
-  const artistCounts = new Map<string, { count: number; image: string }>();
+  // Collect per-artist: count + warehouse profile image (preferred) + post thumbnail fallback
+  const artistCounts = new Map<
+    string,
+    { count: number; profileImage: string | null; postImage: string }
+  >();
   for (const p of [...popularPosts, ...recentPosts]) {
     const key = p.artist_name || p.group_name || "";
     if (!key) continue;
     const existing = artistCounts.get(key);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const warehouseImg =
+      (p as { artist_profile_image_url?: string | null })
+        .artist_profile_image_url ||
+      (p as { group_profile_image_url?: string | null })
+        .group_profile_image_url ||
+      null;
     if (existing) {
       existing.count++;
+      // First non-null warehouse image wins
+      if (!existing.profileImage && warehouseImg) {
+        existing.profileImage = warehouseImg;
+      }
     } else {
-      artistCounts.set(key, { count: 1, image: p.image_url });
+      artistCounts.set(key, {
+        count: 1,
+        profileImage: warehouseImg,
+        postImage: p.image_url,
+      });
     }
   }
 
   const trendingKeywords: TrendingKeywordItem[] = [...artistCounts.entries()]
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 8)
-    .map(([name, { image }]) => ({
-      id: `artist-${name}`,
-      label: enrichArtistName(name).displayName || name,
-      href: `/search?q=${encodeURIComponent(name)}`,
-      image: proxyImg(image),
-    }));
+    .map(([name, { profileImage, postImage }]) => {
+      const enriched = enrichArtistName(name);
+      // Prefer warehouse artist profile image (per-post field from Rust API),
+      // then enrichArtistName's profile image (buildArtistProfileMap), then
+      // fall back to the post thumbnail.
+      const image =
+        profileImage || enriched.profileImageUrl || postImage;
+      return {
+        id: `artist-${name}`,
+        label: enriched.displayName || name,
+        href: `/search?q=${encodeURIComponent(name)}`,
+        image: proxyImg(image),
+      };
+    });
 
   // Pick up to 10 diverse editorial posts (deduplicate by artist)
   const editorialPool =
@@ -421,11 +448,13 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
-      <HeroItemSync posts={heroPosts} />
-
-      <EditorialCarousel items={editorialItems} />
+      <div className="hidden md:block">
+        <HeroItemSync posts={heroPosts} />
+      </div>
 
       <EditorialMagazine data={editorialMagazineData} />
+
+      <EditorialCarousel items={editorialItems} />
 
       {/* #91: Decoded's Pick temporarily disabled */}
 

@@ -8,11 +8,11 @@ import { usePopularKeywords } from "../../hooks/useSearch";
 
 // Fallback keywords if API fails
 const fallbackKeywords = [
-  { keyword: "뉴진스 다니엘", count: 0 },
-  { keyword: "나이키", count: 0 },
-  { keyword: "뉴진스 혜인", count: 0 },
-  { keyword: "블랙핑크 지수", count: 0 },
-  { keyword: "아디다스", count: 0 },
+  { keyword: "NewJeans Danielle", count: 0 },
+  { keyword: "Nike", count: 0 },
+  { keyword: "NewJeans Hyein", count: 0 },
+  { keyword: "BLACKPINK Jisoo", count: 0 },
+  { keyword: "Adidas", count: 0 },
 ];
 
 export function SearchSection() {
@@ -51,7 +51,7 @@ export function SearchSection() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="아티스트, 브랜드로 검색해보세요"
+            placeholder="Search by artist or brand"
             className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-full
                      text-base text-foreground placeholder:text-muted-foreground
                      focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring

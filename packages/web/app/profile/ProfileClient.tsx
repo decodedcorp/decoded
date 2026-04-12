@@ -152,10 +152,10 @@ function ProfileError({
         <div className="text-center">
           <div className="mb-4 text-4xl">⚠️</div>
           <h2 className="mb-2 text-xl font-semibold text-foreground">
-            프로필을 불러올 수 없습니다
+            Couldn't load profile
           </h2>
           <p className="mb-6 text-sm text-muted-foreground max-w-sm">
-            {error.message || "잠시 후 다시 시도해주세요."}
+            {error.message || "Please try again shortly."}
           </p>
           <button
             onClick={onRetry}

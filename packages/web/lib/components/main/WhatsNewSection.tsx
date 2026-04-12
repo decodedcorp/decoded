@@ -10,7 +10,7 @@ const sampleStyles: StyleCardData[] = [
     id: "wn-s1",
     title: "Newjeans Minji Airport Look",
     description:
-      "뉴진스 민지의 공항 패션. 캐주얼하면서도 세련된 레이어링 스타일링.",
+      "Newjeans Minji's airport outfit — casual yet refined layering.",
     artistName: "Newjeans Minji",
     link: "/feed",
     imageUrl:
@@ -20,7 +20,7 @@ const sampleStyles: StyleCardData[] = [
     id: "wn-s2",
     title: "aespa Karina Streetwear",
     description:
-      "에스파 카리나의 스트릿 패션. 유니크한 컬러 매치가 돋보이는 룩.",
+      "aespa Karina's street style — standout color combinations.",
     artistName: "aespa Karina",
     link: "/feed",
     imageUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800",

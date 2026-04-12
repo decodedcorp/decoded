@@ -104,11 +104,11 @@ export function SpotSolutionTabs({
       {/* Active Spot Solutions */}
       <div role="tabpanel" className="min-h-[80px]">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground py-4">로딩 중...</p>
+          <p className="text-sm text-muted-foreground py-4">Loading...</p>
         ) : activeSolutions.length === 0 ? (
           <div className="flex flex-col gap-3 py-3">
             <p className="text-sm text-muted-foreground">
-              등록된 솔루션이 없습니다.
+              No solutions yet.
             </p>
             {onAddSolution && activeSpotId && (
               <button
@@ -117,7 +117,7 @@ export function SpotSolutionTabs({
                 className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:border-primary/60"
               >
                 <Plus className="w-4 h-4" />
-                솔루션 등록하기
+                Add a solution
               </button>
             )}
           </div>

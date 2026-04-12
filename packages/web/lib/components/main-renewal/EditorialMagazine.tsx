@@ -24,17 +24,32 @@ export default function EditorialMagazine({
 }: EditorialMagazineProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const activeImageRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
 
   const cards = data.cards;
   const active = cards[activeIdx];
 
+  const SLIDE_DURATION = 5000;
+
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveIdx((i) => (i + 1) % cards.length);
-    }, 5000);
+    }, SLIDE_DURATION);
     return () => clearInterval(timer);
   }, [cards.length]);
+
+  useEffect(() => {
+    if (!activeImageRef.current) return;
+    const tween = gsap.fromTo(
+      activeImageRef.current,
+      { scale: 1 },
+      { scale: 1.08, duration: SLIDE_DURATION / 1000, ease: "none" }
+    );
+    return () => {
+      tween.kill();
+    };
+  }, [activeIdx]);
   const nextCards = [1, 2].map(
     (offset) => cards[(activeIdx + offset) % cards.length]
   );
@@ -66,7 +81,7 @@ export default function EditorialMagazine({
   return (
     <section
       ref={sectionRef}
-      className={`relative bg-[#050505] ${className ?? ""}`}
+      className={`relative bg-[#050505] mt-10 md:mt-0 ${className ?? ""}`}
       aria-label="Editorial magazine"
     >
       {/* Header */}
@@ -142,14 +157,18 @@ export default function EditorialMagazine({
               className="group relative flex-none w-full md:w-[calc(25%-9px)] aspect-[3/4] rounded-xl overflow-hidden block"
             >
               {active.imageUrl ? (
-                <PostImage
-                  src={active.imageUrl}
-                  alt={active.title}
-                  className="absolute inset-0"
-                  imgClassName="transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
-                  priority
-                  flagKey="FeedCard"
-                />
+                <div
+                  ref={activeImageRef}
+                  className="absolute inset-0 will-change-transform"
+                >
+                  <PostImage
+                    src={active.imageUrl}
+                    alt={active.title}
+                    className="absolute inset-0"
+                    priority
+                    flagKey="FeedCard"
+                  />
+                </div>
               ) : (
                 <div className="absolute inset-0 bg-neutral-900" />
               )}
