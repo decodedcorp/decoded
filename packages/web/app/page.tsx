@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase raw query results lack typed shapes */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { EditorialMagazine } from "@/lib/components/main-renewal";
 import type {
   MainHeroData,
@@ -13,96 +13,99 @@ import {
   DynamicDomeGallerySection as DomeGallerySection,
 } from "./home-dynamic-sections";
 import { TrendingListSection } from "@/lib/components/main/TrendingListSection";
-import type {
-  LatestPostCardData,
-  StyleCardData,
-  ItemCardData,
-} from "@/lib/components/main";
+import type { StyleCardData } from "@/lib/components/main";
 import type { TrendingKeywordItem } from "@/lib/components/main/TrendingListSection";
 import type { HeroPostEntry } from "@/lib/components/main/HeroItemSync";
 import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 import type { PaginatedResponsePostListItemDataItem } from "@/lib/api/generated/models";
+import type { WarehouseProfilesResponse } from "@/lib/api/generated/models";
+import type { SpotsByPostsResponse } from "@/lib/api/generated/models";
+import type { EditorPicksResponse } from "@/lib/api/generated/models";
 import { serverApiGet } from "@/lib/api/server-instance";
-import {
-  // fetchDecodedPickServer,  // #91: temporarily disabled
-  fetchWeeklyBestPostsServer,
-  fetchWhatsNewPostsServer,
-  fetchMagazinePostsServer,
-  fetchEditorPicksServer,
-} from "@/lib/supabase/queries/main-page.server";
-import { buildArtistProfileMap } from "@/lib/supabase/queries/warehouse-entities.server";
-import type { ArtistProfileEntry } from "@/lib/supabase/queries/warehouse-entities.server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Shorthand for post list item from REST API */
 type ApiPost = PaginatedResponsePostListItemDataItem;
 
+interface ArtistProfileEntry {
+  name: string;
+  profileImageUrl: string | null;
+}
+
 const proxyImg = (url: string) =>
   `/api/v1/image-proxy?url=${encodeURIComponent(url)}`;
 
-/** Convert Supabase PostData to ApiPost shape */
-function toApiPost(p: {
-  id: string;
-  imageUrl: string | null;
-  artistName: string | null;
-  groupName: string | null;
-  context: string | null;
-  mediaTitle: string | null;
-  viewCount: number;
-  createdAt: string;
-}): ApiPost {
-  return {
-    id: p.id,
-    image_url: p.imageUrl || "",
-    artist_name: p.artistName,
-    group_name: p.groupName,
-    context: p.context,
-    title: p.mediaTitle,
-    view_count: p.viewCount,
-    created_at: p.createdAt,
-    status: "published" as const,
-    comment_count: 0,
-    spot_count: 0,
-    media_source: {} as any,
-    user: {} as any,
-  };
-}
-
-/** Convert MagazinePostData to ApiPost shape */
-function magazineToApiPost(
-  p: import("@/lib/supabase/queries/main-page.server").MagazinePostData
-): ApiPost {
-  return {
-    id: p.id,
-    image_url: p.imageUrl || "",
-    artist_name: p.artistName,
-    group_name: p.groupName,
-    context: p.context,
-    title: p.magazineTitle,
-    post_magazine_title: p.magazineTitle,
-    view_count: 0,
-    created_at: "",
-    status: "published" as const,
-    comment_count: 0,
-    spot_count: 0,
-    media_source: {} as any,
-    user: {} as any,
-    _magazineItems: p.items,
-  } as any;
-}
-
-/** REST API fetch with Supabase fallback when backend unavailable */
-async function fetchPosts(
-  params: string,
-  fallback?: () => Promise<ApiPost[]>
-): Promise<ApiPost[]> {
+/** REST API fetch — no Supabase fallback */
+async function fetchPosts(params: string): Promise<ApiPost[]> {
   try {
     const res = await serverApiGet<PaginatedResponsePostListItem>(
       `/api/v1/posts?${params}`
     );
     return res.data ?? [];
   } catch {
-    if (fallback) return fallback();
+    return [];
+  }
+}
+
+/** Build artist/group name → profile lookup from Rust API warehouse/profiles */
+async function fetchArtistProfileMap(): Promise<Map<string, ArtistProfileEntry>> {
+  const map = new Map<string, ArtistProfileEntry>();
+  try {
+    const res = await serverApiGet<WarehouseProfilesResponse>(
+      "/api/v1/warehouse/profiles"
+    );
+    const addEntity = (
+      name_ko: string | null | undefined,
+      name_en: string | null | undefined,
+      profile_image_url: string | null | undefined
+    ) => {
+      const displayName = name_en || name_ko || "";
+      if (!displayName) return;
+      const entry: ArtistProfileEntry = {
+        name: displayName,
+        profileImageUrl: profile_image_url ?? null,
+      };
+      if (name_ko) map.set(name_ko.toLowerCase(), entry);
+      if (name_en) map.set(name_en.toLowerCase(), entry);
+    };
+    for (const a of res.artists ?? []) addEntity(a.name_ko, a.name_en, a.profile_image_url);
+    for (const g of res.groups ?? []) addEntity(g.name_ko, g.name_en, g.profile_image_url);
+  } catch {
+    /* warehouse profiles unavailable — use raw names */
+  }
+  return map;
+}
+
+/** Batch-fetch spots+solutions for multiple post IDs via Rust API */
+async function fetchSpotsByPosts(
+  postIds: string[]
+): Promise<SpotsByPostsResponse["spots_by_post"]> {
+  if (postIds.length === 0) return {};
+  try {
+    const res = await serverApiGet<SpotsByPostsResponse>(
+      `/api/v1/spots/by-posts?post_ids=${postIds.join(",")}`
+    );
+    return res.spots_by_post ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** Fetch editor picks via Rust API */
+async function fetchEditorPicks(): Promise<
+  Array<{ id: string; imageUrl: string; title: string; link: string; artistName: string }>
+> {
+  try {
+    const res = await serverApiGet<EditorPicksResponse>(
+      "/api/v1/feed/editor-picks?limit=8"
+    );
+    return (res.data ?? []).map((item: any) => ({
+      id: item.id,
+      imageUrl: item.image_url,
+      title: item.title || item.context || "",
+      link: `/posts/${item.id}`,
+      artistName: item.artist_name || item.group_name || "",
+    }));
+  } catch {
     return [];
   }
 }
@@ -114,25 +117,19 @@ export default async function Home({
 }) {
   await searchParams;
 
-  // Parallel fetch: REST API (with Supabase fallback) + Supabase-only
+  // Parallel fetch: all via Rust API
   const [
     popularPosts,
     recentPosts,
     rawMagazinePosts,
-    // decodedPick,  // #91: temporarily disabled
     artistProfileMap,
     editorPicks,
   ] = await Promise.all([
-    fetchPosts("sort=popular&per_page=30", async () =>
-      (await fetchWeeklyBestPostsServer(30)).map(toApiPost)
-    ),
-    fetchPosts("sort=recent&per_page=50", async () =>
-      (await fetchWhatsNewPostsServer(50)).map((s) => toApiPost(s.post))
-    ),
-    fetchMagazinePostsServer(50), // Supabase direct — includes layout_json items
-    // fetchDecodedPickServer(),  // #91: temporarily disabled
-    buildArtistProfileMap(),
-    fetchEditorPicksServer(),
+    fetchPosts("sort=popular&per_page=30"),
+    fetchPosts("sort=recent&per_page=50"),
+    fetchPosts("sort=recent&per_page=50&has_magazine=true&include_magazine_items=true"),
+    fetchArtistProfileMap(),
+    fetchEditorPicks(),
   ]);
 
   // --- Helpers ---
@@ -164,7 +161,7 @@ export default async function Home({
       editorialTitle: post.context || post.title || "Today's Featured Look",
       editorialSubtitle: post.group_name
         ? `${post.group_name} — Curated by AI`
-        : "AI가 큐레이션한 오늘의 에디토리얼",
+        : "Today's AI-curated editorial",
       heroImageUrl: post.image_url,
       ctaLink: `/posts/${post.id}`,
       ctaLabel: "VIEW EDITORIAL",
@@ -243,49 +240,35 @@ export default async function Home({
     }
   }
 
-  // Enrich hero posts with spots/solutions for item overlay
+  // Enrich hero posts with spots/solutions via Rust API batch endpoint
   try {
-    const supabase = await createSupabaseServerClient();
     const heroPostIds = heroPosts.map((hp) => hp.id);
-    const { data: heroSpots } = await supabase
-      .from("spots")
-      .select(
-        "id, post_id, position_top, position_left, solutions(id, title, thumbnail_url, metadata)"
-      )
-      .in("post_id", heroPostIds);
+    const spotsByPost = await fetchSpotsByPosts(heroPostIds);
 
-    if (heroSpots) {
-      const spotsByPost = new Map<string, typeof heroSpots>();
-      for (const spot of heroSpots) {
-        const existing = spotsByPost.get(spot.post_id) ?? [];
-        existing.push(spot);
-        spotsByPost.set(spot.post_id, existing);
-      }
-      for (const hp of heroPosts) {
-        const spots = spotsByPost.get(hp.id) ?? [];
-        hp.items = spots
-          .flatMap((spot: any) =>
-            (spot.solutions || [])
-              .filter((sol: any) => sol.thumbnail_url)
-              .map((sol: any) => ({
-                id: sol.id,
-                label: sol.title,
-                name: sol.title,
-                brand: (sol.metadata as any)?.brand || "",
-                imageUrl: proxyImg(sol.thumbnail_url),
-              }))
-          )
-          .slice(0, 4);
-        if (hp.items.length > 0) {
-          const post =
-            recentPosts.find((p) => p.id === hp.id) ??
-            popularPosts.find((p) => p.id === hp.id);
-          if (post) {
-            hp.heroData = buildHeroFromApiPost(
-              post,
-              buildSpots(hp.items.map((it) => ({ ...it, label: it.name })))
-            );
-          }
+    for (const hp of heroPosts) {
+      const spots = spotsByPost[hp.id] ?? [];
+      hp.items = spots
+        .flatMap((spot: any) =>
+          (spot.solutions || [])
+            .filter((sol: any) => sol.thumbnail_url)
+            .map((sol: any) => ({
+              id: sol.id,
+              label: sol.title,
+              name: sol.title,
+              brand: sol.brand || "",
+              imageUrl: proxyImg(sol.thumbnail_url),
+            }))
+        )
+        .slice(0, 4);
+      if (hp.items.length > 0) {
+        const post =
+          recentPosts.find((p) => p.id === hp.id) ??
+          popularPosts.find((p) => p.id === hp.id);
+        if (post) {
+          hp.heroData = buildHeroFromApiPost(
+            post,
+            buildSpots(hp.items.map((it) => ({ ...it, label: it.name })))
+          );
         }
       }
     }
@@ -293,48 +276,36 @@ export default async function Home({
     /* hero spots enrichment failed — show without items */
   }
 
-  // --- Trending on Decoded --- (#88: temporarily disabled)
-  // const trendingPostCards: LatestPostCardData[] = popularPosts.slice(0, 16).map((p) => {
-  //   const { displayName } = enrichArtistName(p.artist_name || p.group_name);
-  //   return {
-  //     id: p.id, imageUrl: proxyImg(p.image_url), artistName: displayName || "Unknown",
-  //     context: p.context || p.title || "", createdAt: p.created_at,
-  //     createdWithSolutions: p.created_with_solutions ?? null, link: `/posts/${p.id}`,
-  //   };
-  // });
-
-  // --- 아이템 찾아주세요 --- (#88: temporarily disabled)
-  // const helpFindCards: LatestPostCardData[] = recentPosts
-  //   .filter((p) => p.created_with_solutions === false)
-  //   .slice(0, 12)
-  //   .map((p) => {
-  //     const { displayName } = enrichArtistName(p.artist_name || p.group_name);
-  //     return {
-  //       id: p.id, imageUrl: proxyImg(p.image_url), artistName: displayName || "Unknown",
-  //       context: p.context || p.title || "", createdAt: p.created_at,
-  //       createdWithSolutions: false, link: `/posts/${p.id}`,
-  //     };
-  //   });
-
   // --- Magazine ---
 
   const allMagazineCards = rawMagazinePosts
-    .filter((mp) => mp.magazineTitle && mp.items.length > 0)
+    .filter(
+      (mp) =>
+        (mp.post_magazine_title || mp.title) &&
+        mp.post_magazine_items &&
+        mp.post_magazine_items.length > 0
+    )
     .map((mp) => {
-      const { displayName } = enrichArtistName(mp.artistName || mp.groupName);
+      const { displayName } = enrichArtistName(
+        mp.artist_name || mp.group_name
+      );
       return {
         id: `mag-${mp.id}`,
-        imageUrl: proxyImg(mp.imageUrl ?? ""),
-        title: mp.magazineTitle,
+        imageUrl: proxyImg(mp.image_url),
+        title: mp.post_magazine_title || mp.title || "Editorial",
         subtitle: mp.context || "",
         artistName: displayName || "Unknown",
         category: "Editorial",
         link: `/posts/${mp.id}?from=explore`,
-        items: mp.items,
+        items: (mp.post_magazine_items ?? []).map((it) => ({
+          title: it.title,
+          brand: it.brand ?? null,
+          imageUrl: it.image_url,
+          originalUrl: it.original_url ?? null,
+        })),
       };
     });
 
-  // Deduplicate by artist — pick at most 2 cards per artist for variety
   const seenArtists = new Map<string, number>();
   const diverseCards: typeof allMagazineCards = [];
   for (const c of allMagazineCards) {
@@ -351,34 +322,6 @@ export default async function Home({
     cards: diverseCards,
     featuredArtist: undefined,
   };
-
-  // --- Decoded Pick --- (#91: temporarily disabled)
-
-  // const pickStyleData: StyleCardData | undefined =
-  //   decodedPick && decodedPick.post.imageUrl
-  //     ? {
-  //         id: decodedPick.post.id,
-  //         title: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Decoded Pick",
-  //         description: decodedPick.post.context || "",
-  //         artistName: enrichArtistName(decodedPick.post.artistName || decodedPick.post.groupName).displayName || "Unknown",
-  //         imageUrl: proxyImg(decodedPick.post.imageUrl),
-  //         link: `/posts/${decodedPick.post.id}`,
-  //         spots: decodedPick.spots?.map((s) => ({
-  //           id: s.id, x: parseFloat(s.position_left) || 50, y: parseFloat(s.position_top) || 50,
-  //           label: s.solutions?.[0]?.title || "Item",
-  //         })),
-  //       }
-  //     : undefined;
-
-  // const pickItems: ItemCardData[] | undefined = decodedPick
-  //   ? decodedPick.items.map((item) => ({
-  //       id: String(item.id),
-  //       brand: item.brand || "Unknown",
-  //       name: item.name || item.label,
-  //       imageUrl: item.imageUrl,
-  //       link: `/items/${item.id}`,
-  //     }))
-  //   : undefined;
 
   // --- Editorial + Trending 2-column (#89) ---
 
@@ -404,7 +347,7 @@ export default async function Home({
       image: proxyImg(image),
     }));
 
-  // Pick up to 4 diverse editorial posts (deduplicate by artist)
+  // Pick up to 10 diverse editorial posts (deduplicate by artist)
   const editorialPool =
     popularPosts.length > 0
       ? [...popularPosts].sort(() => Math.random() - 0.5)
@@ -420,46 +363,37 @@ export default async function Home({
     if (editorialPosts.length >= 10) break;
   }
 
-  // Fetch spots+solutions for all 4 posts in parallel
-  const editorialItems: StyleCardData[] = await Promise.all(
-    editorialPosts.map(async (post) => {
-      const { displayName } = enrichArtistName(post.artist_name);
-      let items: StyleCardData["items"] = [];
-      try {
-        const supabase = await createSupabaseServerClient();
-        const { data: spots } = await supabase
-          .from("spots")
-          .select("*, solutions(*)")
-          .eq("post_id", post.id);
-        if (spots) {
-          items = spots
-            .flatMap((spot: any) =>
-              (spot.solutions || [])
-                .filter((sol: any) => sol.thumbnail_url)
-                .map((sol: any) => ({
-                  id: sol.id,
-                  label: sol.title,
-                  name: sol.title,
-                  brand: (sol.metadata as any)?.brand || "",
-                  imageUrl: proxyImg(sol.thumbnail_url),
-                }))
-            )
-            .slice(0, 3);
-        }
-      } catch {
-        /* ignore */
-      }
-      return {
-        id: post.id,
-        title: displayName || "Featured",
-        description: post.context || "",
-        artistName: displayName || "Unknown",
-        imageUrl: proxyImg(post.image_url),
-        link: `/posts/${post.id}`,
-        items,
-      };
-    })
+  // Batch-fetch spots+solutions for editorial posts via Rust API
+  const editorialSpotsByPost = await fetchSpotsByPosts(
+    editorialPosts.map((p) => p.id)
   );
+
+  const editorialItems: StyleCardData[] = editorialPosts.map((post) => {
+    const { displayName } = enrichArtistName(post.artist_name);
+    const spots = editorialSpotsByPost[post.id] ?? [];
+    const items = spots
+      .flatMap((spot: any) =>
+        (spot.solutions || [])
+          .filter((sol: any) => sol.thumbnail_url)
+          .map((sol: any) => ({
+            id: sol.id,
+            label: sol.title,
+            name: sol.title,
+            brand: sol.brand || "",
+            imageUrl: proxyImg(sol.thumbnail_url),
+          }))
+      )
+      .slice(0, 3);
+    return {
+      id: post.id,
+      title: displayName || "Featured",
+      description: post.context || "",
+      artistName: displayName || "Unknown",
+      imageUrl: proxyImg(post.image_url),
+      link: `/posts/${post.id}`,
+      items,
+    };
+  });
 
   // --- MasonryGrid ---
 
@@ -494,13 +428,6 @@ export default async function Home({
       <EditorialMagazine data={editorialMagazineData} />
 
       {/* #91: Decoded's Pick temporarily disabled */}
-      {/* <DecodedPickSection
-        styleData={pickStyleData}
-        items={pickItems}
-        pickDate={decodedPick?.pickDate ?? null}
-        curatedBy={decodedPick?.curatedBy ?? null}
-        note={decodedPick?.note ?? null}
-      /> */}
 
       <section className="relative">
         <StyleMoods items={gridItems} />

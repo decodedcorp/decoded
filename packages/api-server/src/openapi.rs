@@ -34,6 +34,9 @@ use utoipa::OpenApi;
         crate::domains::feed::handlers::trending,
         crate::domains::feed::handlers::list_curations,
         crate::domains::feed::handlers::curation_detail,
+        crate::domains::feed::handlers::editor_picks,
+        crate::domains::warehouse::handlers::get_profiles,
+        crate::domains::spots::handlers::list_spots_by_posts,
         crate::domains::posts::handlers::create_post_without_solutions,
         crate::domains::posts::handlers::create_post_with_solutions,
         crate::domains::posts::handlers::list_posts,
@@ -133,6 +136,7 @@ use utoipa::OpenApi;
         (name = "badges", description = "Badges"),
         (name = "earnings", description = "Earnings and settlements"),
         (name = "admin", description = "Admin operations"),
+        (name = "warehouse", description = "Warehouse entity profiles"),
     ),
     components(
         schemas(
@@ -159,6 +163,7 @@ use utoipa::OpenApi;
             crate::domains::posts::dto::PostResponse,
             crate::domains::posts::dto::PostDetailResponse,
             crate::domains::posts::dto::PostListItem,
+            crate::domains::posts::magazine_preview::PostMagazinePreviewItem,
             crate::domains::posts::dto::PostUserInfo,
             crate::domains::posts::dto::SpotWithTopSolution,
             crate::domains::posts::dto::TopSolutionSummary,
@@ -279,6 +284,12 @@ use utoipa::OpenApi;
                 crate::domains::spots::dto::AdminSpotSubcategoryUpdate,
                 crate::domains::admin::badges::CreateBadgeDto,
                 crate::domains::admin::badges::UpdateBadgeDto,
+                crate::domains::warehouse::dto::WarehouseProfile,
+                crate::domains::warehouse::dto::WarehouseProfilesResponse,
+                crate::domains::spots::dto::SpotsByPostItem,
+                crate::domains::spots::dto::SpotsByPostsResponse,
+                crate::domains::spots::dto::SpotsByPostSolution,
+                crate::domains::feed::dto::EditorPicksResponse,
             )
         )
 )]

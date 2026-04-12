@@ -12,6 +12,8 @@ use crate::domains::categories::dto::CategoryResponse;
 use crate::entities::posts::Model as PostModel;
 use crate::entities::UsersModel;
 
+use super::magazine_preview::PostMagazinePreviewItem;
+
 /// 미디어 소스 정보
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct MediaSourceDto {
@@ -277,6 +279,13 @@ pub struct PostListQuery {
     /// 매거진(editorial) 보유 여부. true = post_magazine_id가 있는 post만
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_magazine: Option<bool>,
+
+    /// true일 때 각 post의 `post_magazine_items`에 layout_json.items 상위
+    /// 4개(image_url 있는 것만)를 포함시킨다. has_magazine 여부와 무관하게
+    /// 동작하지만, 매거진이 없는 post는 결과가 None이 된다. (홈 매거진 카드의
+    /// 썸네일 스트립 전용)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_magazine_items: Option<bool>,
 }
 
 fn default_sort() -> String {
@@ -414,6 +423,12 @@ pub struct PostListItem {
     /// 에디토리얼(매거진) 타이틀. post_magazine_id가 있을 때만 설정
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_magazine_title: Option<String>,
+
+    /// 매거진 레이아웃의 아이템 프리뷰 (홈 매거진 카드의 썸네일 스트립 전용).
+    /// `include_magazine_items=true` 쿼리로만 채워지고, 매거진이 없으면 None.
+    /// 최대 4개, image_url이 있는 항목만 포함.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_magazine_items: Option<Vec<PostMagazinePreviewItem>>,
 
     /// 포스트 생성 시 솔루션을 알고 등록했는지. true=with-solutions, false=without, null=기존 데이터
     #[serde(skip_serializing_if = "Option::is_none")]

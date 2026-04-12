@@ -96,6 +96,40 @@ pub struct AdminSpotSubcategoryUpdate {
     pub subcategory_id: Uuid,
 }
 
+/// 배치 조회용 간이 솔루션 (spots-by-posts 전용)
+///
+/// 홈 페이지가 hero/editorial 카드 위에 오버레이할 아이템 정보만 담는다.
+/// `GET /api/v1/solutions/{id}` 와 달리 채택/검증 상태나 댓글 수 같은 메타는
+/// 의도적으로 제외.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SpotsByPostSolution {
+    pub id: Uuid,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand: Option<String>,
+}
+
+/// 배치 조회 응답의 spot 단위 (post 그룹 내부)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SpotsByPostItem {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    pub position_left: String,
+    pub position_top: String,
+    pub solutions: Vec<SpotsByPostSolution>,
+}
+
+/// `GET /api/v1/spots/by-posts?post_ids=...` 응답
+///
+/// `spots_by_post` 는 `post_id -> Vec<SpotsByPostItem>` 매핑. 요청한 post_id
+/// 중 spot이 없는 항목은 빈 배열로 들어간다.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SpotsByPostsResponse {
+    pub spots_by_post: std::collections::HashMap<Uuid, Vec<SpotsByPostItem>>,
+}
+
 /// Spot 목록 응답 (간소화)
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SpotListItem {
