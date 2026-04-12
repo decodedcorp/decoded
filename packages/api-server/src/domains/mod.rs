@@ -21,3 +21,4 @@ pub mod subcategories;
 pub mod users;
 pub mod views;
 pub mod votes;
+pub mod warehouse;

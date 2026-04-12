@@ -16,8 +16,8 @@ use crate::{
 };
 
 use super::dto::{
-    CurationDetailResponse, CurationListItem, CurationListResponse, FeedItem, FeedResponse,
-    FeedUser, MediaSource, TrendingResponse,
+    CurationDetailResponse, CurationListItem, CurationListResponse, EditorPicksResponse, FeedItem,
+    FeedResponse, FeedUser, MediaSource, TrendingResponse,
 };
 
 pub struct FeedService;
@@ -246,6 +246,50 @@ impl FeedService {
             cover_image_url: curation.cover_image_url,
             posts: feed_items,
         })
+    }
+
+    /// 에디터 픽 조회: 활성 curation 전체에서 curation_posts 를 display_order
+    /// 오름차순으로 정렬한 뒤 상위 `limit` 개의 post 를 반환한다.
+    pub async fn editor_picks(state: &AppState, limit: u64) -> AppResult<EditorPicksResponse> {
+        let active_curation_ids: Vec<Uuid> = entities::Curations::find()
+            .filter(entities::curations::Column::IsActive.eq(true))
+            .select_only()
+            .column(entities::curations::Column::Id)
+            .into_tuple::<Uuid>()
+            .all(state.db.as_ref())
+            .await?;
+
+        if active_curation_ids.is_empty() {
+            return Ok(EditorPicksResponse { data: vec![] });
+        }
+
+        let curation_posts = entities::CurationPosts::find()
+            .filter(entities::curation_posts::Column::CurationId.is_in(active_curation_ids))
+            .order_by_asc(entities::curation_posts::Column::DisplayOrder)
+            .limit(limit)
+            .all(state.db.as_ref())
+            .await?;
+
+        if curation_posts.is_empty() {
+            return Ok(EditorPicksResponse { data: vec![] });
+        }
+
+        let post_ids: Vec<Uuid> = curation_posts.iter().map(|cp| cp.post_id).collect();
+        let posts = entities::Posts::find()
+            .filter(entities::posts::Column::Id.is_in(post_ids))
+            .all(state.db.as_ref())
+            .await?;
+
+        // display_order 순 유지
+        let mut ordered = Vec::with_capacity(curation_posts.len());
+        for cp in curation_posts {
+            if let Some(p) = posts.iter().find(|p| p.id == cp.post_id) {
+                ordered.push(p.clone());
+            }
+        }
+
+        let data = Self::posts_to_feed_items(state.db.as_ref(), ordered).await?;
+        Ok(EditorPicksResponse { data })
     }
 
     /// Post 엔티티들을 FeedItem으로 변환

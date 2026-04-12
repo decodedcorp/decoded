@@ -21,6 +21,7 @@ use super::dto::{
     PostResponse, PostUserInfo, SpotWithTopSolution, TopSolutionSummary, TryCountResponse,
     TryListQuery, TryListResponse, TryPostListItem, UpdatePostDto,
 };
+use super::magazine_preview::{parse_magazine_preview_items, PostMagazinePreviewItem};
 
 #[allow(dead_code)]
 const POST_TYPE_POST: &str = "post";
@@ -1155,21 +1156,37 @@ pub async fn list_posts(
     let comment_count_map: std::collections::HashMap<Uuid, i64> =
         comment_counts.into_iter().collect();
 
-    // 4. PostMagazines 배치 조회 (post_magazine_title용)
+    // 4. PostMagazines 배치 조회 (post_magazine_title + optional preview items)
     use crate::entities::post_magazines::{Column as MagazineColumn, Entity as PostMagazines};
     let magazine_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.post_magazine_id).collect();
-    let magazine_titles_map: std::collections::HashMap<Uuid, String> = if magazine_ids.is_empty() {
-        std::collections::HashMap::new()
+    let include_preview = query.include_magazine_items == Some(true);
+    let (magazine_titles_map, magazine_preview_map) = if magazine_ids.is_empty() {
+        (
+            std::collections::HashMap::new(),
+            std::collections::HashMap::new(),
+        )
     } else {
-        PostMagazines::find()
+        let rows = PostMagazines::find()
             .filter(MagazineColumn::Id.is_in(magazine_ids))
             .filter(MagazineColumn::Status.eq("published"))
             .all(db)
             .await
-            .map_err(AppError::DatabaseError)?
-            .into_iter()
-            .map(|m| (m.id, m.title))
-            .collect()
+            .map_err(AppError::DatabaseError)?;
+        let mut titles = std::collections::HashMap::with_capacity(rows.len());
+        let mut previews: std::collections::HashMap<Uuid, Vec<PostMagazinePreviewItem>> =
+            std::collections::HashMap::new();
+        for m in rows {
+            titles.insert(m.id, m.title.clone());
+            if include_preview {
+                if let Some(layout) = m.layout_json.as_ref() {
+                    let items = parse_magazine_preview_items(layout, 4);
+                    if !items.is_empty() {
+                        previews.insert(m.id, items);
+                    }
+                }
+            }
+        }
+        (titles, previews)
     };
 
     // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
@@ -1202,6 +1219,9 @@ pub async fn list_posts(
             let post_magazine_title = post
                 .post_magazine_id
                 .and_then(|id| magazine_titles_map.get(&id).cloned());
+            let post_magazine_items = post
+                .post_magazine_id
+                .and_then(|id| magazine_preview_map.get(&id).cloned());
 
             let ((artist_name, artist_profile_image_url), (group_name, group_profile_image_url)) =
                 resolve_display_from_maps(&post, &artist_display_map, &group_display_map);
@@ -1223,6 +1243,7 @@ pub async fn list_posts(
                 status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
+                post_magazine_items,
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
@@ -1521,6 +1542,7 @@ pub async fn admin_list_posts(
                 status: post.status.clone(),
                 created_at: post.created_at.with_timezone(&chrono::Utc),
                 post_magazine_title,
+                post_magazine_items: None,
                 created_with_solutions: post.created_with_solutions,
                 image_width: post.image_width,
                 image_height: post.image_height,
@@ -3439,6 +3461,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
         let result = list_posts(&db, query).await;
         assert!(result.is_ok());
@@ -3474,6 +3497,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: Some(true),
+            include_magazine_items: None,
         };
         let result = list_posts(&db, query).await;
         assert!(result.is_ok());
@@ -3507,6 +3531,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
         assert!(list_posts(&db, query).await.is_ok());
     }
@@ -3544,6 +3569,7 @@ mod tests {
                 per_page: 20,
                 has_solutions: None,
                 has_magazine: None,
+                include_magazine_items: None,
             },
         };
         let result = admin_list_posts(&db, query).await;
@@ -3581,6 +3607,7 @@ mod tests {
                 per_page: 20,
                 has_solutions: None,
                 has_magazine: None,
+                include_magazine_items: None,
             },
         };
         assert!(admin_list_posts(&db, query).await.is_ok());
@@ -3617,6 +3644,7 @@ mod tests {
                 per_page: 20,
                 has_solutions: None,
                 has_magazine: None,
+                include_magazine_items: None,
             },
         };
         assert!(admin_list_posts(&db, query).await.is_ok());
@@ -3799,6 +3827,7 @@ mod tests {
             per_page: 20,
             has_solutions: Some(true),
             has_magazine: None,
+            include_magazine_items: None,
         };
         let result = list_posts(&db, query).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -3844,6 +3873,7 @@ mod tests {
             per_page: 20,
             has_solutions: Some(false),
             has_magazine: None,
+            include_magazine_items: None,
         };
         let result = list_posts(&db, query).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -3897,6 +3927,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
         let result = list_posts(&db, query).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -4018,6 +4049,7 @@ mod tests {
                 per_page: 20,
                 has_solutions: None,
                 has_magazine: None,
+                include_magazine_items: None,
             },
         };
         let result = admin_list_posts(&db, query).await;

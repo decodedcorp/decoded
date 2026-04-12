@@ -4,10 +4,12 @@
 
 pub mod dto;
 pub mod handlers;
+pub mod magazine_preview;
 pub mod service;
 
 pub use dto::*;
 pub use handlers::router;
+pub use magazine_preview::{parse_magazine_preview_items, PostMagazinePreviewItem};
 pub use service::*;
 
 #[cfg(test)]

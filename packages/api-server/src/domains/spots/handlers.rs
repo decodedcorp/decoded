@@ -3,21 +3,22 @@
 //! Spot 관련 HTTP 엔드포인트
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     middleware::from_fn_with_state,
     routing::{get, patch, post},
     Extension, Json, Router,
 };
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
     config::{AppConfig, AppState},
-    error::AppResult,
+    error::{AppError, AppResult},
     middleware::{auth::User, auth_middleware, optional_auth_middleware},
 };
 
 use super::{
-    dto::{CreateSpotDto, SpotListItem, SpotResponse, UpdateSpotDto},
+    dto::{CreateSpotDto, SpotListItem, SpotResponse, SpotsByPostsResponse, UpdateSpotDto},
     service,
 };
 
@@ -161,6 +162,52 @@ pub async fn update_spot(
     Ok(Json(updated_spot))
 }
 
+/// 배치 조회 쿼리: `post_ids=uuid1,uuid2,...`
+#[derive(Debug, Deserialize)]
+pub struct SpotsByPostsQuery {
+    pub post_ids: String,
+    /// spot 당 노출할 solution 수 (기본 3, 상한 5)
+    pub solutions_per_spot: Option<usize>,
+}
+
+/// GET /api/v1/spots/by-posts?post_ids=a,b,c
+///
+/// 여러 post_id 에 대한 spots + 대표 solutions 을 한 번에 반환한다.
+/// 홈 페이지 hero/editorial 카드의 아이템 오버레이 배치 조회용.
+#[utoipa::path(
+    get,
+    path = "/api/v1/spots/by-posts",
+    tag = "spots",
+    params(
+        ("post_ids" = String, Query, description = "comma-separated post uuids (max 50)"),
+        ("solutions_per_spot" = Option<usize>, Query, description = "상위 solution 개수 (default 3, max 5)"),
+    ),
+    responses(
+        (status = 200, description = "조회 성공", body = SpotsByPostsResponse),
+        (status = 400, description = "잘못된 post_ids")
+    )
+)]
+pub async fn list_spots_by_posts(
+    State(state): State<AppState>,
+    Query(q): Query<SpotsByPostsQuery>,
+) -> AppResult<Json<SpotsByPostsResponse>> {
+    let post_ids: Vec<Uuid> = q
+        .post_ids
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(Uuid::parse_str)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| AppError::validation("post_ids must be comma-separated uuids"))?;
+    if post_ids.len() > 50 {
+        return Err(AppError::validation("post_ids supports at most 50 entries"));
+    }
+    let solutions_per_spot = q.solutions_per_spot.unwrap_or(3).clamp(1, 5);
+    let result =
+        service::list_spots_by_posts(state.db.as_ref(), &post_ids, solutions_per_spot).await?;
+    Ok(Json(result))
+}
+
 /// DELETE /api/v1/spots/{spot_id} - Spot 삭제
 #[utoipa::path(
     delete,
@@ -203,6 +250,7 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
 
     Router::new()
         .route("/", get(list_spots))
+        .route("/by-posts", get(list_spots_by_posts))
         .route(
             "/{spot_id}/tries",
             get(crate::domains::posts::handlers::list_tries_by_spot),
