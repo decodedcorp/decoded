@@ -28,7 +28,7 @@ export function toDecodeShowcaseData({
         | undefined;
       const croppedUrl = item.cropped_image_path;
       return {
-        id: String(item.id),
+        id: item.spot_id ?? String(item.id),
         label: item.product_name ?? item.sam_prompt ?? `Item ${item.id}`,
         brand: (meta?.brand as string) ?? undefined,
         imageUrl: croppedUrl
@@ -47,6 +47,5 @@ export function toDecodeShowcaseData({
     sourceImageUrl: imageUrl,
     artistName,
     detectedItems,
-    tagline: "See how it's Decoded",
   };
 }

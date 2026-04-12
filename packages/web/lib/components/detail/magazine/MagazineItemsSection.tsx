@@ -49,11 +49,11 @@ export function MagazineItemsSection({
     return () => obs.disconnect();
   }, []);
 
-  // Estimate text container width beside the image (md:w-60 lg:w-64 + gap-10 + section px-8*2)
+  // Estimate text container width beside the image (brand/title/price row)
   const titleContainerWidth =
     sectionWidth >= 768
-      ? Math.max(sectionWidth - 256 - 40 - 64, 0) // desktop: section - image - gap - section padding
-      : Math.max(sectionWidth - 32, 0); // mobile: section - px-4*2
+      ? Math.max(sectionWidth - 176 - 24 - 64, 0) // desktop: section - image(md:w-44) - gap - padding
+      : Math.max(sectionWidth - 112 - 16 - 32, 0); // mobile: section - image(w-28) - gap - padding
 
   const titleLayouts = useBatchTextLayout({
     items: items.map((item) => ({
@@ -235,181 +235,211 @@ export function MagazineItemsSection({
           return (
             <div
               key={item.spot_id}
-              className={
+              className={`scroll-mt-20 md:scroll-mt-24 ${
                 compact ? "item-card py-5 first:pt-0 last:pb-0" : "item-card"
-              }
+              }`}
               data-item-index={i}
+              data-item-id={item.spot_id}
             >
-              <div
-                className={`flex flex-col ${compact ? "gap-4 md:flex-row md:gap-5" : `gap-6 md:flex-row md:gap-10 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}`}
-              >
-                {/* Item Image */}
-                <div
-                  className={`w-full shrink-0 ${compact ? "md:w-52 lg:w-56" : "md:w-60 lg:w-64"}`}
-                >
-                  {item.image_url ? (
-                    <ItemImage
-                      src={item.image_url}
-                      alt={item.title}
-                      size="card"
-                      className="rounded-xl"
-                    />
-                  ) : (
-                    <div
-                      className={`flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-border/50 bg-muted text-center ${compact ? "aspect-square p-4" : "aspect-[3/4] gap-3 p-6"}`}
-                      style={{
-                        background: accentColor
-                          ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
-                          : undefined,
-                      }}
-                    >
-                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/50">
-                        {(i + 1).toString().padStart(2, "0")}
-                      </span>
-                      {item.brand && (
-                        <>
-                          <div className="mx-auto h-px w-8 bg-border/30" />
-                          <span
-                            className={`font-serif font-light tracking-wide text-foreground/70 ${compact ? "text-lg" : "text-2xl md:text-3xl"}`}
-                          >
-                            {item.brand}
-                          </span>
-                        </>
-                      )}
-                      {meta?.sub_category && (
-                        <>
-                          <div className="mx-auto h-px w-8 bg-border/30" />
-                          <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
-                            {meta.sub_category}
-                          </span>
-                        </>
-                      )}
-                      {!compact &&
-                        meta?.material &&
-                        meta.material.length > 0 && (
+              {compact ? (
+                /* Compact: everything side-by-side */
+                <div className="flex flex-row gap-4 md:gap-5">
+                  <div className="w-28 shrink-0 md:w-40 lg:w-44">
+                    {item.image_url ? (
+                      <ItemImage
+                        src={item.image_url}
+                        alt={item.title}
+                        size="card"
+                        className="rounded-xl"
+                      />
+                    ) : (
+                      <div
+                        className="flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-border/50 bg-muted text-center aspect-square p-4"
+                        style={{
+                          background: accentColor
+                            ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
+                            : undefined,
+                        }}
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/50">
+                          {(i + 1).toString().padStart(2, "0")}
+                        </span>
+                        {item.brand && (
                           <>
                             <div className="mx-auto h-px w-8 bg-border/30" />
-                            <span className="text-[10px] italic text-muted-foreground/40">
-                              {meta.material.join(" · ")}
+                            <span className="font-serif text-lg font-light tracking-wide text-foreground/70">
+                              {item.brand}
                             </span>
                           </>
                         )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Item Details */}
-                <div className="flex flex-1 flex-col justify-center">
-                  {item.brand && (
-                    <div
-                      className={`flex items-center gap-2 ${compact ? "mb-1" : "mb-2"}`}
-                    >
-                      {"brand_logo_url" in item &&
-                        (item as { brand_logo_url?: string })
-                          .brand_logo_url && (
-                          <img
-                            src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
-                            alt={item.brand ?? ""}
-                            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                          />
-                        )}
-                      <p className="typography-overline text-muted-foreground">
-                        {item.brand}
-                      </p>
-                    </div>
-                  )}
-                  <h3
-                    className={
-                      compact
-                        ? "text-base font-semibold mb-1"
-                        : "typography-h4 mb-2"
-                    }
-                    style={
-                      !compact && titleHeight > 0
-                        ? { minHeight: titleHeight }
-                        : undefined
-                    }
-                  >
-                    {item.title}
-                  </h3>
-                  {compact ? (
-                    /* Compact: description + price + Shop Now inline */
-                    <>
-                      {item.editorial_paragraphs.length > 0 && (
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
-                          {item.editorial_paragraphs[0]}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 mt-1">
-                        {price && (
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {price}
-                          </span>
-                        )}
-                        {item.original_url && (
-                          <a
-                            href={item.original_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            Shop
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
                       </div>
-                    </>
-                  ) : (
-                    /* Full: original layout */
-                    <>
-                      {price && (
-                        <p className="mb-4 text-sm font-medium text-muted-foreground">
-                          {price}
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center min-w-0">
+                    {item.brand && (
+                      <div className="mb-1 flex items-center gap-2">
+                        {"brand_logo_url" in item &&
+                          (item as { brand_logo_url?: string }).brand_logo_url && (
+                            <img
+                              src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
+                              alt={item.brand ?? ""}
+                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                            />
+                          )}
+                        <p className="typography-overline text-muted-foreground">
+                          {item.brand}
                         </p>
+                      </div>
+                    )}
+                    <h3 className="text-base font-semibold mb-1">{item.title}</h3>
+                    {item.editorial_paragraphs.length > 0 && (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                        {item.editorial_paragraphs[0]}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1">
+                      {price && (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {price}
+                        </span>
                       )}
-
-                      {item.editorial_paragraphs.length > 0 && (
-                        <div className="mb-6 space-y-3">
-                          {item.editorial_paragraphs.map((p, j) => (
-                            <p
-                              key={j}
-                              className="font-serif text-sm leading-relaxed text-foreground/80 md:text-base"
-                            >
-                              {p}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-
                       {item.original_url && (
                         <a
                           href={item.original_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-foreground hover:text-background"
-                          style={
-                            accentColor
-                              ? { borderColor: `${accentColor}40` }
-                              : undefined
-                          }
+                          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          Shop Now
-                          <ExternalLink className="h-3.5 w-3.5" />
+                          Shop
+                          <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Full: image + brand/title/price side-by-side, editorial below */
+                <>
+                  <div className="flex flex-row gap-4 md:gap-6">
+                    <div className="w-28 shrink-0 sm:w-32 md:w-44 lg:w-48">
+                      {item.image_url ? (
+                        <ItemImage
+                          src={item.image_url}
+                          alt={item.title}
+                          size="card"
+                          className="rounded-xl"
+                        />
+                      ) : (
+                        <div
+                          className="flex w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/50 bg-muted text-center aspect-[3/4] p-6"
+                          style={{
+                            background: accentColor
+                              ? `linear-gradient(135deg, ${accentColor}18 0%, ${accentColor}08 100%)`
+                              : undefined,
+                          }}
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/50">
+                            {(i + 1).toString().padStart(2, "0")}
+                          </span>
+                          {item.brand && (
+                            <>
+                              <div className="mx-auto h-px w-8 bg-border/30" />
+                              <span className="font-serif text-2xl font-light tracking-wide text-foreground/70 md:text-3xl">
+                                {item.brand}
+                              </span>
+                            </>
+                          )}
+                          {meta?.sub_category && (
+                            <>
+                              <div className="mx-auto h-px w-8 bg-border/30" />
+                              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60">
+                                {meta.sub_category}
+                              </span>
+                            </>
+                          )}
+                          {meta?.material && meta.material.length > 0 && (
+                            <>
+                              <div className="mx-auto h-px w-8 bg-border/30" />
+                              <span className="text-[10px] italic text-muted-foreground/40">
+                                {meta.material.join(" · ")}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col justify-center min-w-0">
+                      {item.brand && (
+                        <div className="mb-2 flex items-center gap-2">
+                          {"brand_logo_url" in item &&
+                            (item as { brand_logo_url?: string }).brand_logo_url && (
+                              <img
+                                src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
+                                alt={item.brand ?? ""}
+                                className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                              />
+                            )}
+                          <p className="typography-overline text-muted-foreground">
+                            {item.brand}
+                          </p>
+                        </div>
+                      )}
+                      <h3
+                        className="typography-h4 mb-2"
+                        style={
+                          titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                        }
+                      >
+                        {item.title}
+                      </h3>
+                      {price && (
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {price}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Similar Items for this spot — intentionally small & muted to
-                  stay visually subordinate to the main item above */}
+                  {item.editorial_paragraphs.length > 0 && (
+                    <div className="mt-6 space-y-3">
+                      {item.editorial_paragraphs.map((p, j) => (
+                        <p
+                          key={j}
+                          className="font-serif text-sm leading-relaxed text-foreground/80 md:text-base"
+                        >
+                          {p}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {item.original_url && (
+                    <div className="mt-5">
+                      <a
+                        href={item.original_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-foreground hover:text-background"
+                        style={
+                          accentColor
+                            ? { borderColor: `${accentColor}40` }
+                            : undefined
+                        }
+                      >
+                        Shop Now
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </>
+              )}
+
               {spotRelated.length > 0 && (
                 <div
                   className={
                     compact
                       ? "mt-3 max-w-[220px]"
-                      : "mt-4 ml-0 max-w-xs md:ml-[calc(15rem+2.5rem)] lg:ml-[calc(16rem+2.5rem)]"
+                      : "mt-4 max-w-xs"
                   }
                 >
                   <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/50">

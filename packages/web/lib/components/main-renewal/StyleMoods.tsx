@@ -66,39 +66,47 @@ export default function StyleMoods({ items }: StyleMoodsProps) {
           ))}
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {filtered.map((item) => (
-            <Link
-              key={item.id}
-              href={item.link}
-              prefetch={false}
-              className="group relative block aspect-[3/4] overflow-hidden rounded-sm bg-white/5"
-            >
-              {item.imageUrl && (
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              )}
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              {/* Title */}
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="text-white text-xs font-medium leading-tight truncate">
-                  {item.title}
-                </p>
-                {item.subtitle && (
-                  <p className="text-white/50 text-[10px] mt-0.5 truncate">
-                    {item.subtitle}
-                  </p>
+        {/* Masonry Grid */}
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-3">
+          {filtered.map((item) => {
+            const ratio =
+              item.image_width && item.image_height
+                ? item.image_width / item.image_height
+                : item.aspectRatio
+                  ? item.aspectRatio
+                  : 3 / 4;
+
+            return (
+              <Link
+                key={item.id}
+                href={item.link}
+                prefetch={false}
+                className="group relative mb-3 block break-inside-avoid overflow-hidden rounded-sm bg-white/5"
+              >
+                {item.imageUrl && (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    width={item.image_width ?? 400}
+                    height={item.image_height ?? Math.round(400 / ratio)}
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 )}
-              </div>
-            </Link>
-          ))}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <p className="text-white text-xs font-medium leading-tight truncate">
+                    {item.title}
+                  </p>
+                  {item.subtitle && (
+                    <p className="text-white/50 text-[10px] mt-0.5 truncate">
+                      {item.subtitle}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

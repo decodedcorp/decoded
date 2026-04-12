@@ -422,7 +422,7 @@ export function ExploreClient({
                         onClick={handleClear}
                         className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                       >
-                        검색어 지우기
+                        Clear search
                       </button>
                     </>
                   )}

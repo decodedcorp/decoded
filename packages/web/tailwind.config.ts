@@ -130,6 +130,8 @@ const config: Config = {
         "neon-drift-reverse":
           "neon-drift-reverse 12s ease-in-out infinite alternate",
         "neon-drift-slow": "neon-drift-slow 8s ease-in-out infinite alternate",
+        "bounce-slow": "bounce-slow 2.4s ease-in-out infinite",
+        "scroll-dot": "scroll-dot 2.4s ease-in-out infinite",
       },
       keyframes: {
         "pulse-soft": {
@@ -167,6 +169,15 @@ const config: Config = {
         "neon-drift-slow": {
           "0%": { transform: "translate(0, 0) scale(1)" },
           "100%": { transform: "translate(2%, -4%) scale(1.03)" },
+        },
+        "bounce-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(5px)" },
+        },
+        "scroll-dot": {
+          "0%": { cy: "9", opacity: "1" },
+          "50%": { cy: "18", opacity: "0.3" },
+          "100%": { cy: "9", opacity: "1" },
         },
       },
     },

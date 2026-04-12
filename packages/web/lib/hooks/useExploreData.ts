@@ -106,6 +106,7 @@ export function useExploreData(
     enabled: !isSearchMode,
     limit: 40,
     hasMagazine,
+    loop: true,
     sort: (activeSort === "recent"
       ? "recent"
       : activeSort === "popular"

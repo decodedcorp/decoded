@@ -102,7 +102,8 @@ export function ItemDetailCard({
       ref={cardRef}
       data-testid="item-detail-card"
       data-item-index={index}
-      className={`group relative flex min-h-auto flex-col justify-center ${
+      data-item-id={item.spot_id ?? String(item.id)}
+      className={`group relative flex min-h-auto flex-col justify-center scroll-mt-20 md:scroll-mt-24 ${
         compact
           ? "mb-4 py-2"
           : "mb-8 md:mb-12 py-4 md:py-6 lg:mb-16"
@@ -129,13 +130,15 @@ export function ItemDetailCard({
         className={`relative z-10 flex ${
           compact
             ? "flex-row items-start gap-3"
-            : "flex-col gap-4 md:gap-6"
+            : "flex-col items-stretch gap-5 md:flex-row md:items-start md:gap-6 lg:gap-8"
         }`}
       >
-        {/* Item Image */}
+        {/* Item Image — mobile: stacked; md+: beside copy with fixed column width */}
         <div
           className={`group/image shrink-0 ${
-            compact ? "w-24 md:w-28 lg:w-32" : ""
+            compact
+              ? "w-24 md:w-28 lg:w-32"
+              : "mx-auto w-full max-w-xs sm:max-w-sm md:mx-0 md:w-44 md:max-w-none lg:w-52 xl:w-56"
           }`}
         >
           <ItemImage
@@ -154,7 +157,7 @@ export function ItemDetailCard({
         {/* Text Content */}
         <div
           className={`flex flex-col relative z-30 ${
-            compact ? "min-w-0 flex-1 px-0" : "px-2"
+            compact ? "min-w-0 flex-1 px-0" : "min-w-0 flex-1 px-0 sm:px-1 md:pl-0"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

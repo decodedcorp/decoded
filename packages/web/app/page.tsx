@@ -435,6 +435,8 @@ export default async function Home({
       subtitle: post.context || post.title || undefined,
       category: post.context || "other",
       link: `/posts/${post.id}`,
+      image_width: post.image_width,
+      image_height: post.image_height,
       aspectRatio: [1.25, 1.0, 1.4, 0.8, 1.2, 1.0, 1.5, 0.9][i % 8],
     };
   });
