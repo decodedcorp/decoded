@@ -207,11 +207,11 @@ function captureBasicData(el) {
                 source: sheet.href || 'inline',
               });
             }
-          } catch { /* skip rules that can't be matched */ }
+          } catch (e) { if (!(e instanceof TypeError) && !(e instanceof DOMException)) throw e; }
         }
-      } catch { /* cross-origin sheet — silently skip */ }
+      } catch (e) { if (!(e instanceof DOMException)) throw e; }
     }
-  } catch { /* CSSOM not available */ }
+  } catch (e) { if (!(e instanceof TypeError) && !(e instanceof DOMException)) throw e; }
 
   return { computedStyles, boxModel, matchedRules };
 }
@@ -219,7 +219,7 @@ function captureBasicData(el) {
 function basicBuildSelector(el) {
   if (el.id) {
     const sel = '#' + CSS.escape(el.id);
-    try { if (document.querySelectorAll(sel).length === 1) return sel; } catch {}
+    try { if (document.querySelectorAll(sel).length === 1) return sel; } catch (e) { if (!(e instanceof TypeError) && !(e instanceof DOMException)) throw e; }
   }
   const parts = [];
   let current = el;
@@ -326,8 +326,18 @@ function startBasicPicker() {
   document.addEventListener('keydown', onBasicKeydown, true);
 }
 
+// Do NOT dispatch gstack-extension-ready here — the extension being loaded
+// does not mean the sidebar is open. The welcome page arrow hint should only
+// hide when the sidebar is actually open. We dispatch it when we receive
+// a 'sidebarOpened' message from background.js.
+
 // Listen for messages from background worker
 chrome.runtime.onMessage.addListener((msg) => {
+  // Sidebar actually opened — now hide the welcome page arrow hint
+  if (msg.type === 'sidebarOpened') {
+    document.dispatchEvent(new CustomEvent('gstack-extension-ready'));
+    return;
+  }
   if (msg.type === 'startBasicPicker') {
     startBasicPicker();
     return;

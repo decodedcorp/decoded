@@ -20,6 +20,8 @@ bun run dev:skill    # watch mode: auto-regen + validate on change
 bun run eval:list    # list all eval runs from ~/.gstack-dev/evals/
 bun run eval:compare # compare two eval runs (auto-picks most recent)
 bun run eval:summary # aggregate stats across all eval runs
+bun run slop          # full slop-scan report (all files)
+bun run slop:diff     # slop findings in files changed on this branch only
 ```
 
 `test:evals` requires `ANTHROPIC_API_KEY`. Codex E2E tests (`test/codex-e2e.test.ts`)
@@ -63,8 +65,16 @@ gstack/
 │   │   └── snapshot.ts  # SNAPSHOT_FLAGS metadata array
 │   ├── test/        # Integration tests + fixtures
 │   └── dist/        # Compiled binary
+├── hosts/           # Typed host configs (one per AI agent)
+│   ├── claude.ts    # Primary host config
+│   ├── codex.ts, factory.ts, kiro.ts  # Existing hosts
+│   ├── opencode.ts, slate.ts, cursor.ts, openclaw.ts  # New hosts
+│   └── index.ts     # Registry: exports all, derives Host type
 ├── scripts/         # Build + DX tooling
-│   ├── gen-skill-docs.ts  # Template → SKILL.md generator
+│   ├── gen-skill-docs.ts  # Template → SKILL.md generator (config-driven)
+│   ├── host-config.ts     # HostConfig interface + validator
+│   ├── host-config-export.ts  # Shell bridge for setup script
+│   ├── host-adapters/     # Host-specific adapters (OpenClaw tool mapping)
 │   ├── resolvers/   # Template resolver modules (preamble, design, review, etc.)
 │   ├── skill-check.ts     # Health dashboard
 │   └── dev-skill.ts       # Watch mode
@@ -95,7 +105,8 @@ gstack/
 ├── cso/             # /cso skill (OWASP Top 10 + STRIDE security audit)
 ├── design-consultation/ # /design-consultation skill (design system from scratch)
 ├── design-shotgun/  # /design-shotgun skill (visual design exploration)
-├── connect-chrome/  # /connect-chrome skill (headed Chrome with side panel)
+├── open-gstack-browser/  # /open-gstack-browser skill (launch GStack Browser)
+├── connect-chrome/  # symlink → open-gstack-browser (backwards compat)
 ├── design/          # Design binary CLI (GPT Image API)
 │   ├── src/         # CLI + commands (generate, variants, compare, serve, etc.)
 │   ├── test/        # Integration tests
@@ -107,6 +118,8 @@ gstack/
 ├── .github/         # CI workflows + Docker image
 │   ├── workflows/   # evals.yml (E2E on Ubicloud), skill-docs.yml, actionlint.yml
 │   └── docker/      # Dockerfile.ci (pre-baked toolchain + Playwright/Chromium)
+├── contrib/         # Contributor-only tools (never installed for users)
+│   └── add-host/    # /gstack-contrib-add-host skill
 ├── setup            # One-time setup: build binary + symlink skills
 ├── SKILL.md         # Generated from SKILL.md.tmpl (don't edit directly)
 ├── SKILL.md.tmpl    # Template: edit this, run gen:skill-docs
@@ -167,10 +180,18 @@ When you need to interact with a browser (QA, dogfooding, cookie setup), use the
 `mcp__claude-in-chrome__*` tools — they are slow, unreliable, and not what this
 project uses.
 
-## Vendored symlink awareness
+**Sidebar architecture:** Before modifying `sidepanel.js`, `background.js`,
+`content.js`, `sidebar-agent.ts`, or sidebar-related server endpoints, read
+`docs/designs/SIDEBAR_MESSAGE_FLOW.md`. It documents the full initialization
+timeline, message flow, auth token chain, tab concurrency model, and known
+failure modes. The sidebar spans 5 files across 2 codebases (extension + server)
+with non-obvious ordering dependencies. The doc exists to prevent the kind of
+silent failures that come from not understanding the cross-component flow.
+
+## Dev symlink awareness
 
 When developing gstack, `.claude/skills/gstack` may be a symlink back to this
-working directory (gitignored). This means skill changes are **live immediately** —
+working directory (gitignored). This means skill changes are **live immediately**,
 great for rapid iteration, risky during big refactors where half-written skills
 could break other Claude Code sessions using gstack concurrently.
 
@@ -181,15 +202,25 @@ symlink or a real copy. If it's a symlink to your working directory, be aware th
 - During large refactors, remove the symlink (`rm .claude/skills/gstack`) so the
   global install at `~/.claude/skills/gstack/` is used instead
 
-**Prefix setting:** Skill symlinks use either short names (`qa -> gstack/qa`) or
-namespaced (`gstack-qa -> gstack/qa`), controlled by `skill_prefix` in
-`~/.gstack/config.yaml`. When vendoring into a project, run `./setup` after
-symlinking to create the per-skill symlinks with your preferred naming. Pass
-`--no-prefix` or `--prefix` to skip the interactive prompt.
+**Prefix setting:** Setup creates real directories (not symlinks) at the top level
+with a SKILL.md symlink inside (e.g., `qa/SKILL.md -> gstack/qa/SKILL.md`). This
+ensures Claude discovers them as top-level skills, not nested under `gstack/`.
+Names are either short (`qa`) or namespaced (`gstack-qa`), controlled by
+`skill_prefix` in `~/.gstack/config.yaml`. Pass `--no-prefix` or `--prefix` to
+skip the interactive prompt.
+
+**Note:** Vendoring gstack into a project's repo is deprecated. Use global install
++ `./setup --team` instead. See README.md for team mode instructions.
 
 **For plan reviews:** When reviewing plans that modify skill templates or the
 gen-skill-docs pipeline, consider whether the changes should be tested in isolation
 before going live (especially if the user is actively using gstack in other windows).
+
+**Upgrade migrations:** When a change modifies on-disk state (directory structure,
+config format, stale files) in ways that could break existing user installs, add a
+migration script to `gstack-upgrade/migrations/`. Read CONTRIBUTING.md's "Upgrade
+migrations" section for the format and testing requirements. The upgrade skill runs
+these automatically after `./setup` during `/gstack-upgrade`.
 
 ## Compiled binaries — NEVER commit browse/dist/ or design/dist/
 
@@ -220,6 +251,62 @@ Examples of good bisection:
 
 When the user says "bisect commit" or "bisect and push," split staged/unstaged
 changes into logical commits and push.
+
+## Slop-scan: AI code quality, not AI code hiding
+
+We use [slop-scan](https://github.com/benvinegar/slop-scan) to catch patterns where
+AI-generated code is genuinely worse than what a human would write. We are NOT trying
+to pass as human code. We are AI-coded and proud of it. The goal is code quality.
+
+```bash
+npx slop-scan scan .          # human-readable report
+npx slop-scan scan . --json   # machine-readable for diffing
+```
+
+Config: `slop-scan.config.json` at repo root (currently excludes `**/vendor/**`).
+
+### What to fix (genuine quality improvements)
+
+- **Empty catches around file ops** — use `safeUnlink()` (ignores ENOENT, rethrows
+  EPERM/EIO). A swallowed EPERM in cleanup means silent data loss.
+- **Empty catches around process kills** — use `safeKill()` (ignores ESRCH, rethrows
+  EPERM). A swallowed EPERM means you think you killed something you didn't.
+- **Redundant `return await`** — remove when there's no enclosing try block. Saves a
+  microtask, signals intent.
+- **Typed exception catches** — `catch (err) { if (!(err instanceof TypeError)) throw err }`
+  is genuinely better than `catch {}` when the try block does URL parsing or DOM work.
+  You know what error you expect, so say so.
+
+### What NOT to fix (linter gaming, not quality)
+
+- **String-matching on error messages** — `err.message.includes('closed')` is brittle.
+  Playwright/Chrome can change wording anytime. If a fire-and-forget operation can fail
+  for ANY reason and you don't care, `catch {}` is the correct pattern.
+- **Adding comments to exempt pass-through wrappers** — "alias for active session" above
+  a method just to trip slop-scan's exemption rule is noise, not documentation.
+- **Converting extension catch-and-log to selective rethrow** — Chrome extensions crash
+  entirely on uncaught errors. If the catch logs and continues, that IS the right pattern
+  for extension code. Don't make it throw.
+- **Tightening best-effort cleanup paths** — shutdown, emergency cleanup, and disconnect
+  code should use `safeUnlinkQuiet()` (swallows ALL errors). A cleanup path that throws
+  on EPERM means the rest of cleanup doesn't run. That's worse.
+
+### Utilities in `browse/src/error-handling.ts`
+
+| Function | Use when | Behavior |
+|----------|----------|----------|
+| `safeUnlink(path)` | Normal file deletion | Ignores ENOENT, rethrows others |
+| `safeUnlinkQuiet(path)` | Shutdown/emergency cleanup | Swallows all errors |
+| `safeKill(pid, signal)` | Sending signals | Ignores ESRCH, rethrows others |
+| `isProcessAlive(pid)` | Boolean process checks | Returns true/false, never throws |
+
+### Score tracking
+
+Baseline (2026-04-09, before cleanup): 100 findings, 432.8 score, 2.38 score/file.
+After cleanup: 90 findings, 358.1 score, 1.96 score/file.
+
+Don't chase the number. Fix patterns that represent actual code quality problems.
+Accept findings where the "sloppy" pattern is the correct engineering choice.
 
 ## Community PR guardrails
 
@@ -373,6 +460,29 @@ Also when running targeted E2E tests to debug failures:
 - Run in **foreground** (`bun test ...`), not background with `&` and `tee`
 - Never `pkill` running eval processes and restart — you lose results and waste money
 - One clean run beats three killed-and-restarted runs
+
+## Publishing native OpenClaw skills to ClawHub
+
+Native OpenClaw skills live in `openclaw/skills/gstack-openclaw-*/SKILL.md`. These are
+hand-crafted methodology skills (not generated by the pipeline) published to ClawHub
+so any OpenClaw user can install them.
+
+**Publishing:** The command is `clawhub publish` (NOT `clawhub skill publish`):
+
+```bash
+clawhub publish openclaw/skills/gstack-openclaw-office-hours \
+  --slug gstack-openclaw-office-hours --name "gstack Office Hours" \
+  --version 1.0.0 --changelog "description of changes"
+```
+
+Repeat for each skill: `gstack-openclaw-ceo-review`, `gstack-openclaw-investigate`,
+`gstack-openclaw-retro`. Bump `--version` on each update.
+
+**Auth:** `clawhub login` (opens browser for GitHub auth). `clawhub whoami` to verify.
+
+**Updating:** Same `clawhub publish` command with a higher `--version` and `--changelog`.
+
+**Verification:** `clawhub search gstack` to confirm they're live.
 
 ## Deploying to the active skill
 
