@@ -227,7 +227,7 @@ pub struct UpdatePostDto {
 }
 
 /// Post 목록 조회 쿼리 파라미터
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostListQuery {
     /// 아티스트명 필터
     #[serde(skip_serializing_if = "Option::is_none")]
