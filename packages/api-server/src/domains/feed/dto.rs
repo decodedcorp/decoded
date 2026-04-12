@@ -106,6 +106,13 @@ pub struct CurationDetailResponse {
     pub posts: Vec<FeedItem>,
 }
 
+/// 에디터 픽 응답 — 모든 활성 curation 의 curation_posts 를 display_order 로
+/// 정렬해 상위 N개를 반환한다. 홈 페이지의 "Editor Picks" 섹션 전용.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct EditorPicksResponse {
+    pub data: Vec<FeedItem>,
+}
+
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 mod tests {

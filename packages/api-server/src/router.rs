@@ -31,6 +31,7 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
         .nest("/post-magazines", domains::post_magazines::router())
         .nest("/categories", domains::categories::router())
         .nest("/subcategories", domains::subcategories::handlers::router())
+        .nest("/warehouse", domains::warehouse::router())
         // merge를 사용하는 라우터들 (solutions, votes, comments는 자체 경로를 가지고 있음)
         .merge(domains::solutions::router(config.clone()))
         .merge(domains::votes::handlers::router(config.clone()))

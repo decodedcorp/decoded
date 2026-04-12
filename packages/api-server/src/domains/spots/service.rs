@@ -22,7 +22,7 @@ use sea_orm::PaginatorTrait;
 
 use super::dto::{
     AdminSpotListItem, AdminSpotSubcategoryUpdate, CreateSpotDto, SpotListItem, SpotResponse,
-    UpdateSpotDto,
+    SpotsByPostItem, SpotsByPostSolution, SpotsByPostsResponse, UpdateSpotDto,
 };
 
 /// Spot의 subcategory를 통해 category 정보 조회
@@ -110,6 +110,85 @@ pub async fn list_spots_by_post_id(
     }
 
     Ok(items)
+}
+
+/// 여러 post_id 의 spots + 대표 solution 메타를 배치로 조회
+///
+/// 홈 페이지가 hero/editorial 카드에 아이템 오버레이를 쌓을 때 사용한다.
+/// 하나의 query 로 spots 를 모두 가져온 뒤, 다시 하나의 query 로 solutions
+/// 를 가져와 N+1 을 피한다. Solution 은 thumbnail_url 이 있는 것만 노출하고
+/// 각 spot 당 상위 `solutions_per_spot` 개만 남긴다.
+pub async fn list_spots_by_posts(
+    db: &DatabaseConnection,
+    post_ids: &[Uuid],
+    solutions_per_spot: usize,
+) -> AppResult<SpotsByPostsResponse> {
+    use crate::entities::solutions::{Column as SolutionColumn, Entity as Solutions};
+    use std::collections::HashMap;
+
+    let mut spots_by_post: HashMap<Uuid, Vec<SpotsByPostItem>> = HashMap::new();
+    for id in post_ids {
+        spots_by_post.insert(*id, Vec::new());
+    }
+    if post_ids.is_empty() {
+        return Ok(SpotsByPostsResponse { spots_by_post });
+    }
+
+    let spots = Spots::find()
+        .filter(Column::PostId.is_in(post_ids.to_vec()))
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    if spots.is_empty() {
+        return Ok(SpotsByPostsResponse { spots_by_post });
+    }
+
+    let spot_ids: Vec<Uuid> = spots.iter().map(|s| s.id).collect();
+    let solutions = Solutions::find()
+        .filter(SolutionColumn::SpotId.is_in(spot_ids))
+        .filter(SolutionColumn::Status.eq(crate::constants::solution_status::ACTIVE))
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    // spot_id -> Vec<SpotsByPostSolution>
+    let mut by_spot: HashMap<Uuid, Vec<SpotsByPostSolution>> = HashMap::new();
+    for sol in solutions {
+        if sol.thumbnail_url.as_deref().unwrap_or("").is_empty() {
+            continue;
+        }
+        let brand = sol
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("brand"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let bucket = by_spot.entry(sol.spot_id).or_default();
+        if bucket.len() >= solutions_per_spot {
+            continue;
+        }
+        bucket.push(SpotsByPostSolution {
+            id: sol.id,
+            title: sol.title,
+            thumbnail_url: sol.thumbnail_url,
+            brand,
+        });
+    }
+
+    for spot in spots {
+        let solutions_for_spot = by_spot.remove(&spot.id).unwrap_or_default();
+        let entry = spots_by_post.entry(spot.post_id).or_default();
+        entry.push(SpotsByPostItem {
+            id: spot.id,
+            post_id: spot.post_id,
+            position_left: spot.position_left,
+            position_top: spot.position_top,
+            solutions: solutions_for_spot,
+        });
+    }
+
+    Ok(SpotsByPostsResponse { spots_by_post })
 }
 
 /// Spot ID로 조회

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::domains::categories::CategoryCache;
+use crate::domains::posts::cache::PostListCache;
 use crate::services::{
     AffiliateClient, CloudflareR2Client, DecodedAIGrpcClient, DummyEmbeddingClient,
     EmbeddingClient, MeilisearchClient, OpenAIEmbeddingClient, RakutenAffiliateClient,
@@ -227,8 +228,9 @@ pub struct AppState {
     pub db: Arc<DatabaseConnection>,
     pub config: AppConfig,
 
-    // Category Cache
+    // Caches
     pub category_cache: Arc<CategoryCache>,
+    pub post_list_cache: Arc<PostListCache>,
 
     // Trait 기반 클라이언트
     pub storage_client: Arc<dyn StorageClient>,
@@ -315,9 +317,10 @@ impl AppState {
                 }
             };
 
-        // CategoryCache 초기화
+        // Cache 초기화
         let category_cache = Arc::new(CategoryCache::new());
-        tracing::info!("CategoryCache initialized successfully");
+        let post_list_cache = Arc::new(PostListCache::new());
+        tracing::info!("CategoryCache, PostListCache initialized successfully");
 
         // DecodedAIGrpcClient 초기화 (lazy connect - 실제 연결은 첫 RPC 시점에 수행)
         let grpc_url = config.ai_service.url.trim().to_string();
@@ -346,6 +349,7 @@ impl AppState {
             db,
             config,
             category_cache,
+            post_list_cache,
             storage_client,
             search_client,
             affiliate_client,

@@ -407,6 +407,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
 
         let response = list_posts(State(state), Query(query))
@@ -690,6 +691,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: Some(true),
+            include_magazine_items: None,
         };
 
         let response = list_posts(State(state), Query(query))
@@ -728,6 +730,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
 
         let response = list_posts(State(state), Query(query))
@@ -1225,6 +1228,7 @@ mod tests {
                 per_page: 20,
                 has_solutions: None,
                 has_magazine: None,
+                include_magazine_items: None,
             },
         };
         let result =
@@ -1436,6 +1440,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
         let response = list_posts(State(state), Query(query))
             .await
@@ -1618,6 +1623,7 @@ mod tests {
             per_page: 20,
             has_solutions: None,
             has_magazine: None,
+            include_magazine_items: None,
         };
         let response = list_posts(State(state), Query(query))
             .await
