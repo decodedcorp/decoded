@@ -2,6 +2,7 @@
 //!
 //! 게시물 관리 및 API 엔드포인트
 
+pub mod cache;
 pub mod dto;
 pub mod handlers;
 pub mod magazine_preview;

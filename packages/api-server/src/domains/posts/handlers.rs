@@ -110,6 +110,7 @@ pub async fn create_post_without_solutions(
         dto,
     )
     .await?;
+    state.post_list_cache.invalidate_all().await;
     Ok(Json(post))
 }
 
@@ -191,6 +192,7 @@ pub async fn create_post_with_solutions(
     let result =
         service::create_post_with_solutions(&state, user.id, image_file, &image_content_type, dto)
             .await?;
+    state.post_list_cache.invalidate_all().await;
     Ok(Json(result))
 }
 
@@ -221,7 +223,16 @@ pub async fn list_posts(
     State(state): State<AppState>,
     Query(query): Query<PostListQuery>,
 ) -> AppResult<Json<PaginatedResponse<crate::domains::posts::dto::PostListItem>>> {
-    let posts = service::list_posts(state.db.as_ref(), query).await?;
+    // 캐시 히트 시 즉시 반환
+    if let Some(cached) = state.post_list_cache.get(&query).await {
+        return Ok(Json((*cached).clone()));
+    }
+
+    let posts = service::list_posts(state.db.as_ref(), query.clone()).await?;
+
+    // 캐시에 저장 (30초 TTL)
+    state.post_list_cache.insert(&query, posts.clone()).await;
+
     Ok(Json(posts))
 }
 
@@ -290,6 +301,7 @@ pub async fn update_post(
     Json(dto): Json<UpdatePostDto>,
 ) -> AppResult<Json<PostResponse>> {
     let updated_post = service::update_post(&state, post_id, user.id, dto).await?;
+    state.post_list_cache.invalidate_all().await;
     Ok(Json(updated_post))
 }
 
@@ -317,6 +329,7 @@ pub async fn delete_post(
     Path(post_id): Path<Uuid>,
 ) -> AppResult<axum::http::StatusCode> {
     service::delete_post(&state.search_client, state.db.as_ref(), post_id, user.id).await?;
+    state.post_list_cache.invalidate_all().await;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 

@@ -666,39 +666,33 @@ async fn load_warehouse_display_maps(
     let artist_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.artist_id).collect();
     let group_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.group_id).collect();
 
-    let artist_fut = async {
-        if artist_ids.is_empty() {
-            Ok::<_, AppError>(std::collections::HashMap::new())
-        } else {
-            let rows = WarehouseArtists::find()
-                .filter(ArtistCol::Id.is_in(artist_ids))
-                .all(db)
-                .await
-                .map_err(AppError::DatabaseError)?;
-            Ok(rows
-                .into_iter()
-                .map(|a| (a.id, (a.name_en, a.name_ko, a.profile_image_url)))
-                .collect())
-        }
-    };
-    let group_fut = async {
-        if group_ids.is_empty() {
-            Ok::<_, AppError>(std::collections::HashMap::new())
-        } else {
-            let rows = WarehouseGroups::find()
-                .filter(GroupCol::Id.is_in(group_ids))
-                .all(db)
-                .await
-                .map_err(AppError::DatabaseError)?;
-            Ok(rows
-                .into_iter()
-                .map(|g| (g.id, (g.name_en, g.name_ko, g.profile_image_url)))
-                .collect())
-        }
+    let artist_map = if artist_ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        WarehouseArtists::find()
+            .filter(ArtistCol::Id.is_in(artist_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+            .into_iter()
+            .map(|a| (a.id, (a.name_en, a.name_ko, a.profile_image_url)))
+            .collect()
     };
 
-    let (artists, groups) = tokio::join!(artist_fut, group_fut);
-    Ok((artists?, groups?))
+    let group_map = if group_ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        WarehouseGroups::find()
+            .filter(GroupCol::Id.is_in(group_ids))
+            .all(db)
+            .await
+            .map_err(AppError::DatabaseError)?
+            .into_iter()
+            .map(|g| (g.id, (g.name_en, g.name_ko, g.profile_image_url)))
+            .collect()
+    };
+
+    Ok((artist_map, group_map))
 }
 
 /// 단일 post의 artist/group display fallback: (artist_name, profile), (group_name, profile).
@@ -1009,69 +1003,38 @@ pub async fn list_posts(
     }
 
     // has_solutions 필터: true = ACTIVE 솔루션 있는 post만, false = spot은 있으나 솔루션 없는 post만
+    // 최적화: 2~3개 순차 쿼리 → 1개 JOIN 쿼리로 통합
     if let Some(has_solutions) = query.has_solutions {
-        use crate::entities::solutions::{Column as SolutionColumn, Entity as Solutions};
-        use crate::entities::spots::{Column as SpotColumn, Entity as Spots};
+        use sea_orm::sea_query::{Alias, Query as SeaQuery};
 
-        let solution_spot_ids: Vec<Uuid> = Solutions::find()
-            .filter(SolutionColumn::Status.eq(crate::constants::solution_status::ACTIVE))
-            .select_only()
-            .column(SolutionColumn::SpotId)
-            .into_tuple::<Uuid>()
-            .all(db)
-            .await
-            .map_err(AppError::DatabaseError)?;
+        // spots JOIN solutions (status='active') → DISTINCT post_id (단일 쿼리)
+        let subquery = SeaQuery::select()
+            .distinct()
+            .column((Alias::new("spots"), Alias::new("post_id")))
+            .from(Alias::new("spots"))
+            .inner_join(
+                Alias::new("solutions"),
+                sea_orm::sea_query::Expr::col((Alias::new("solutions"), Alias::new("spot_id")))
+                    .equals((Alias::new("spots"), Alias::new("id"))),
+            )
+            .and_where(
+                sea_orm::sea_query::Expr::col((Alias::new("solutions"), Alias::new("status")))
+                    .eq(crate::constants::solution_status::ACTIVE),
+            )
+            .to_owned();
 
         if has_solutions {
-            // post_id in (spots where spot_id in solution_spot_ids)
-            let post_ids_with_solutions: Vec<Uuid> = if solution_spot_ids.is_empty() {
-                vec![]
-            } else {
-                Spots::find()
-                    .filter(SpotColumn::Id.is_in(solution_spot_ids))
-                    .select_only()
-                    .column(SpotColumn::PostId)
-                    .into_tuple::<Uuid>()
-                    .all(db)
-                    .await
-                    .map_err(AppError::DatabaseError)?
-            };
-            if !post_ids_with_solutions.is_empty() {
-                select = select.filter(Column::Id.is_in(post_ids_with_solutions));
-            } else {
-                // no post has solutions -> return empty
-                select = select.filter(Column::Id.is_in([Uuid::nil()]));
-            }
+            select = select.filter(Column::Id.in_subquery(subquery));
         } else {
-            // spot은 있으나 solution 없는 post: post_id in (all spots) AND post_id not in (posts with solutions)
-            let post_ids_with_solutions: Vec<Uuid> = if solution_spot_ids.is_empty() {
-                vec![]
-            } else {
-                Spots::find()
-                    .filter(SpotColumn::Id.is_in(solution_spot_ids))
-                    .select_only()
-                    .column(SpotColumn::PostId)
-                    .into_tuple::<Uuid>()
-                    .all(db)
-                    .await
-                    .map_err(AppError::DatabaseError)?
-            };
-            let post_ids_with_any_spot: Vec<Uuid> = Spots::find()
-                .select_only()
-                .column(SpotColumn::PostId)
-                .into_tuple::<Uuid>()
-                .all(db)
-                .await
-                .map_err(AppError::DatabaseError)?;
-            let post_ids_spot_only: Vec<Uuid> = post_ids_with_any_spot
-                .into_iter()
-                .filter(|id| !post_ids_with_solutions.contains(id))
-                .collect();
-            if post_ids_spot_only.is_empty() {
-                select = select.filter(Column::Id.is_in([Uuid::nil()]));
-            } else {
-                select = select.filter(Column::Id.is_in(post_ids_spot_only));
-            }
+            // spot은 있으나 solution이 없는 post
+            let spot_subquery = SeaQuery::select()
+                .distinct()
+                .column((Alias::new("spots"), Alias::new("post_id")))
+                .from(Alias::new("spots"))
+                .to_owned();
+            select = select
+                .filter(Column::Id.in_subquery(spot_subquery))
+                .filter(Column::Id.not_in_subquery(subquery));
         }
     }
 
@@ -1094,71 +1057,66 @@ pub async fn list_posts(
         }
     }
 
-    // 전체 개수 조회
-    let total = select
-        .clone()
-        .count(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
-
     // 페이지네이션 설정
     let pagination = Pagination::new(query.page, query.per_page);
 
-    // 페이지네이션 적용
-    let posts = select
-        .offset(pagination.offset())
-        .limit(pagination.limit())
-        .all(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
+    // COUNT + SELECT 병렬 실행 (동시 2 커넥션)
+    let (total_result, posts_result) = tokio::join!(
+        select.clone().count(db),
+        select
+            .offset(pagination.offset())
+            .limit(pagination.limit())
+            .all(db),
+    );
+    let total = total_result.map_err(AppError::DatabaseError)?;
+    let posts = posts_result.map_err(AppError::DatabaseError)?;
 
-    // 배치 로딩: User 정보
+    // 배치 로딩: 부가 데이터 병렬 조회
     use crate::entities::comments::{Column as CommentColumn, Entity as Comments};
+    use crate::entities::post_magazines::{Column as MagazineColumn, Entity as PostMagazines};
     use crate::entities::spots::{Column as SpotColumn, Entity as Spots};
     use crate::entities::users::{Column as UserColumn, Entity as Users};
 
     let post_ids: Vec<Uuid> = posts.iter().map(|p| p.id).collect();
     let user_ids: Vec<Uuid> = posts.iter().map(|p| p.user_id).collect();
-
-    // 1. User 배치 조회
-    let users = Users::find()
-        .filter(UserColumn::Id.is_in(user_ids))
-        .all(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
-    let users_map: std::collections::HashMap<Uuid, crate::entities::users::Model> =
-        users.into_iter().map(|u| (u.id, u)).collect();
-
-    // 2. Spot 개수 배치 조회 (GROUP BY)
-    let spot_counts = Spots::find()
-        .select_only()
-        .column(SpotColumn::PostId)
-        .filter(SpotColumn::PostId.is_in(post_ids.clone()))
-        .group_by(SpotColumn::PostId)
-        .column_as(SpotColumn::Id.count(), "count")
-        .into_tuple::<(Uuid, i64)>()
-        .all(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
-    let spot_count_map: std::collections::HashMap<Uuid, i64> = spot_counts.into_iter().collect();
-
-    // 3. Comment 개수 배치 조회 (GROUP BY)
-    let comment_counts = Comments::find()
-        .select_only()
-        .column(CommentColumn::PostId)
-        .filter(CommentColumn::PostId.is_in(post_ids))
-        .group_by(CommentColumn::PostId)
-        .column_as(CommentColumn::Id.count(), "count")
-        .into_tuple::<(Uuid, i64)>()
-        .all(db)
-        .await
-        .map_err(AppError::DatabaseError)?;
-    let comment_count_map: std::collections::HashMap<Uuid, i64> =
-        comment_counts.into_iter().collect();
-
-    // 4. PostMagazines 배치 조회 (post_magazine_title + optional preview items)
-    use crate::entities::post_magazines::{Column as MagazineColumn, Entity as PostMagazines};
     let magazine_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.post_magazine_id).collect();
+
+    // 그룹 A: users + spot counts + comment counts (동시 3 커넥션)
+    let (users_result, spot_counts_result, comment_counts_result) = tokio::join!(
+        Users::find().filter(UserColumn::Id.is_in(user_ids)).all(db),
+        Spots::find()
+            .select_only()
+            .column(SpotColumn::PostId)
+            .filter(SpotColumn::PostId.is_in(post_ids.clone()))
+            .group_by(SpotColumn::PostId)
+            .column_as(SpotColumn::Id.count(), "count")
+            .into_tuple::<(Uuid, i64)>()
+            .all(db),
+        Comments::find()
+            .select_only()
+            .column(CommentColumn::PostId)
+            .filter(CommentColumn::PostId.is_in(post_ids))
+            .group_by(CommentColumn::PostId)
+            .column_as(CommentColumn::Id.count(), "count")
+            .into_tuple::<(Uuid, i64)>()
+            .all(db),
+    );
+
+    let users_map: std::collections::HashMap<Uuid, crate::entities::users::Model> = users_result
+        .map_err(AppError::DatabaseError)?
+        .into_iter()
+        .map(|u| (u.id, u))
+        .collect();
+    let spot_count_map: std::collections::HashMap<Uuid, i64> = spot_counts_result
+        .map_err(AppError::DatabaseError)?
+        .into_iter()
+        .collect();
+    let comment_count_map: std::collections::HashMap<Uuid, i64> = comment_counts_result
+        .map_err(AppError::DatabaseError)?
+        .into_iter()
+        .collect();
+
+    // magazines + warehouse 순차 (커넥션 1개씩)
     let include_preview = query.include_magazine_items == Some(true);
     let (magazine_titles_map, magazine_preview_map) = if magazine_ids.is_empty() {
         (
@@ -1188,8 +1146,6 @@ pub async fn list_posts(
         }
         (titles, previews)
     };
-
-    // 5. Warehouse 배치 조회 (artist/group의 name_en, name_ko, profile_image_url)
     let (artist_display_map, group_display_map) = load_warehouse_display_maps(db, &posts).await?;
 
     // PostListItem으로 변환 (배치 로딩 데이터 사용)
