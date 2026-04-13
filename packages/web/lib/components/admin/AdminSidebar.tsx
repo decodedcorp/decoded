@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   ArrowLeft,
   LayoutDashboard,
   FileText,
@@ -74,6 +75,7 @@ const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { href: "/admin/ai-cost", label: "AI Cost", icon: DollarSign },
   { href: "/admin/pipeline-logs", label: "Pipeline Logs", icon: GitBranch },
   { href: "/admin/server-logs", label: "Server Logs", icon: Server },
+  { href: "/admin/monitoring", label: "Monitoring", icon: Activity },
 ];
 
 interface AdminSidebarProps {

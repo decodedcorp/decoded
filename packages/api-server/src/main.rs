@@ -158,6 +158,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             axum::extract::Request,
         >::new_from_top())
         .layer(sentry::integrations::tower::SentryHttpLayer::new().enable_transaction())
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            middleware::metrics_middleware,
+        ))
         .layer(axum::middleware::from_fn(
             middleware::request_logger_middleware,
         ))

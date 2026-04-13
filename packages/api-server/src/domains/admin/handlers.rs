@@ -7,8 +7,8 @@ use axum::Router;
 use crate::config::{AppConfig, AppState};
 
 use super::{
-    badges, categories, curations, dashboard, editorial_candidates, magazine_sessions, posts,
-    solutions, spots, synonyms,
+    badges, categories, curations, dashboard, editorial_candidates, magazine_sessions, monitoring,
+    posts, solutions, spots, synonyms,
 };
 use crate::domains::reports;
 
@@ -35,4 +35,5 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
             "/magazine-sessions",
             magazine_sessions::router(state, app_config),
         )
+        .nest("/monitoring", monitoring::router())
 }
