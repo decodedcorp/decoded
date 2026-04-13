@@ -72,20 +72,19 @@ jobs:
               DETAIL="HTTP $HTTP_CODE / status: $STATUS"
             fi
 
-            ICON=$'\360\237\224\264'
-            SEP="----------------"
             DB_ICON=$(status_icon "$DB")
             SEARCH_ICON=$(status_icon "$SEARCH")
             STORAGE_ICON=$(status_icon "$STORAGE")
             AI_ICON=$(status_icon "$AI")
-            MSG="$ICON [DECODED API] Server Down
-$SEP
-$DETAIL
-database    $DB_ICON
-meilisearch $SEARCH_ICON
-storage     $STORAGE_ICON
-ai-grpc     $AI_ICON
-$NOW"
+            MSG=$(printf '%s\n' \
+              "[DECODED API] Server Down" \
+              "----------------" \
+              "$DETAIL" \
+              "database    $DB_ICON" \
+              "meilisearch $SEARCH_ICON" \
+              "storage     $STORAGE_ICON" \
+              "ai-grpc     $AI_ICON" \
+              "$NOW")
 
             send_telegram "$MSG"
             echo "::warning::Health check FAILED — alert sent"
