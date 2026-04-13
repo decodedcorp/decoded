@@ -72,14 +72,17 @@ jobs:
               DETAIL="HTTP $HTTP_CODE / status: $STATUS"
             fi
 
-            MSG="🔴 [DECODED API] Server Down
+            MSG=$(cat <<ENDMSG
+🔴 [DECODED API] Server Down
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 $DETAIL
 database    $(status_icon $DB)
 meilisearch $(status_icon $SEARCH)
 storage     $(status_icon $STORAGE)
 ai-grpc     $(status_icon $AI)
-$NOW"
+$NOW
+ENDMSG
+)
 
             send_telegram "$MSG"
             echo "::warning::Health check FAILED — alert sent"
