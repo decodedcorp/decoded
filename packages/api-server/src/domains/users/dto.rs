@@ -186,6 +186,18 @@ pub struct SavedItem {
     pub saved_at: DateTime<Utc>,
 }
 
+/// 좋아요한 포스트 아이템
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LikedItem {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_thumbnail_url: Option<String>,
+    pub liked_at: DateTime<Utc>,
+}
+
 /// 사용자 활동 타입
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]

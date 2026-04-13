@@ -1,11 +1,12 @@
-use crate::config::AppState;
+use crate::config::{AppConfig, AppState};
 use crate::error::AppResult;
 use crate::middleware::auth::User;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    middleware::from_fn_with_state,
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
     Extension, Json, Router,
 };
 use sea_orm::EntityTrait;
@@ -187,14 +188,18 @@ pub async fn delete_comment(
 }
 
 /// Comments 라우터
-pub fn router() -> Router<AppState> {
-    Router::new()
+pub fn router(app_config: AppConfig) -> Router<AppState> {
+    use crate::middleware::auth_middleware;
+
+    let protected = Router::new()
+        .route("/posts/{post_id}/comments", post(create_comment))
         .route(
-            "/api/v1/posts/{post_id}/comments",
-            post(create_comment).get(list_comments),
-        )
-        .route(
-            "/api/v1/comments/{comment_id}",
+            "/comments/{comment_id}",
             axum::routing::patch(update_comment).delete(delete_comment),
         )
+        .route_layer(from_fn_with_state(app_config, auth_middleware));
+
+    Router::new()
+        .route("/posts/{post_id}/comments", get(list_comments))
+        .merge(protected)
 }

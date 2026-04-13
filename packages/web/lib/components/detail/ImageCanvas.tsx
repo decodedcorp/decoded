@@ -301,7 +301,7 @@ export function ImageCanvas({
   }, [activeIndex, naturalSize, containerSize]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
+    <div ref={containerRef} className="relative w-full overflow-hidden">
       {image.image_url && (
         <>
           {/* Main Image */}
@@ -309,7 +309,11 @@ export function ImageCanvas({
             ref={imageRef}
             src={image.image_url}
             alt={`Image ${image.id}`}
-            className={`h-full w-full ${objectFit === "contain" ? "object-contain" : "object-cover"} will-change-transform`}
+            className={`will-change-transform ${
+              objectFit === "contain"
+                ? "w-full h-auto max-h-[85vh]"
+                : "h-full w-full object-cover"
+            }`}
             style={{ transformOrigin: "center center" }}
             loading="lazy"
             onLoad={(e) => {

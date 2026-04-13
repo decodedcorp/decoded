@@ -26,7 +26,8 @@ const RelatedImages = lazy(() =>
   import("./RelatedImages").then((m) => ({ default: m.RelatedImages }))
 );
 import { SocialActions } from "@/lib/components/shared/SocialActions";
-import { ImageCommentSection } from "./ImageCommentSection";
+import { CommentSection } from "@/lib/components/shared/CommentSection";
+import { BottomSheet } from "@/lib/design-system/bottom-sheet";
 import { AddSolutionSheet } from "./AddSolutionSheet";
 import { AISummarySection } from "./AISummarySection";
 import { useAllSolutionsForSpots } from "@/lib/hooks/useSolutions";
@@ -55,6 +56,9 @@ const DecodeShowcase = lazy(
 import { toDecodeShowcaseData } from "./adapters/toDecodeShowcaseData";
 import { SpotDot } from "./SpotDot";
 import { SpotSolutionTabs } from "./SpotSolutionTabs";
+import { useAuthStore } from "@/lib/stores/authStore";
+import { X } from "lucide-react";
+import { useMediaQuery, breakpoints } from "@/lib/hooks/useMediaQuery";
 
 type Props = {
   image: ImageDetail & { ai_summary?: string | null };
@@ -98,8 +102,20 @@ export function ImageDetailContent({
   const imageUrl = typeof image.image_url === "string" ? image.image_url : null;
   // D-08: Always use brand color — per-post design_spec.accent_color override removed
   const accentColor = "var(--mag-accent)";
-  const commentSectionRef = useRef<HTMLDivElement>(null);
   const detailContentRef = useRef<HTMLDivElement>(null);
+  const currentUser = useAuthStore((s) => s.user);
+  const userProfile = useAuthStore((s) => s.profile);
+  const commentViewerName = !currentUser
+    ? null
+    : userProfile?.display_name?.trim() ||
+      userProfile?.username?.trim() ||
+      currentUser.name?.trim() ||
+      null;
+  const commentViewerAvatarUrl = !currentUser
+    ? null
+    : userProfile?.avatar_url?.trim() || currentUser.avatarUrl || null;
+  const [isCommentOverlayOpen, setIsCommentOverlayOpen] = useState(false);
+  const isMdUp = useMediaQuery(breakpoints.md);
 
   const handleShare = useCallback(async () => {
     const url =
@@ -121,12 +137,27 @@ export function ImageDetailContent({
     }
   }, [image.id]);
 
-  const scrollToComments = useCallback(() => {
-    commentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+  const openCommentOverlay = useCallback(() => {
+    if (isExplorePreview) return;
+    setIsCommentOverlayOpen(true);
+  }, [isExplorePreview]);
+
+  const closeCommentOverlay = useCallback(() => {
+    setIsCommentOverlayOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (!isCommentOverlayOpen || isExplorePreview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsCommentOverlayOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isCommentOverlayOpen, isExplorePreview]);
 
   const imageWithOwner = image as ImageDetailWithPostOwner;
   const likeCount = imageWithOwner.like_count ?? 0;
+  const saveCount = imageWithOwner.save_count ?? 0;
   const initialLiked = imageWithOwner.user_has_liked ?? false;
   const initialSaved = imageWithOwner.user_has_saved ?? false;
 
@@ -255,25 +286,29 @@ export function ImageDetailContent({
     null
   );
 
-  const fetchedCommentCount = useCommentCount(
-    commentCountProp != null ? "" : image.id
-  );
-  const commentCount = commentCountProp ?? fetchedCommentCount;
+  const fetchedCommentCount = useCommentCount(image.id);
+  // Always use live count from comments query (updates after create/delete)
+  // Fall back to prop only when comments haven't loaded yet
+  const commentCount = fetchedCommentCount > 0 ? fetchedCommentCount : (commentCountProp ?? 0);
 
   // Build DecodeShowcase data whenever the post has item centers + hero image (all layouts)
   const decodeShowcaseData = useMemo(() => {
     if (!imageUrl) return null;
     const itemsWithCenter = normalizedItems.filter((i) => i.normalizedCenter);
     if (itemsWithCenter.length === 0) return null;
+    const post = firstPost as Record<string, unknown> | undefined;
     return toDecodeShowcaseData({
       items: normalizedItems,
       imageUrl,
       artistName:
         imageWithOwner.artist_name ?? imageWithOwner.group_name ?? "DECODED",
+      imageWidth: (post?.image_width as number) ?? null,
+      imageHeight: (post?.image_height as number) ?? null,
     });
   }, [
     imageUrl,
     normalizedItems,
+    firstPost,
     imageWithOwner.artist_name,
     imageWithOwner.group_name,
   ]);
@@ -299,8 +334,7 @@ export function ImageDetailContent({
 
   const decodeShowcaseArtist = useMemo(() => {
     if (!showDecodeShowcase) return null;
-    const displayName =
-      imageWithOwner.artist_name || imageWithOwner.group_name;
+    const displayName = imageWithOwner.artist_name || imageWithOwner.group_name;
     if (!displayName) return null;
     return {
       displayName,
@@ -471,17 +505,15 @@ export function ImageDetailContent({
         )}
 
         {/* AI Summary — inside DecodeShowcase when pinned decode runs; else below title/hero */}
-        {aiSummary &&
-          !isExplorePreview &&
-          !showDecodeShowcase && (
-            <section
-              className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
-            >
-              <div className="w-full">
-                <AISummarySection summary={aiSummary} isModal={isModal} />
-              </div>
-            </section>
-          )}
+        {aiSummary && !isExplorePreview && !showDecodeShowcase && (
+          <section
+            className={`mx-auto px-6 ${isModal ? "max-w-5xl pt-10 pb-8" : hasMagazine ? "max-w-6xl pt-4 pb-8" : "max-w-6xl pt-20 pb-16"}`}
+          >
+            <div className="w-full">
+              <AISummarySection summary={aiSummary} isModal={isModal} />
+            </div>
+          </section>
+        )}
 
         {/* Interactive item cards (non-magazine); DecodeShowcase rendered above */}
         {!hasMagazine && hasItemsWithCoordinates && (
@@ -633,6 +665,72 @@ export function ImageDetailContent({
             </Suspense>
           )}
 
+        {/* Comments: mobile bottom sheet vs desktop centered modal (single CommentSection) */}
+        {!isExplorePreview && isCommentOverlayOpen && !isMdUp && (
+          <BottomSheet
+            isOpen
+            onClose={closeCommentOverlay}
+            title={`Comments (${commentCount})`}
+            snapPoints={[0.5, 0.75, 0.9]}
+            defaultSnapPoint={0.75}
+            backdropClassName="z-[60]"
+            className="z-[70]"
+          >
+            <CommentSection
+              postId={image.id}
+              currentUserId={currentUser?.id}
+              hideHeading
+              viewerName={commentViewerName}
+              viewerAvatarUrl={commentViewerAvatarUrl}
+            />
+          </BottomSheet>
+        )}
+        {!isExplorePreview && isCommentOverlayOpen && isMdUp && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="comment-overlay-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/60"
+              aria-label="Close comments"
+              onClick={closeCommentOverlay}
+            />
+            <div
+              className="relative z-[70] flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+                <h2
+                  id="comment-overlay-title"
+                  className="text-lg font-semibold"
+                >
+                  Comments ({commentCount})
+                </h2>
+                <button
+                  type="button"
+                  onClick={closeCommentOverlay}
+                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
+                <CommentSection
+                  postId={image.id}
+                  currentUserId={currentUser?.id}
+                  hideHeading
+                  viewerName={commentViewerName}
+                  viewerAvatarUrl={commentViewerAvatarUrl}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TODO: Try Gallery Section — temporarily disabled
       <TryGallerySection
         postId={image.id}
@@ -663,13 +761,14 @@ export function ImageDetailContent({
               initialLiked={initialLiked}
               initialSaved={initialSaved}
               likeCount={likeCount}
+              saveCount={saveCount}
               commentCount={commentCount}
               showComment
               variant="default"
               onLike={handleLike}
               onSave={handleSave}
               onShare={handleShare}
-              onComment={scrollToComments}
+              onComment={openCommentOverlay}
             />
           </div>
         )}
@@ -681,13 +780,14 @@ export function ImageDetailContent({
               initialLiked={initialLiked}
               initialSaved={initialSaved}
               likeCount={likeCount}
+              saveCount={saveCount}
               commentCount={commentCount}
               showComment
               variant="default"
               onLike={handleLike}
               onSave={handleSave}
               onShare={handleShare}
-              onComment={scrollToComments}
+              onComment={openCommentOverlay}
             />
           </div>
         )}
@@ -695,9 +795,7 @@ export function ImageDetailContent({
         {/* Magazine: Related Editorials - 맨 마지막 (lazy loaded) */}
         {hasMagazine && relatedEditorials && relatedEditorials.length > 0 && (
           <Suspense fallback={null}>
-            <MagazineRelatedSectionLazy
-              relatedEditorials={relatedEditorials}
-            />
+            <MagazineRelatedSectionLazy relatedEditorials={relatedEditorials} />
           </Suspense>
         )}
 

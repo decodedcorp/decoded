@@ -283,6 +283,10 @@ export function usePostDetailForImage(
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 5,
     initialData: serverData ?? undefined,
+    // Treat server-prefetched data as fresh so TanStack Query doesn't
+    // immediately background-refetch on mount (default initialDataUpdatedAt=0
+    // is always stale regardless of staleTime).
+    initialDataUpdatedAt: serverData ? Date.now() : undefined,
   });
 }
 

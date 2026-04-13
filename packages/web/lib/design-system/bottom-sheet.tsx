@@ -29,6 +29,8 @@ export interface BottomSheetProps {
   onSnapChange?: (snapPoint: number) => void;
   /** Additional class name */
   className?: string;
+  /** Backdrop overlay classes (e.g. z-index above fixed UI) */
+  backdropClassName?: string;
   /** Center content vertically and horizontally */
   contentCenter?: boolean;
 }
@@ -70,6 +72,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
       title,
       onSnapChange,
       className,
+      backdropClassName,
       contentCenter = false,
     },
     ref
@@ -217,7 +220,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
       <>
         {/* Backdrop overlay */}
         <div
-          className="fixed inset-0 z-40 bg-black/50"
+          className={cn("fixed inset-0 z-40 bg-black/50", backdropClassName)}
           onClick={onClose}
           aria-hidden="true"
         />

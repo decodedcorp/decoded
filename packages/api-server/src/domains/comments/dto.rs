@@ -30,9 +30,7 @@ pub struct CommentResponse {
     pub parent_id: Option<Uuid>,
     pub content: String,
     pub user: CommentUser,
-    #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-    #[serde(with = "chrono::serde::ts_seconds")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     /// 대댓글 목록 (계층 구조)
     #[schema(no_recursion)]
@@ -48,9 +46,7 @@ pub struct CommentListItem {
     pub parent_id: Option<Uuid>,
     pub content: String,
     pub user: CommentUser,
-    #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-    #[serde(with = "chrono::serde::ts_seconds")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     /// 대댓글 개수
     pub reply_count: usize,

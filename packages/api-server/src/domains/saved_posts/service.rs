@@ -1,7 +1,9 @@
 use crate::entities::{posts, saved_posts};
 use crate::error::{AppError, AppResult};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
+};
 use uuid::Uuid;
 
 pub async fn save_post(
@@ -61,4 +63,13 @@ pub async fn user_has_saved(
         .await?;
 
     Ok(saved.is_some())
+}
+
+pub async fn count_saves_by_post_id(db: &DatabaseConnection, post_id: Uuid) -> AppResult<u64> {
+    let count = saved_posts::Entity::find()
+        .filter(saved_posts::Column::PostId.eq(post_id))
+        .count(db)
+        .await?;
+
+    Ok(count)
 }

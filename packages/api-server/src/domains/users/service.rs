@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::dto::{
-    SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivityItem,
+    LikedItem, SavedItem, SocialAccountResponse, TryItem, UpdateUserDto, UserActivityItem,
     UserActivityPostMeta, UserActivitySpotMeta, UserActivityType, UserResponse, UserSolutionItem,
     UserSpotItem, UserStatsResponse,
 };
@@ -513,6 +513,66 @@ pub async fn list_my_saved(
             post_thumbnail_url: row.try_get("", "post_thumbnail_url").ok(),
             saved_at: row
                 .try_get::<chrono::DateTime<chrono::Utc>>("", "saved_at")
+                .unwrap_or_default(),
+        })
+        .collect();
+
+    Ok(PaginatedResponse::new(
+        items,
+        Pagination::new(pagination.page, per_page),
+        total_items,
+    ))
+}
+
+/// 좋아요한 포스트 목록 조회
+pub async fn list_my_liked(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    pagination: Pagination,
+) -> AppResult<PaginatedResponse<LikedItem>> {
+    let per_page = pagination.per_page.min(50);
+    let offset = (pagination.page.max(1) - 1) * per_page;
+
+    let total_row = db
+        .query_one(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "SELECT COUNT(*)::BIGINT AS cnt FROM public.post_likes WHERE user_id = $1",
+            [user_id.into()],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let total_items = total_row
+        .map(|r| r.try_get::<i64>("", "cnt").unwrap_or(0))
+        .unwrap_or(0) as u64;
+
+    let rows = db
+        .query_all(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            r#"SELECT pl.id, pl.post_id, p.title AS post_title, p.image_url AS post_thumbnail_url, pl.created_at AS liked_at
+               FROM public.post_likes pl
+               JOIN public.posts p ON pl.post_id = p.id
+               WHERE pl.user_id = $1
+               ORDER BY pl.created_at DESC
+               LIMIT $2 OFFSET $3"#,
+            [
+                user_id.into(),
+                (per_page as i64).into(),
+                (offset as i64).into(),
+            ],
+        ))
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let items: Vec<LikedItem> = rows
+        .iter()
+        .map(|row| LikedItem {
+            id: row.try_get("", "id").unwrap_or_default(),
+            post_id: row.try_get("", "post_id").unwrap_or_default(),
+            post_title: row.try_get("", "post_title").ok(),
+            post_thumbnail_url: row.try_get("", "post_thumbnail_url").ok(),
+            liked_at: row
+                .try_get::<chrono::DateTime<chrono::Utc>>("", "liked_at")
                 .unwrap_or_default(),
         })
         .collect();

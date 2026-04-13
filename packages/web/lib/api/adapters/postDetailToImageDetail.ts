@@ -35,6 +35,8 @@ export type ImageDetailWithPostOwner = ImageDetail & {
   group_profile_image_url?: string | null;
   /** 백엔드에서 제공하는 댓글 수 (별도 fetch 불필요) */
   comment_count?: number;
+  /** 저장 횟수 */
+  save_count?: number;
 };
 
 function parsePosition(val: string): number {
@@ -108,6 +110,7 @@ export function postDetailToImageDetail(
     artist_profile_image_url: post.artist_profile_image_url ?? null,
     group_profile_image_url: post.group_profile_image_url ?? null,
     comment_count: post.comment_count ?? 0,
+    save_count: post.save_count ?? 0,
     status: post.status as
       | "pending"
       | "extracted"

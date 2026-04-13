@@ -20,7 +20,7 @@ use crate::{
 
 use super::{
     dto::{
-        FollowStatusResponse, SavedItem, SocialAccountResponse, TryItem, UpdateUserDto,
+        FollowStatusResponse, LikedItem, SavedItem, SocialAccountResponse, TryItem, UpdateUserDto,
         UserActivitiesQuery, UserActivityItem, UserActivityType, UserResponse, UserSolutionItem,
         UserSpotItem, UserStatsResponse,
     },
@@ -202,6 +202,32 @@ pub async fn get_my_saved(
     Ok(Json(result))
 }
 
+/// GET /api/v1/users/me/liked - 좋아요한 포스트 조회
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/liked",
+    tag = "users",
+    security(
+        ("bearer_auth" = [])
+    ),
+    params(
+        ("page" = Option<u64>, Query, description = "페이지 번호 (기본 1)"),
+        ("per_page" = Option<u64>, Query, description = "페이지당 개수 (기본 20, 최대 50)")
+    ),
+    responses(
+        (status = 200, description = "좋아요한 포스트 조회 성공", body = PaginatedResponse<LikedItem>),
+        (status = 401, description = "인증 필요")
+    )
+)]
+pub async fn get_my_liked(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(pagination): Query<Pagination>,
+) -> AppResult<Json<PaginatedResponse<LikedItem>>> {
+    let result = service::list_my_liked(state.db.as_ref(), user.id, pagination).await?;
+    Ok(Json(result))
+}
+
 /// POST /api/v1/users/{user_id}/follow - 팔로우
 #[utoipa::path(
     post,
@@ -345,6 +371,7 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/me/stats", get(get_my_stats))
         .route("/me/tries", get(get_my_tries))
         .route("/me/saved", get(get_my_saved))
+        .route("/me/liked", get(get_my_liked))
         .route(
             "/{user_id}/follow",
             post(follow_user_handler).delete(unfollow_user_handler),

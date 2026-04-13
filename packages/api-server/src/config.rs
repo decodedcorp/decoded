@@ -214,7 +214,7 @@ impl AppConfig {
             .min_connections(self.database.min_connections)
             .connect_timeout(self.database.connect_timeout)
             .idle_timeout(self.database.idle_timeout)
-            .sqlx_logging(true);
+            .sqlx_logging(false);
 
         Database::connect(opt).await
     }

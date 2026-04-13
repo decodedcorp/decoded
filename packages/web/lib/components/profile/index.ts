@@ -16,6 +16,7 @@ export { PostsGrid } from "./PostsGrid";
 export { SpotsList } from "./SpotsList";
 export { SolutionsList } from "./SolutionsList";
 export { SavedGrid } from "./SavedGrid";
+export { LikesGrid } from "./LikesGrid";
 export { TriesGrid } from "./TriesGrid";
 export { StyleDNACard } from "./StyleDNACard";
 export { ArchiveStats } from "./ArchiveStats";

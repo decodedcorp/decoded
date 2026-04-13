@@ -5,6 +5,8 @@ interface ToDecodeShowcaseDataParams {
   items: NormalizedItem[];
   imageUrl: string;
   artistName: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 /**
@@ -18,6 +20,8 @@ export function toDecodeShowcaseData({
   items,
   imageUrl,
   artistName,
+  imageWidth,
+  imageHeight,
 }: ToDecodeShowcaseDataParams): DecodeShowcaseData {
   const detectedItems = items
     .filter((item) => item.normalizedCenter !== null)
@@ -47,5 +51,7 @@ export function toDecodeShowcaseData({
     sourceImageUrl: imageUrl,
     artistName,
     detectedItems,
+    imageWidth,
+    imageHeight,
   };
 }

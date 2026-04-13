@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 
-export type ActivityTab = "posts" | "spots" | "solutions" | "tries" | "saved";
+export type ActivityTab = "posts" | "spots" | "solutions" | "tries" | "saved" | "likes";
 
 interface ActivityTabsProps {
   activeTab: ActivityTab;
@@ -18,6 +18,7 @@ const ALL_TABS: { id: ActivityTab; label: string }[] = [
   { id: "solutions", label: "Solutions" },
   { id: "tries", label: "Tries" },
   { id: "saved", label: "Saved" },
+  { id: "likes", label: "Likes" },
 ];
 
 /** Public profile shows only posts/spots/solutions */

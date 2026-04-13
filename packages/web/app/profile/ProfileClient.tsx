@@ -23,6 +23,7 @@ import {
   SpotsList,
   SolutionsList,
   SavedGrid,
+  LikesGrid,
   TriesGrid,
   StyleDNACard,
   ArchiveStats,
@@ -287,6 +288,8 @@ export function ProfileClient() {
         return <TriesGrid />;
       case "saved":
         return <SavedGrid />;
+      case "likes":
+        return <LikesGrid />;
       default:
         return null;
     }

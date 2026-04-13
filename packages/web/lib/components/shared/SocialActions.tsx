@@ -8,6 +8,7 @@ export interface SocialActionsProps {
   initialLiked?: boolean;
   initialSaved?: boolean;
   likeCount?: number;
+  saveCount?: number;
   commentCount?: number;
   onLike?: (liked: boolean) => void;
   onSave?: (saved: boolean) => void;
@@ -22,6 +23,7 @@ export function SocialActions({
   initialLiked = false,
   initialSaved = false,
   likeCount = 0,
+  saveCount = 0,
   commentCount,
   onLike,
   onSave,
@@ -34,12 +36,14 @@ export function SocialActions({
   const [liked, setLiked] = useState(initialLiked);
   const [saved, setSaved] = useState(initialSaved);
   const [count, setCount] = useState(likeCount);
+  const [savedCount, setSavedCount] = useState(saveCount);
 
   useEffect(() => {
     setLiked(initialLiked);
     setSaved(initialSaved);
     setCount(likeCount);
-  }, [initialLiked, initialSaved, likeCount]);
+    setSavedCount(saveCount);
+  }, [initialLiked, initialSaved, likeCount, saveCount]);
 
   const handleLike = () => {
     const next = !liked;
@@ -51,6 +55,7 @@ export function SocialActions({
   const handleSave = () => {
     const next = !saved;
     setSaved(next);
+    setSavedCount((c) => (next ? c + 1 : Math.max(0, c - 1)));
     onSave?.(next);
   };
 
@@ -112,6 +117,9 @@ export function SocialActions({
             saved && "fill-primary text-primary"
           )}
         />
+        {savedCount > 0 && (
+          <span className="text-xs text-muted-foreground">{savedCount}</span>
+        )}
       </button>
     </div>
   );

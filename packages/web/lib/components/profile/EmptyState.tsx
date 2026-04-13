@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { FileText, MapPin, Lightbulb, Bookmark, Sparkles } from "lucide-react";
+import { FileText, MapPin, Lightbulb, Bookmark, Sparkles, Heart } from "lucide-react";
 import type { ActivityTab } from "./ActivityTabs";
 
 interface EmptyStateProps {
@@ -44,6 +44,12 @@ const EMPTY_STATES: Record<
   saved: {
     icon: Bookmark,
     message: "No saved items",
+    ctaLabel: "Browse the feed",
+    ctaHref: "/feed",
+  },
+  likes: {
+    icon: Heart,
+    message: "No liked posts yet",
     ctaLabel: "Browse the feed",
     ctaHref: "/feed",
   },
