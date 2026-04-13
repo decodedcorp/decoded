@@ -9,6 +9,7 @@ pub mod curations;
 pub mod dashboard;
 pub mod editorial_candidates;
 pub mod magazine_sessions;
+pub mod monitoring;
 pub mod posts;
 pub mod solutions;
 pub mod spots;

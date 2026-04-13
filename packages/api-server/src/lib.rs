@@ -6,6 +6,7 @@ pub mod entities;
 pub mod error;
 pub mod grpc;
 pub mod handlers;
+pub mod metrics;
 pub mod middleware;
 pub mod observability;
 pub mod openapi;

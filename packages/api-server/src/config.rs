@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use crate::domains::categories::CategoryCache;
 use crate::domains::posts::cache::PostListCache;
+use crate::metrics::MetricsStore;
 use crate::services::{
     AffiliateClient, CloudflareR2Client, DecodedAIGrpcClient, DummyEmbeddingClient,
     EmbeddingClient, MeilisearchClient, OpenAIEmbeddingClient, RakutenAffiliateClient,
@@ -240,6 +241,9 @@ pub struct AppState {
 
     // gRPC Client
     pub decoded_ai_client: Arc<DecodedAIGrpcClient>,
+
+    // Metrics
+    pub metrics: Arc<MetricsStore>,
 }
 
 impl AppState {
@@ -355,6 +359,7 @@ impl AppState {
             affiliate_client,
             embedding_client,
             decoded_ai_client,
+            metrics: Arc::new(MetricsStore::new()),
         })
     }
 }

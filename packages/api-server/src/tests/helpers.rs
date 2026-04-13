@@ -140,11 +140,13 @@ pub fn test_app_state_with_clients(
         db,
         config: test_config(),
         category_cache: Arc::new(CategoryCache::new()),
+        post_list_cache: Arc::new(crate::domains::posts::cache::PostListCache::new()),
         storage_client,
         search_client,
         affiliate_client,
         embedding_client,
         decoded_ai_client: Arc::new(decoded_ai_client),
+        metrics: Arc::new(crate::metrics::MetricsStore::new()),
     }
 }
 

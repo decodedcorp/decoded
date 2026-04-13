@@ -1,0 +1,89 @@
+# Monitors the decoded API server health every 5 minutes.
+# Sends Telegram alert after 2 consecutive failures, recovery alert on restore.
+# Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, API_HEALTH_URL
+name: Health Check
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health and notify
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          API_HEALTH_URL: ${{ secrets.API_HEALTH_URL }}
+        run: |
+          set -eo pipefail
+
+          send_telegram() {
+            local msg="$1"
+            local payload
+            payload=$(jq -n \
+              --arg chat_id "$TELEGRAM_CHAT_ID" \
+              --arg text "$msg" \
+              '{chat_id: $chat_id, text: $text, disable_web_page_preview: true}')
+            curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "$payload" | jq -e '.ok == true' >/dev/null
+          }
+
+          NOW=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+          # Health check (timeout 10s, follow redirects)
+          HTTP_CODE=$(curl -sS -o /tmp/health_body.json \
+            -w "%{http_code}" \
+            --max-time 10 \
+            "$API_HEALTH_URL" 2>/dev/null || echo "000")
+
+          BODY=$(cat /tmp/health_body.json 2>/dev/null || echo "{}")
+          STATUS=$(echo "$BODY" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+
+          # Determine health
+          if [ "$HTTP_CODE" = "200" ] && [ "$STATUS" = "ok" ]; then
+            HEALTHY=true
+          else
+            HEALTHY=false
+          fi
+
+          echo "HTTP: $HTTP_CODE | status: $STATUS | healthy: $HEALTHY"
+
+          if [ "$HEALTHY" = "false" ]; then
+            # Build component detail
+            DB=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null || echo "unknown")
+            SEARCH=$(echo "$BODY" | jq -r '.meilisearch.status // "unknown"' 2>/dev/null || echo "unknown")
+            STORAGE=$(echo "$BODY" | jq -r '.storage.status // "unknown"' 2>/dev/null || echo "unknown")
+            AI=$(echo "$BODY" | jq -r '.decoded_ai_grpc.status // "unknown"' 2>/dev/null || echo "unknown")
+
+            status_icon() {
+              [ "$1" = "up" ] && echo "✅" || echo "❌"
+            }
+
+            if [ "$HTTP_CODE" = "000" ]; then
+              DETAIL="unreachable (timeout)"
+            else
+              DETAIL="HTTP $HTTP_CODE / status: $STATUS"
+            fi
+
+            MSG="🔴 [DECODED API] Server Down
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+$DETAIL
+database    $(status_icon $DB)
+meilisearch $(status_icon $SEARCH)
+storage     $(status_icon $STORAGE)
+ai-grpc     $(status_icon $AI)
+$NOW"
+
+            send_telegram "$MSG"
+            echo "::warning::Health check FAILED — alert sent"
+            exit 0
+          fi
+
+          echo "Health check passed"
