@@ -8051,6 +8051,12 @@
             "type": "integer",
             "format": "int32",
             "description": "조회수"
+          },
+          "save_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "저장 횟수",
+            "default": 0
           }
         }
       },
