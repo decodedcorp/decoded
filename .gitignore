@@ -62,10 +62,8 @@ packages/web/lib/api/generated/
 supabase/.temp/
 packages/backend/target/
 
-# gstack build artifacts (built locally by ./setup)
-.claude/skills/gstack/node_modules/
-.claude/skills/gstack/browse/dist/
-.claude/skills/gstack/bin/gstack-global-discover
+# claude skills (local tools, not tracked)
+.claude/skills/
 .agents/skills/gstack*/node_modules/
 .dmux/
 .gstack/
@@ -73,3 +71,4 @@ packages/backend/target/
 # Worktrees
 .claude/worktrees/
 .vercel
+packages/ai-server/searxng/settings.yml.new
