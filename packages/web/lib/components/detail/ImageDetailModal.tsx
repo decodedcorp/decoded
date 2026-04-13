@@ -304,7 +304,7 @@ export function ImageDetailModal({
         ref={leftImageContainerRef}
         className="hidden md:flex absolute inset-y-0 left-0 z-[60] items-center justify-center p-8 pointer-events-none md:right-[50vw] lg:right-[600px] xl:right-[700px]"
       >
-        <div className="pointer-events-auto relative w-full max-w-[500px] h-[75vh] rounded-lg overflow-hidden shadow-2xl bg-white/5">
+        <div className="pointer-events-auto relative w-fit max-w-[500px] max-h-[85vh] rounded-lg overflow-hidden shadow-2xl bg-white/5">
           {image && hasItemsWithCoordinates ? (
             <>
               {imageSrc && (
@@ -343,7 +343,7 @@ export function ImageDetailModal({
                 ref={floatingImageRef}
                 src={imageSrc}
                 alt="Post image"
-                className="w-full h-full object-contain pointer-events-none"
+                className="w-full h-auto max-h-[85vh] pointer-events-none"
                 onLoad={(e) => {
                   const img = e.currentTarget;
                   setNaturalSize({
@@ -354,7 +354,7 @@ export function ImageDetailModal({
               />
             </>
           ) : (
-            <div className="w-full h-full animate-pulse bg-white/10" />
+            <div className="w-full aspect-[3/4] animate-pulse bg-white/10" />
           )}
         </div>
       </div>

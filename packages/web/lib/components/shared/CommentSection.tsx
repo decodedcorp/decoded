@@ -3,12 +3,12 @@
 import { useState } from "react";
 import {
   Send,
-  MoreHorizontal,
   ChevronDown,
   ChevronUp,
   Loader2,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { AccountAvatar } from "./AccountAvatar";
 import { formatRelativeTime } from "@/lib/utils";
@@ -24,6 +24,12 @@ export interface CommentSectionProps {
   className?: string;
   title?: string;
   currentUserId?: string | null;
+  /** Hide the "Comments (n)" heading when the parent shell already shows a title */
+  hideHeading?: boolean;
+  /** Logged-in viewer display name for the composer avatar initials (falls back to "?" if absent) */
+  viewerName?: string | null;
+  /** Logged-in viewer avatar URL for the composer */
+  viewerAvatarUrl?: string | null;
 }
 
 function CommentItem({
@@ -49,14 +55,21 @@ function CommentItem({
 
   return (
     <div className={cn("flex gap-3", depth > 0 && "ml-10")}>
-      <AccountAvatar
-        name={displayName}
-        src={comment.user.avatar_url ?? undefined}
-        size="sm"
-      />
+      <Link href={`/profile/${comment.user_id}`} className="flex-shrink-0">
+        <AccountAvatar
+          name={displayName}
+          src={comment.user.avatar_url ?? undefined}
+          size="sm"
+        />
+      </Link>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium truncate">{displayName}</span>
+          <Link
+            href={`/profile/${comment.user_id}`}
+            className="text-sm font-medium truncate hover:underline"
+          >
+            {displayName}
+          </Link>
           <span className="text-xs text-muted-foreground flex-shrink-0">
             {formatRelativeTime(createdAt)}
           </span>
@@ -116,11 +129,53 @@ function CommentItem({
   );
 }
 
+function CommentListSkeleton({ rows = 3 }: { rows?: number }) {
+  const widths = ["w-[92%]", "w-[78%]", "w-[85%]", "w-[70%]", "w-[88%]"];
+  return (
+    <div
+      className="space-y-5 py-2"
+      role="status"
+      aria-label="Loading comments"
+    >
+      <span className="sr-only">Loading comments</span>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex gap-3">
+          <div
+            className="h-9 w-9 shrink-0 rounded-full bg-muted animate-pulse"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+            <div className="flex items-center gap-2">
+              <div className="h-3.5 w-28 rounded-md bg-muted animate-pulse" />
+              <div className="h-3 w-16 rounded-md bg-muted/80 animate-pulse" />
+            </div>
+            <div
+              className={cn(
+                "h-3 rounded-md bg-muted animate-pulse",
+                widths[i % widths.length]
+              )}
+            />
+            <div
+              className={cn(
+                "h-3 rounded-md bg-muted/70 animate-pulse",
+                widths[(i + 2) % widths.length]
+              )}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CommentSection({
   postId,
   className,
   title = "Comments",
   currentUserId,
+  hideHeading = false,
+  viewerName,
+  viewerAvatarUrl,
 }: CommentSectionProps) {
   const { data: comments, isLoading } = useComments(postId);
   const createMutation = useCreateComment(postId);
@@ -153,9 +208,11 @@ export function CommentSection({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <h3 className="text-sm font-semibold">
-        {title} ({commentCount})
-      </h3>
+      {!hideHeading && (
+        <h3 className="text-sm font-semibold">
+          {title} ({commentCount})
+        </h3>
+      )}
 
       {/* Comment input */}
       <div className="space-y-2">
@@ -171,7 +228,11 @@ export function CommentSection({
           </div>
         )}
         <div className="flex items-center gap-3">
-          <AccountAvatar name="You" size="sm" />
+          <AccountAvatar
+            name={viewerName ?? undefined}
+            src={viewerAvatarUrl ?? undefined}
+            size="sm"
+          />
           <div className="flex-1 relative">
             <input
               type="text"
@@ -204,9 +265,7 @@ export function CommentSection({
 
       {/* Comments list */}
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
+        <CommentListSkeleton rows={3} />
       ) : comments && comments.length > 0 ? (
         <div className="space-y-4">
           {comments.map((comment) => (

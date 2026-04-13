@@ -600,6 +600,10 @@ pub struct PostDetailResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_has_liked: Option<bool>,
 
+    /// 저장 횟수
+    #[serde(default)]
+    pub save_count: i64,
+
     /// 현재 사용자가 저장했는지 (인증 시에만 설정)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_has_saved: Option<bool>,
@@ -681,6 +685,7 @@ impl PostDetailResponse {
             spots: spots.map_or(vec![], |spots| spots),
             comment_count,
             like_count,
+            save_count: 0,
             user_has_liked,
             user_has_saved,
         }

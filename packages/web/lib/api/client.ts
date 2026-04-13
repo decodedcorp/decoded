@@ -6,6 +6,19 @@
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import { ApiError } from "./mutation-types";
 
+/** Rust API `AppError` JSON: `{ error: { code, message } }` */
+function messageFromApiErrorJson(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const o = data as Record<string, unknown>;
+  if (typeof o.message === "string" && o.message.length > 0) return o.message;
+  const err = o.error;
+  if (err && typeof err === "object") {
+    const m = (err as Record<string, unknown>).message;
+    if (typeof m === "string" && m.length > 0) return m;
+  }
+  return undefined;
+}
+
 // Use empty string to route through Next.js API proxy (avoids CORS issues)
 // The proxy routes forward requests to the actual backend via server-side API_BASE_URL
 const API_BASE_URL = "";
@@ -96,14 +109,20 @@ export async function apiClient<T>(options: ApiClientOptions): Promise<T> {
     let errorData: ApiError;
 
     try {
-      errorData = await response.json();
+      const raw = await response.json();
+      const nested = messageFromApiErrorJson(raw);
+      errorData = nested
+        ? { message: nested }
+        : (raw as ApiError);
     } catch {
       errorData = {
         message: `HTTP ${response.status}: ${response.statusText}`,
       };
     }
 
-    throw new Error(errorData.message || `API Error: ${response.status}`);
+    throw new Error(
+      errorData.message || `API Error: ${response.status}`
+    );
   }
 
   // 204 No Content

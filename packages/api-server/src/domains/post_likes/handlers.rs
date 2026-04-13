@@ -57,12 +57,12 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
 
     let protected = Router::new()
         .route(
-            "/api/v1/posts/{post_id}/likes",
+            "/posts/{post_id}/likes",
             post(create_like).delete(delete_like),
         )
         .route_layer(from_fn_with_state(app_config, auth_middleware));
 
     Router::new()
-        .route("/api/v1/posts/{post_id}/likes", get(get_like_stats))
+        .route("/posts/{post_id}/likes", get(get_like_stats))
         .merge(protected)
 }

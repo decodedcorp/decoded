@@ -278,17 +278,18 @@ export default function DecodeShowcase({
           style={{ width: "min(80vw, 360px)" }}
         >
           {/* Image */}
-          <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-neutral-900">
+          <div className="relative w-full rounded-2xl overflow-hidden bg-neutral-900">
             {data.sourceImageUrl ? (
               <PostImage
                 src={data.sourceImageUrl}
                 alt={`${data.artistName} outfit decode`}
-                className="absolute inset-0"
+                imageWidth={data.imageWidth}
+                imageHeight={data.imageHeight}
                 priority={true}
                 flagKey="FeedCard"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-neutral-600">
+              <div className="flex aspect-[3/4] items-center justify-center text-neutral-600">
                 <p className="text-sm">AI Detection Showcase</p>
               </div>
             )}

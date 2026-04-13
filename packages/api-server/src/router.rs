@@ -36,6 +36,6 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
         .merge(domains::solutions::router(config.clone()))
         .merge(domains::votes::handlers::router(config.clone()))
         .merge(domains::post_likes::handlers::router(config.clone()))
-        .merge(domains::saved_posts::handlers::router(config))
-        .merge(domains::comments::handlers::router())
+        .merge(domains::saved_posts::handlers::router(config.clone()))
+        .merge(domains::comments::handlers::router(config))
 }

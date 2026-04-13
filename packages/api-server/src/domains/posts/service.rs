@@ -784,12 +784,13 @@ pub async fn get_post_detail(
 ) -> AppResult<PostDetailResponse> {
     use crate::domains::comments::service::count_comments_by_post_id;
     use crate::domains::post_likes::service::{count_likes_by_post_id, user_has_liked};
+    use crate::domains::saved_posts::service::{count_saves_by_post_id, user_has_saved};
     use crate::domains::users::service::get_user_by_id;
 
     // 1. Post 조회 (나머지 쿼리에서 post.user_id, post.artist_id 등이 필요)
     let post = get_post_by_id(db, post_id).await?;
 
-    // 2. 독립적인 쿼리들을 모두 병렬 실행
+    // 2. 독립적인 쿼리들을 모두 병렬 실행 (커넥션 풀 압박 최소화를 위해 5개로 제한)
     let user_fut = get_user_by_id(db, post.user_id);
     let related_fut = load_post_related_data(db, post_id);
     let like_count_fut = count_likes_by_post_id(db, post_id);
@@ -803,11 +804,7 @@ pub async fn get_post_detail(
     };
     let saved_fut = async {
         match user_id {
-            Some(uid) => Ok(
-                crate::domains::saved_posts::service::user_has_saved(db, post_id, uid)
-                    .await
-                    .unwrap_or(false),
-            ),
+            Some(uid) => Ok(user_has_saved(db, post_id, uid).await.unwrap_or(false)),
             None => Ok::<bool, crate::error::AppError>(false),
         }
     };
@@ -817,7 +814,7 @@ pub async fn get_post_detail(
         related_data,
         like_count,
         user_has_liked_val,
-        user_has_saved,
+        user_has_saved_val,
         ((artist_name_en, artist_name_ko, artist_img), (group_name_en, group_name_ko, group_img)),
     ) = tokio::try_join!(
         user_fut,
@@ -841,6 +838,7 @@ pub async fn get_post_detail(
         } else {
             None
         };
+        let save_count = count_saves_by_post_id(db, post_id).await.unwrap_or(0);
         let mut response = PostDetailResponse::from_post_model(
             post,
             user,
@@ -849,8 +847,9 @@ pub async fn get_post_detail(
             0,
             like_count as i64,
             Some(user_has_liked_val),
-            user_id.map(|_| user_has_saved),
+            user_id.map(|_| user_has_saved_val),
         );
+        response.save_count = save_count as i64;
         response.try_count = try_count;
         response.artist_profile_image_url = artist_img;
         response.group_profile_image_url = group_img;
@@ -871,7 +870,7 @@ pub async fn get_post_detail(
     let media_source = build_media_source_from_post(&post);
 
     let is_try = post.post_type.as_deref() == Some(POST_TYPE_TRY);
-    let (comment_count, try_count_result) = tokio::try_join!(
+    let (comment_count, try_count_result, save_count) = tokio::try_join!(
         async {
             count_comments_by_post_id(db, post_id)
                 .await
@@ -885,6 +884,7 @@ pub async fn get_post_detail(
                 .await
                 .map(|c| if c.count > 0 { Some(c.count) } else { None })
         },
+        async { count_saves_by_post_id(db, post_id).await },
     )?;
 
     // 5. PostDetailResponse 반환
@@ -896,8 +896,9 @@ pub async fn get_post_detail(
         comment_count,
         like_count as i64,
         Some(user_has_liked_val),
-        user_id.map(|_| user_has_saved),
+        user_id.map(|_| user_has_saved_val),
     );
+    response.save_count = save_count as i64;
     response.try_count = try_count_result;
     response.artist_profile_image_url = artist_img;
     response.group_profile_image_url = group_img;

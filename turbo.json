@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "generate:api": {
+      "inputs": ["../../packages/api-server/openapi.json", "orval.config.ts"],
       "outputs": ["lib/api/generated/**"]
     },
     "build": {

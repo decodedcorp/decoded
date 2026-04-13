@@ -101,6 +101,10 @@ export interface DecodeShowcaseData {
   detectedItems: DetectedItem[];
   /** Optional tagline */
   tagline?: string;
+  /** Source image natural width (from post) */
+  imageWidth?: number | null;
+  /** Source image natural height (from post) */
+  imageHeight?: number | null;
 }
 
 // ─── VirtualTryOnTeaser: VTON Before/After section ───

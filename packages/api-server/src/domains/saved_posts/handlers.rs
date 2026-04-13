@@ -60,12 +60,12 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
 
     let protected = Router::new()
         .route(
-            "/api/v1/posts/{post_id}/saved",
+            "/posts/{post_id}/saved",
             post(save_post).delete(unsave_post),
         )
         .route_layer(from_fn_with_state(app_config, auth_middleware));
 
     Router::new()
-        .route("/api/v1/posts/{post_id}/saved", get(get_save_status))
+        .route("/posts/{post_id}/saved", get(get_save_status))
         .merge(protected)
 }
