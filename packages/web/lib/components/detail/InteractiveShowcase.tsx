@@ -172,7 +172,9 @@ export function InteractiveShowcase({
       <div
         ref={cardsContainerRef}
         className={`relative z-20 w-full bg-background px-4 py-6 ${
-          isModal ? "overflow-visible pt-0" : "mx-auto max-w-6xl lg:px-8 lg:pt-12"
+          isModal
+            ? "overflow-visible pt-0"
+            : "mx-auto max-w-6xl lg:px-8 lg:pt-12"
         }`}
       >
         {items.map((item, index) => (

@@ -33,10 +33,9 @@ export async function GET() {
     );
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/api/v1/admin/monitoring/metrics`,
-    { next: { revalidate: 0 } }
-  );
+  const res = await fetch(`${API_BASE_URL}/api/v1/admin/monitoring/metrics`, {
+    next: { revalidate: 0 },
+  });
 
   if (!res.ok) {
     return NextResponse.json(

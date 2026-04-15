@@ -47,7 +47,9 @@ async function fetchPosts(params: string): Promise<ApiPost[]> {
 }
 
 /** Build artist/group name → profile lookup from Rust API warehouse/profiles */
-async function fetchArtistProfileMap(): Promise<Map<string, ArtistProfileEntry>> {
+async function fetchArtistProfileMap(): Promise<
+  Map<string, ArtistProfileEntry>
+> {
   const map = new Map<string, ArtistProfileEntry>();
   try {
     const res = await serverApiGet<WarehouseProfilesResponse>(
@@ -67,8 +69,10 @@ async function fetchArtistProfileMap(): Promise<Map<string, ArtistProfileEntry>>
       if (name_ko) map.set(name_ko.toLowerCase(), entry);
       if (name_en) map.set(name_en.toLowerCase(), entry);
     };
-    for (const a of res.artists ?? []) addEntity(a.name_ko, a.name_en, a.profile_image_url);
-    for (const g of res.groups ?? []) addEntity(g.name_ko, g.name_en, g.profile_image_url);
+    for (const a of res.artists ?? [])
+      addEntity(a.name_ko, a.name_en, a.profile_image_url);
+    for (const g of res.groups ?? [])
+      addEntity(g.name_ko, g.name_en, g.profile_image_url);
   } catch {
     /* warehouse profiles unavailable — use raw names */
   }
@@ -92,7 +96,13 @@ async function fetchSpotsByPosts(
 
 /** Fetch editor picks via Rust API */
 async function fetchEditorPicks(): Promise<
-  Array<{ id: string; imageUrl: string; title: string; link: string; artistName: string }>
+  Array<{
+    id: string;
+    imageUrl: string;
+    title: string;
+    link: string;
+    artistName: string;
+  }>
 > {
   try {
     const res = await serverApiGet<EditorPicksResponse>(
@@ -127,7 +137,9 @@ export default async function Home({
   ] = await Promise.all([
     fetchPosts("sort=popular&per_page=30"),
     fetchPosts("sort=recent&per_page=50"),
-    fetchPosts("sort=recent&per_page=50&has_magazine=true&include_magazine_items=true"),
+    fetchPosts(
+      "sort=recent&per_page=50&has_magazine=true&include_magazine_items=true"
+    ),
     fetchArtistProfileMap(),
     fetchEditorPicks(),
   ]);
@@ -286,9 +298,7 @@ export default async function Home({
         mp.post_magazine_items.length > 0
     )
     .map((mp) => {
-      const { displayName } = enrichArtistName(
-        mp.artist_name || mp.group_name
-      );
+      const { displayName } = enrichArtistName(mp.artist_name || mp.group_name);
       return {
         id: `mag-${mp.id}`,
         imageUrl: proxyImg(mp.image_url),
@@ -364,8 +374,7 @@ export default async function Home({
       // Prefer warehouse artist profile image (per-post field from Rust API),
       // then enrichArtistName's profile image (buildArtistProfileMap), then
       // fall back to the post thumbnail.
-      const image =
-        profileImage || enriched.profileImageUrl || postImage;
+      const image = profileImage || enriched.profileImageUrl || postImage;
       return {
         id: `artist-${name}`,
         label: enriched.displayName || name,

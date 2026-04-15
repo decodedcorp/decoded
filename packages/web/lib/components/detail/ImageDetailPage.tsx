@@ -89,7 +89,9 @@ export function ImageDetailPage({ imageId, serverData }: Props) {
   }
 
   return (
-    <Suspense fallback={<div ref={pageRef} className="relative mt-4 md:mt-6" />}>
+    <Suspense
+      fallback={<div ref={pageRef} className="relative mt-4 md:mt-6" />}
+    >
       <LenisProvider>
         <div ref={pageRef} className="relative mt-4 md:mt-6">
           <div className="fixed left-4 top-16 md:top-20 z-50">

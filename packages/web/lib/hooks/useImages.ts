@@ -214,8 +214,7 @@ export function useInfinitePosts(params: {
     queryFn: async ({ pageParam }) => {
       const page = (pageParam as number) ?? 1;
       const tp = totalPagesRef.current;
-      const actualPage =
-        loop && tp > 0 ? ((page - 1) % tp) + 1 : page;
+      const actualPage = loop && tp > 0 ? ((page - 1) % tp) + 1 : page;
 
       const response = await listPosts({
         page: actualPage,
