@@ -21,6 +21,7 @@ use utoipa::OpenApi;
         crate::domains::users::handlers::get_my_stats,
         crate::domains::users::handlers::get_my_tries,
         crate::domains::users::handlers::get_my_saved,
+        crate::domains::users::handlers::get_my_liked,
         crate::domains::users::handlers::get_my_spots,
         crate::domains::users::handlers::get_my_solutions,
         crate::domains::users::handlers::get_my_social_accounts,

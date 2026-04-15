@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Send,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Trash2,
-} from "lucide-react";
+import { Send, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { AccountAvatar } from "./AccountAvatar";
@@ -132,11 +126,7 @@ function CommentItem({
 function CommentListSkeleton({ rows = 3 }: { rows?: number }) {
   const widths = ["w-[92%]", "w-[78%]", "w-[85%]", "w-[70%]", "w-[88%]"];
   return (
-    <div
-      className="space-y-5 py-2"
-      role="status"
-      aria-label="Loading comments"
-    >
+    <div className="space-y-5 py-2" role="status" aria-label="Loading comments">
       <span className="sr-only">Loading comments</span>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex gap-3">

@@ -59,9 +59,7 @@ export function LatestPostsScroll({ posts }: LatestPostsScrollProps) {
                       : "bg-white/15 text-white/90"
                   }`}
                 >
-                  {post.createdWithSolutions
-                    ? "Sharing items"
-                    : "Curious"}
+                  {post.createdWithSolutions ? "Sharing items" : "Curious"}
                 </span>
               )}
             </div>

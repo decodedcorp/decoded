@@ -173,4 +173,34 @@ mod tests {
             .await;
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_dummy_search_client_as_any() {
+        let client = DummySearchClient;
+        assert!(client
+            .as_any()
+            .downcast_ref::<DummySearchClient>()
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_dummy_search_client_advanced_search_default_payload() {
+        let client = DummySearchClient;
+        let payload = client
+            .advanced_search(
+                "posts",
+                "test",
+                vec!["status = active".to_string()],
+                vec!["created_at:desc".to_string()],
+                0,
+                10,
+                vec!["title".to_string()],
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(payload["hits"], json!([]));
+        assert_eq!(payload["estimatedTotalHits"], json!(0));
+        assert_eq!(payload["processingTimeMs"], json!(0));
+    }
 }

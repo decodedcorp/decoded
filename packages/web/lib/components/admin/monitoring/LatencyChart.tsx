@@ -52,9 +52,9 @@ function CustomTooltip({
 export function LatencyChart({ data }: { data: HistoryBucket[] }) {
   const chartData = data.map((b) => ({
     time: formatTimestamp(b.timestamp),
-    "p50": b.p50_ms,
-    "p95": b.p95_ms,
-    "p99": b.p99_ms,
+    p50: b.p50_ms,
+    p95: b.p95_ms,
+    p99: b.p99_ms,
   }));
 
   return (
@@ -84,7 +84,11 @@ export function LatencyChart({ data }: { data: HistoryBucket[] }) {
             tick={{ fontSize: 10, fill: "#6b7280" }}
             interval="preserveStartEnd"
           />
-          <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} unit="ms" width={45} />
+          <YAxis
+            tick={{ fontSize: 10, fill: "#6b7280" }}
+            unit="ms"
+            width={45}
+          />
           <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{ fontSize: 11, color: "#9ca3af" }}

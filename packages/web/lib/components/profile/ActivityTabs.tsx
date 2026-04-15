@@ -2,7 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
-export type ActivityTab = "posts" | "spots" | "solutions" | "tries" | "saved" | "likes";
+export type ActivityTab =
+  | "posts"
+  | "spots"
+  | "solutions"
+  | "tries"
+  | "saved"
+  | "likes";
 
 interface ActivityTabsProps {
   activeTab: ActivityTab;

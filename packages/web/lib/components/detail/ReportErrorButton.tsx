@@ -103,8 +103,7 @@ export function ReportErrorButton({ postId, size = "sm" }: Props) {
 
             <h3 className="text-lg font-semibold mb-2">Report an issue</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Did you find a mistake in this post? Let us know and we'll fix
-              it.
+              Did you find a mistake in this post? Let us know and we'll fix it.
             </p>
 
             <form onSubmit={handleSubmit}>

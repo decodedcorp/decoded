@@ -159,8 +159,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // OAuth는 리다이렉트되므로 여기서 loading 상태는 유지됨
       // 실제 로그인 완료는 onAuthStateChange에서 처리
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Login failed.";
+      const message = error instanceof Error ? error.message : "Login failed.";
       set({
         error: message,
         isLoading: false,
@@ -199,8 +198,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         sessionExpired: false,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Logout failed.";
+      const message = error instanceof Error ? error.message : "Logout failed.";
       set({
         error: message,
         isLoading: false,

@@ -56,6 +56,7 @@ pub fn parse_magazine_preview_items(
 }
 
 #[cfg(test)]
+#[allow(clippy::disallowed_methods)] // serde_json::json! 매크로 전개 false positive
 mod tests {
     use super::*;
     use serde_json::json;

@@ -107,9 +107,7 @@ export function SpotSolutionTabs({
           <p className="text-sm text-muted-foreground py-4">Loading...</p>
         ) : activeSolutions.length === 0 ? (
           <div className="flex flex-col gap-3 py-3">
-            <p className="text-sm text-muted-foreground">
-              No solutions yet.
-            </p>
+            <p className="text-sm text-muted-foreground">No solutions yet.</p>
             {onAddSolution && activeSpotId && (
               <button
                 type="button"

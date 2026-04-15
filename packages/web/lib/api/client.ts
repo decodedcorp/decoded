@@ -111,18 +111,14 @@ export async function apiClient<T>(options: ApiClientOptions): Promise<T> {
     try {
       const raw = await response.json();
       const nested = messageFromApiErrorJson(raw);
-      errorData = nested
-        ? { message: nested }
-        : (raw as ApiError);
+      errorData = nested ? { message: nested } : (raw as ApiError);
     } catch {
       errorData = {
         message: `HTTP ${response.status}: ${response.statusText}`,
       };
     }
 
-    throw new Error(
-      errorData.message || `API Error: ${response.status}`
-    );
+    throw new Error(errorData.message || `API Error: ${response.status}`);
   }
 
   // 204 No Content

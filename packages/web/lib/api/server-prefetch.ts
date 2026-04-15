@@ -48,9 +48,8 @@ export const prefetchPostDetail = cache(
 
       const post = await res.json();
 
-      const { postDetailToImageDetail } = await import(
-        "@/lib/api/adapters/postDetailToImageDetail"
-      );
+      const { postDetailToImageDetail } =
+        await import("@/lib/api/adapters/postDetailToImageDetail");
       return postDetailToImageDetail(post, postId);
     } catch {
       return null;

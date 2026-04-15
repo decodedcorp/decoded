@@ -7,8 +7,10 @@ yanked = "warn"
 # 직접 의존성에만 적용 (과도한 transitive 알림 완화)
 unmaintained = "workspace"
 ignore = [
-    # aws-smithy-http-client → hyper-rustls 0.24 → rustls 0.21 → rustls-webpki 0.101.x 고정
-    { id = "RUSTSEC-2026-0049", reason = "AWS SDK 체인이 webpki 0.101 사용; SDK 업데이트 시 재검토" },
+    # aws-smithy-http-client 기본 TLS 체인이 legacy rustls 0.21 / webpki 0.101.x를 유지한다.
+    # 현재 crates.io 최신 호환 버전 범위에서도 lockfile이 이동하지 않아, SDK transport 업그레이드 시 재검토한다.
+    { id = "RUSTSEC-2026-0098", reason = "AWS SDK TLS 체인이 rustls-webpki 0.101.x에 고정; SDK transport 업그레이드 시 재검토" },
+    { id = "RUSTSEC-2026-0099", reason = "AWS SDK TLS 체인이 rustls-webpki 0.101.x에 고정; SDK transport 업그레이드 시 재검토" },
 ]
 
 [licenses]
