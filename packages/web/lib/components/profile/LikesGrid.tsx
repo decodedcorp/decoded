@@ -170,7 +170,9 @@ export function LikesGrid({ className }: LikesGridProps) {
     return (
       <div className="py-12 text-center">
         <Heart className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-        <p className="text-sm text-muted-foreground">좋아요한 포스트가 없습니다</p>
+        <p className="text-sm text-muted-foreground">
+          좋아요한 포스트가 없습니다
+        </p>
         <p className="mt-1 text-xs text-muted-foreground/60">
           마음에 드는 포스트에 좋아요를 눌러보세요
         </p>

@@ -289,7 +289,8 @@ export function ImageDetailContent({
   const fetchedCommentCount = useCommentCount(image.id);
   // Always use live count from comments query (updates after create/delete)
   // Fall back to prop only when comments haven't loaded yet
-  const commentCount = fetchedCommentCount > 0 ? fetchedCommentCount : (commentCountProp ?? 0);
+  const commentCount =
+    fetchedCommentCount > 0 ? fetchedCommentCount : (commentCountProp ?? 0);
 
   // Build DecodeShowcase data whenever the post has item centers + hero image (all layouts)
   const decodeShowcaseData = useMemo(() => {

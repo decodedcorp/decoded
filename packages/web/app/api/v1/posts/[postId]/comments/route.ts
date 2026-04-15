@@ -26,8 +26,7 @@ async function proxy(
     headers["Authorization"] = authHeader;
   }
 
-  const body =
-    method === "POST" ? await request.text() : undefined;
+  const body = method === "POST" ? await request.text() : undefined;
 
   const response = await fetch(url, {
     method,

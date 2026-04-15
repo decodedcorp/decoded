@@ -26,9 +26,7 @@ export function AISummarySection({
       : "border border-border/40 bg-muted/5";
 
   const body =
-    surface === "decode"
-      ? "text-[var(--mag-text)]/90"
-      : "text-foreground/90";
+    surface === "decode" ? "text-[var(--mag-text)]/90" : "text-foreground/90";
 
   return (
     <div className="flex w-full flex-col">

@@ -20,8 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const displayName = user?.display_name || user?.username || "User";
   const title = `${displayName} | DECODED`;
-  const description =
-    user?.bio || `Explore ${displayName}'s style collection.`;
+  const description = user?.bio || `Explore ${displayName}'s style collection.`;
 
   return {
     title,

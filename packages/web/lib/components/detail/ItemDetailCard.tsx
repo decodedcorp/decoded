@@ -104,9 +104,7 @@ export function ItemDetailCard({
       data-item-index={index}
       data-item-id={item.spot_id ?? String(item.id)}
       className={`group relative flex min-h-auto flex-col justify-center scroll-mt-20 md:scroll-mt-24 ${
-        compact
-          ? "mb-4 py-2"
-          : "mb-8 md:mb-12 py-4 md:py-6 lg:mb-16"
+        compact ? "mb-4 py-2" : "mb-8 md:mb-12 py-4 md:py-6 lg:mb-16"
       }`}
       onMouseEnter={onActivate}
       onMouseLeave={onDeactivate}
@@ -157,7 +155,9 @@ export function ItemDetailCard({
         {/* Text Content */}
         <div
           className={`flex flex-col relative z-30 ${
-            compact ? "min-w-0 flex-1 px-0" : "min-w-0 flex-1 px-0 sm:px-1 md:pl-0"
+            compact
+              ? "min-w-0 flex-1 px-0"
+              : "min-w-0 flex-1 px-0 sm:px-1 md:pl-0"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -272,8 +272,8 @@ export function ItemDetailCard({
                 spotId && onAddSolution ? (
                   <div className="flex flex-col gap-3 py-3">
                     <p className="font-serif text-sm text-muted-foreground/70">
-                      No shopping links yet. Add a link to help others find
-                      this item.
+                      No shopping links yet. Add a link to help others find this
+                      item.
                     </p>
                     <button
                       type="button"

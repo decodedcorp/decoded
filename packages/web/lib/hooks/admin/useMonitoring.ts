@@ -8,7 +8,9 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import type { MonitoringMetrics } from "@/lib/api/admin/monitoring";
 
-async function fetchMonitoringMetrics(signal?: AbortSignal): Promise<MonitoringMetrics> {
+async function fetchMonitoringMetrics(
+  signal?: AbortSignal
+): Promise<MonitoringMetrics> {
   const res = await fetch("/api/v1/admin/monitoring/metrics", { signal });
   if (!res.ok) {
     throw new Error(`Monitoring API error: ${res.status}`);
