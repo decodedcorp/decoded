@@ -3734,6 +3734,7 @@ mod tests {
             .append_query_results([vec![fixtures::count_row(0)]]) // 2c like count
             .append_query_results([vec![fixtures::count_row(2)]]) // 3a comment count
             .append_query_results([vec![fixtures::count_row(0)]]) // 3b count_tries
+            .append_query_results([vec![fixtures::count_row(0)]]) // 3c count_saves
             .into_connection();
         let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -3802,18 +3803,9 @@ mod tests {
         use sea_orm::{DatabaseBackend, MockDatabase};
 
         // has_solutions=false branch:
-        //   1) solution spot_ids → non-empty
-        //   2) spots with solutions → post_ids
-        //   3) spots all → post_ids (superset)
-        //   4) count → posts → users → spot_counts → comment_counts
+        //   count → posts → users → spot_counts → comment_counts
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![fixtures::uuid_row("spot_id", fixtures::test_uuid(2))]]) // solution.spot_ids
-            .append_query_results([vec![fixtures::uuid_row("post_id", fixtures::test_uuid(1))]]) // spots with solutions
-            .append_query_results([vec![
-                fixtures::uuid_row("post_id", fixtures::test_uuid(1)),
-                fixtures::uuid_row("post_id", fixtures::test_uuid(7)),
-            ]]) // all spot post_ids
-            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([vec![fixtures::count_row(0)]]) // count
             .append_query_results([Vec::<posts::Model>::new()]) // posts
             .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
             .append_query_results([

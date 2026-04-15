@@ -140,7 +140,7 @@ mod tests {
             reply_count: 2,
         };
         let v: serde_json::Value = serde_json::to_value(&item).unwrap();
-        assert_eq!(v["created_at"], serde_json::Value::from(t.timestamp()));
+        assert_eq!(v["created_at"], serde_json::to_value(t).unwrap());
         assert_eq!(v["reply_count"], 2);
         assert_eq!(v["user"]["username"], "u1");
     }
