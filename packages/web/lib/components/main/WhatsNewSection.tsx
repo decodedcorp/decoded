@@ -19,8 +19,7 @@ const sampleStyles: StyleCardData[] = [
   {
     id: "wn-s2",
     title: "aespa Karina Streetwear",
-    description:
-      "aespa Karina's street style — standout color combinations.",
+    description: "aespa Karina's street style — standout color combinations.",
     artistName: "aespa Karina",
     link: "/feed",
     imageUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800",

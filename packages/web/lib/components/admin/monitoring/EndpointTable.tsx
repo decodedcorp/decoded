@@ -16,7 +16,9 @@ function SortIcon({
   asc: boolean;
 }) {
   if (col !== active)
-    return <ChevronUp className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100" />;
+    return (
+      <ChevronUp className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100" />
+    );
   return asc ? (
     <ChevronUp className="w-3 h-3 text-gray-400" />
   ) : (
@@ -95,11 +97,16 @@ export function EndpointTable({ data }: { data: EndpointMetrics[] }) {
               </tr>
             ) : (
               sorted.map((ep) => (
-                <tr key={ep.path} className="hover:bg-gray-800/30 transition-colors">
+                <tr
+                  key={ep.path}
+                  className="hover:bg-gray-800/30 transition-colors"
+                >
                   <td className="px-4 py-2.5 font-mono text-xs text-gray-300 max-w-[300px] truncate">
                     {ep.path}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-gray-200">{ep.rpm}</td>
+                  <td className="px-4 py-2.5 text-right text-gray-200">
+                    {ep.rpm}
+                  </td>
                   <td
                     className={`px-4 py-2.5 text-right font-medium ${
                       ep.error_rate > 0.05

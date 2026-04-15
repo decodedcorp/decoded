@@ -76,8 +76,18 @@ export function ThroughputChart({ data }: { data: HistoryBucket[] }) {
             iconType="circle"
             iconSize={8}
           />
-          <Bar dataKey="Requests" fill="#6366f1" radius={[2, 2, 0, 0]} maxBarSize={20} />
-          <Bar dataKey="Errors" fill="#ef4444" radius={[2, 2, 0, 0]} maxBarSize={20} />
+          <Bar
+            dataKey="Requests"
+            fill="#6366f1"
+            radius={[2, 2, 0, 0]}
+            maxBarSize={20}
+          />
+          <Bar
+            dataKey="Errors"
+            fill="#ef4444"
+            radius={[2, 2, 0, 0]}
+            maxBarSize={20}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
