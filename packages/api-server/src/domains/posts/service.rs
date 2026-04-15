@@ -777,6 +777,7 @@ async fn load_entity_display_data(
 /// 독립적인 쿼리를 tokio::try_join!으로 병렬 실행하여 응답 시간을 최소화한다.
 /// Before: post → user → related_data → like_stats → saved → profile (직렬 ~6 RTT)
 /// After:  post → [user, related_data, like_count, user_liked, saved, profile] 병렬 (~2 RTT)
+#[allow(clippy::disallowed_methods)] // tokio::try_join! 매크로 전개 false positive
 pub async fn get_post_detail(
     db: &DatabaseConnection,
     post_id: Uuid,
@@ -804,7 +805,10 @@ pub async fn get_post_detail(
     };
     let saved_fut = async {
         match user_id {
-            Some(uid) => Ok(user_has_saved(db, post_id, uid).await.unwrap_or(false)),
+            Some(uid) => match user_has_saved(db, post_id, uid).await {
+                Ok(saved) => Ok(saved),
+                Err(_) => Ok(false),
+            },
             None => Ok::<bool, crate::error::AppError>(false),
         }
     };
@@ -838,7 +842,9 @@ pub async fn get_post_detail(
         } else {
             None
         };
-        let save_count = count_saves_by_post_id(db, post_id).await.unwrap_or(0);
+        let save_count: u64 = count_saves_by_post_id(db, post_id)
+            .await
+            .unwrap_or_default();
         let mut response = PostDetailResponse::from_post_model(
             post,
             user,
