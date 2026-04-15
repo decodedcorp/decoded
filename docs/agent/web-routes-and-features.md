@@ -6,18 +6,22 @@ App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트
 
 | Route                | Description                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| `/`                  | Home — HeroItemSync, TrendingPostsSection, HelpFindSection, EditorialMagazine, DecodedPickSection, MasonryGrid, DomeGallerySection |
+| `/`                  | Home — HeroItemSync, EditorialMagazine, EditorialCarousel, StyleMoods, EditorPicks, TrendingListSection, DomeGallerySection |
 | `/explore`           | Grid view with Meilisearch search, hierarchical filters, artist/context facets     |
 | `/feed`              | Social feed timeline                                                               |
 | `/search`            | Full-screen overlay search with multi-tab results                                  |
 | `/images`            | Image discovery grid with infinite scroll                                          |
-| `/posts/[id]`        | Post detail (Lightbox, hero, related items, shop grid, comments, AI summary, try)  |
-| `/profile`           | User profile with activity, badges, tries, stats, rankings, style DNA, collections |
+| `/posts/[id]`        | Post detail (Lightbox, hero, related items, shop grid, comments, social actions, AI summary, try) |
+| `/profile`           | User profile with activity, badges, tries, stats, rankings, style DNA, likes, saved, follow |
+| `/profile/[userId]`  | Public profile with follow, posts, likes grid                                      |
+| `/rankings`          | Global rankings & user ranking                                                     |
 | `/editorial`         | Daily editorial page with curated content                                          |
 | `/magazine/personal` | Personal magazine issue viewer with decoding ritual                                |
-| `/admin`             | Admin dashboard (AI cost, audit, content, pipeline, server logs, picks)            |
+| `/admin`             | Admin dashboard (AI cost, audit, content, pipeline, server logs, picks, monitoring) |
 | `/admin/login`       | Admin email/password login (exempted from proxy.ts auth middleware)                |
 | `/admin/content`     | Content management — post visibility, status control                               |
+| `/admin/monitoring`  | Backend monitoring — latency charts, throughput, endpoint metrics (Prometheus)     |
+| `/admin/ai-audit`    | AI 감사 페이지                                                                      |
 | `/admin/editorial-candidates` | Posts eligible for editorial promotion (spot ≥ 4, solution ≥ 1/spot)   |
 | `/admin/picks`       | Decoded Pick curation — create/edit daily curated picks                            |
 | `/admin/audit-log`   | 감사 로그 뷰어                                                                     |
@@ -42,12 +46,12 @@ Sections rendered in order:
 
 | Component | Description |
 | --------- | ----------- |
-| `HeroItemSync` | Hero carousel synced with item annotations; slides through recent + popular posts |
-| `TrendingPostsSection` | Horizontal scroll of trending (popular) posts — up to 16 cards |
-| `HelpFindSection` | Posts where `created_with_solutions = false` — community sourcing |
-| `EditorialMagazine` | Magazine-style cards from posts with `post_magazine_title` |
-| `DecodedPickSection` | Daily curated pick with style card + item grid; sourced from `decoded_picks` table |
-| `MasonryGrid` | Masonry layout of popular posts (up to 16) |
+| `HeroItemSync` | Hero carousel synced with item annotations; slides through recent + popular posts (desktop only) |
+| `EditorialMagazine` | Magazine-style cards from posts with `post_magazine_title` (diverse artists, max 12) |
+| `EditorialCarousel` | Style cards with editorial posts + spot/solution items (up to 10, deduplicated by artist) |
+| `StyleMoods` | Masonry grid of popular posts (up to 16, with image dimensions) |
+| `EditorPicks` | Editor-curated picks (from `fetchEditorPicks`) |
+| `TrendingListSection` | Trending artist keywords with profile images (up to 8) |
 | `DomeGallerySection` | Dome/panoramic gallery of popular post images (up to 20) |
 
 ## Key feature areas

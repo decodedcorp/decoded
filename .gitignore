@@ -72,3 +72,6 @@ packages/backend/target/
 .claude/worktrees/
 .vercel
 packages/ai-server/searxng/settings.yml.new
+
+# Claude persistent memory
+.claude-pers/

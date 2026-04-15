@@ -45,18 +45,29 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 | `/api/v1/spots/[spotId]/tries`         | GET       | Tries tagged with spot       |
 | `/api/v1/spots/[spotId]/solutions`     | GET/POST  | Solutions for spot           |
 
+## Comments
+
+| Route                                  | Methods      | Description                     |
+| -------------------------------------- | ------------ | ------------------------------- |
+| `/api/v1/posts/[postId]/comments`      | GET/POST     | List / create comments on post  |
+| `/api/v1/comments/[commentId]`         | DELETE       | Delete a comment (인증 필요)     |
+
 ## Users & profile
 
-| Route                           | Methods | Description          |
-| ------------------------------- | ------- | -------------------- |
-| `/api/v1/users/me`              | GET     | Current user profile |
-| `/api/v1/users/me/activities`   | GET     | User activities      |
-| `/api/v1/users/me/stats`        | GET     | User statistics      |
-| `/api/v1/users/[userId]`        | GET     | User by ID           |
-| `/api/v1/badges`                | GET     | All badges           |
-| `/api/v1/badges/me`             | GET     | User's earned badges |
-| `/api/v1/rankings`              | GET     | Global rankings      |
-| `/api/v1/rankings/me`           | GET     | User's ranking       |
+| Route                                  | Methods | Description                |
+| -------------------------------------- | ------- | -------------------------- |
+| `/api/v1/users/me`                     | GET     | Current user profile       |
+| `/api/v1/users/me/activities`          | GET     | User activities            |
+| `/api/v1/users/me/stats`              | GET     | User statistics            |
+| `/api/v1/users/me/liked`              | GET     | User's liked posts         |
+| `/api/v1/users/me/saved`              | GET     | User's saved posts         |
+| `/api/v1/users/[userId]`              | GET     | User by ID                 |
+| `/api/v1/users/[userId]/follow`       | POST    | Follow/unfollow user       |
+| `/api/v1/users/[userId]/follow-status`| GET     | Check follow status        |
+| `/api/v1/badges`                       | GET     | All badges                 |
+| `/api/v1/badges/me`                    | GET     | User's earned badges       |
+| `/api/v1/rankings`                     | GET     | Global rankings            |
+| `/api/v1/rankings/me`                  | GET     | User's ranking             |
 
 ## Behavioral intelligence
 
@@ -96,6 +107,7 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 | `/api/v1/admin/editorial-candidates`  | GET     | Posts eligible for editorial (spot ≥ 4, solution ≥ 1/spot; proxy → Rust) |
 | `/api/v1/admin/picks`                 | GET/POST | List / create decoded picks (Supabase `decoded_picks` table) |
 | `/api/v1/admin/picks/[pickId]`        | PATCH/DELETE | Update / delete a decoded pick |
+| `/api/v1/admin/monitoring/metrics`    | GET          | Backend monitoring metrics (Prometheus-sourced) |
 
 ## Utility
 

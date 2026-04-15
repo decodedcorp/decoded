@@ -118,7 +118,10 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `useNormalizedItems()` - Normalize item data structure
 - `useSolutions()` - Fetch solutions for items
 - `useSpots()` - Fetch spot data for images
-- `useComments()` - Fetch and manage comments
+- `useComments(postId)` - Fetch comments for a post
+- `useCreateComment(postId)` - Create a comment
+- `useDeleteComment(postId)` - Delete a comment
+- `useCommentCount(postId)` - Comment count for a post
 - `useTries()` - Fetch try-on results
 - `useCreateTryPost()` - Try 포스트 생성 (`lib/hooks/useTries.ts`)
 - `useTrendingArtists()` - Fetch trending artist list
@@ -129,6 +132,7 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `usePostLike()` - Like/unlike posts
 - `useSavedPost()` - Save/unsave posts
 - `useReport()` - Submit content reports
+- `useAffiliateClick()` - Track affiliate link clicks
 - `useAdoptDropdown()` - Adopt a solution from dropdown
 - `useVoting()` (`useVoteStats`, `useCreateVote`, `useDeleteVote`) — 솔루션 투표 조회·생성·삭제 (`lib/hooks/useVoting.ts`)
 
@@ -173,5 +177,6 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `useServerLogs()` - Server log streaming
 - `useAdminPosts()` / `useAdminPostEdit()` - Admin post list and metadata editing
 - `useAdminReports()` - Admin content report list
-- `useEditorialCandidates()` - Posts eligible for editorial promotion
+- `useEditorialCandidates()` / `useGenerateEditorial()` - Posts eligible for editorial promotion + trigger generation
 - `useAdminPickList()` / `useCreatePick()` / `useUpdatePick()` / `useDeletePick()` - Decoded Pick CRUD (from `lib/hooks/admin/useAdminPicks.ts`)
+- `useMonitoringMetrics()` - Backend monitoring metrics (latency, throughput, endpoints)
