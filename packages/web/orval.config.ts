@@ -1,4 +1,19 @@
 import { defineConfig } from "orval";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const packageRoot = dirname(fileURLToPath(import.meta.url));
+const monorepoRoot = join(packageRoot, "..", "..");
+
+/** Bun/npm often hoist binaries to the repo root — `./node_modules/.bin/prettier` under `packages/web` may not exist. */
+function prettierWriteHook(): string {
+  const local = join(packageRoot, "node_modules", ".bin", "prettier");
+  const hoisted = join(monorepoRoot, "node_modules", ".bin", "prettier");
+  if (existsSync(local)) return `${local} --write`;
+  if (existsSync(hoisted)) return `${hoisted} --write`;
+  return "bun x prettier --write";
+}
 
 export default defineConfig({
   decodedApi: {
@@ -56,7 +71,7 @@ export default defineConfig({
       },
     },
     hooks: {
-      afterAllFilesWrite: "./node_modules/.bin/prettier --write",
+      afterAllFilesWrite: prettierWriteHook(),
     },
   },
   decodedApiZod: {
