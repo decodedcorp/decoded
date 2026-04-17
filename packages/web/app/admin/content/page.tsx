@@ -2,6 +2,7 @@
 
 import { useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { FileTextIcon, FlagIcon } from "lucide-react";
 import { useAdminPostList } from "@/lib/hooks/admin/useAdminPosts";
 import { useAdminReportList } from "@/lib/hooks/admin/useAdminReports";
 import { AdminPostTable } from "@/lib/components/admin/content/AdminPostTable";
@@ -9,6 +10,7 @@ import { AdminPostTableSkeleton } from "@/lib/components/admin/content/AdminPost
 import { PostStatusFilter } from "@/lib/components/admin/content/PostStatusFilter";
 import { ReportTable } from "@/lib/components/admin/content/ReportTable";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 import type { PostStatus } from "@/lib/api/admin/posts";
 import type { ReportStatus } from "@/lib/api/admin/reports";
 
@@ -155,16 +157,24 @@ function ContentManagementContent() {
           {postListQuery.isLoading ? (
             <AdminPostTableSkeleton />
           ) : postListQuery.data ? (
-            <>
-              <AdminPostTable data={postListQuery.data.data} />
-              {postListQuery.data.pagination.total_pages > 1 && (
-                <Pagination
-                  currentPage={postListQuery.data.pagination.current_page}
-                  totalPages={postListQuery.data.pagination.total_pages}
-                  onPageChange={handlePageChange}
-                />
-              )}
-            </>
+            postListQuery.data.data.length === 0 && !postStatus ? (
+              <AdminEmptyState
+                icon={<FileTextIcon className="w-12 h-12" />}
+                title="No posts found"
+                description="Posts submitted by users will appear here."
+              />
+            ) : (
+              <>
+                <AdminPostTable data={postListQuery.data.data} />
+                {postListQuery.data.pagination.total_pages > 1 && (
+                  <Pagination
+                    currentPage={postListQuery.data.pagination.current_page}
+                    totalPages={postListQuery.data.pagination.total_pages}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
+            )
           ) : (
             <AdminPostTableSkeleton />
           )}
@@ -210,16 +220,24 @@ function ContentManagementContent() {
           {reportListQuery.isLoading ? (
             <AdminPostTableSkeleton />
           ) : reportListQuery.data ? (
-            <>
-              <ReportTable data={reportListQuery.data.data} />
-              {reportListQuery.data.pagination.total_pages > 1 && (
-                <Pagination
-                  currentPage={reportListQuery.data.pagination.current_page}
-                  totalPages={reportListQuery.data.pagination.total_pages}
-                  onPageChange={handlePageChange}
-                />
-              )}
-            </>
+            reportListQuery.data.data.length === 0 && !reportStatus ? (
+              <AdminEmptyState
+                icon={<FlagIcon className="w-12 h-12" />}
+                title="No reports to review"
+                description="User-submitted reports will appear here for moderation."
+              />
+            ) : (
+              <>
+                <ReportTable data={reportListQuery.data.data} />
+                {reportListQuery.data.pagination.total_pages > 1 && (
+                  <Pagination
+                    currentPage={reportListQuery.data.pagination.current_page}
+                    totalPages={reportListQuery.data.pagination.total_pages}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
+            )
           ) : (
             <AdminPostTableSkeleton />
           )}
