@@ -84,8 +84,17 @@ export async function PATCH(
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
     if (error.message?.includes("invalid_transition")) {
+      // Parse "invalid_transition: <from> -> <to>" into structured fields so
+      // we don't leak the raw PostgreSQL exception prefix to the client.
+      const match = error.message.match(
+        /invalid_transition:\s*(\w+)\s*->\s*(\w+)/
+      );
       return NextResponse.json(
-        { error: "invalid_transition", message: error.message },
+        {
+          error: "invalid_transition",
+          from: match?.[1] ?? null,
+          to: match?.[2] ?? null,
+        },
         { status: 409 }
       );
     }

@@ -27,14 +27,25 @@ DECLARE
   v_action TEXT;
   v_caller UUID := auth.uid();
 BEGIN
-  -- AuthZ: caller must be an admin. When invoked from a user session
-  -- (auth.uid() non-null) we additionally require the passed admin_user_id
-  -- to match the session, so a malicious caller can't stamp the audit log
-  -- with someone else's UUID.
+  -- AuthZ trust boundary (read carefully).
+  --
+  -- This RPC is GRANT EXECUTE TO service_role only (see bottom of file).
+  -- That means only the Next.js admin client, which ran checkIsAdmin() on
+  -- the session first, can reach here. When invoked via service_role,
+  -- auth.uid() is NULL and we must trust p_admin_user_id -- the caller
+  -- is responsible for passing the authenticated session's user id.
+  --
+  -- If an authenticated (non-service_role) caller ever regains execute
+  -- permission, the caller_mismatch check below forces p_admin_user_id to
+  -- equal the session's auth.uid(), preventing UUID spoofing in the audit
+  -- log even under that fallback scenario.
   IF v_caller IS NOT NULL AND v_caller <> p_admin_user_id THEN
     RAISE EXCEPTION 'caller_mismatch' USING ERRCODE = 'P0003';
   END IF;
 
+  -- Defense-in-depth: even with service_role, the passed UUID must
+  -- resolve to an admin row. Prevents a bug in the route layer from
+  -- accidentally escalating a non-admin user.
   IF NOT public.is_admin(p_admin_user_id) THEN
     RAISE EXCEPTION 'caller_not_admin' USING ERRCODE = 'P0003';
   END IF;

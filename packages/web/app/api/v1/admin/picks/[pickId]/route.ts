@@ -65,7 +65,9 @@ export async function PATCH(
         : null;
   }
   if ("post_id" in body) {
-    if (typeof body.post_id !== "string" || body.post_id.length === 0) {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (typeof body.post_id !== "string" || !uuidRegex.test(body.post_id)) {
       return NextResponse.json({ error: "invalid_post_id" }, { status: 400 });
     }
     updates.post_id = body.post_id;

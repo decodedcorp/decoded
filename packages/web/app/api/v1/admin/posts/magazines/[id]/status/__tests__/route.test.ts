@@ -141,16 +141,80 @@ describe("PATCH /api/v1/admin/posts/magazines/[id]/status", () => {
     expect(body.error).toBe("invalid_transition");
   });
 
-  it("maps unknown RPC error to 500", async () => {
+  it("maps unknown RPC error to 500 with generic message", async () => {
     checkIsAdmin.mockResolvedValue({ isAdmin: true, userId: "admin-1" });
     rpc.mockResolvedValue({
       data: null,
-      error: { message: "kaboom" },
+      error: { message: "kaboom — raw db internals" },
     });
     const { PATCH } = await import("../route");
     const res = await PATCH(makeRequest({ status: "published" }), {
       params: Promise.resolve({ id: "m1" }),
     });
     expect(res.status).toBe(500);
+    const body = await res.json();
+    // Must not leak raw DB message to client.
+    expect(body.error).toBe("internal_error");
+    expect(body).not.toHaveProperty("message");
+  });
+
+  it("maps caller_not_admin from RPC to 403", async () => {
+    checkIsAdmin.mockResolvedValue({ isAdmin: true, userId: "admin-1" });
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "caller_not_admin", code: "P0003" },
+    });
+    const { PATCH } = await import("../route");
+    const res = await PATCH(makeRequest({ status: "published" }), {
+      params: Promise.resolve({ id: "m1" }),
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("forbidden");
+  });
+
+  it("maps caller_mismatch from RPC to 403", async () => {
+    checkIsAdmin.mockResolvedValue({ isAdmin: true, userId: "admin-1" });
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "caller_mismatch", code: "P0003" },
+    });
+    const { PATCH } = await import("../route");
+    const res = await PATCH(makeRequest({ status: "published" }), {
+      params: Promise.resolve({ id: "m1" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects rejection_reason longer than 2000 chars before RPC", async () => {
+    checkIsAdmin.mockResolvedValue({ isAdmin: true, userId: "admin-1" });
+    const { PATCH } = await import("../route");
+    const tooLong = "x".repeat(2001);
+    const res = await PATCH(
+      makeRequest({ status: "rejected", rejectionReason: tooLong }),
+      { params: Promise.resolve({ id: "m1" }) }
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("rejection_reason_too_long");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps rejection_reason_too_long from RPC (defense-in-depth) to 400", async () => {
+    checkIsAdmin.mockResolvedValue({ isAdmin: true, userId: "admin-1" });
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "rejection_reason_too_long", code: "P0001" },
+    });
+    const { PATCH } = await import("../route");
+    // Route pre-check won't fire (reason within limit), so the RPC
+    // branch is the one exercised.
+    const res = await PATCH(
+      makeRequest({ status: "rejected", rejectionReason: "ok" }),
+      { params: Promise.resolve({ id: "m1" }) }
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("rejection_reason_too_long");
   });
 });
