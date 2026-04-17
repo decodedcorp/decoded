@@ -9,6 +9,7 @@ def __getattr__(name):
     """Lazy-load Application to avoid circular imports with managers/services."""
     if name == "Application":
         from ._container import Application
+
         return Application
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

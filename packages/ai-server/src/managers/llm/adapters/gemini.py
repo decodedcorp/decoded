@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import List, Optional, Dict, Any, Type
+from typing import List, Optional, Type
 from pydantic import BaseModel
 from google import genai
 from google.genai import types as genai_types
@@ -12,6 +12,7 @@ from ..base.types import ContentType
 
 logger = logging.getLogger(__name__)
 
+
 class GeminiClient(BaseLLMClient):
     """Adapter for Google Gemini API"""
 
@@ -19,7 +20,9 @@ class GeminiClient(BaseLLMClient):
         super().__init__(config)
         self.environment = environment
         self.client = None
-        api_key = config.api_key or (getattr(environment, 'GEMINI_API_KEY', '') if environment else '')
+        api_key = config.api_key or (
+            getattr(environment, "GEMINI_API_KEY", "") if environment else ""
+        )
         if api_key:
             try:
                 self.client = genai.Client(api_key=api_key)
@@ -49,9 +52,9 @@ class GeminiClient(BaseLLMClient):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         response_schema: Optional[Type[BaseModel]] = None,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
-        
+
         # Sanity check
         if not self.client:
             raise ValueError("Gemini client is not initialized")
@@ -60,7 +63,7 @@ class GeminiClient(BaseLLMClient):
         self._validate_kwargs(content_type, kwargs)
 
         model = self.config.model
-        
+
         # Convert LLMMessage to Gemini Content
         contents = []
         for msg in messages:
@@ -73,9 +76,9 @@ class GeminiClient(BaseLLMClient):
         # Default config params
         gen_config_params = {
             "thinking_config": genai_types.ThinkingConfig(thinking_level="MINIMAL"),
-            "tools": [genai_types.Tool(googleSearch=genai_types.GoogleSearch())]
+            "tools": [genai_types.Tool(googleSearch=genai_types.GoogleSearch())],
         }
-        
+
         # Handle response_schema for structured output
         if response_schema is not None:
             print("Response schema is not None")
@@ -91,7 +94,7 @@ class GeminiClient(BaseLLMClient):
         try:
             # Generate content (using asyncio to run sync API call)
             loop = asyncio.get_event_loop()
-            
+
             def generate_sync():
                 # Use standard generate_content instead of stream for JSON reliability
                 try:
@@ -104,9 +107,9 @@ class GeminiClient(BaseLLMClient):
                 except Exception as e:
                     logger.error(f"Gemini generate_content failed: {str(e)}", exc_info=True)
                     raise
-            
+
             response_text = await loop.run_in_executor(None, generate_sync)
-            
+
             # Parse response if JSON expected (detected via response_schema presence)
             structured_output = {}
             if response_schema is not None:
@@ -121,15 +124,15 @@ class GeminiClient(BaseLLMClient):
                     structured_output = json.loads(clean_text)
                 except json.JSONDecodeError:
                     logger.error(f"Failed to parse Gemini JSON response: {response_text}")
-            else: 
+            else:
                 print("Response schema is None")
-            
+
             return LLMResponse(
                 provider="gemini",
                 content=response_text,
                 structured_output=structured_output,
             )
-            
+
         except Exception as e:
             logger.error(f"Gemini completion error: {str(e)}")
             raise

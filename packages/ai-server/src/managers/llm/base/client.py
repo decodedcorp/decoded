@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, Type
+from typing import List, Optional, Type
 from .message import LLMMessage, LLMResponse
 from .config import LLMConfig
 from .types import ContentType
@@ -21,7 +21,7 @@ class BaseLLMClient(ABC):
 
     def __init__(self, config: LLMConfig):
         self.config = config
-        
+
         # Initialize PromptManager for all adapters
         if PromptManager is not None:
             self.prompt_manager = PromptManager()
@@ -36,7 +36,7 @@ class BaseLLMClient(ABC):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         response_schema: Optional[Type["BaseModel"]] = None,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
         """
         Generate completion from messages
@@ -58,7 +58,7 @@ class BaseLLMClient(ABC):
     def health_check(self) -> bool:
         """
         Check if the LLM service is available
-        
+
         Returns:
             True if service is healthy, False otherwise
         """
@@ -75,10 +75,10 @@ class BaseLLMClient(ABC):
     def get_language_instruction(self, locale: str = "ko") -> str:
         """
         Get language instruction for given locale
-        
+
         Args:
             locale: Language locale code (default: "ko")
-            
+
         Returns:
             Language instruction string
         """
@@ -87,14 +87,14 @@ class BaseLLMClient(ABC):
         else:
             # Fallback implementation if PromptManager is not available
             language_map = {
-                'ko': 'Please respond in Korean.',
-                'ja': 'Please respond in Japanese.',
-                'zh': 'Please respond in Chinese.',
-                'zh-cn': 'Please respond in Simplified Chinese.',
-                'zh-tw': 'Please respond in Traditional Chinese.',
-                'en': '',  # English is default, no instruction needed
+                "ko": "Please respond in Korean.",
+                "ja": "Please respond in Japanese.",
+                "zh": "Please respond in Chinese.",
+                "zh-cn": "Please respond in Simplified Chinese.",
+                "zh-tw": "Please respond in Traditional Chinese.",
+                "en": "",  # English is default, no instruction needed
             }
-            return language_map.get(locale.lower(), 'Please respond in Korean.')
+            return language_map.get(locale.lower(), "Please respond in Korean.")
 
     def _validate_kwargs(self, content_type: ContentType, kwargs: dict) -> None:
         """

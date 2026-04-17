@@ -50,9 +50,7 @@ def test_stealth_browser():
             print(f"플랫폼: {platform}")
 
             # 스크린샷 저장 (선택사항)
-            driver.save_screenshot(
-                f"test_screenshot_{url.split('//')[1].split('/')[0]}.png"
-            )
+            driver.save_screenshot(f"test_screenshot_{url.split('//')[1].split('/')[0]}.png")
 
             print("\n" + "=" * 50)
 

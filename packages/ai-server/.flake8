@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 120
+extend-ignore =
+    # whitespace before ':' — black & PEP 8 conflict
+    E203,
+    # line break before binary operator — black compatible
+    W503
+exclude =
+    .venv,
+    __pycache__,
+    src/grpc/proto,
+    src/generated,
+    build,
+    dist

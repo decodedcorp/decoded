@@ -63,7 +63,9 @@ def create_post_editorial_graph(checkpointer=None):
     builder.add_edge("ItemSearch", "Review")
     builder.add_edge("Summary", "Review")
 
-    builder.add_conditional_edges("Review", route_after_review, {"Publish": "Publish", "Editorial": "Editorial", END: END})
+    builder.add_conditional_edges(
+        "Review", route_after_review, {"Publish": "Publish", "Editorial": "Editorial", END: END}
+    )
     builder.add_edge("Publish", END)
 
     return builder.compile(checkpointer=checkpointer)

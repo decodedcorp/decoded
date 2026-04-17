@@ -77,9 +77,7 @@ class PostContextService:
             "OLLAMA_BASE_URL", "http://localhost:11434"
         )
         self.model = ollama_model or os.environ.get("OLLAMA_VISION_MODEL", "gemma4:e4b")
-        self.timeout = ollama_timeout or int(
-            os.environ.get("OLLAMA_VISION_TIMEOUT", "60")
-        )
+        self.timeout = ollama_timeout or int(os.environ.get("OLLAMA_VISION_TIMEOUT", "60"))
 
     async def extract_context(self, image_url: str) -> dict:
         """이미지 URL에서 context와 style_tags를 추출.

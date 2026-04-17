@@ -12,6 +12,7 @@ def create_app(application: Application) -> FastAPI:
     """기본 FastAPI 앱 생성 및 동기적 설정"""
     # Sentry는 FastAPI 인스턴스 생성 전에 초기화해야 한다
     from .app import _init_sentry
+
     _init_sentry()
     environment = application.environment()
 

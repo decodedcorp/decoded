@@ -51,12 +51,9 @@ async def publish_node(state: PostEditorialState) -> dict:
         client = await _get_supabase_client()
 
         # Batch-fetch warehouse brands for enrichment
-        brand_ids = list({
-            sol.brand_id
-            for spot in post_data.spots
-            for sol in spot.solutions
-            if sol.brand_id
-        })
+        brand_ids = list(
+            {sol.brand_id for spot in post_data.spots for sol in spot.solutions if sol.brand_id}
+        )
 
         # Try to reuse warehouse_brands from item_research if available
         item_research = state.get("item_research") or {}
@@ -87,17 +84,19 @@ async def publish_node(state: PostEditorialState) -> dict:
                                 enriched_meta[k] = v
                         metadata = enriched_meta
 
-                items.append({
-                    "spot_id": spot.id,
-                    "solution_id": sol.id,
-                    "title": sol.title,
-                    "brand": brand,
-                    "brand_logo_url": brand_logo_url,
-                    "image_url": sol.thumbnail_url,
-                    "original_url": sol.original_url,
-                    "metadata": metadata,
-                    "editorial_paragraphs": item_editorial_texts.get(spot.id, []),
-                })
+                items.append(
+                    {
+                        "spot_id": spot.id,
+                        "solution_id": sol.id,
+                        "title": sol.title,
+                        "brand": brand,
+                        "brand_logo_url": brand_logo_url,
+                        "image_url": sol.thumbnail_url,
+                        "original_url": sol.original_url,
+                        "metadata": metadata,
+                        "editorial_paragraphs": item_editorial_texts.get(spot.id, []),
+                    }
+                )
 
         news_references = state.get("news_references") or []
 
@@ -122,16 +121,18 @@ async def publish_node(state: PostEditorialState) -> dict:
 
         await (
             client.table("post_magazines")
-            .update({
-                "title": layout.title,
-                "subtitle": layout.subtitle,
-                "keyword": keyword,
-                "layout_json": layout_dict,
-                "status": "published",
-                "review_summary": review_result.get("summary"),
-                "published_at": now,
-                "updated_at": now,
-            })
+            .update(
+                {
+                    "title": layout.title,
+                    "subtitle": layout.subtitle,
+                    "keyword": keyword,
+                    "layout_json": layout_dict,
+                    "status": "published",
+                    "review_summary": review_result.get("summary"),
+                    "published_at": now,
+                    "updated_at": now,
+                }
+            )
             .eq("id", post_magazine_id)
             .execute()
         )
@@ -142,20 +143,22 @@ async def publish_node(state: PostEditorialState) -> dict:
                 try:
                     await (
                         client.table("post_magazine_news_references")
-                        .insert({
-                            "post_magazine_id": post_magazine_id,
-                            "title": ref.get("title", ""),
-                            "url": ref.get("url", ""),
-                            "source": ref.get("source", ""),
-                            "summary": ref.get("summary"),
-                            "og_title": ref.get("og_title"),
-                            "og_description": ref.get("og_description"),
-                            "og_image": ref.get("og_image"),
-                            "og_site_name": ref.get("og_site_name"),
-                            "relevance_score": ref.get("relevance_score", 0),
-                            "credibility_score": ref.get("credibility_score", 0),
-                            "matched_item": ref.get("matched_item"),
-                        })
+                        .insert(
+                            {
+                                "post_magazine_id": post_magazine_id,
+                                "title": ref.get("title", ""),
+                                "url": ref.get("url", ""),
+                                "source": ref.get("source", ""),
+                                "summary": ref.get("summary"),
+                                "og_title": ref.get("og_title"),
+                                "og_description": ref.get("og_description"),
+                                "og_image": ref.get("og_image"),
+                                "og_site_name": ref.get("og_site_name"),
+                                "relevance_score": ref.get("relevance_score", 0),
+                                "credibility_score": ref.get("credibility_score", 0),
+                                "matched_item": ref.get("matched_item"),
+                            }
+                        )
                         .execute()
                     )
                 except Exception:
@@ -184,11 +187,13 @@ async def publish_node(state: PostEditorialState) -> dict:
             client = await _get_supabase_client()
             await (
                 client.table("post_magazines")
-                .update({
-                    "status": "failed",
-                    "error_log": json.dumps([error_msg]),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                })
+                .update(
+                    {
+                        "status": "failed",
+                        "error_log": json.dumps([error_msg]),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
                 .eq("id", post_magazine_id)
                 .execute()
             )

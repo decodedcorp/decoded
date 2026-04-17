@@ -10,7 +10,7 @@ import logging
 class LLMRouter(BaseLLMClient):
     """
     Router that directs requests to different LLM clients based on content type
-    
+
     Example:
         router = LLMRouter({
             "link": perplexity_client,
@@ -18,29 +18,36 @@ class LLMRouter(BaseLLMClient):
             "text": llama_client
         })
     """
-    
-    def __init__(self, client_mapping: Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]], fallback_provider: str = "text", content_resolver: Optional[ContentTypeResolver] = None):
+
+    def __init__(
+        self,
+        client_mapping: Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]],
+        fallback_provider: str = "text",
+        content_resolver: Optional[ContentTypeResolver] = None,
+    ):
         """
         Initialize LLM Router
-        
+
         Args:
             client_mapping: Dictionary mapping content_type to LLM client
             fallback_provider: Content type to use when requested type not found
         """
         # Create a dummy config for the router
         super().__init__(LLMConfig(provider="router", api_key="", model="router"))
-        
+
         # Normalize client mapping to handle both single clients and lists
         self.clients = self._normalize_client_mapping(client_mapping)
-        
+
         # Initialize content resolver for URL pattern analysis
         self.content_resolver = content_resolver or ContentTypeResolver()
         self.fallback_provider = fallback_provider
         self.logger = logging.getLogger(__name__)
-        
+
         # Validate that fallback provider exists
         if fallback_provider not in self.clients:
-            self.logger.warning(f"Fallback provider '{fallback_provider}' not found in client mapping")
+            self.logger.warning(
+                f"Fallback provider '{fallback_provider}' not found in client mapping"
+            )
             # Use first available client as fallback
             self.fallback_provider = next(iter(self.clients.keys())) if self.clients else None
         self.logger.info(f"LLMRouter initialized with fallback provider: {self.fallback_provider}")
@@ -51,7 +58,7 @@ class LLMRouter(BaseLLMClient):
         content_type: ContentType = ContentType.TEXT,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
         """
         Route completion request to appropriate LLM client
@@ -72,7 +79,9 @@ class LLMRouter(BaseLLMClient):
         content_type_str = content_type.value
         client = self._get_client_for_content_type(content_type_str, url)
         if client is None:
-            raise ValueError(f"No client available for content type '{content_type}' and no fallback")
+            raise ValueError(
+                f"No client available for content type '{content_type}' and no fallback"
+            )
 
         self.logger.debug(f"Routing {content_type} request to {client.get_provider()}")
 
@@ -82,26 +91,28 @@ class LLMRouter(BaseLLMClient):
             content_type=content_type,
             max_tokens=max_tokens,
             temperature=temperature,
-            **kwargs
+            **kwargs,
         )
 
     def health_check(self) -> bool:
         """
         Check if at least one client is healthy
-        
+
         Returns:
             True if any client is healthy, False otherwise
         """
         for content_type, clients in self.clients.items():
             # Handle both single client and list of clients
             client_list = clients if isinstance(clients, list) else [clients]
-            
+
             for client in client_list:
                 try:
                     if client.health_check():
                         return True
                 except Exception as e:
-                    self.logger.warning(f"Health check failed for {content_type} client ({client.get_provider()}): {e}")
+                    self.logger.warning(
+                        f"Health check failed for {content_type} client ({client.get_provider()}): {e}"
+                    )
                     continue
         return False
 
@@ -127,13 +138,15 @@ class LLMRouter(BaseLLMClient):
                 models.append(f"{ct}:{clients.get_model()}")
         return f"router({', '.join(models)})"
 
-    def _get_client_for_content_type(self, content_type: str, url: str = "") -> Optional[BaseLLMClient]:
+    def _get_client_for_content_type(
+        self, content_type: str, url: str = ""
+    ) -> Optional[BaseLLMClient]:
         """
         Get appropriate client for content type
-        
+
         Args:
             content_type: Type of content to process
-            
+
         Returns:
             LLM client or None if not found
         """
@@ -144,15 +157,17 @@ class LLMRouter(BaseLLMClient):
             if isinstance(clients, list):
                 return self._select_client_for_url(url, clients)
             return clients
-        
+
         # Try fallback
         if self.fallback_provider and self.fallback_provider in self.clients:
-            self.logger.info(f"Using fallback provider '{self.fallback_provider}' for content type '{content_type}'")
+            self.logger.info(
+                f"Using fallback provider '{self.fallback_provider}' for content type '{content_type}'"
+            )
             fallback_clients = self.clients[self.fallback_provider]
             if isinstance(fallback_clients, list):
                 return self._select_client_for_url(url, fallback_clients)
             return fallback_clients
-        
+
         return None
 
     def add_client(self, content_type: str, client: Union[BaseLLMClient, List[BaseLLMClient]]):
@@ -170,8 +185,10 @@ class LLMRouter(BaseLLMClient):
     def get_available_content_types(self) -> List[str]:
         """Get list of supported content types"""
         return list(self.clients.keys())
-    
-    def _normalize_client_mapping(self, client_mapping: Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]]) -> Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]]:
+
+    def _normalize_client_mapping(
+        self, client_mapping: Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]]
+    ) -> Dict[str, Union[BaseLLMClient, List[BaseLLMClient]]]:
         """Normalize client mapping to ensure consistent format and resolve providers"""
         normalized = {}
         for content_type, clients in client_mapping.items():
@@ -189,14 +206,14 @@ class LLMRouter(BaseLLMClient):
                 if resolved_client:
                     normalized[content_type] = resolved_client
         return normalized
-    
+
     def _resolve_provider_if_needed(self, client):
         """Resolve dependency injector provider to actual instance if needed"""
         # Check if it's a dependency injector provider
-        if hasattr(client, '__class__') and 'dependency_injector' in str(client.__class__):
+        if hasattr(client, "__class__") and "dependency_injector" in str(client.__class__):
             # Try to call it to get the actual instance
             try:
-                if hasattr(client, '__call__'):
+                if hasattr(client, "__call__"):
                     return client()
                 else:
                     return client
@@ -206,23 +223,24 @@ class LLMRouter(BaseLLMClient):
         else:
             # It's already an actual instance
             return client
-    
+
     def _select_client_for_url(self, url: str, clients: List[BaseLLMClient]) -> BaseLLMClient:
         """
         Select appropriate client based on URL pattern using ContentTypeResolver
-        
+
         Args:
             url: URL to analyze
             clients: List of available clients
-            
+
         Returns:
             Selected LLM client
         """
         if not url or not clients:
             return clients[0] if clients else None
-        
+
         # Use ContentTypeResolver to determine URL type
         from src.database.models.batch import DataItemType
+
         resolved_type = self.content_resolver.resolve_content_type(url, DataItemType.LINK)
         # YouTube URLs -> prefer Groq for speed
         if resolved_type == "youtube":
@@ -230,14 +248,13 @@ class LLMRouter(BaseLLMClient):
             if groq_client:
                 self.logger.debug(f"Selected Groq for YouTube URL: {url}")
                 return groq_client
-        
+
         # Default -> prefer Perplexity for web search capabilities
         perplexity_client = next((c for c in clients if c.get_provider() == "perplexity"), None)
         if perplexity_client:
             self.logger.debug(f"Selected Perplexity for general URL: {url}")
             return perplexity_client
-        
+
         # Fallback to first available client
         self.logger.debug(f"Using fallback client for URL: {url}")
         return clients[0]
-

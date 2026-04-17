@@ -51,8 +51,7 @@ class MetadataExtractService:
         try:
             # Initialize web scraping components
             self.web_scraper = WebScraperService(
-                max_retries=self.environment.MAX_RETRIES,
-                timeout=self.environment.REQUEST_TIMEOUT
+                max_retries=self.environment.MAX_RETRIES, timeout=self.environment.REQUEST_TIMEOUT
             )
             self.og_extractor = OGTagExtractor()
 
@@ -78,11 +77,11 @@ class MetadataExtractService:
             link_type_classifier = LinkTypeClassifier(groq_client=groq_client)
 
             # Initialize Gemini client (Primary) for LinkAIAnalyzer
-            gemini_model = getattr(self.environment, 'GEMINI_MODEL', 'gemini-3-flash-preview')
+            gemini_model = getattr(self.environment, "GEMINI_MODEL", "gemini-3-flash-preview")
             gemini_config = LLMConfig(
                 provider="gemini",
                 model=gemini_model,
-                api_key=getattr(self.environment, 'GEMINI_API_KEY', '')
+                api_key=getattr(self.environment, "GEMINI_API_KEY", ""),
             )
             gemini_client = GeminiClient(gemini_config, environment=self.environment)
 
@@ -90,20 +89,16 @@ class MetadataExtractService:
             perplexity_client = PerplexityClient(environment=self.environment)
 
             # Create Default LLM Agent (Gemini -> Perplexity)
-            llm_agent = DefaultLLMAgent(
-                primary=perplexity_client,
-                fallback=gemini_client
-            )
+            llm_agent = DefaultLLMAgent(primary=perplexity_client, fallback=gemini_client)
 
             self.link_ai_analyzer = LinkAIAnalyzer(
-                llm_client=llm_agent,  
+                llm_client=llm_agent,
                 link_type_classifier=link_type_classifier,
                 environment=self.environment,
             )
 
             self.image_processor = ImageProcessor(
-                web_scraper=self.web_scraper,
-                llm_client=self.llm_router
+                web_scraper=self.web_scraper, llm_client=self.llm_router
             )
 
             self.logger.debug("Metadata extraction components initialized successfully")
@@ -111,7 +106,6 @@ class MetadataExtractService:
         except Exception as e:
             self.logger.error(f"Failed to initialize components: {str(e)}")
             raise
-
 
     async def extract_og_metadata(self, url: str) -> Optional[LinkPreviewMetadata]:
         """
@@ -125,14 +119,11 @@ class MetadataExtractService:
         """
         try:
             return await self.link_og_extractor.extract(url=url)
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def _analyze_link(
-        self,
-        url: str,
-        item_id: str,
-        og_metadata: Dict[str, str]
+        self, url: str, item_id: str, og_metadata: Dict[str, str]
     ) -> LinkProcessingResult:
         """
         Analyze a link with AI (internal method)
@@ -161,21 +152,16 @@ class MetadataExtractService:
 
         try:
             result = await self.link_ai_analyzer.analyze(
-                url=url,
-                item_id=item_id,
-                og_metadata=og_metadata
+                url=url, item_id=item_id, og_metadata=og_metadata
             )
             return result
 
         except Exception as e:
             self.logger.error(f"Error analyzing link for {url}: {str(e)}", exc_info=True)
             return LinkProcessingResult(
-                item_id=item_id,
-                url=url,
-                status=ProcessingStatus.FAILED,
-                error_message=str(e)
+                item_id=item_id, url=url, status=ProcessingStatus.FAILED, error_message=str(e)
             )
-    
+
     @staticmethod
     async def analyze_link_job(
         ctx: Dict[str, Any],
@@ -183,7 +169,7 @@ class MetadataExtractService:
         solution_id: str,
         title: str = "",
         description: str = "",
-        site_name: str = ""
+        site_name: str = "",
     ) -> Dict[str, Any]:
         """
         ARQ job for link analysis
@@ -201,29 +187,24 @@ class MetadataExtractService:
             Dict with processing results
         """
         import logging
+
         logger = logging.getLogger(__name__)
-        
-        service = ctx.get('metadata_extract_service')
+
+        service = ctx.get("metadata_extract_service")
         if not service:
             return {"success": False, "error": "Service not available"}
 
-        og_metadata = {
-            "title": title,
-            "description": description,
-            "site_name": site_name
-        }
+        og_metadata = {"title": title, "description": description, "site_name": site_name}
 
         try:
             # 비즈니스 로직 실행
             result = await service._analyze_link(
-                url=url,
-                item_id=solution_id,
-                og_metadata=og_metadata
+                url=url, item_id=solution_id, og_metadata=og_metadata
             )
 
             # 상태별 처리
-            result_batch_service = ctx.get('result_batch_service')
-            failed_items_manager = ctx.get('failed_items_manager')
+            result_batch_service = ctx.get("result_batch_service")
+            failed_items_manager = ctx.get("failed_items_manager")
 
             if result.status == ProcessingStatus.FAILED:
                 # 실패: FailedItemsManager로 전달 (버퍼링 안 함)
@@ -232,7 +213,7 @@ class MetadataExtractService:
                         item_id=solution_id,
                         url=url,
                         item_type="link",
-                        error_message=result.error_message or "Unknown error"
+                        error_message=result.error_message or "Unknown error",
                     )
             elif result.status == ProcessingStatus.PARTIAL:
                 # 부분 성공: 버퍼링 + FailedItemsManager 등록
@@ -244,7 +225,7 @@ class MetadataExtractService:
                         url=url,
                         item_type="link",
                         missing_fields=[],  # TODO: 실제 누락 필드 파악
-                        current_metadata=result.metadata.model_dump() if result.metadata else {}
+                        current_metadata=result.metadata.model_dump() if result.metadata else {},
                     )
             else:  # SUCCESS
                 # 성공: 버퍼링만
@@ -255,14 +236,8 @@ class MetadataExtractService:
                 "success": result.status == ProcessingStatus.SUCCESS,
                 "url": url,
                 "solution_id": solution_id,
-                "status": result.status.value
+                "status": result.status.value,
             }
         except Exception as e:
             logger.error(f"Error in analyze_link_job: {str(e)}", exc_info=True)
-            return {
-                "success": False,
-                "error": str(e),
-                "url": url,
-                "solution_id": solution_id
-            }
-
+            return {"success": False, "error": str(e), "url": url, "solution_id": solution_id}
