@@ -5,7 +5,6 @@ import logging
 import httpx
 from pydantic import BaseModel
 from src.config._environment import Environment
-from src.managers.llm.base.config import LLMConfig
 from src.managers.llm.base import BaseLLMClient, LLMConfig, LLMMessage, LLMResponse, LLMUsage
 from src.managers.llm.base.types import ContentType
 
@@ -177,7 +176,10 @@ class GroqClient(BaseLLMClient):
         # Keep beginning and end for context
         keep_start = max_chars // 3
         keep_end = max_chars // 3
-        middle_text = f"\n\n[Content truncated - original length: {len(content)} chars, estimated {estimated_tokens} tokens]\n\n"
+        middle_text = (
+            f"\n\n[Content truncated - original length: {len(content)} chars, "
+            f"estimated {estimated_tokens} tokens]\n\n"
+        )
 
         if keep_start + len(middle_text) + keep_end >= max_chars:
             # If still too long, just truncate from end
@@ -293,8 +295,6 @@ class GroqClient(BaseLLMClient):
 
     async def _handle_link_completion(self, messages: List[LLMMessage], **kwargs) -> LLMResponse:
         """Handle link analysis completion"""
-        url = kwargs.get("url", "")
-
         # Use the content from the provided messages (includes enhanced content like YouTube transcript)
         user_content = self._build_link_analysis_prompt(messages[0].content)
 

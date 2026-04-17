@@ -40,8 +40,6 @@ async def initialize_async_resources(application: Application):
 
 
 def configure_routes(app: FastAPI, application: Application) -> FastAPI:
-    logger = application.logger()
-    infrastructure = application.infrastructure()
     environment = application.environment()
 
     # CORS 설정

@@ -393,7 +393,10 @@ async def process_ai_analysis_queue(
             "partial_count": partial_count,
             "failed_count": failed_count,
             "batch_id": batch_id,
-            "message": f"Processed {len(items)} items from queue: {success_count} success, {partial_count} partial, {failed_count} failed",
+            "message": (
+                f"Processed {len(items)} items from queue: "
+                f"{success_count} success, {partial_count} partial, {failed_count} failed"
+            ),
         }
 
         logger.info(

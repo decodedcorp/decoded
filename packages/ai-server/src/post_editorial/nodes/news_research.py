@@ -1,4 +1,7 @@
-"""NewsResearch node: find item-specific fashion news via per-item Perplexity search + OG extraction + Gemini filtering."""
+"""NewsResearch node: find item-specific fashion news.
+
+Uses per-item Perplexity search + OG extraction + Gemini filtering.
+"""
 
 from __future__ import annotations
 

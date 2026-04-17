@@ -195,11 +195,17 @@ class LocalLLMClient(BaseLLMClient):
         enhanced_messages = [
             LLMMessage(
                 role="system",
-                content="You are being asked to analyze an image, but as a text-based model, you cannot process images directly.",
+                content=(
+                    "You are being asked to analyze an image, but as a text-based model, "
+                    "you cannot process images directly."
+                ),
             ),
             LLMMessage(
                 role="user",
-                content="I need image analysis, but this is a text-only model. Please explain what image analysis typically involves.",
+                content=(
+                    "I need image analysis, but this is a text-only model. "
+                    "Please explain what image analysis typically involves."
+                ),
             ),
         ]
 
@@ -307,7 +313,10 @@ class LocalLLMClient(BaseLLMClient):
     async def _make_api_request(self, prompt: str) -> Dict[str, Any]:
         """Make API request to Local LLM"""
         try:
-            system_message = "You are a helpful assistant that provides information and returns structured JSON responses."
+            system_message = (
+                "You are a helpful assistant that provides information "
+                "and returns structured JSON responses."
+            )
 
             response = await self.client.chat.completions.create(
                 model=self.config.model,
