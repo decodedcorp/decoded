@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { gsap } from "gsap";
 import { getRequestActions } from "@/lib/stores/requestStore";
 
-type MaxWidth = "4xl" | "5xl" | "6xl" | "7xl";
+export type MaxWidth = "4xl" | "5xl" | "6xl" | "7xl";
 
 const MAX_WIDTH_CLASS: Record<MaxWidth, string> = {
   "4xl": "max-w-4xl",
