@@ -1,3 +1,11 @@
+---
+title: E2E Testing — Agent Reference
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, testing]
+---
+
 # Frontend E2E Testing
 
 Playwright 기반 E2E 테스트. 로컬 CI (pre-push hook) 및 수동 실행으로 프론트엔드 핵심 플로우를 검증한다.
@@ -28,11 +36,11 @@ RUN_E2E=1 git push
 
 ### 프로젝트 구조
 
-| Project | Auth | 포함 Spec | 용도 |
-|---------|------|-----------|------|
-| `setup` | - | `auth.setup.ts` | 세션 획득 |
-| `chromium` | 인증됨 | 나머지 전부 | 핵심 플로우 검증 |
-| `chromium-no-auth` | 미인증 | `login`, `api-migration` | 비로그인 UX |
+| Project            | Auth   | 포함 Spec                | 용도             |
+| ------------------ | ------ | ------------------------ | ---------------- |
+| `setup`            | -      | `auth.setup.ts`          | 세션 획득        |
+| `chromium`         | 인증됨 | 나머지 전부              | 핵심 플로우 검증 |
+| `chromium-no-auth` | 미인증 | `login`, `api-migration` | 비로그인 UX      |
 
 ### API Mock
 
@@ -45,21 +53,21 @@ RUN_E2E=1 git push
 
 ### 필수 통과 (핵심 사용자 플로우)
 
-| Spec | 테스트 수 | 검증 항목 |
-|------|-----------|-----------|
-| `content-consumption.spec.ts` | 5 | Explore grid 로딩, 검색 입력, 정렬 드롭다운, 포스트 상세 (item cards), 피드 카드 |
-| `content-creation.spec.ts` | 3 | 업로드 DropZone 렌더, 스텝 프로그레스, 지원 포맷 표시 |
-| `engagement.spec.ts` | 3 | 포스트 상세 item 카드, Shop the Look, 뒤로가기 |
-| `navigation.spec.ts` | 4 | 인증 후 메인/이미지/프로필/업로드 페이지 접근 |
-| `login.spec.ts` | 3 | 로그인 페이지 렌더, OAuth 버튼, admin 리다이렉트 |
+| Spec                          | 테스트 수 | 검증 항목                                                                        |
+| ----------------------------- | --------- | -------------------------------------------------------------------------------- |
+| `content-consumption.spec.ts` | 5         | Explore grid 로딩, 검색 입력, 정렬 드롭다운, 포스트 상세 (item cards), 피드 카드 |
+| `content-creation.spec.ts`    | 3         | 업로드 DropZone 렌더, 스텝 프로그레스, 지원 포맷 표시                            |
+| `engagement.spec.ts`          | 3         | 포스트 상세 item 카드, Shop the Look, 뒤로가기                                   |
+| `navigation.spec.ts`          | 4         | 인증 후 메인/이미지/프로필/업로드 페이지 접근                                    |
+| `login.spec.ts`               | 3         | 로그인 페이지 렌더, OAuth 버튼, admin 리다이렉트                                 |
 
 ### 보조 (품질 보장)
 
-| Spec | 테스트 수 | 검증 항목 |
-|------|-----------|-----------|
-| `visual-qa.spec.ts` | 40 | 4 viewport x 10 페이지 스크린샷 캡처 (assertion 없음, 시각 검증용) |
-| `ai-pipeline.spec.ts` | 4 | AI 업로드 파이프라인 (이미지 → 분석 → 스팟) mock |
-| `api-migration.spec.ts` | 4 | 백엔드 API 마이그레이션 연기 검증, health check |
+| Spec                    | 테스트 수 | 검증 항목                                                          |
+| ----------------------- | --------- | ------------------------------------------------------------------ |
+| `visual-qa.spec.ts`     | 40        | 4 viewport x 10 페이지 스크린샷 캡처 (assertion 없음, 시각 검증용) |
+| `ai-pipeline.spec.ts`   | 4         | AI 업로드 파이프라인 (이미지 → 분석 → 스팟) mock                   |
+| `api-migration.spec.ts` | 4         | 백엔드 API 마이그레이션 연기 검증, health check                    |
 
 ## 검증 기준 (CI 게이트)
 
@@ -92,23 +100,23 @@ RUN_E2E=1 git push
 
 테스트에서 사용하는 `data-testid` 속성 목록.
 
-| testid | 컴포넌트 | 용도 |
-|--------|----------|------|
-| `thiings-grid` | ThiingsGrid | Explore/피드 그리드 컨테이너 |
-| `thiings-grid-item` | ThiingsGrid | 그리드 개별 아이템 |
-| `explore-search-input` | ExploreClient | 검색 입력 필드 |
-| `explore-sort-select` | ExploreClient | 정렬 드롭다운 |
-| `feed-grid` | VerticalFeed | 피드 그리드 컨테이너 |
-| `feed-card` | FeedCard | 피드 개별 카드 |
-| `like-button` | FeedCard, SocialActions | 좋아요 버튼 |
-| `save-button` | SocialActions | 저장 버튼 |
-| `upload-dropzone` | DropZone | 업로드 영역 |
-| `image-detail-modal` | ImageDetailModal | 포스트 상세 모달 |
-| `image-detail-image` | ImageDetailModal | 상세 이미지 |
-| `image-detail-close` | ImageDetailModal | 모달 닫기 |
-| `item-detail-card` | ItemDetailCard | 아이템 카드 |
-| `item-adopt-button` | TopSolutionCard | 솔루션 채택 |
-| `item-solutions-list` | OtherSolutionsList | 솔루션 목록 |
+| testid                 | 컴포넌트                | 용도                         |
+| ---------------------- | ----------------------- | ---------------------------- |
+| `thiings-grid`         | ThiingsGrid             | Explore/피드 그리드 컨테이너 |
+| `thiings-grid-item`    | ThiingsGrid             | 그리드 개별 아이템           |
+| `explore-search-input` | ExploreClient           | 검색 입력 필드               |
+| `explore-sort-select`  | ExploreClient           | 정렬 드롭다운                |
+| `feed-grid`            | VerticalFeed            | 피드 그리드 컨테이너         |
+| `feed-card`            | FeedCard                | 피드 개별 카드               |
+| `like-button`          | FeedCard, SocialActions | 좋아요 버튼                  |
+| `save-button`          | SocialActions           | 저장 버튼                    |
+| `upload-dropzone`      | DropZone                | 업로드 영역                  |
+| `image-detail-modal`   | ImageDetailModal        | 포스트 상세 모달             |
+| `image-detail-image`   | ImageDetailModal        | 상세 이미지                  |
+| `image-detail-close`   | ImageDetailModal        | 모달 닫기                    |
+| `item-detail-card`     | ItemDetailCard          | 아이템 카드                  |
+| `item-adopt-button`    | TopSolutionCard         | 솔루션 채택                  |
+| `item-solutions-list`  | OtherSolutionsList      | 솔루션 목록                  |
 
 ## 새 테스트 추가 가이드
 
