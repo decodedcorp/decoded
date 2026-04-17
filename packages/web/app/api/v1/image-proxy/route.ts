@@ -149,6 +149,70 @@ function resolveReferer(hostname: string): string | null {
   return null;
 }
 
+async function fetchWithRedirect(
+  initial: URL,
+  signal: AbortSignal
+): Promise<
+  | { ok: true; response: Response; finalUrl: URL }
+  | { ok: false; code: ErrorCode; status?: number }
+> {
+  let currentUrl = initial;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    // Re-validate each hop (hostname-layer SSRF defense for redirect chains)
+    const v = validateUrl(currentUrl.toString());
+    if (!v.ok) return { ok: false, code: v.code };
+    currentUrl = v.url;
+
+    const headers: Record<string, string> = {
+      "User-Agent": IMAGE_PROXY_UA,
+      "X-Decoded-Proxy": "1",
+      Accept: "image/*",
+    };
+    const referer = resolveReferer(currentUrl.hostname);
+    if (referer) headers["Referer"] = referer;
+
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, {
+        signal,
+        headers,
+        redirect: "manual",
+      });
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        return { ok: false, code: "timeout" };
+      }
+      return { ok: false, code: "fetch_failed" };
+    }
+
+    // 3xx with Location → follow manually
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        return { ok: false, code: "upstream_error", status: response.status };
+      }
+      try {
+        currentUrl = new URL(location, currentUrl);
+      } catch {
+        return { ok: false, code: "upstream_error", status: response.status };
+      }
+      // Drain body so the connection can be reused
+      await response.body?.cancel();
+      continue;
+    }
+
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { ok: false, code: "upstream_error", status: response.status };
+    }
+
+    return { ok: true, response, finalUrl: currentUrl };
+  }
+
+  return { ok: false, code: "redirect_loop" };
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
