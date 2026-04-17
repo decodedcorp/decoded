@@ -70,6 +70,7 @@ packages/backend/target/
 
 # Worktrees
 .claude/worktrees/
+.worktrees/
 .vercel
 packages/ai-server/searxng/settings.yml.new
 
