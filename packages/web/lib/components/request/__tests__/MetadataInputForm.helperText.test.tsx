@@ -52,12 +52,17 @@ describe("MetadataInputForm — helper text + dynamic placeholder (ported from P
     ).toBeInTheDocument();
   });
 
-  test("description placeholder defaults to the generic example for user_upload", () => {
+  test("description placeholder uses user_upload example for direct uploads", () => {
     renderForm({ mediaType: "user_upload" });
     expect(
-      screen.getByPlaceholderText(
-        "e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam"
-      )
+      screen.getByPlaceholderText("e.g., your own photo or gallery shot")
+    ).toBeInTheDocument();
+  });
+
+  test("description placeholder uses youtube-specific example", () => {
+    renderForm({ mediaType: "youtube" });
+    expect(
+      screen.getByPlaceholderText("e.g., BLACKPINK channel — dance practice")
     ).toBeInTheDocument();
   });
 

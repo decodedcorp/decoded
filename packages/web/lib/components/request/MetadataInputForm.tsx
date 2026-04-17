@@ -33,7 +33,13 @@ const GROUP_HELPER =
 
 const DEFAULT_MEDIA_PLACEHOLDER =
   "e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam";
+// PR #230 supplied verbatim placeholders for drama / music_video / variety /
+// other. user_upload + youtube were not in PR #230's scope (those types live
+// only in MetadataInputForm), so we add type-consistent fallbacks instead of
+// letting them inherit the drama-flavoured DEFAULT.
 const MEDIA_PLACEHOLDERS: Partial<Record<MediaSourceType, string>> = {
+  user_upload: "e.g., your own photo or gallery shot",
+  youtube: "e.g., BLACKPINK channel — dance practice",
   drama: "e.g., The Glory, Squid Game",
   music_video: "e.g., BLACKPINK - How You Like That",
   variety: "e.g., Running Man, Knowing Bros",
