@@ -7,7 +7,7 @@ tags: [harness, agent, claude-code, gstack, superpowers, omc]
 related:
   - CLAUDE.md
   - docs/wiki/schema/harness.md
-  - docs/agent/ai-playbook-summary.md
+  - docs/ai-playbook/claude-profile.md
 source:
   - https://docs.claude.com/en/docs/claude-code
 ---
