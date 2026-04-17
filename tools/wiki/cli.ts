@@ -19,7 +19,10 @@ async function main(): Promise<number> {
       const { runLint } = await import("./lint.ts");
       return runLint();
     }
-    case "links":
+    case "links": {
+      const { runLinks } = await import("./links.ts");
+      return runLinks();
+    }
     case "ingest":
       process.stderr.write(`TODO: ${subcommand} not yet implemented\n`);
       return EXIT.IO_ERROR;
