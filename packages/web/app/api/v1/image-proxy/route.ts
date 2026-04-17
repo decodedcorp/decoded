@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { isIPv6 } from "node:net";
 import {
   checkRateLimit,
@@ -29,7 +29,7 @@ const REFERER_MAP: Record<string, string> = {
   "pinterest.com": "https://www.pinterest.com/",
 };
 
-// SVG is intentionally excluded — ShopGrid/ImageDetailContent/DecodeShowcase/
+// SVG is intentionally excluded - ShopGrid/ImageDetailContent/DecodeShowcase/
 // MagazineItemsSection call /api/v1/image-proxy via <img src> directly,
 // bypassing Next optimizer. Raw SVG would reach the browser and enable XSS.
 const ALLOWED_CONTENT_TYPES = new Set([
@@ -98,7 +98,7 @@ function isPrivateIPv6(host: string): boolean {
   if (lower === "::1" || lower === "::") return true;
   if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
   if (lower.startsWith("fe80:")) return true;
-  // IPv4-mapped IPv6: ::ffff:a.b.c.d — SSRF bypass defense
+  // IPv4-mapped IPv6: ::ffff:a.b.c.d - SSRF bypass defense
   if (lower.startsWith("::ffff:")) return true;
   return false;
 }
@@ -117,7 +117,7 @@ function validateUrl(
     return { ok: false, code: "invalid_url" };
   }
 
-  // URL.hostname includes [] for IPv6 literals — strip before validation
+  // URL.hostname includes [] for IPv6 literals - strip before validation
   // (net.isIPv6("[::1]") returns false; must strip first)
   const hostname = url.hostname;
   const bare =
@@ -251,47 +251,79 @@ async function readBodyWithCap(
   return { ok: true, buffer, contentType: mime };
 }
 
+function logFailure(
+  code: ErrorCode,
+  url: string,
+  extras?: Record<string, unknown>
+): void {
+  console.error("[image-proxy]", { code, url, ...extras });
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
     return rateLimitResponse(60);
   }
 
-  const url = request.nextUrl.searchParams.get("url");
-
-  if (!url) {
-    return NextResponse.json(
-      { error: "Missing url parameter" },
-      { status: 400 }
-    );
+  const raw = request.nextUrl.searchParams.get("url");
+  if (!raw) {
+    return errorResponse("missing_url", 400);
   }
 
-  try {
-    const response = await fetch(url, {
-      headers: { Accept: "image/*" },
-    });
+  const validation = validateUrl(raw);
+  if (!validation.ok) {
+    logFailure(validation.code, raw);
+    return errorResponse(validation.code, 400);
+  }
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Upstream returned ${response.status}` },
-        { status: response.status }
-      );
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+
+  try {
+    const fetched = await fetchWithRedirect(validation.url, controller.signal);
+    if (!fetched.ok) {
+      logFailure(fetched.code, raw, { upstreamStatus: fetched.status });
+      const status =
+        fetched.code === "timeout"
+          ? 504
+          : fetched.code === "redirect_loop"
+            ? 400
+            : fetched.code === "upstream_error"
+              ? (fetched.status ?? 502)
+              : 502;
+      return errorResponse(fetched.code, status, {
+        upstreamStatus: fetched.status,
+      });
     }
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
+    const body = await readBodyWithCap(fetched.response);
+    if (!body.ok) {
+      logFailure(body.code, raw);
+      const status =
+        body.code === "too_large"
+          ? 413
+          : body.code === "content_type_rejected"
+            ? 415
+            : 502;
+      return errorResponse(body.code, status);
+    }
 
-    return new NextResponse(buffer, {
+    return new Response(body.buffer, {
+      status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": body.contentType,
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
         "Access-Control-Allow-Origin": "*",
       },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch image" },
-      { status: 502 }
-    );
+  } catch (err) {
+    const code: ErrorCode =
+      err instanceof Error && err.name === "AbortError"
+        ? "timeout"
+        : "fetch_failed";
+    logFailure(code, raw, { message: (err as Error)?.message });
+    return errorResponse(code, code === "timeout" ? 504 : 502);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
