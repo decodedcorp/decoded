@@ -62,7 +62,7 @@ export function ExploreClient({
       setQuery(initialQuery);
       setDebouncedQuery(initialQuery);
     }
-  }, []);
+  }, [initialQuery, query, setQuery, setDebouncedQuery]);
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
