@@ -150,8 +150,8 @@ export function DescriptionInput() {
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <span>
             {localValue.length >= MIN_DESCRIPTION_LENGTH
-              ? "AI will extract metadata automatically"
-              : "Enter at least 10 characters"}
+              ? "AI will auto-fill title, year, and platform"
+              : `Enter at least ${MIN_DESCRIPTION_LENGTH} characters to trigger AI extraction`}
           </span>
           <span>
             {localValue.length}/{MAX_DESCRIPTION_LENGTH}

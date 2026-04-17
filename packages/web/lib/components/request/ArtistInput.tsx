@@ -38,7 +38,12 @@ export function ArtistInput({
       {/* Artist Name Input */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-xs text-muted-foreground">Name</label>
+          <div className="space-y-0.5">
+            <label className="block text-xs text-muted-foreground">Name</label>
+            <p className="text-[10px] text-muted-foreground/70">
+              Actor, singer, model, or public figure in the image
+            </p>
+          </div>
           {hasAiRecommendation && !isUsingAiRecommendation && (
             <button
               type="button"
@@ -80,9 +85,14 @@ export function ArtistInput({
 
       {/* Group Name Input */}
       <div className="space-y-2">
-        <label className="block text-xs text-muted-foreground">
-          Group / Agency
-        </label>
+        <div className="space-y-0.5">
+          <label className="block text-xs text-muted-foreground">
+            Group / Agency
+          </label>
+          <p className="text-[10px] text-muted-foreground/70">
+            Group (e.g., BLACKPINK) or agency (e.g., YG Entertainment)
+          </p>
+        </div>
         <input
           type="text"
           value={groupName}
