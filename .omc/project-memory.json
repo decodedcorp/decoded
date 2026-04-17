@@ -184,6 +184,48 @@
   },
   "hotPaths": [
     {
+      "path": "packages/web/app/api/v1/image-proxy/route.ts",
+      "accessCount": 29,
+      "lastAccessed": 1776466352322,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-04-17-229-image-proxy-robustness-design.md",
+      "accessCount": 11,
+      "lastAccessed": 1776433136836,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-04-17-229-image-proxy-robustness.md",
+      "accessCount": 5,
+      "lastAccessed": 1776433394776,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/rate-limit.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776433904397,
+      "type": "file"
+    },
+    {
+      "path": "packages/web/lib/image-loader.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776432841693,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/briefs/229-image-proxy.md",
+      "accessCount": 3,
+      "lastAccessed": 1776432842419,
+      "type": "file"
+    },
+    {
+      "path": "packages/web",
+      "accessCount": 3,
+      "lastAccessed": 1776433000942,
+      "type": "directory"
+    },
+    {
       "path": "CLAUDE.md",
       "accessCount": 2,
       "lastAccessed": 1776391760218,
@@ -196,10 +238,22 @@
       "type": "file"
     },
     {
+      "path": "packages/web/next.config.js",
+      "accessCount": 2,
+      "lastAccessed": 1776432841858,
+      "type": "file"
+    },
+    {
       "path": "scripts/start-issue.sh",
       "accessCount": 1,
       "lastAccessed": 1776391785503,
       "type": "file"
+    },
+    {
+      "path": "packages/web/lib/components/ui/CircularGallery.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776433000408,
+      "type": "directory"
     }
   ],
   "userDirectives": []
