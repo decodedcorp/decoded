@@ -17,18 +17,21 @@ import { useRequestStore } from "@/lib/stores/requestStore";
  */
 export default function InterceptUploadPage() {
   const router = useRouter();
-  const activeInstanceId = useRequestStore((s) => s.activeInstanceId);
 
   const handleClose = useCallback(() => {
-    if (activeInstanceId) {
-      useRequestStore.getState().resetIfActive(activeInstanceId);
+    // Read activeInstanceId via getState (no subscription, no closure trap).
+    // If close fires before useUploadFlow's mount effect committed, id is null
+    // and cleanup falls back to the unmount path inside useUploadFlow.
+    const id = useRequestStore.getState().activeInstanceId;
+    if (id) {
+      useRequestStore.getState().resetIfActive(id);
     }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push("/");
     }
-  }, [activeInstanceId, router]);
+  }, [router]);
 
   return (
     <RequestFlowModal maxWidth="6xl" mobileFullScreen onClose={handleClose}>
