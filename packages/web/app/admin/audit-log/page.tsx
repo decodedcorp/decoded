@@ -218,7 +218,7 @@ export default function AuditLogPage() {
           />
         </div>
 
-        {(actionFilter || tableFilter || dateFrom || dateTo) && (
+        {hasFilter && (
           <button
             onClick={() => {
               setActionFilter("");
@@ -240,7 +240,7 @@ export default function AuditLogPage() {
           <AdminEmptyState
             icon={<ClipboardListIcon className="w-12 h-12" />}
             title="No audit log entries"
-            description="Admin actions will appear here as they happen. Apply a filter or trigger an admin action to populate this log."
+            description="Admin actions will appear here as they happen."
           />
         </div>
       ) : (
