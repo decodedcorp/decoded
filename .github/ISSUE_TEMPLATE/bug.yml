@@ -1,0 +1,88 @@
+name: 🐛 Bug report
+description: 재현 가능한 버그 보고 — 증상·증거·기대값을 분리해서 적어주세요
+title: "bug(<scope>): <한 줄 요약>"
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        증상만 기반으로 이슈를 열면 다른 사람이 **다른 버그를 고치게 될 수 있습니다**. 아래 섹션을 최대한 채워주세요.
+  - type: input
+    id: scope
+    attributes:
+      label: 스코프
+      description: 어느 영역? (web/api/ai/infra/editorial/search/upload 등)
+      placeholder: web / search
+    validations:
+      required: true
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 증상 (What)
+      description: 사용자가 실제로 본 것. 화면 캡처/GIF 권장.
+      placeholder: |
+        - 예: /search?q=블랙핑크 → 결과가 뜨지 않음
+        - 예: Editorial 상세 → Related News 이미지가 깨짐
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 단계
+      description: 다른 사람이 그대로 따라할 수 있는 단계
+      placeholder: |
+        1. dev 서버 기동 (`just local-deps && bun dev`)
+        2. http://localhost:3000/search 진입
+        3. 검색창에 "test" 입력
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 증거 (DevTools / 로그 / 쿼리 응답)
+      description: |
+        증상만으로는 원인이 불명확합니다. 최소 하나 이상 첨부:
+        - **Network**: 요청 URL + 응답 상태 + 응답 바디 (민감정보 마스킹)
+        - **Console**: 에러/경고 메시지
+        - **DB/SQL 결과**: 관련 row 상태 (Supabase Studio 등)
+        - **서버 로그**: `.logs/local/*.log`
+      placeholder: |
+        Request:  GET /api/v1/search?q=test&page=1&limit=40
+        Response: 502 Bad Gateway
+        Body:     {"error":{"code":502,"message":"Advanced search failed..."}}
+        Console:  Failed to load resource: 502 (Bad Gateway)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      placeholder: 검색 결과 그리드가 표시되거나, 최소한 "검색 서비스 일시 장애" 같은 명시적 에러 UI가 나와야 함
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: 가설 (선택)
+      description: 원인에 대한 추측. 확정 아님을 명시. 없으면 비워도 됨.
+      placeholder: |
+        - Meilisearch 미기동? 혹은 `/api/v1/search` 프록시 문제?
+        - useEffect 의존성 누락으로 store 재동기화 실패?
+  - type: textarea
+    id: environment
+    attributes:
+      label: 환경
+      placeholder: |
+        - 브랜치/커밋: dev @ 71eedf42
+        - 로컬: macOS 25.3.0, bun 1.3.10, Node 22
+        - Meilisearch/Redis 기동 여부: ✅ / ❌
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 체크리스트
+      options:
+        - label: 메인 `dev` 브랜치 최신에서 재현됨
+          required: false
+        - label: 이미 있는 이슈를 검색했음 (중복 아님)
+          required: true

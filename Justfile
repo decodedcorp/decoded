@@ -54,4 +54,22 @@ e2e:
 e2e-only PATTERN:
     cd "{{ repo }}/packages/web" && bunx playwright test --grep "{{ PATTERN }}"
 
+# 워크트리 부트스트랩 — env 심볼릭 링크 + bun install + 포트 안내
+# 예:   just worktree-setup .worktrees/149-search-fix
+#       just worktree-setup .worktrees/148-editorial-og 3001
+worktree-setup PATH PORT="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=("{{ PATH }}")
+    if [[ -n "{{ PORT }}" ]]; then args+=(--port "{{ PORT }}"); fi
+    bash "{{ repo }}/scripts/worktree-bootstrap.sh" "${args[@]}"
+
+# 현재 워크트리(cwd)에서 즉시 부트스트랩
+worktree-setup-here PORT="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=(--here)
+    if [[ -n "{{ PORT }}" ]]; then args+=(--port "{{ PORT }}"); fi
+    bash "{{ repo }}/scripts/worktree-bootstrap.sh" "${args[@]}"
+
 
