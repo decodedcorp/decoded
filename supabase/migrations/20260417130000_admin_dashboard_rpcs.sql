@@ -4,10 +4,6 @@
 -- 전용으로 제한하면 별도 클라이언트 레이어가 필요해진다. 보완책으로 함수 내부에서
 -- auth.uid() IS NULL 체크 + public.is_admin(auth.uid()) 가드를 수행한다.
 
--- ── view_logs(created_at) 인덱스 — 나머지 3 로그 테이블은 이미 보유 ────────
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_view_logs_created_at
-  ON public.view_logs(created_at);
-
 -- ── RPC #1: 기간 내 distinct user_id 개수 (DAU/MAU) ────────────────────
 CREATE OR REPLACE FUNCTION public.admin_distinct_user_count(
   p_from_ts TIMESTAMPTZ,
@@ -102,7 +98,7 @@ BEGIN
     days AS (
       SELECT generate_series(
         date_trunc('day', p_from_ts)::date,
-        (date_trunc('day', p_to_ts) - INTERVAL '1 day')::date,
+        date_trunc('day', p_to_ts - INTERVAL '1 microsecond')::date,
         INTERVAL '1 day'
       )::date AS d
     )
