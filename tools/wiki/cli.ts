@@ -23,9 +23,25 @@ async function main(): Promise<number> {
       const { runLinks } = await import("./links.ts");
       return runLinks();
     }
-    case "ingest":
-      process.stderr.write(`TODO: ${subcommand} not yet implemented\n`);
-      return EXIT.IO_ERROR;
+    case "ingest": {
+      const { ingest } = await import("./ingest.ts");
+      const [topic, ...titleParts] = process.argv.slice(3);
+      const title = titleParts.join(" ");
+      if (!topic || !title) {
+        process.stderr.write("Usage: wiki:ingest <topic> <title>\n");
+        return EXIT.IO_ERROR;
+      }
+      try {
+        const result = await ingest(topic, title);
+        process.stdout.write(
+          `created ${result.created}\nupdated ${result.updatedIndex}\n`,
+        );
+        return EXIT.OK;
+      } catch (e) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        return EXIT.IO_ERROR;
+      }
+    }
     case "-h":
     case "--help":
     case undefined:
