@@ -15,6 +15,15 @@ const MEDIA_TYPES: { value: MediaSourceType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+const DEFAULT_TITLE_PLACEHOLDER = "e.g., The Glory, Squid Game";
+const TITLE_PLACEHOLDERS: Partial<Record<MediaSourceType, string>> = {
+  drama: DEFAULT_TITLE_PLACEHOLDER,
+  movie: "e.g., Parasite, Past Lives",
+  music_video: "e.g., BLACKPINK - How You Like That",
+  variety: "e.g., Running Man, Knowing Bros",
+  other: "e.g., brand campaign, magazine cover",
+};
+
 const PLATFORMS = [
   "Netflix",
   "Disney+",
@@ -82,7 +91,12 @@ export function MediaSourceInput({ value, onChange }: MediaSourceInputProps) {
 
       {/* Type Selection */}
       <div className="space-y-2">
-        <label className="block text-xs text-muted-foreground">Type *</label>
+        <div className="space-y-0.5">
+          <label className="block text-xs text-muted-foreground">Type *</label>
+          <p className="text-[10px] text-muted-foreground/70">
+            What kind of media is this image from?
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {MEDIA_TYPES.map(({ value: typeValue, label }) => (
             <button
@@ -111,7 +125,10 @@ export function MediaSourceInput({ value, onChange }: MediaSourceInputProps) {
           type="text"
           value={value?.title || ""}
           onChange={(e) => handleTitleChange(e.target.value)}
-          placeholder="e.g., The Glory, Squid Game"
+          placeholder={
+            (value?.type && TITLE_PLACEHOLDERS[value.type]) ??
+            DEFAULT_TITLE_PLACEHOLDER
+          }
           className="
             w-full px-3 py-2 rounded-lg border border-border
             bg-background text-foreground text-sm
