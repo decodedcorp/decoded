@@ -321,13 +321,78 @@ packages/web/lib/hooks/admin/
 
 ---
 
-## 6. 조사 결과 기록 (Wave 0.5 완료 후 업데이트)
+## 6. 조사 결과 기록 (Wave 0.5 완료)
 
-> 이 섹션은 Wave 0.5 실행 후 채워집니다. 현재는 placeholder.
+> 2026-04-17 조사 완료. 후속 wave에서 이 결과를 전제로 진행.
 
-- `createAdminSupabaseClient()` 존재 여부: (조사 전)
-- `AdminEmptyState` 사용 패턴: (조사 전)
-- Rust audit 인프라: (조사 전)
+### 6.1 `is_admin` SQL 함수 존재 여부
+
+- **결론: 존재하지 않음** (`grep -rn "CREATE OR REPLACE FUNCTION.*is_admin\|CREATE FUNCTION.*is_admin" supabase/migrations/` → 0건)
+- 단 **`users.is_admin` boolean 컬럼**은 존재 (`20260409075040_remote_schema.sql:866`).
+- **영향**: §4.1 migration의 `USING (public.is_admin(auth.uid()))` 정책이 그대로 적용 시 실패함.
+- **결정**: Task 7 migration 파일에 `is_admin(uuid)` SQL 함수를 **반드시 포함**해야 함. 권장 정의:
+
+  ```sql
+  CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID)
+  RETURNS BOOLEAN
+  LANGUAGE sql
+  SECURITY DEFINER
+  STABLE
+  AS $$
+    SELECT COALESCE((SELECT is_admin FROM public.users WHERE id = user_id), false);
+  $$;
+  REVOKE ALL ON FUNCTION public.is_admin(UUID) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated, service_role;
+  ```
+
+  - SECURITY DEFINER + STABLE: RLS 정책에서 호출 시 plan 캐시 가능
+  - `users.is_admin` 컬럼을 단일 진실원으로 사용 (TS 쪽 `checkIsAdmin`과 동일 의미)
+
+### 6.2 `post_magazines` RLS 정책 현황
+
+- `ENABLE ROW LEVEL SECURITY` 활성 (line 2686).
+- 정책: **`"Allow public read" FOR SELECT USING (true)` 단 1건**만 존재 (line 2427).
+- INSERT/UPDATE/DELETE 정책 **없음** → §4.1의 `admin_can_update_magazines` 정책 추가가 정확한 처방.
+- GRANT는 anon/authenticated/service_role 모두 ALL이지만 RLS가 막고 있음.
+
+### 6.3 `checkIsAdmin` 미들웨어 위치
+
+- **파일**: `packages/web/lib/supabase/admin.ts:19`
+- **시그니처**: `checkIsAdmin(supabase: SupabaseClient<Database>, userId: string): Promise<boolean>`
+- **동작**: `users` 테이블에서 `is_admin` 컬럼 조회, 에러/null/false 모두 false 반환.
+- **사용처**: 35+ admin route (proxy.ts, app/admin/layout.tsx, app/api/admin/**, app/api/v1/admin/**)에서 광범위 사용 중.
+- **Task 11/12 import 경로**: `import { checkIsAdmin } from "@/lib/supabase/admin";`
+
+### 6.4 `createAdminSupabaseClient` (service-role 클라이언트) 존재 여부
+
+- **결론: 존재하지 않음** (`grep -rn "createAdminSupabaseClient\|createAdminClient" packages/web` → 0건).
+- 현재 admin route는 모두 `createSupabaseServerClient()` (anon + 쿠키)만 사용.
+- **영향**: §5 Wave 0.5 산출물대로 `packages/web/lib/supabase/admin-server.ts`에 신규 service_role 유틸을 만들어야 함.
+- **단 Wave 2 한정 대안**: `update_magazine_status` RPC가 `SECURITY DEFINER`라면, anon 클라이언트로도 호출 가능. RPC 도입 시 service_role 클라이언트 신규 생성을 **선택 사항**으로 격하 가능 (단, RPC 내부에서 `checkIsAdmin(p_admin_user_id)` 검증을 권장).
+
+### 6.5 `AdminEmptyState` 사용 패턴
+
+- **실제 경로**: `packages/web/lib/components/admin/common/AdminEmptyState.tsx` (스펙 §5 Wave 0.5에 기재된 `shared/` 경로는 **오타** — `common/` 으로 정정 필요).
+- **Import 패턴**: `import { AdminEmptyState } from "@/lib/components/admin/common";` (배럴 export 사용).
+- **Props**: `icon`, `title`, `description`.
+- **기존 사용처 (5개)**: `server-logs`, `pipeline-logs`, `ai-cost`, `ai-audit` 페이지에서 동일 패턴으로 적용. (`audit-log`는 본 PR Wave 1에서 추가 예정.)
+- **Wave 1 가이드**: 기존 5개 페이지 어느 것이든 모범 예시로 사용. 새 패턴 도입 금지.
+
+### 6.6 Rust audit 인프라
+
+- `packages/api-server/src/` 트리에 `audit` 명칭의 파일/모듈 **없음** (`grep -rn "audit" packages/api-server/src/` → 0건, 관련 모듈 부재 확인).
+- 디렉토리 구성: `batch/ bin/ config.rs constants.rs domains/ entities/ error.rs grpc/ handlers.rs lib.rs main.rs metrics/ middleware/ observability/ openapi.rs router.rs services/ tests/ utils/`.
+- **결론**: Rust 쪽은 audit 인프라가 전무 → **#152 별도 이슈로 분리**한다는 §2.2 결정이 정확. 본 PR에서 다루지 않음.
+
+### 6.7 후속 task 영향 요약
+
+| 후속 Task              | 본 조사로 인한 변경                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Task 7 (migration)     | **`is_admin(UUID)` 함수 정의를 migration 파일에 추가** (§6.1 정의 사용). `approved_by`/`rejection_reason` 추가는 동일. |
+| Task 7 (RLS 정책)      | `admin_can_update_magazines` 정책의 `public.is_admin(auth.uid())` 호출은 함수 추가 후 정상 동작.                       |
+| Task 11/12 (API route) | `import { checkIsAdmin } from "@/lib/supabase/admin"` 사용. service_role 클라이언트 신규 생성은 RPC 도입 시 선택.      |
+| Wave 1 (empty state)   | `AdminEmptyState` 경로는 `common/` (스펙 §5의 `shared/` 표기는 정정 필요). 기존 5개 사용처를 모범 예시로.              |
+| #152 분리 결정         | Rust audit 인프라 부재 재확인 → 별도 이슈 처리 결정 유지.                                                              |
 
 ---
 
