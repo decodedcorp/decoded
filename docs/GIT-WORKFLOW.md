@@ -178,3 +178,52 @@ hotfix/*  ──PR──▶ main (긴급 시에만)
 ## 릴리스 플로우
 
 `dev` → `main` PR 머지 시 Vercel 자동 배포. 별도 릴리스 브랜치 없음.
+
+## 워크트리 (병렬 피처 작업)
+
+여러 피처/버그를 동시에 진행하거나, 장시간 dev 서버 없이 코드만 만지는 경우 [git worktree](https://git-scm.com/docs/git-worktree)를 사용.
+
+### 기본 사용
+
+```bash
+# 1) 워크트리 생성 — dev 기준 새 feature 브랜치
+git worktree add .worktrees/149-search-fix -b feature/149-search-fix dev
+
+# 2) 부트스트랩 — env 심볼릭 링크 + bun install
+just worktree-setup .worktrees/149-search-fix
+
+# 3) 여러 워크트리 동시에 dev 서버 띄우려면 포트 분리
+just worktree-setup .worktrees/148-editorial-og 3001
+```
+
+### 폴더 규칙
+
+- **위치**: `.worktrees/<branch-slug>/` (gitignored, 하이든 폴더)
+- **이름**: 이슈 번호 + 짧은 슬러그 (`149-search-fix`)
+- **브랜치**: `feature/<issue>-<slug>` 또는 `fix/*`
+- 메인 워크트리에서는 부트스트랩 실행하지 않음 (스크립트가 거부함)
+
+### 부트스트랩이 하는 일
+
+`scripts/worktree-bootstrap.sh` = `just worktree-setup`:
+
+1. 메인 워크트리에서 `.env.local`, `.env.backend.dev`, `packages/web/.playwright/`를 **심볼릭 링크** (수정이 즉시 모든 워크트리에 반영됨)
+2. `bun install` 실행 (워크트리 node_modules 동기화)
+3. `--port <N>` 지정 시 `packages/web/.env.local.port` 메모 파일 + `PORT=<N> bun dev` 안내
+
+### 수동 QA 패턴
+
+- **단일 수정 QA**: 해당 워크트리에서 바로 `bun dev` (포트 3000)
+- **여러 수정 합쳐서 QA**: 메인 워크트리에 `qa/*` 브랜치 만들어 피처 브랜치들 머지 → QA → PR 각자 올림
+- **병렬 QA**: 각 워크트리에 포트 다르게 (3001/3002) 부트스트랩 → 동시에 `bun dev`
+
+### 정리
+
+```bash
+# 브랜치 유지 + 폴더 삭제
+git worktree remove .worktrees/149-search-fix
+
+# 브랜치까지 삭제
+git worktree remove .worktrees/149-search-fix
+git branch -D feature/149-search-fix
+```
