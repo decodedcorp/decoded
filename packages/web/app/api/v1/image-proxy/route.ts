@@ -74,6 +74,72 @@ function errorResponse(
   );
 }
 
+function isPrivateIPv4(host: string): boolean {
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return false;
+  const parts = host.split(".").map((p) => Number(p));
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+  ) {
+    return false;
+  }
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
+}
+
+function isPrivateIPv6(host: string): boolean {
+  const lower = host.toLowerCase();
+  if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  if (lower.startsWith("fe80:")) return true;
+  // IPv4-mapped IPv6: ::ffff:a.b.c.d — SSRF bypass defense
+  if (lower.startsWith("::ffff:")) return true;
+  return false;
+}
+
+function validateUrl(
+  raw: string
+): { ok: true; url: URL } | { ok: false; code: ErrorCode } {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { ok: false, code: "invalid_url" };
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { ok: false, code: "invalid_url" };
+  }
+
+  // URL.hostname includes [] for IPv6 literals — strip before validation
+  // (net.isIPv6("[::1]") returns false; must strip first)
+  const hostname = url.hostname;
+  const bare =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
+
+  if (bare === "localhost" || bare === "") {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  if (isPrivateIPv4(bare)) {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  if (isIPv6(bare) && isPrivateIPv6(bare)) {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  return { ok: true, url };
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
