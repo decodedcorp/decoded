@@ -229,7 +229,7 @@ GRANT EXECUTE ON FUNCTION public.update_magazine_status TO authenticated;
 1. `createSupabaseServerClient()` 호출 시 service_role 키를 사용하는 admin 전용 변형이 있는지 확인
    - 없으면 **신규 `createAdminSupabaseClient()` 유틸** 생성 (service_role + 쿠키 미사용)
    - 파일: `packages/web/lib/supabase/admin-server.ts`
-2. 기존 `AdminEmptyState` 컴포넌트 props/variants 확인 (`packages/web/lib/components/admin/shared/AdminEmptyState.tsx` 존재 확인)
+2. 기존 `AdminEmptyState` 컴포넌트 props/variants 확인 (`packages/web/lib/components/admin/common/AdminEmptyState.tsx` 존재 확인)
 3. Rust API에 audit 관련 구조 존재 여부 재확인 (#152 범위 확정용)
 
 **산출물**: 코드 변경 없음. 조사 결과 스펙에 주석 형태로 남김 (본 문서 6절).
@@ -338,6 +338,7 @@ packages/web/lib/hooks/admin/
   LANGUAGE sql
   SECURITY DEFINER
   STABLE
+  SET search_path = public, pg_temp
   AS $$
     SELECT COALESCE((SELECT is_admin FROM public.users WHERE id = user_id), false);
   $$;
@@ -375,8 +376,8 @@ packages/web/lib/hooks/admin/
 - **실제 경로**: `packages/web/lib/components/admin/common/AdminEmptyState.tsx` (스펙 §5 Wave 0.5에 기재된 `shared/` 경로는 **오타** — `common/` 으로 정정 필요).
 - **Import 패턴**: `import { AdminEmptyState } from "@/lib/components/admin/common";` (배럴 export 사용).
 - **Props**: `icon`, `title`, `description`.
-- **기존 사용처 (5개)**: `server-logs`, `pipeline-logs`, `ai-cost`, `ai-audit` 페이지에서 동일 패턴으로 적용. (`audit-log`는 본 PR Wave 1에서 추가 예정.)
-- **Wave 1 가이드**: 기존 5개 페이지 어느 것이든 모범 예시로 사용. 새 패턴 도입 금지.
+- **기존 사용처 (4개)**: `app/admin/ai-audit/page.tsx`, `app/admin/ai-cost/page.tsx`, `app/admin/pipeline-logs/page.tsx`, `app/admin/server-logs/page.tsx`에서 동일 패턴으로 적용 (검증 명령: `grep -rln "AdminEmptyState" packages/web/app/admin/`). 컴포넌트 정의 파일과 배럴(`index.ts`)은 사용처 카운트에서 제외. (`audit-log`는 본 PR Wave 1에서 추가 예정.)
+- **Wave 1 가이드**: 기존 4개 페이지(`ai-audit`, `ai-cost`, `pipeline-logs`, `server-logs`) 어느 것이든 모범 예시로 사용. 새 패턴 도입 금지.
 
 ### 6.6 Rust audit 인프라
 
