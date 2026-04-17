@@ -1,3 +1,11 @@
+---
+title: "#239 — admin dashboard RPC (unbounded row fetch 제거)"
+owner: human
+status: draft
+updated: 2026-04-17
+tags: [db, api]
+---
+
 # #239 — admin dashboard RPC (unbounded row fetch 제거)
 
 **Status**: Design approved (2026-04-17)
