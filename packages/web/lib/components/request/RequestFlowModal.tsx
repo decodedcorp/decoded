@@ -6,15 +6,28 @@ import { X } from "lucide-react";
 import { gsap } from "gsap";
 import { getRequestActions } from "@/lib/stores/requestStore";
 
+type MaxWidth = "4xl" | "5xl" | "6xl" | "7xl";
+
+const MAX_WIDTH_CLASS: Record<MaxWidth, string> = {
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
 interface RequestFlowModalProps {
   children: React.ReactNode;
+  maxWidth?: MaxWidth;
 }
 
 /**
  * Modal wrapper for request flow (upload/detect) on desktop
  * Uses intercepting routes to show request pages as modal overlay
  */
-export function RequestFlowModal({ children }: RequestFlowModalProps) {
+export function RequestFlowModal({
+  children,
+  maxWidth = "4xl",
+}: RequestFlowModalProps) {
   const router = useRouter();
 
   // Refs for animation
@@ -132,7 +145,8 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
       {/* Modal Container */}
       <div
         ref={modalRef}
-        className="relative z-10 flex flex-col w-full max-w-4xl max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden"
+        data-testid="request-flow-modal-dialog"
+        className={`relative z-10 flex flex-col w-full ${MAX_WIDTH_CLASS[maxWidth]} max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden`}
       >
         {/* Close Button */}
         <button
