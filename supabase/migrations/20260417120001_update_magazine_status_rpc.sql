@@ -21,7 +21,7 @@ BEGIN
   SELECT * INTO v_before FROM public.post_magazines
     WHERE id = p_magazine_id FOR UPDATE;
 
-  IF v_before IS NULL THEN
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'magazine_not_found' USING ERRCODE = 'P0002';
   END IF;
 
@@ -68,7 +68,7 @@ BEGIN
     jsonb_build_object('rejection_reason', p_rejection_reason)
   );
 
-  RETURN QUERY SELECT * FROM public.post_magazines WHERE id = p_magazine_id;
+  RETURN NEXT v_after;
 END;
 $$;
 
