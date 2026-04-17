@@ -1,4 +1,12 @@
-# Spec — #229 image-proxy robustness (UA / Referer / timeout / size-guard / SSRF)
+---
+title: "image-proxy robustness (UA / Referer / timeout / size-guard / SSRF)"
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [api, security, ops]
+---
+
+# image-proxy robustness (UA / Referer / timeout / size-guard / SSRF)
 
 **Issue**: #229
 **Branch**: `fix/229-image-proxy-robustness`
