@@ -157,7 +157,10 @@ class LinkAIAnalyzer:
             messages.append(
                 LLMMessage(
                     role="user",
-                    content="Summarize the content of this link in 1-2 sentences and put it in the summary field (English).",
+                    content=(
+                        "Summarize the content of this link in 1-2 sentences "
+                        "and put it in the summary field (English)."
+                    ),
                 )
             )
             messages.append(

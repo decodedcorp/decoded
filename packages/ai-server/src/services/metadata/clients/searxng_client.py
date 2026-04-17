@@ -385,7 +385,6 @@ class SearXNGClient:
 
         # Check title/content for relevance
         title = result.get("title", "").lower()
-        content = result.get("content", "").lower()
 
         # Skip if title suggests it's not a main content image
         skip_title_patterns = ["icon", "logo", "button", "banner", "avatar", "thumbnail"]

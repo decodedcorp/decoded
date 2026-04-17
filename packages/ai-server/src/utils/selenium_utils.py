@@ -100,7 +100,7 @@ def enhance_stealth_setup(
                         length: 4,
                         refresh: function() {},
                         item: function(index) { return this[index] },
-                        namedItem: function(name) { 
+                        namedItem: function(name) {
                             return Object.values(this).find(plugin => plugin.name === name);
                         }
                     };

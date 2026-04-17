@@ -77,10 +77,12 @@ class ResultAggregator:
                 backend_address = (
                     f"{self.environment.grpc_backend_host}:{self.environment.grpc_backend_port}"
                 )
+                grpc_port = self.environment.grpc_backend_port
                 self.logger.warning(
-                    f"Connection timeout/error for batch {batch_id} on attempt {attempt + 1}: {str(e)}. "
+                    f"Connection timeout/error for batch {batch_id} on attempt {attempt + 1}: "
+                    f"{str(e)}. "
                     f"Backend server at {backend_address} may be unreachable or slow to respond. "
-                    f"Please verify: 1) Backend server is running, 2) Port {self.environment.grpc_backend_port} is accessible, "
+                    f"Please verify: 1) Backend server is running, 2) Port {grpc_port} is accessible, "
                     f"3) Docker network configuration allows connection to host.docker.internal"
                 )
                 if attempt < max_retries - 1:

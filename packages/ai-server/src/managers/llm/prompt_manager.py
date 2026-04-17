@@ -103,7 +103,7 @@ class PromptManager:
         try:
             self.env.get_template(template_name)
             return True
-        except:
+        except Exception:
             return False
 
     def list_templates(self) -> list[str]:

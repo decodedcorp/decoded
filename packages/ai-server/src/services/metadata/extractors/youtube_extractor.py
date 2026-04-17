@@ -145,17 +145,17 @@ class YouTubeExtractor(BaseExtractor):
             try:
                 transcript = transcript_list.find_manually_created_transcript([preferred_language])
                 self.logger.debug(f"✓ Using {preferred_language} manual transcript")
-            except:
+            except Exception:
                 # 2. Preferred language auto-generated transcript
                 try:
                     transcript = transcript_list.find_generated_transcript([preferred_language])
                     self.logger.debug(f"✓ Using {preferred_language} auto-generated transcript")
-                except:
+                except Exception:
                     # 3. English transcript
                     try:
                         transcript = transcript_list.find_transcript(["en"])
                         self.logger.debug("✓ Using English transcript")
-                    except:
+                    except Exception:
                         # 4. First available transcript
                         transcript = next(iter(transcript_list))
                         self.logger.debug(f"✓ Using {transcript.language} transcript")
@@ -177,8 +177,10 @@ class YouTubeExtractor(BaseExtractor):
                     if last_period > max_transcript_length * 0.8:  # If period is in last 20%
                         full_text = full_text[: last_period + 1]
                 full_text += " [transcript truncated for optimization]"
+                original_length = len(" ".join([item.text for item in transcript_data.snippets]))
                 self.logger.info(
-                    f"Truncated transcript for video {video_id}: original length {len(' '.join([item.text for item in transcript_data.snippets]))} chars -> {len(full_text)} chars"
+                    f"Truncated transcript for video {video_id}: "
+                    f"original length {original_length} chars -> {len(full_text)} chars"
                 )
 
             return {
