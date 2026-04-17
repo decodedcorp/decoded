@@ -10,7 +10,7 @@ related:
   - docs/wiki/wiki/INDEX.md
 ---
 
-# Wiki Entry
+# Wiki Entry — How Agents Use docs/wiki
 
 Claude / Cursor / 기타 에이전트가 `docs/wiki/`를 어떻게 사용하는지 진입 가이드.
 

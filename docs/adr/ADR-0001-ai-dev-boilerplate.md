@@ -1,3 +1,11 @@
+---
+title: "ADR-0001: Multi-AI Development Boilerplate"
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [harness, agent]
+---
+
 # ADR-0001: Multi-AI Development Boilerplate
 
 ## Status

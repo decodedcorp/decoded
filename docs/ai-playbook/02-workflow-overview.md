@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, harness]
 ---
 
-# 워크플로우 개요 (v1.0)
+# AI Playbook — Workflow Overview
 
 **최종 검증**: 2025-01-27
 **버전**: 1.0

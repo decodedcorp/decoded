@@ -1,3 +1,11 @@
+---
+title: Supabase RLS & Security Hardening
+owner: human
+status: draft
+updated: 2026-04-04
+tags: [security, db]
+---
+
 # Supabase RLS & Security Hardening
 
 **Date:** 2026-04-04
@@ -9,6 +17,7 @@
 ## 1. Background
 
 Supabase Security Advisor에서 CRITICAL/WARN 이슈 발견:
+
 - **RLS 미적용**: public 스키마 34개 테이블
 - **민감 컬럼 노출**: `user_social_accounts.access_token/refresh_token`이 anon key로 접근 가능
 - **SECURITY DEFINER 뷰**: `explore_posts`가 뷰 생성자 권한으로 실행
@@ -39,28 +48,29 @@ CREATE POLICY "Allow public read" ON public.{table} FOR SELECT USING (true);
 
 **대상 테이블:**
 
-| 테이블 | 비고 |
-|--------|------|
-| `categories` | 참조 데이터 |
-| `subcategories` | 참조 데이터 |
-| `badges` | 뱃지 목록 |
-| `user_badges` | 뱃지 할당 (공개) |
-| `posts` | 게스트 브라우징 |
-| `spots` | 포스트 하위 |
-| `solutions` | 포스트 하위 |
-| `post_magazines` | 매거진 |
-| `magazines` | 매거진 시스템 |
-| `magazine_posts` | 매거진-포스트 연결 |
-| `comments` | 공개 댓글 |
-| `curations` | 큐레이션 |
-| `curation_posts` | 큐레이션 연결 |
-| `synonyms` | 검색 동의어 |
-| `seaql_migrations` | 마이그레이션 기록 |
-| `embeddings` | 벡터 임베딩 |
-| `votes` | 투표 (공개) |
-| `user_follows` | 팔로우 그래프 (공개 읽기) |
+| 테이블             | 비고                      |
+| ------------------ | ------------------------- |
+| `categories`       | 참조 데이터               |
+| `subcategories`    | 참조 데이터               |
+| `badges`           | 뱃지 목록                 |
+| `user_badges`      | 뱃지 할당 (공개)          |
+| `posts`            | 게스트 브라우징           |
+| `spots`            | 포스트 하위               |
+| `solutions`        | 포스트 하위               |
+| `post_magazines`   | 매거진                    |
+| `magazines`        | 매거진 시스템             |
+| `magazine_posts`   | 매거진-포스트 연결        |
+| `comments`         | 공개 댓글                 |
+| `curations`        | 큐레이션                  |
+| `curation_posts`   | 큐레이션 연결             |
+| `synonyms`         | 검색 동의어               |
+| `seaql_migrations` | 마이그레이션 기록         |
+| `embeddings`       | 벡터 임베딩               |
+| `votes`            | 투표 (공개)               |
+| `user_follows`     | 팔로우 그래프 (공개 읽기) |
 
 **`posts` 추가 정책** (소유자 쓰기):
+
 ```sql
 CREATE POLICY "Owner insert posts" ON public.posts
   FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -71,6 +81,7 @@ CREATE POLICY "Owner delete posts" ON public.posts
 ```
 
 **`comments` 추가 정책** (인증 사용자 쓰기):
+
 ```sql
 CREATE POLICY "Auth insert comments" ON public.comments
   FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -79,6 +90,7 @@ CREATE POLICY "Owner delete comments" ON public.comments
 ```
 
 **`user_follows` 추가 정책** (팔로우 관리):
+
 ```sql
 CREATE POLICY "Auth insert follows" ON public.user_follows
   FOR INSERT WITH CHECK (auth.uid() = follower_id);
@@ -87,6 +99,7 @@ CREATE POLICY "Owner delete follows" ON public.user_follows
 ```
 
 **`votes` 추가 정책**:
+
 ```sql
 CREATE POLICY "Auth insert votes" ON public.votes
   FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -107,20 +120,21 @@ CREATE POLICY "Owner update" ON public.{table} FOR UPDATE USING (auth.uid() = {u
 CREATE POLICY "Owner delete" ON public.{table} FOR DELETE USING (auth.uid() = {uid_col});
 ```
 
-| 테이블 | uid 컬럼 | SELECT 예외 | 비고 |
-|--------|----------|------------|------|
-| `users` | `id` | public read (프로필 공개) | UPDATE/DELETE만 소유자 |
-| `user_social_accounts` | `user_id` | 없음 (완전 비공개) | **CRITICAL: 토큰 보호** |
-| `user_magazines` | `user_id` | 없음 | 개인 매거진 컬렉션 |
-| `user_collections` | `user_id` | 없음 | 개인 컬렉션 |
-| `post_likes` | `user_id` | 없음 | 좋아요 (비공개) |
-| `saved_posts` | `user_id` | 없음 | 저장 (비공개) |
-| `click_logs` | `user_id` | 없음 | 클릭 로그 |
-| `view_logs` | `user_id` | 없음 | 조회 로그 |
-| `credit_transactions` | `user_id` | 없음 | 크레딧 내역 |
-| `content_reports` | `reporter_id` | 없음 | 신고 내역 |
+| 테이블                 | uid 컬럼      | SELECT 예외               | 비고                    |
+| ---------------------- | ------------- | ------------------------- | ----------------------- |
+| `users`                | `id`          | public read (프로필 공개) | UPDATE/DELETE만 소유자  |
+| `user_social_accounts` | `user_id`     | 없음 (완전 비공개)        | **CRITICAL: 토큰 보호** |
+| `user_magazines`       | `user_id`     | 없음                      | 개인 매거진 컬렉션      |
+| `user_collections`     | `user_id`     | 없음                      | 개인 컬렉션             |
+| `post_likes`           | `user_id`     | 없음                      | 좋아요 (비공개)         |
+| `saved_posts`          | `user_id`     | 없음                      | 저장 (비공개)           |
+| `click_logs`           | `user_id`     | 없음                      | 클릭 로그               |
+| `view_logs`            | `user_id`     | 없음                      | 조회 로그               |
+| `credit_transactions`  | `user_id`     | 없음                      | 크레딧 내역             |
+| `content_reports`      | `reporter_id` | 없음                      | 신고 내역               |
 
 **`users` 특수 정책** (공개 프로필 + 소유자 수정):
+
 ```sql
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read profiles" ON public.users FOR SELECT USING (true);
@@ -136,19 +150,19 @@ ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;
 -- 정책 없음 = 모든 접근 차단 (anon key)
 ```
 
-| 테이블 | 이유 |
-|--------|------|
-| `agent_sessions` | AI 에이전트 세션 |
-| `checkpoints` | LangGraph 체크포인트 |
-| `checkpoint_blobs` | LangGraph 블롭 |
-| `checkpoint_writes` | LangGraph 쓰기 |
+| 테이블                  | 이유                   |
+| ----------------------- | ---------------------- |
+| `agent_sessions`        | AI 에이전트 세션       |
+| `checkpoints`           | LangGraph 체크포인트   |
+| `checkpoint_blobs`      | LangGraph 블롭         |
+| `checkpoint_writes`     | LangGraph 쓰기         |
 | `checkpoint_migrations` | LangGraph 마이그레이션 |
-| `processed_batches` | ETL 배치 처리 |
-| `failed_batch_items` | ETL 실패 항목 |
-| `search_logs` | 서버 로깅 |
-| `point_logs` | 포인트 내부 기록 |
-| `earnings` | 정산 |
-| `settlements` | 정산 |
+| `processed_batches`     | ETL 배치 처리          |
+| `failed_batch_items`    | ETL 실패 항목          |
+| `search_logs`           | 서버 로깅              |
+| `point_logs`            | 포인트 내부 기록       |
+| `earnings`              | 정산                   |
+| `settlements`           | 정산                   |
 
 ---
 
@@ -205,16 +219,17 @@ Supabase 대시보드 > Authentication > Settings에서 활성화.
 
 총 4개 마이그레이션으로 분리:
 
-| # | 마이그레이션 | 내용 |
-|---|-------------|------|
-| 1 | `rls_public_read_tables` | 18개 Public Read 테이블 RLS + 정책 |
-| 2 | `rls_user_scoped_tables` | 10개 User-scoped 테이블 RLS + 정책 |
-| 3 | `rls_internal_only_tables` | 11개 Internal 테이블 RLS (정책 없음) |
-| 4 | `security_hardening_views_functions` | explore_posts 뷰 전환 + search_path + extension 이동 |
+| #   | 마이그레이션                         | 내용                                                 |
+| --- | ------------------------------------ | ---------------------------------------------------- |
+| 1   | `rls_public_read_tables`             | 18개 Public Read 테이블 RLS + 정책                   |
+| 2   | `rls_user_scoped_tables`             | 10개 User-scoped 테이블 RLS + 정책                   |
+| 3   | `rls_internal_only_tables`           | 11개 Internal 테이블 RLS (정책 없음)                 |
+| 4   | `security_hardening_views_functions` | explore_posts 뷰 전환 + search_path + extension 이동 |
 
 ### 롤백 전략
 
 모든 마이그레이션에 롤백 SQL 포함:
+
 ```sql
 -- Rollback: ALTER TABLE public.{table} DISABLE ROW LEVEL SECURITY;
 -- Rollback: DROP POLICY IF EXISTS "policy_name" ON public.{table};

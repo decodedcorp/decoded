@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, design-system]
 ---
 
-# v2.0 Design System (LLM quick reference)
+# Design System — LLM Reference
 
 Implementation: `packages/web/lib/design-system/`. Human-facing 토큰·패턴 상세는 [docs/design-system/](../design-system/)를 SSOT로 둡니다.
 

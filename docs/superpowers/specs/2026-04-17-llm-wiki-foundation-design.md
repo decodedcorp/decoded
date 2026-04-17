@@ -1,8 +1,10 @@
 ---
 title: LLM Wiki Foundation — Docs Consolidation & Agent Harness Schema (Phase 1)
 date: 2026-04-17
+updated: 2026-04-17
 owner: human
 status: approved
+tags: [harness, agent]
 issue: https://github.com/decodedcorp/decoded/issues/153
 pr: https://github.com/decodedcorp/decoded/pull/223
 phase: Sub-1 + Sub-2 (LLM Wiki Foundation)
@@ -13,7 +15,7 @@ related:
   - CLAUDE.md
 ---
 
-# LLM Wiki Foundation — Design (Phase 1)
+# LLM Wiki Foundation — Docs Consolidation & Agent Harness Schema (Phase 1)
 
 ## 1. Background
 

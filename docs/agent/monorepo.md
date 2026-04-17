@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, architecture]
 ---
 
-# Monorepo overview & commands
+# Monorepo — Agent Reference
 
 Paths are relative to the repository root unless noted.
 

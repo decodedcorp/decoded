@@ -1,3 +1,11 @@
+---
+title: ItemImage 컴포넌트 통일 설계
+owner: human
+status: draft
+updated: 2026-04-02
+tags: [ui]
+---
+
 # ItemImage 컴포넌트 통일 설계
 
 > 프로젝트 전역의 아이템 이미지 표시를 하나의 공통 컴포넌트로 통일하여 일관된 UI 제공
@@ -5,6 +13,7 @@
 ## 문제
 
 현재 7개 컴포넌트에서 아이템 이미지를 각각 다르게 렌더링:
+
 - 서로 다른 aspect-ratio (square, 4/3, 3/2, 4/5)
 - `object-cover`로 인한 잘림
 - next/image와 plain `<img>` 혼재
@@ -28,7 +37,7 @@
 interface ItemImageProps {
   src: string;
   alt: string;
-  size: 'thumbnail' | 'card' | 'detail' | 'hero';
+  size: "thumbnail" | "card" | "detail" | "hero";
   className?: string;
   imgClassName?: string;
   priority?: boolean;
@@ -39,12 +48,12 @@ interface ItemImageProps {
 
 ### Size 프리셋
 
-| 프리셋 | 용도 | aspect-ratio | sizes (next/image) | blur 배경 |
-|--------|------|-------------|---------------------|-----------|
-| `thumbnail` | SolutionCard, DecodeShowcase 썸네일 | 1:1 | `56px` | 없음 (bg-muted) |
-| `card` | ShopGrid, MagazineItems 카드 | 3:4 | `(max-width: 768px) 50vw, 25vw` | 있음 |
-| `detail` | ItemDetailCard | 3:4 | `(max-width: 768px) 100vw, 800px` | 있음 |
-| `hero` | 모달 메인 이미지 (미래 사용) | 3:4 | `(max-width: 768px) 100vw, 50vw` | 있음 |
+| 프리셋      | 용도                                | aspect-ratio | sizes (next/image)                | blur 배경       |
+| ----------- | ----------------------------------- | ------------ | --------------------------------- | --------------- |
+| `thumbnail` | SolutionCard, DecodeShowcase 썸네일 | 1:1          | `56px`                            | 없음 (bg-muted) |
+| `card`      | ShopGrid, MagazineItems 카드        | 3:4          | `(max-width: 768px) 50vw, 25vw`   | 있음            |
+| `detail`    | ItemDetailCard                      | 3:4          | `(max-width: 768px) 100vw, 800px` | 있음            |
+| `hero`      | 모달 메인 이미지 (미래 사용)        | 3:4          | `(max-width: 768px) 100vw, 50vw`  | 있음            |
 
 ### 렌더링 구조
 
@@ -77,15 +86,15 @@ container (relative, overflow-hidden, aspect-ratio per preset)
 
 ## 교체 대상
 
-| # | 컴포넌트 | 파일 | 현재 방식 | → ItemImage size |
-|---|----------|------|----------|-----------------|
-| 1 | ShopGrid 아이템 카드 | `detail/ShopGrid.tsx:260` | `aspect-square` + next/image + `object-cover` | `card` |
-| 2 | ItemDetailCard | `detail/ItemDetailCard.tsx:118` | `aspect-[4/3]→md:aspect-[3/2]` + next/image + `object-contain` | `detail` |
-| 3 | TopSolutionCard | `detail/TopSolutionCard.tsx:74` | `w-14 h-14` + plain `<img>` + `object-cover` | `thumbnail` |
-| 4 | OtherSolutionsList | `detail/OtherSolutionsList.tsx:99` | `w-10 h-10` + plain `<img>` + `object-cover` | `thumbnail` |
-| 5 | MagazineItemsSection 메인 | `magazine/MagazineItemsSection.tsx:130` | `aspect-square w-72/w-80` + next/image + `object-cover` | `card` |
-| 6 | MagazineItemsSection 그리드 | `magazine/MagazineItemsSection.tsx:236` | `aspect-square` + next/image + `object-cover` | `card` |
-| 7 | DecodeShowcase 썸네일 | `main-renewal/DecodeShowcase.tsx:321,362` | `w-14 h-14` + next/image + `object-cover` | `thumbnail` |
+| #   | 컴포넌트                    | 파일                                      | 현재 방식                                                      | → ItemImage size |
+| --- | --------------------------- | ----------------------------------------- | -------------------------------------------------------------- | ---------------- |
+| 1   | ShopGrid 아이템 카드        | `detail/ShopGrid.tsx:260`                 | `aspect-square` + next/image + `object-cover`                  | `card`           |
+| 2   | ItemDetailCard              | `detail/ItemDetailCard.tsx:118`           | `aspect-[4/3]→md:aspect-[3/2]` + next/image + `object-contain` | `detail`         |
+| 3   | TopSolutionCard             | `detail/TopSolutionCard.tsx:74`           | `w-14 h-14` + plain `<img>` + `object-cover`                   | `thumbnail`      |
+| 4   | OtherSolutionsList          | `detail/OtherSolutionsList.tsx:99`        | `w-10 h-10` + plain `<img>` + `object-cover`                   | `thumbnail`      |
+| 5   | MagazineItemsSection 메인   | `magazine/MagazineItemsSection.tsx:130`   | `aspect-square w-72/w-80` + next/image + `object-cover`        | `card`           |
+| 6   | MagazineItemsSection 그리드 | `magazine/MagazineItemsSection.tsx:236`   | `aspect-square` + next/image + `object-cover`                  | `card`           |
+| 7   | DecodeShowcase 썸네일       | `main-renewal/DecodeShowcase.tsx:321,362` | `w-14 h-14` + next/image + `object-cover`                      | `thumbnail`      |
 
 ## 교체하지 않는 것
 
