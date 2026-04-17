@@ -45,4 +45,34 @@ describe("createAdminSupabaseClient", () => {
     const client = createAdminSupabaseClient();
     expect(client).toBeDefined();
   });
+
+  it("passes service_role key and disables session to createClient", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const { createAdminSupabaseClient } = await import("../admin-server");
+    createAdminSupabaseClient();
+
+    expect(createClient).toHaveBeenCalledWith(
+      "https://test.supabase.co",
+      "test-service-role",
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          persistSession: false,
+          autoRefreshToken: false,
+        }),
+      })
+    );
+  });
+
+  it("throws when SUPABASE_SERVICE_ROLE_KEY is empty string", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+
+    const { createAdminSupabaseClient } = await import("../admin-server");
+    expect(() => createAdminSupabaseClient()).toThrow(
+      /SUPABASE_SERVICE_ROLE_KEY/
+    );
+  });
 });

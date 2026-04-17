@@ -2,16 +2,17 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { getEnv } from "./env";
 
-const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-
 /**
  * Server-only Supabase client with service_role key.
  *
  * Bypasses RLS. Use ONLY in admin-authenticated route handlers
  * after `checkIsAdmin()` has verified the caller. Never import
  * from a Client Component or expose the returned client to the browser.
+ *
+ * @throws Error if SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is missing.
  */
 export function createAdminSupabaseClient() {
+  const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
     throw new Error(
