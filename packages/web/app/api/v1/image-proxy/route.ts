@@ -140,6 +140,15 @@ function validateUrl(
   return { ok: true, url };
 }
 
+function resolveReferer(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+  if (REFERER_MAP[host]) return REFERER_MAP[host];
+  for (const key of Object.keys(REFERER_MAP)) {
+    if (host.endsWith("." + key)) return REFERER_MAP[key];
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
