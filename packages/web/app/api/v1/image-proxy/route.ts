@@ -158,6 +158,8 @@ async function fetchWithRedirect(
 > {
   let currentUrl = initial;
 
+  // Iterations: initial fetch + up to MAX_REDIRECTS follows (4 total with MAX_REDIRECTS=3).
+  // The final iteration is what catches "still redirecting after 3 follows" → redirect_loop.
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     // Re-validate each hop (hostname-layer SSRF defense for redirect chains)
     const v = validateUrl(currentUrl.toString());
@@ -180,7 +182,7 @@ async function fetchWithRedirect(
         redirect: "manual",
       });
     } catch (err) {
-      if ((err as Error).name === "AbortError") {
+      if (err instanceof Error && err.name === "AbortError") {
         return { ok: false, code: "timeout" };
       }
       return { ok: false, code: "fetch_failed" };
