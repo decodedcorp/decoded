@@ -24,6 +24,23 @@ const CONTEXT_OPTIONS: { value: ContextType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+// Helper text + dynamic placeholders ported verbatim from PR #230
+// (ArtistInput.tsx, MediaSourceInput.tsx).
+const MEDIA_TYPE_HELPER = "What kind of media is this image from?";
+const ARTIST_HELPER = "Actor, singer, model, or public figure in the image";
+const GROUP_HELPER =
+  "Group (e.g., BLACKPINK) or agency (e.g., YG Entertainment)";
+
+const DEFAULT_MEDIA_PLACEHOLDER =
+  "e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam";
+const MEDIA_PLACEHOLDERS: Partial<Record<MediaSourceType, string>> = {
+  drama: "e.g., The Glory, Squid Game",
+  music_video: "e.g., BLACKPINK - How You Like That",
+  variety: "e.g., Running Man, Knowing Bros",
+  event: "e.g., 2024 Met Gala, Coachella",
+  other: "e.g., brand campaign, magazine cover",
+};
+
 export interface MetadataFormValues {
   mediaType: MediaSourceType;
   mediaDescription: string;
@@ -40,9 +57,17 @@ interface MetadataInputFormProps {
 /**
  * MetadataInputForm - 솔루션을 모르는 유저용 메타데이터 입력
  * media_source, group_name, artist_name, context
+ *
+ * Helper text + dynamic media-type placeholders are sourced from PR #230,
+ * which originally targeted ArtistInput / MediaSourceInput in the deprecated
+ * Details step. PR #145 PR-4 ports those strings here so they ship with the
+ * unified upload flow.
  */
 export const MetadataInputForm = memo(
   ({ values, onChange }: MetadataInputFormProps) => {
+    const descriptionPlaceholder =
+      MEDIA_PLACEHOLDERS[values.mediaType] ?? DEFAULT_MEDIA_PLACEHOLDER;
+
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-medium">Photo info (optional)</h3>
@@ -50,6 +75,9 @@ export const MetadataInputForm = memo(
         {/* Source */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Source type</label>
+          <p className="text-[10px] text-muted-foreground/70">
+            {MEDIA_TYPE_HELPER}
+          </p>
           <select
             value={values.mediaType}
             onChange={(e) =>
@@ -69,7 +97,7 @@ export const MetadataInputForm = memo(
           </select>
         </div>
 
-        {/* Media description */}
+        {/* Media description — placeholder adapts to selected media type */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             Where or what is this photo from?
@@ -80,7 +108,7 @@ export const MetadataInputForm = memo(
             onChange={(e) =>
               onChange({ ...values, mediaDescription: e.target.value })
             }
-            placeholder="e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam"
+            placeholder={descriptionPlaceholder}
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
                        focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
                        placeholder:text-muted-foreground/50"
@@ -92,6 +120,7 @@ export const MetadataInputForm = memo(
           <label className="text-xs text-muted-foreground">
             Group / team name
           </label>
+          <p className="text-[10px] text-muted-foreground/70">{GROUP_HELPER}</p>
           <input
             type="text"
             value={values.groupName}
@@ -108,6 +137,9 @@ export const MetadataInputForm = memo(
           <label className="text-xs text-muted-foreground">
             Artist / person name
           </label>
+          <p className="text-[10px] text-muted-foreground/70">
+            {ARTIST_HELPER}
+          </p>
           <input
             type="text"
             value={values.artistName}
