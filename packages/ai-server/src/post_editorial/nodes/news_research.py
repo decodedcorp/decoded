@@ -66,11 +66,13 @@ def _build_item_queries(state: PostEditorialState) -> list[dict]:
             if sub_category:
                 parts.append(sub_category)
 
-            queries.append({
-                "query": " ".join(parts),
-                "item_label": f"{brand} {title}".strip() if brand else title,
-                "spot_id": spot.id,
-            })
+            queries.append(
+                {
+                    "query": " ".join(parts),
+                    "item_label": f"{brand} {title}".strip() if brand else title,
+                    "spot_id": spot.id,
+                }
+            )
 
     return queries[:6]  # Cap at 6 to avoid too many API calls
 
@@ -258,19 +260,21 @@ Output valid JSON only."""
     results = []
     for article in output.articles:
         og = og_map.get(article.url, {})
-        results.append({
-            "title": article.title,
-            "url": article.url,
-            "source": article.source,
-            "summary": article.summary,
-            "og_title": og.get("og_title"),
-            "og_description": og.get("og_description"),
-            "og_image": og.get("og_image"),
-            "og_site_name": og.get("og_site_name"),
-            "relevance_score": article.relevance_score,
-            "credibility_score": article.credibility_score,
-            "matched_item": article.matched_item,
-        })
+        results.append(
+            {
+                "title": article.title,
+                "url": article.url,
+                "source": article.source,
+                "summary": article.summary,
+                "og_title": og.get("og_title"),
+                "og_description": og.get("og_description"),
+                "og_image": og.get("og_image"),
+                "og_site_name": og.get("og_site_name"),
+                "relevance_score": article.relevance_score,
+                "credibility_score": article.credibility_score,
+                "matched_item": article.matched_item,
+            }
+        )
     return results
 
 

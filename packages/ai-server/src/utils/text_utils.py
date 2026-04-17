@@ -94,8 +94,7 @@ def detect_main_language(
 
         # 지원하지 않는 언어면 기본 언어 사용
         logger.warning(
-            f"Unsupported language {main_lang.lang}, "
-            f"using default language {default_language}"
+            f"Unsupported language {main_lang.lang}, using default language {default_language}"
         )
         return default_language
 

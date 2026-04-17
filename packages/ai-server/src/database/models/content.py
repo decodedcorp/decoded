@@ -5,6 +5,7 @@ from enum import Enum
 
 class ProcessingStatus(Enum):
     """Processing status enumeration"""
+
     SUCCESS = "success"
     PARTIAL = "partial"
     FAILED = "failed"
@@ -14,6 +15,7 @@ class LinkPreviewMetadata(BaseModel):
     """
     model for link preview metadata
     """
+
     title: Optional[str] = None
     description: Optional[str] = None
     img_url: Optional[str] = None
@@ -39,6 +41,7 @@ class QAPair(BaseModel):
     """
     model for question and answer pair
     """
+
     question: str
     answer: str
 
@@ -47,6 +50,7 @@ class AIGenMetadata(BaseModel):
     """
     model for ai generated metadata
     """
+
     summary: str
     qa_list: List[QAPair]
 
@@ -55,6 +59,7 @@ class ProcessedLinkMetadata(BaseModel):
     """
     Complete processed link metadata for backend
     """
+
     link_type: str = "other"  # "product", "article", "video", "other"
     summary: Optional[str] = None
     qa_pairs: List[QAPair] = []
@@ -66,6 +71,7 @@ class ProcessedImageMetadata(BaseModel):
     """
     Complete processed image metadata for backend
     """
+
     description: Optional[str] = None
     objects: Optional[List[str]] = None
     context: Optional[str] = None
@@ -79,6 +85,7 @@ class LinkProcessingResult(BaseModel):
     """
     Complete link processing result with metadata and status
     """
+
     item_id: str  # Solution ID (same as solution_id from backend)
     url: str
     status: ProcessingStatus
@@ -91,6 +98,7 @@ class ImageProcessingResult(BaseModel):
     """
     Complete image processing result with metadata and status
     """
+
     item_id: str  # Solution ID (same as solution_id from backend)
     url: str
     status: ProcessingStatus

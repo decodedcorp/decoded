@@ -100,8 +100,7 @@ async def summary_node(state: PostEditorialState) -> dict:
     try:
         post_data = state["post_data"]
         artist_info = (
-            " / ".join(filter(None, [post_data.artist_name, post_data.group_name]))
-            or "Unknown"
+            " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
         )
         context = post_data.context or post_data.title or "fashion post"
         items_section = _build_items_brief(state)

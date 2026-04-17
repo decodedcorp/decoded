@@ -43,10 +43,7 @@ async def logging_middleware(request: Request, call_next):
     except Exception as e:
         process_time = (time.time() - start_time) * 1000
         logger.error(
-            f"{request.method} {request.url.path} "
-            f"- 500 "
-            f"- {process_time:.2f}ms "
-            f"- Error: {str(e)}"
+            f"{request.method} {request.url.path} - 500 - {process_time:.2f}ms - Error: {str(e)}"
         )
         raise
 
@@ -66,9 +63,7 @@ async def debug_middleware(request: Request, call_next):
 
 async def model_error_handler(request: Request, exc: Exception):
     logger.error(f"Model error: {str(exc)}")
-    return JSONResponse(
-        status_code=500, content={"message": "AI Model processing error"}
-    )
+    return JSONResponse(status_code=500, content={"message": "AI Model processing error"})
 
 
 async def global_exception_handler(request: Request, exc: Exception):

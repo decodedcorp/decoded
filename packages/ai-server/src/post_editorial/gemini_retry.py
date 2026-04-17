@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable, TypeVar
 
-from tenacity import retry_if_exception, wait_none, before_sleep_log
 
 logger = logging.getLogger(__name__)
 

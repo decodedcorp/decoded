@@ -123,8 +123,12 @@ async def _query_similar_posts(
     return result.data or []
 
 
-def _build_celeb_ranking_prompt(post_summary: str, candidates_json: str, warehouse_context: str) -> str:
-    context_block = f"\n## 아티스트 프로필 (warehouse)\n{warehouse_context}\n" if warehouse_context else ""
+def _build_celeb_ranking_prompt(
+    post_summary: str, candidates_json: str, warehouse_context: str
+) -> str:
+    context_block = (
+        f"\n## 아티스트 프로필 (warehouse)\n{warehouse_context}\n" if warehouse_context else ""
+    )
     return f"""당신은 패션 매거진 에디터입니다.
 다음 포스트 정보와 셀럽 후보를 바탕으로 관련성을 랭킹해주세요.
 
@@ -243,7 +247,9 @@ async def celeb_search_node(state: PostEditorialState) -> dict:
             celeb_dict = c.model_dump()
             if not celeb_dict.get("celeb_image_url"):
                 if "artist" in warehouse_info:
-                    celeb_dict["celeb_image_url"] = warehouse_info["artist"].get("profile_image_url")
+                    celeb_dict["celeb_image_url"] = warehouse_info["artist"].get(
+                        "profile_image_url"
+                    )
                 elif "group" in warehouse_info:
                     celeb_dict["celeb_image_url"] = warehouse_info["group"].get("profile_image_url")
             celeb_results.append(celeb_dict)

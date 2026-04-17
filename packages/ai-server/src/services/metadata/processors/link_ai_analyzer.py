@@ -1,9 +1,6 @@
-import asyncio
 import logging
-from re import L
 import time
-import json
-from typing import Dict, Any, Optional, List
+from typing import Dict
 from urllib.parse import urlparse
 
 from src.database.models.content import (
@@ -27,7 +24,7 @@ def parse_hostname(url: str) -> str:
         parsed = urlparse(url)
         hostname = parsed.hostname.lower() if parsed.hostname else ""
         return hostname.replace("www.", "")
-    except Exception as e:
+    except Exception:
         return ""
 
 
@@ -111,9 +108,7 @@ class LinkAIAnalyzer:
             )
 
             processing_time = time.time() - start_time
-            self.logger.info(
-                f"Successfully analyzed link {item_id} in {processing_time:.2f}s"
-            )
+            self.logger.info(f"Successfully analyzed link {item_id} in {processing_time:.2f}s")
 
             return LinkProcessingResult(
                 item_id=item_id,
@@ -153,14 +148,10 @@ class LinkAIAnalyzer:
             messages = []
 
             if link_preview.title:
-                messages.append(
-                    LLMMessage(role="user", content=f"Title: {link_preview.title}")
-                )
+                messages.append(LLMMessage(role="user", content=f"Title: {link_preview.title}"))
             if link_preview.description:
                 messages.append(
-                    LLMMessage(
-                        role="user", content=f"Description: {link_preview.description}"
-                    )
+                    LLMMessage(role="user", content=f"Description: {link_preview.description}")
                 )
             messages.append(LLMMessage(role="user", content=f"Platform: {host}"))
             messages.append(
@@ -175,9 +166,7 @@ class LinkAIAnalyzer:
                     content="Also include 3-5 question-and-answer pairs about this link in the qna field (English).",
                 )
             )
-            messages.append(
-                LLMMessage(role="user", content="Extract keywords in English only.")
-            )
+            messages.append(LLMMessage(role="user", content="Extract keywords in English only."))
             messages.append(
                 LLMMessage(
                     role="user",
@@ -187,7 +176,7 @@ class LinkAIAnalyzer:
 
             self.logger.debug(f"Messages count: {len(messages)}")
             for i, msg in enumerate(messages):
-                self.logger.debug(f"Message {i+1}: {msg.content}")
+                self.logger.debug(f"Message {i + 1}: {msg.content}")
 
             return await self.llm_client.completion(
                 messages=messages,

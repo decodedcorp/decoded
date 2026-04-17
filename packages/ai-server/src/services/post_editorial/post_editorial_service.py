@@ -46,6 +46,7 @@ class PostEditorialService:
 
         metadata_extract_service = ctx.get("metadata_extract_service")
         from src.post_editorial.graph import create_post_editorial_graph
+
         graph = create_post_editorial_graph()
 
         initial_state = {
@@ -70,23 +71,31 @@ class PostEditorialService:
             config["configurable"]["metadata_extract_service"] = metadata_extract_service
 
         import uuid
+
         thread_id = str(uuid.uuid4())
         config["configurable"]["thread_id"] = thread_id
 
         try:
             result = await graph.ainvoke(initial_state, config)
             final_status = result.get("pipeline_status", "unknown")
-            logger.info("Post editorial completed for %s: status=%s", post_magazine_id, final_status)
+            logger.info(
+                "Post editorial completed for %s: status=%s", post_magazine_id, final_status
+            )
 
             if final_status == "failed":
                 error_log = result.get("error_log", [])
                 await _mark_magazine_failed(post_magazine_id, "; ".join(str(x) for x in error_log))
 
-            return {"success": final_status in ("published", "reviewed"), "pipeline_status": final_status}
+            return {
+                "success": final_status in ("published", "reviewed"),
+                "pipeline_status": final_status,
+            }
 
         except Exception as e:
             logger.exception("Post editorial pipeline failed for %s", post_magazine_id)
-            await _mark_magazine_failed(post_magazine_id, f"Pipeline crash: {type(e).__name__}: {e!s}")
+            await _mark_magazine_failed(
+                post_magazine_id, f"Pipeline crash: {type(e).__name__}: {e!s}"
+            )
             return {"success": False, "error": str(e)}
 
 
@@ -94,14 +103,17 @@ async def _mark_magazine_failed(post_magazine_id: str, error_msg: str) -> None:
     """Update post_magazines table with failed status."""
     try:
         from supabase import acreate_client
+
         settings = get_settings()
         client = await acreate_client(settings.supabase_url, settings.supabase_service_role_key)
         await (
             client.table("post_magazines")
-            .update({
-                "status": "failed",
-                "error_log": json.dumps([error_msg]),
-            })
+            .update(
+                {
+                    "status": "failed",
+                    "error_log": json.dumps([error_msg]),
+                }
+            )
             .eq("id", post_magazine_id)
             .execute()
         )

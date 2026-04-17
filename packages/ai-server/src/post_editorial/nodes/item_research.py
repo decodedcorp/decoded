@@ -81,7 +81,7 @@ def _build_research_query(state: PostEditorialState, warehouse_brands: dict[str,
 
     brand_context = ""
     if brand_context_lines:
-        brand_context = f"\n\nKnown brand information:\n" + "\n".join(brand_context_lines)
+        brand_context = "\n\nKnown brand information:\n" + "\n".join(brand_context_lines)
 
     return f"""{artist} fashion style and relationship with {brands_str} (ambassador, muse, collaboration history).
 
@@ -109,7 +109,9 @@ async def _perplexity_search_async(query: str) -> tuple[str, list[str]]:
     }
     payload = {
         "model": "sonar",
-        "messages": [{"role": "user", "content": f"Brief, factual answer. Cite sources.\n\n{query}"}],
+        "messages": [
+            {"role": "user", "content": f"Brief, factual answer. Cite sources.\n\n{query}"}
+        ],
         "max_tokens": 2048,
         "temperature": 0.2,
     }
@@ -163,7 +165,18 @@ def _extract_artist_brand_context(raw_content: str, state: PostEditorialState) -
     if not artist:
         return ""
 
-    keywords = ["ambassador", "앰버서더", "muse", "뮤즈", "collaboration", "콜라보", "campaign", "캠페인", "contract", "계약"]
+    keywords = [
+        "ambassador",
+        "앰버서더",
+        "muse",
+        "뮤즈",
+        "collaboration",
+        "콜라보",
+        "campaign",
+        "캠페인",
+        "contract",
+        "계약",
+    ]
     relevant: list[str] = []
     for line in raw_content.split("\n"):
         line_lower = line.lower()
@@ -185,12 +198,9 @@ async def item_research_node(state: PostEditorialState) -> dict:
         post_data = state["post_data"]
 
         # Collect distinct brand_ids and fetch from warehouse
-        brand_ids = list({
-            sol.brand_id
-            for spot in post_data.spots
-            for sol in spot.solutions
-            if sol.brand_id
-        })
+        brand_ids = list(
+            {sol.brand_id for spot in post_data.spots for sol in spot.solutions if sol.brand_id}
+        )
         warehouse_brands: dict[str, dict] = {}
         if brand_ids:
             sb_client = await _get_supabase_client()
@@ -203,7 +213,9 @@ async def item_research_node(state: PostEditorialState) -> dict:
             return {
                 "item_research": {
                     "warehouse_brands": warehouse_brands,
-                } if warehouse_brands else None
+                }
+                if warehouse_brands
+                else None
             }
 
         artist_brand_context = _extract_artist_brand_context(raw_content, state)

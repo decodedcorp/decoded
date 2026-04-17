@@ -1,5 +1,5 @@
-from pydantic import BaseModel, HttpUrl, field_validator
-from typing import Dict, List, Optional, Literal, Union
+from pydantic import BaseModel, field_validator
+from typing import Dict, List, Optional
 from enum import Enum
 
 
@@ -12,33 +12,35 @@ class DataItem(BaseModel):
     item_id: str
     type: DataItemType
     # oneof data_source - exactly one of these should be provided
-    url: Optional[str] = None           # URL 방식 (링크 또는 이미지 URL)
+    url: Optional[str] = None  # URL 방식 (링크 또는 이미지 URL)
     image_data: Optional[bytes] = None  # 바이너리 데이터 방식 (업로드된 이미지)
     existing_metadata: Optional[Dict[str, str]] = None
-    post_id: Optional[str] = None       # Solution ID for backend callback (deprecated: use item_id instead)
-    
-    @field_validator('image_data', 'url')
+    post_id: Optional[str] = (
+        None  # Solution ID for backend callback (deprecated: use item_id instead)
+    )
+
+    @field_validator("image_data", "url")
     @classmethod
     def validate_data_source(cls, v, info):
         """oneof 필드 검증: url 또는 image_data 중 정확히 하나만 설정되어야 함"""
         values = info.data
         field_name = info.field_name
-        
-        url = values.get('url') if field_name == 'image_data' else v
-        image_data = values.get('image_data') if field_name == 'url' else v
-        
+
+        url = values.get("url") if field_name == "image_data" else v
+        image_data = values.get("image_data") if field_name == "url" else v
+
         # 정확히 하나만 설정되어야 함
         has_url = url is not None
         has_image_data = image_data is not None
-        
+
         if not has_url and not has_image_data:
-            raise ValueError('url 또는 image_data 중 하나는 반드시 설정되어야 합니다')
-        
+            raise ValueError("url 또는 image_data 중 하나는 반드시 설정되어야 합니다")
+
         if has_url and has_image_data:
-            raise ValueError('url과 image_data는 동시에 설정될 수 없습니다 (oneof 필드)')
-        
+            raise ValueError("url과 image_data는 동시에 설정될 수 없습니다 (oneof 필드)")
+
         return v
-    
+
     def get_data_source_type(self) -> str:
         """현재 설정된 데이터 소스 타입 반환"""
         if self.url is not None:
@@ -64,7 +66,7 @@ class BatchStatistics(BaseModel):
 
 class ProcessedDataBatch(BaseModel):
     batch_id: str
-    link_results: List  # Now List[LinkProcessingResult] 
+    link_results: List  # Now List[LinkProcessingResult]
     image_results: List  # Now List[ImageProcessingResult]
     statistics: BatchStatistics
 
