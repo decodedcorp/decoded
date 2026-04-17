@@ -1,3 +1,11 @@
+---
+title: Image Ratio Improvement Design
+owner: human
+status: draft
+updated: 2026-04-02
+tags: [ui]
+---
+
 # Image Ratio Improvement Design
 
 **Date:** 2026-04-02
@@ -30,6 +38,7 @@ Inspired by Reddit's image handling:
 ```
 
 Core change across all components:
+
 - `object-fit: cover` → `object-fit: contain`
 - Add `max-height` constraint per component context
 - Add `width`/`height` HTML attributes (client-side detection)
@@ -37,10 +46,10 @@ Core change across all components:
 
 ### Why `object-contain`
 
-| Property | Crop | Distortion | Empty space |
-|----------|------|-----------|-------------|
-| `object-cover` | Yes (fills container) | No | No |
-| `object-contain` | No (fits inside) | No | Possible (letterbox) |
+| Property         | Crop                  | Distortion | Empty space          |
+| ---------------- | --------------------- | ---------- | -------------------- |
+| `object-cover`   | Yes (fills container) | No         | No                   |
+| `object-contain` | No (fits inside)      | No         | Possible (letterbox) |
 
 Letterbox space is nearly invisible on decoded's dark theme.
 
@@ -68,18 +77,19 @@ CSS: object-contain + max-height + dark bg
 
 ```typescript
 interface ImageDimensions {
-  width: number | undefined
-  height: number | undefined
-  loading: boolean
+  width: number | undefined;
+  height: number | undefined;
+  loading: boolean;
 }
 
 // Global memory cache (survives re-renders, not re-mounts of entire app)
-const memoryCache = new Map<string, { w: number; h: number }>()
+const memoryCache = new Map<string, { w: number; h: number }>();
 
-function useImageDimensions(url: string | null | undefined): ImageDimensions
+function useImageDimensions(url: string | null | undefined): ImageDimensions;
 ```
 
 **Caching strategy:**
+
 1. Check memory cache (Map) — instant
 2. Check localStorage (`img-dims:{urlHash}`) — fast
 3. Create `new Image()` → onload → save to both caches
@@ -134,7 +144,7 @@ AFTER:  height = columnWidth * (h / w)  // real ratio-based height
                style={{ objectFit: "contain" }} />
 ```
 
-Remove `HEIGHT_VARIANTS` cycling. Card height = column width * image aspect ratio (h/w), clamped to 200~500px range. When container matches image ratio, `object-contain` produces zero crop and zero letterbox.
+Remove `HEIGHT_VARIANTS` cycling. Card height = column width \* image aspect ratio (h/w), clamped to 200~500px range. When container matches image ratio, `object-contain` produces zero crop and zero letterbox.
 
 ### PostsGrid (`lib/components/profile/PostsGrid.tsx`)
 
@@ -159,12 +169,12 @@ AFTER:  <div className="bg-black">
 
 ## Max-Height Values
 
-| Component | max-height | Rationale |
-|-----------|-----------|-----------|
-| FeedCard | `80vh` | Full-screen feel, like Reddit detail |
-| ExploreCardCell | `60vh` | Grid context, don't dominate page |
+| Component       | max-height            | Rationale                             |
+| --------------- | --------------------- | ------------------------------------- |
+| FeedCard        | `80vh`                | Full-screen feel, like Reddit detail  |
+| ExploreCardCell | `60vh`                | Grid context, don't dominate page     |
 | MasonryGridItem | `500px` / min `200px` | Masonry rhythm, prevent extreme cards |
-| PostsGrid | `300px` | Compact profile grid |
+| PostsGrid       | `300px`               | Compact profile grid                  |
 
 ## Feature Flag
 
@@ -177,14 +187,14 @@ export const FEATURE_FLAGS = {
     MasonryGridItem: true,
     PostsGrid: true,
   },
-} as const
+} as const;
 ```
 
 Each component checks its flag:
 
 ```typescript
-const { width, height } = useImageDimensions(imageUrl)
-const useDynamic = FEATURE_FLAGS.dynamicImageRatio.FeedCard
+const { width, height } = useImageDimensions(imageUrl);
+const useDynamic = FEATURE_FLAGS.dynamicImageRatio.FeedCard;
 
 // If flag off: existing behavior (object-cover, fixed ratio)
 // If flag on: new behavior (object-contain, max-height)
@@ -194,18 +204,19 @@ Rollback = flip flag to `false`. Zero code changes needed.
 
 ## Edge Cases
 
-| Case | Handling |
-|------|----------|
-| Image URL is null/undefined | Show placeholder, skip dimension detection |
-| Image fails to load | Fallback to existing fixed ratio + object-cover |
-| Very tall image (>1:2) | max-height clamps display height |
-| Very wide image (>3:1) | object-contain shows full image, dark bg fills vertical space |
-| Dimension detection slow | Show skeleton → render when dimensions known |
-| localStorage full | Graceful fallback to memory-only cache |
+| Case                        | Handling                                                      |
+| --------------------------- | ------------------------------------------------------------- |
+| Image URL is null/undefined | Show placeholder, skip dimension detection                    |
+| Image fails to load         | Fallback to existing fixed ratio + object-cover               |
+| Very tall image (>1:2)      | max-height clamps display height                              |
+| Very wide image (>3:1)      | object-contain shows full image, dark bg fills vertical space |
+| Dimension detection slow    | Show skeleton → render when dimensions known                  |
+| localStorage full           | Graceful fallback to memory-only cache                        |
 
 ## Transition Behavior
 
 When `useImageDimensions` is loading:
+
 - Show skeleton placeholder (same bg color as container)
 - Once dimensions arrive, render image immediately (no animation needed — image was never visible in wrong ratio)
 
@@ -222,16 +233,19 @@ When ready to eliminate client-side detection:
 ## Files to Create/Modify
 
 ### New Files
+
 - `packages/web/lib/hooks/useImageDimensions.ts` — dimension detection hook
 - `packages/web/lib/config/feature-flags.ts` — feature flag config
 
 ### Modified Files
+
 - `packages/web/lib/components/FeedCard.tsx` — object-contain + max-height
 - `packages/web/lib/components/explore/ExploreCardCell.tsx` — object-contain + max-height
 - `packages/web/lib/components/main-renewal/MasonryGridItem.tsx` — real dimensions + contain
 - `packages/web/lib/components/profile/PostsGrid.tsx` — object-contain + max-height
 
 ### Unchanged Files
+
 - `packages/web/lib/components/detail/ShopGrid.tsx` — intentionally square
 - `packages/web/lib/components/detail/HeroSection.tsx` — design-driven hero
 

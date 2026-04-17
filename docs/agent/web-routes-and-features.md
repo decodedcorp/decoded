@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, ui]
 ---
 
-# Web routes & feature areas
+# Web Routes & Features — Agent Reference
 
 App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트리를 함께 확인합니다.
 

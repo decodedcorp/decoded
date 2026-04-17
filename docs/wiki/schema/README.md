@@ -10,10 +10,9 @@ related:
   - docs/wiki/schema/links.md
   - docs/wiki/schema/ownership-matrix.md
   - docs/wiki/schema/conventions.md
-  - docs/wiki/schema/harness.md
 ---
 
-# Wiki Schema
+# Wiki Schema — SSOT for Docs Conventions
 
 decoded-monorepo의 문서 규약 SSOT (Single Source of Truth).
 

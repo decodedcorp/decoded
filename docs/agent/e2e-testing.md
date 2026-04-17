@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, testing]
 ---
 
-# Frontend E2E Testing
+# E2E Testing — Agent Reference
 
 Playwright 기반 E2E 테스트. 로컬 CI (pre-push hook) 및 수동 실행으로 프론트엔드 핵심 플로우를 검증한다.
 

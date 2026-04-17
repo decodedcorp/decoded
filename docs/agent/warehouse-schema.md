@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, db]
 ---
 
-# Warehouse Schema Reference
+# Warehouse Schema — Agent Reference
 
 > ETL 파이프라인 데이터를 저장하는 Supabase `warehouse` 스키마.  
 > Instagram 수집 → 엔티티 관리 → Seed 퍼블리싱 파이프라인 전체를 커버한다.

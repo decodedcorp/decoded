@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, harness]
 ---
 
-# Gemini Profile – Documentation & Explanation
+# Gemini Profile
 
 **Last verified**: 2025-01-27  
 **Version**: 1.0

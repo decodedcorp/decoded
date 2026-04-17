@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, ui]
 ---
 
-# Key file locations & custom hooks
+# Web Hooks & Stores — Agent Reference
 
 Paths below are under `packages/web/` unless absolute from repo root.
 

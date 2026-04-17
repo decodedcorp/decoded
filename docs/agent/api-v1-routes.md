@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, api]
 ---
 
-# Next.js API routes (`/api/v1/*`)
+# API v1 Routes — Agent Reference
 
 `packages/web/app/api/v1/` 기준. 메서드·경로 추가 시 이 파일과 실제 라우트 핸들러를 함께 갱신합니다.
 

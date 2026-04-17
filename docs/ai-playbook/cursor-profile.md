@@ -6,7 +6,7 @@ updated: 2026-04-17
 tags: [agent, cursor, harness]
 ---
 
-# Cursor Profile – Main Coding Assistant (v1.0)
+# Cursor Profile
 
 **Last verified**: 2025-01-27
 
