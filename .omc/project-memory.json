@@ -182,6 +182,25 @@
       ]
     }
   },
-  "hotPaths": [],
+  "hotPaths": [
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 2,
+      "lastAccessed": 1776391760218,
+      "type": "file"
+    },
+    {
+      "path": "docs/GIT-WORKFLOW.md",
+      "accessCount": 2,
+      "lastAccessed": 1776391802453,
+      "type": "file"
+    },
+    {
+      "path": "scripts/start-issue.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776391785503,
+      "type": "file"
+    }
+  ],
   "userDirectives": []
 }
