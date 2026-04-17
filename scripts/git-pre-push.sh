@@ -50,4 +50,11 @@ fi
 echo "=== [monorepo] api-server 로컬 CI ==="
 bash "$REPO_ROOT/packages/api-server/scripts/pre-push.sh"
 
+if [[ -n "${SKIP_WIKI_CI:-}" ]]; then
+  echo "=== [monorepo] wiki lint 건너뜀 (SKIP_WIKI_CI) ==="
+else
+  echo "=== [monorepo] wiki lint ==="
+  bun run wiki:lint
+fi
+
 echo "=== [monorepo] 모든 체크 통과 ==="
