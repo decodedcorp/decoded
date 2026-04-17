@@ -158,11 +158,13 @@ function ContentManagementContent() {
             <AdminPostTableSkeleton />
           ) : postListQuery.data ? (
             postListQuery.data.data.length === 0 && !postStatus ? (
-              <AdminEmptyState
-                icon={<FileTextIcon className="w-12 h-12" />}
-                title="No posts found"
-                description="Posts submitted by users will appear here."
-              />
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <AdminEmptyState
+                  icon={<FileTextIcon className="w-12 h-12" />}
+                  title="No posts found"
+                  description="Posts submitted by users will appear here."
+                />
+              </div>
             ) : (
               <>
                 <AdminPostTable data={postListQuery.data.data} />
@@ -221,11 +223,13 @@ function ContentManagementContent() {
             <AdminPostTableSkeleton />
           ) : reportListQuery.data ? (
             reportListQuery.data.data.length === 0 && !reportStatus ? (
-              <AdminEmptyState
-                icon={<FlagIcon className="w-12 h-12" />}
-                title="No reports to review"
-                description="User-submitted reports will appear here for moderation."
-              />
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <AdminEmptyState
+                  icon={<FlagIcon className="w-12 h-12" />}
+                  title="No reports to review"
+                  description="User-submitted reports will appear here for moderation."
+                />
+              </div>
             ) : (
               <>
                 <ReportTable data={reportListQuery.data.data} />
