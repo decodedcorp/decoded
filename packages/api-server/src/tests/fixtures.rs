@@ -258,6 +258,21 @@ pub fn click_log_model() -> crate::entities::click_logs::Model {
     }
 }
 
+/// warehouse.admin_audit_log row — default admin + post target.
+pub fn audit_log_model() -> crate::entities::warehouse_admin_audit_log::Model {
+    crate::entities::warehouse_admin_audit_log::Model {
+        id: test_uuid(130),
+        admin_user_id: test_uuid(99),
+        action: "test.action".to_string(),
+        target_table: "posts".to_string(),
+        target_id: Some(test_uuid(1)),
+        before_state: None,
+        after_state: None,
+        metadata: None,
+        created_at: test_timestamp(),
+    }
+}
+
 pub fn report_model() -> crate::entities::content_reports::Model {
     crate::entities::content_reports::Model {
         id: test_uuid(100),

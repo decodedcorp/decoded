@@ -28,12 +28,10 @@ export async function writeAuditLog(entry: AuditLogEntry) {
     });
 
   if (error) {
-    // TODO(#237): surface this to the caller or retry. Today picks CRUD
-    // writes audit as a fire-and-forget step after the mutation commits,
-    // so a failed audit insert leaves a silent gap in the log. The
-    // magazine status path avoids this by wrapping mutation + audit in
-    // update_magazine_status() RPC. Fold picks into the same pattern
-    // when Rust audit integration lands.
+    // picks CRUD remains fire-and-forget in TS; admin reports/posts mutations
+    // now go through the Rust API which wraps UPDATE + audit in one transaction
+    // (see #237, `services/audit.rs`). Magazine status uses update_magazine_status()
+    // RPC for the same atomicity.
     console.error("[audit-log] Failed to write:", error.message);
   }
 }
