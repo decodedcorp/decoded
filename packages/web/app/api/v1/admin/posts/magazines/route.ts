@@ -55,7 +55,8 @@ export async function GET(req: Request) {
     .range(from, to);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/magazines] list error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   const response: AdminMagazineListResponse = {

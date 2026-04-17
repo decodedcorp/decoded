@@ -54,6 +54,13 @@ export async function PATCH(
         { status: 400 }
       );
     }
+    if (reason.length > 2000) {
+      return NextResponse.json(
+        { error: "rejection_reason_too_long" },
+        { status: 400 }
+      );
+    }
+    body.rejectionReason = reason;
   }
 
   const supabase = createAdminSupabaseClient();
@@ -88,7 +95,20 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error.message?.includes("rejection_reason_too_long")) {
+      return NextResponse.json(
+        { error: "rejection_reason_too_long" },
+        { status: 400 }
+      );
+    }
+    if (
+      error.message?.includes("caller_not_admin") ||
+      error.message?.includes("caller_mismatch")
+    ) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    console.error("[admin/magazines/status] RPC error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   return NextResponse.json({ data }, { status: 200 });

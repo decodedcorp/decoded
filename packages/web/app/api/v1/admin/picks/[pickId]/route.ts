@@ -27,13 +27,49 @@ export async function PATCH(
   }
 
   const { pickId } = await params;
-  const body = await request.json();
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  if (rawBody === null || typeof rawBody !== "object") {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+  const body = rawBody as Record<string, unknown>;
   const updates: Record<string, unknown> = {};
 
-  if ("note" in body) updates.note = body.note;
-  if ("is_active" in body) updates.is_active = body.is_active;
-  if ("curated_by" in body) updates.curated_by = body.curated_by;
-  if ("post_id" in body) updates.post_id = body.post_id;
+  if ("note" in body) {
+    if (body.note !== null && typeof body.note !== "string") {
+      return NextResponse.json({ error: "invalid_note" }, { status: 400 });
+    }
+    updates.note =
+      typeof body.note === "string" ? body.note.slice(0, 2000) : null;
+  }
+  if ("is_active" in body) {
+    if (typeof body.is_active !== "boolean") {
+      return NextResponse.json({ error: "invalid_is_active" }, { status: 400 });
+    }
+    updates.is_active = body.is_active;
+  }
+  if ("curated_by" in body) {
+    if (body.curated_by !== null && typeof body.curated_by !== "string") {
+      return NextResponse.json(
+        { error: "invalid_curated_by" },
+        { status: 400 }
+      );
+    }
+    updates.curated_by =
+      typeof body.curated_by === "string"
+        ? body.curated_by.slice(0, 200)
+        : null;
+  }
+  if ("post_id" in body) {
+    if (typeof body.post_id !== "string" || body.post_id.length === 0) {
+      return NextResponse.json({ error: "invalid_post_id" }, { status: 400 });
+    }
+    updates.post_id = body.post_id;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
@@ -53,7 +89,8 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/picks] update error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   await writeAuditLog({
@@ -106,7 +143,8 @@ export async function DELETE(
     .eq("id", pickId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/picks] delete error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   await writeAuditLog({

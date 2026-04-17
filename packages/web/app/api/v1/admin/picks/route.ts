@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     .range(from, to);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/picks] list error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -120,7 +121,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/picks] upsert error:", error.message);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 
   await writeAuditLog({
