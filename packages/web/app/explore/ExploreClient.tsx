@@ -62,7 +62,7 @@ export function ExploreClient({
       setQuery(initialQuery);
       setDebouncedQuery(initialQuery);
     }
-  }, []);
+  }, [initialQuery, query, setQuery, setDebouncedQuery]);
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -354,7 +354,7 @@ export function ExploreClient({
               </div>
             )}
 
-            {/* Error state — browse mode only (search mode falls through to fallback) */}
+            {/* Error state — browse mode */}
             {isError && mode !== "search" && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
@@ -385,9 +385,48 @@ export function ExploreClient({
               </div>
             )}
 
-            {/* Empty/error state with search suggestions */}
-            {((!isError && !isLoading && items.length === 0) ||
-              (isError && mode === "search")) && (
+            {/* Error state — search mode (backend/Meilisearch outage) */}
+            {isError && mode === "search" && (
+              <div className="absolute inset-0 z-0 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center px-4 py-12 text-center max-w-md">
+                  <div className="mb-4 text-4xl">🛠️</div>
+                  <h2 className="mb-2 text-xl font-semibold text-foreground">
+                    Search is temporarily unavailable
+                  </h2>
+                  <p className="mb-6 text-sm text-muted-foreground">
+                    {(() => {
+                      if (process.env.NODE_ENV === "development") {
+                        console.error("[ExploreClient] Search error:", error);
+                      }
+                      const msg =
+                        error instanceof Error
+                          ? error.message
+                          : "Please try again in a moment.";
+                      return msg.length > 140 ? `${msg.slice(0, 140)}…` : msg;
+                    })()}
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button
+                      onClick={() => refetch()}
+                      className="rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                      type="button"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClear}
+                      className="rounded-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state with search suggestions */}
+            {!isError && !isLoading && items.length === 0 && (
               <div className="absolute inset-0 z-0 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center px-4 py-12 text-center max-w-md">
                   <div className="mb-4 text-4xl">

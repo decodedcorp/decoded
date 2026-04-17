@@ -116,11 +116,7 @@ export function useExploreData(
 
   // Search mode: Meilisearch with API filters
   const searchResult = useInfiniteQuery({
-    queryKey: [
-      "search",
-      "infinite",
-      { q: debouncedQuery, context: activeContext, sort: activeSort },
-    ],
+    queryKey: ["search", "infinite", debouncedQuery, activeContext, activeSort],
     queryFn: async ({ pageParam = 1 }) => {
       return search({
         q: debouncedQuery,
