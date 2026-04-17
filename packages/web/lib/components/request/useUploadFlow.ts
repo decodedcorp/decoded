@@ -56,6 +56,9 @@ export function useUploadFlow(): UseUploadFlowReturn {
   const artistName = useRequestStore(selectArtistName);
   const groupName = useRequestStore(selectGroupName);
   const context = useRequestStore(selectContext);
+  // Identity of the primary image — used as a dep so auto-save thumbnail
+  // re-fires when the user swaps the image (parity with old page.tsx).
+  const primaryImageId = useRequestStore((s) => s.images[0]?.id ?? null);
 
   // Register as active instance; reset on unmount
   useEffect(() => {
@@ -126,6 +129,7 @@ export function useUploadFlow(): UseUploadFlowReturn {
     artistName,
     groupName,
     context,
+    primaryImageId,
   ]);
 
   const submit = useCallback(async () => {
