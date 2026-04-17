@@ -126,6 +126,22 @@ export const ExploreCardCell = memo(function ExploreCardCell({
             onLoad={() => setIsLoaded(true)}
             onError={() => setImageError(true)}
           />
+          {/* Editorial title overlay — shown when card represents an editorial post */}
+          {item?.editorialTitle && (
+            <div className="absolute top-2 left-2 max-w-[70%] rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white/95 truncate">
+              {item.editorialTitle}
+            </div>
+          )}
+          {/* Spot count badge — indicates number of detected items on the post */}
+          {typeof item?.spotCount === "number" && item.spotCount > 0 && (
+            <div
+              role="status"
+              aria-label={`${item.spotCount} spots`}
+              className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white"
+            >
+              {item.spotCount}
+            </div>
+          )}
           {/* Search highlight overlay — only visible when search highlights exist */}
           {item?.highlight && item.postAccount && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-6">
