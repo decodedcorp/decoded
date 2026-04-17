@@ -78,64 +78,66 @@ export async function fetchDashboardStats(): Promise<KPIStats> {
   const supabase = await createSupabaseServerClient();
 
   const today = todayStartUTC();
+  const tomorrow = daysAgoUTC(-1);
   const yesterday = daysAgoUTC(1);
-  const thirtyDaysAgo = daysAgoUTC(30);
-  const sixtyDaysAgo = daysAgoUTC(60);
+  const d30ago = daysAgoUTC(30);
+  const d60ago = daysAgoUTC(60);
+
+  const ranges = {
+    dau: { from: today, to: tomorrow },
+    mau: { from: d30ago, to: tomorrow },
+    prevDau: { from: yesterday, to: today },
+    prevMau: { from: d60ago, to: d30ago },
+  } as const;
 
   try {
-    // Parallel queries for current stats
     const [
       { count: postCount },
       { count: itemCount },
       { count: userCount },
-      { data: dauData },
-      { data: mauData },
-      // Previous period for deltas
-      { data: prevDauData },
-      { data: prevMauData },
+      { data: dau, error: e1 },
+      { data: mau, error: e2 },
+      { data: prevDau, error: e3 },
+      { data: prevMau, error: e4 },
     ] = await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       supabase.from("post" as any).select("*", { count: "exact", head: true }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       supabase.from("item" as any).select("*", { count: "exact", head: true }),
       supabase.from("users").select("*", { count: "exact", head: true }),
-      // DAU: distinct user_id today
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", today.toISOString()),
-      // MAU: distinct user_id last 30 days
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", thirtyDaysAgo.toISOString()),
-      // Previous DAU: yesterday
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", yesterday.toISOString())
-        .lt("created_at", today.toISOString()),
-      // Previous MAU: 60-30 days ago
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", sixtyDaysAgo.toISOString())
-        .lt("created_at", thirtyDaysAgo.toISOString()),
+      supabase.rpc("admin_distinct_user_count", {
+        p_from_ts: ranges.dau.from.toISOString(),
+        p_to_ts: ranges.dau.to.toISOString(),
+      }),
+      supabase.rpc("admin_distinct_user_count", {
+        p_from_ts: ranges.mau.from.toISOString(),
+        p_to_ts: ranges.mau.to.toISOString(),
+      }),
+      supabase.rpc("admin_distinct_user_count", {
+        p_from_ts: ranges.prevDau.from.toISOString(),
+        p_to_ts: ranges.prevDau.to.toISOString(),
+      }),
+      supabase.rpc("admin_distinct_user_count", {
+        p_from_ts: ranges.prevMau.from.toISOString(),
+        p_to_ts: ranges.prevMau.to.toISOString(),
+      }),
     ]);
 
-    const dau = new Set(dauData?.map((r) => r.user_id)).size;
-    const mau = new Set(mauData?.map((r) => r.user_id)).size;
-    const prevDau = new Set(prevDauData?.map((r) => r.user_id)).size;
-    const prevMau = new Set(prevMauData?.map((r) => r.user_id)).size;
+    if (e1 || e2 || e3 || e4) throw e1 ?? e2 ?? e3 ?? e4;
+
+    const dauN = (dau as number | null) ?? 0;
+    const mauN = (mau as number | null) ?? 0;
+    const prevDauN = (prevDau as number | null) ?? 0;
+    const prevMauN = (prevMau as number | null) ?? 0;
 
     return {
-      dau,
-      mau,
+      dau: dauN,
+      mau: mauN,
       totalUsers: userCount ?? 0,
       totalPosts: postCount ?? 0,
       totalSolutions: itemCount ?? 0,
-      dauDelta: calcDelta(dau, prevDau),
-      mauDelta: calcDelta(mau, prevMau),
+      dauDelta: calcDelta(dauN, prevDauN),
+      mauDelta: calcDelta(mauN, prevMauN),
       totalUsersDelta: 0,
       totalPostsDelta: 0,
       totalSolutionsDelta: 0,
@@ -166,92 +168,24 @@ export async function fetchChartData(
   days: number = 30
 ): Promise<DailyMetric[]> {
   const clampedDays = Math.min(Math.max(1, days), 90);
-  const since = daysAgoUTC(clampedDays);
-  const sinceIso = since.toISOString();
+  const from = daysAgoUTC(clampedDays - 1);
+  const to = daysAgoUTC(-1);
 
   const supabase = await createSupabaseServerClient();
 
   try {
-    const [
-      { data: viewRows },
-      { data: clickRows },
-      { data: searchRows },
-      { data: eventRows },
-    ] = await Promise.all([
-      supabase
-        .from("view_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("click_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("search_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("user_events")
-        .select("created_at, user_id")
-        .gte("created_at", sinceIso),
-    ]);
-
-    // Build date → counts map
-    const dateMap = new Map<
-      string,
-      { views: number; clicks: number; searches: number; userIds: Set<string> }
-    >();
-
-    // Initialize all dates
-    for (let i = clampedDays - 1; i >= 0; i--) {
-      const d = daysAgoUTC(i);
-      dateMap.set(formatDate(d), {
-        views: 0,
-        clicks: 0,
-        searches: 0,
-        userIds: new Set(),
-      });
-    }
-
-    const getDate = (ts: string) => ts.slice(0, 10);
-
-    viewRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.views++;
+    const { data, error } = await supabase.rpc("admin_daily_metrics", {
+      p_from_ts: from.toISOString(),
+      p_to_ts: to.toISOString(),
     });
+    if (error) throw error;
 
-    clickRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.clicks++;
-    });
-
-    searchRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.searches++;
-    });
-
-    eventRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.userIds.add(r.user_id);
-    });
-
-    // Convert to sorted array
-    const metrics: DailyMetric[] = [];
-    for (const [date, data] of dateMap) {
-      metrics.push({
-        date,
-        dau: data.userIds.size,
-        searches: data.searches,
-        clicks: data.clicks,
-      });
-    }
-
-    metrics.sort((a, b) => a.date.localeCompare(b.date));
-    return metrics;
+    return (data ?? []).map((r) => ({
+      date: r.day,
+      dau: r.dau ?? 0,
+      searches: r.searches ?? 0,
+      clicks: r.clicks ?? 0,
+    }));
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
       console.error("[fetchChartData] Supabase error:", err);
