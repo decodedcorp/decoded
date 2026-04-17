@@ -8,9 +8,14 @@ export default defineConfig({
     include: [
       "tests/**/*.test.ts",
       "tests/**/*.test.tsx",
+      "lib/**/__tests__/**/*.test.ts",
       "lib/**/__tests__/**/*.test.tsx",
       "lib/**/*.test.ts",
       "lib/**/*.test.tsx",
+      "app/**/__tests__/**/*.test.ts",
+      "app/**/__tests__/**/*.test.tsx",
+      "app/**/*.test.ts",
+      "app/**/*.test.tsx",
     ],
     env: {
       NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",

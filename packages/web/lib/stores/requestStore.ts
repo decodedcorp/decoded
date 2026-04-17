@@ -102,6 +102,9 @@ interface RequestState {
   isSubmitting: boolean;
   submitError: string | null;
 
+  // Instance guard (prevents stale writes from unmounted hook owners)
+  activeInstanceId: string | null;
+
   // Actions - Images
   addImage: (file: File) => string | null;
   addImages: (files: File[]) => string[];
@@ -151,6 +154,10 @@ interface RequestState {
   // Actions - Reset
   resetRequestFlow: () => void;
 
+  // Actions - Instance guard
+  setActiveInstance: (id: string | null) => void;
+  resetIfActive: (id: string) => void;
+
   // User type selection
   setUserKnowsItems: (value: boolean) => void;
 }
@@ -199,6 +206,8 @@ const initialState = {
   // Step 4
   isSubmitting: false,
   submitError: null as string | null,
+  // Instance guard
+  activeInstanceId: null as string | null,
 };
 
 export const useRequestStore = create<RequestState>((set, get) => ({
@@ -483,6 +492,17 @@ export const useRequestStore = create<RequestState>((set, get) => ({
 
   setUserKnowsItems: (value) => {
     set({ userKnowsItems: value });
+  },
+
+  setActiveInstance: (id) => {
+    set({ activeInstanceId: id });
+  },
+
+  resetIfActive: (id) => {
+    if (get().activeInstanceId !== id) return;
+    const { images } = get();
+    images.forEach((img) => revokePreviewUrl(img.previewUrl));
+    set({ ...initialState, activeInstanceId: null });
   },
 }));
 
