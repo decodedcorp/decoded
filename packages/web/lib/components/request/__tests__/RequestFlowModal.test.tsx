@@ -67,9 +67,11 @@ describe("RequestFlowModal — onClose prop", () => {
     const { container } = render(
       <RequestFlowModal>
         <div>child</div>
-      </RequestFlowModal>,
+      </RequestFlowModal>
     );
-    expect(container.querySelector("[data-testid='request-flow-modal-backdrop']")).toBeTruthy();
+    expect(
+      container.querySelector("[data-testid='request-flow-modal-backdrop']")
+    ).toBeTruthy();
   });
 
   test("calls onClose when backdrop is clicked", () => {
@@ -77,9 +79,11 @@ describe("RequestFlowModal — onClose prop", () => {
     const { container } = render(
       <RequestFlowModal onClose={onClose}>
         <div>child</div>
-      </RequestFlowModal>,
+      </RequestFlowModal>
     );
-    const backdrop = container.querySelector("[data-testid='request-flow-modal-backdrop']") as HTMLElement;
+    const backdrop = container.querySelector(
+      "[data-testid='request-flow-modal-backdrop']"
+    ) as HTMLElement;
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -88,9 +92,37 @@ describe("RequestFlowModal — onClose prop", () => {
     const { container } = render(
       <RequestFlowModal>
         <div>child</div>
-      </RequestFlowModal>,
+      </RequestFlowModal>
     );
-    const backdrop = container.querySelector("[data-testid='request-flow-modal-backdrop']") as HTMLElement;
+    const backdrop = container.querySelector(
+      "[data-testid='request-flow-modal-backdrop']"
+    ) as HTMLElement;
     expect(() => fireEvent.click(backdrop)).not.toThrow();
+  });
+});
+
+describe("RequestFlowModal — mobileFullScreen prop", () => {
+  test("applies mobile full-screen classes when mobileFullScreen=true", () => {
+    render(
+      <RequestFlowModal mobileFullScreen>
+        <div data-testid="child">c</div>
+      </RequestFlowModal>
+    );
+    const dialog = screen.getByTestId("request-flow-modal-dialog");
+    expect(dialog.className).toMatch(/max-sm:rounded-none/);
+    expect(dialog.className).toMatch(/max-sm:max-w-none/);
+    expect(dialog.className).toMatch(/max-sm:h-\[100dvh\]/);
+    expect(dialog.className).toMatch(/max-sm:w-full/);
+  });
+
+  test("does not apply mobile classes by default", () => {
+    render(
+      <RequestFlowModal>
+        <div data-testid="child">c</div>
+      </RequestFlowModal>
+    );
+    const dialog = screen.getByTestId("request-flow-modal-dialog");
+    expect(dialog.className).not.toMatch(/max-sm:rounded-none/);
+    expect(dialog.className).not.toMatch(/max-sm:h-\[100dvh\]/);
   });
 });

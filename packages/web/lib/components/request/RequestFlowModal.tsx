@@ -15,10 +15,14 @@ const MAX_WIDTH_CLASS: Record<MaxWidth, string> = {
   "7xl": "max-w-7xl",
 };
 
+const MOBILE_FULLSCREEN_CLASSES =
+  "max-sm:rounded-none max-sm:max-w-none max-sm:max-h-none max-sm:h-[100dvh] max-sm:w-full";
+
 interface RequestFlowModalProps {
   children: React.ReactNode;
   maxWidth?: MaxWidth;
   onClose?: () => void;
+  mobileFullScreen?: boolean;
 }
 
 /**
@@ -29,6 +33,7 @@ export function RequestFlowModal({
   children,
   maxWidth = "4xl",
   onClose,
+  mobileFullScreen = false,
 }: RequestFlowModalProps) {
   const router = useRouter();
 
@@ -154,7 +159,7 @@ export function RequestFlowModal({
       <div
         ref={modalRef}
         data-testid="request-flow-modal-dialog"
-        className={`relative z-10 flex flex-col w-full ${MAX_WIDTH_CLASS[maxWidth]} max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden`}
+        className={`relative z-10 flex flex-col w-full ${MAX_WIDTH_CLASS[maxWidth]} max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden${mobileFullScreen ? ` ${MOBILE_FULLSCREEN_CLASSES}` : ""}`}
       >
         {/* Close Button */}
         <button
