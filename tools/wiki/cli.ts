@@ -15,7 +15,10 @@ Usage:
 async function main(): Promise<number> {
   const [subcommand] = process.argv.slice(2);
   switch (subcommand) {
-    case "lint":
+    case "lint": {
+      const { runLint } = await import("./lint.ts");
+      return runLint();
+    }
     case "links":
     case "ingest":
       process.stderr.write(`TODO: ${subcommand} not yet implemented\n`);
