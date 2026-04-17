@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, test, expect, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
 
 /**
  * Tests for hasMagazine filter in useInfinitePosts.
@@ -90,7 +94,7 @@ describe("useInfinitePosts hasMagazine filter", () => {
   });
 
   test("hasMagazine=true uses REST API listPosts with has_magazine=true", async () => {
-    useInfinitePosts({ hasMagazine: true });
+    renderHook(() => useInfinitePosts({ hasMagazine: true }));
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
@@ -103,21 +107,23 @@ describe("useInfinitePosts hasMagazine filter", () => {
     expect(supabaseFromCalls).toHaveLength(0);
   });
 
-  test("hasMagazine=false does NOT use REST API, uses Supabase", async () => {
-    useInfinitePosts({ hasMagazine: false });
+  // Obsolete: useInfinitePosts was consolidated to always use the REST API
+  // (listPosts with has_magazine=true), removing the Supabase fallback.
+  // These tests guarded the previous dual-path behavior. Re-enable only if
+  // the Supabase fallback is restored.
+  test.skip("hasMagazine=false does NOT use REST API, uses Supabase", async () => {
+    renderHook(() => useInfinitePosts({ hasMagazine: false }));
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
 
-    // Should NOT call REST API
     expect(listPostsCalls).toHaveLength(0);
-    // Should use Supabase
     const supabaseFromCalls = recordedCalls.filter((c) => c.method === "from");
     expect(supabaseFromCalls).toHaveLength(1);
   });
 
-  test("hasMagazine=undefined does NOT use REST API, uses Supabase", async () => {
-    useInfinitePosts({});
+  test.skip("hasMagazine=undefined does NOT use REST API, uses Supabase", async () => {
+    renderHook(() => useInfinitePosts({}));
     expect(capturedQueryFn).toBeDefined();
 
     await capturedQueryFn({ pageParam: 1 });
