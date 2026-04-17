@@ -215,6 +215,42 @@ async function fetchWithRedirect(
   return { ok: false, code: "redirect_loop" };
 }
 
+async function readBodyWithCap(
+  response: Response
+): Promise<
+  | { ok: true; buffer: Uint8Array; contentType: string }
+  | { ok: false; code: ErrorCode }
+> {
+  const rawCt = response.headers.get("content-type") ?? "";
+  const mime = rawCt.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (!ALLOWED_CONTENT_TYPES.has(mime)) {
+    await response.body?.cancel();
+    return { ok: false, code: "content_type_rejected" };
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return { ok: false, code: "fetch_failed" };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_BYTES) {
+      await reader.cancel();
+      return { ok: false, code: "too_large" };
+    }
+    chunks.push(value);
+  }
+
+  const buffer = Buffer.concat(chunks);
+  return { ok: true, buffer, contentType: mime };
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
