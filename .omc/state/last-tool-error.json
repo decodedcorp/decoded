@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"git merge origin/feat/45-request-solution-flow-completion --no-edit\",\"description\":\"Merge #56 branch into dev\"}",
-  "error": "Exit code 1\n자동 병합: packages/web/lib/components/detail/ImageDetailContent.tsx\n충돌 (내용): packages/web/lib/components/detail/ImageDetailContent.tsx에 병합 충돌\n자동 병합: packages/web/lib/components/detail/ItemDetailCard.tsx\n자동 병합: packages/web/lib/components/detail/OtherSolutionsList.tsx\n충돌 (내용): packages/web/lib/components/detail/OtherSolutionsList.tsx에 병합 충돌\n자동 병합: packages/web/lib/components/detail/TopSolutionCard.tsx\n충돌 (내용): packages/web/lib/components/detail/TopSolutionCard.tsx에 병합 충돌\n자동 병합: packages/...",
-  "timestamp": "2026-04-09T08:12:39.569Z",
-  "retry_count": 2
-}

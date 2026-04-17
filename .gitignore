@@ -75,3 +75,8 @@ packages/ai-server/searxng/settings.yml.new
 
 # Claude persistent memory
 .claude-pers/
+
+# OMC (oh-my-claudecode) — 로컬 세션/상태는 ignore, 공용 프로젝트 메모리만 tracked
+.omc/*
+!.omc/
+!.omc/project-memory.json
