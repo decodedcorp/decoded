@@ -1,3 +1,13 @@
+---
+title: "Upload Modal 재정의 — Intercepting Routes 통합 + Hook/Composition Seam"
+owner: human
+status: draft
+updated: 2026-04-17
+tags:
+  - ui
+  - architecture
+---
+
 # Upload Modal 재정의 — Intercepting Routes 통합 + Hook/Composition Seam
 
 **Issue:** [#145](https://github.com/decodedcorp/decoded/issues/145)

@@ -1,3 +1,13 @@
+---
+title: "#151 Admin 실데이터 연동 잔여 범위 — 설계 스펙"
+owner: human
+status: draft
+updated: 2026-04-17
+tags:
+  - architecture
+  - ui
+---
+
 # #151 Admin 실데이터 연동 잔여 범위 — 설계 스펙
 
 **Issue**: [#151](https://github.com/decodedcorp/decoded/issues/151)
