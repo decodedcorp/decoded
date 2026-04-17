@@ -97,7 +97,7 @@ pub async fn list_posts(
 )]
 pub async fn update_post_status(
     State(state): State<AppState>,
-    _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
+    axum::Extension(user): axum::Extension<User>,
     Path(post_id): Path<Uuid>,
     Json(dto): Json<PostStatusUpdate>,
 ) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
@@ -115,6 +115,7 @@ pub async fn update_post_status(
         state.db.as_ref(),
         post_id,
         &dto.status,
+        user.id,
     )
     .await?;
     Ok(Json(post))
@@ -137,11 +138,11 @@ pub async fn update_post_status(
 )]
 pub async fn admin_update_post(
     State(state): State<AppState>,
-    _extension: axum::Extension<User>,
+    axum::Extension(user): axum::Extension<User>,
     Path(post_id): Path<Uuid>,
     Json(dto): Json<UpdatePostDto>,
 ) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
-    let post = service::admin_update_post(&state, post_id, dto).await?;
+    let post = service::admin_update_post(&state, post_id, dto, user.id).await?;
     Ok(Json(post))
 }
 

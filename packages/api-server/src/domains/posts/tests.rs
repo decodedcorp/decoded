@@ -1271,8 +1271,9 @@ mod tests {
         let mut updated = post_model();
         updated.status = "active".to_string();
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![post_model()]]) // get_post_by_id
+            .append_query_results([vec![post_model()]]) // find_by_id (txn)
             .append_query_results([vec![updated]]) // update
+            .append_query_results([vec![crate::tests::fixtures::audit_log_model()]]) // audit insert
             .into_connection();
         let state = test_app_state(db);
         let dto = PostStatusUpdate {
@@ -1300,8 +1301,9 @@ mod tests {
         let mut updated = post_model();
         updated.status = "hidden".to_string();
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![post_model()]]) // get_post_by_id
+            .append_query_results([vec![post_model()]]) // find_by_id (txn)
             .append_query_results([vec![updated]]) // update
+            .append_query_results([vec![crate::tests::fixtures::audit_log_model()]]) // audit insert
             .into_connection();
         let state = test_app_state(db);
         let dto = PostStatusUpdate {
@@ -1356,8 +1358,9 @@ mod tests {
         let mut updated = post_model();
         updated.artist_name = Some("NewArtist".to_string());
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![post_model()]]) // get_post_by_id
+            .append_query_results([vec![post_model()]]) // find_by_id (txn)
             .append_query_results([vec![updated]]) // update
+            .append_query_results([vec![crate::tests::fixtures::audit_log_model()]]) // audit insert
             .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // spots load
             .into_connection();
         let state = test_app_state(db);

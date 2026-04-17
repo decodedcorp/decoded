@@ -36,6 +36,7 @@ pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;
 pub mod votes;
+pub mod warehouse_admin_audit_log;
 pub mod warehouse_artists;
 pub mod warehouse_brands;
 pub mod warehouse_groups;
@@ -151,6 +152,10 @@ pub use try_spot_tags::Model as TrySpotTagsModel;
 pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
 pub use user_tryon_history::Entity as UserTryonHistory;
 pub use user_tryon_history::Model as UserTryonHistoryModel;
+
+pub use warehouse_admin_audit_log::ActiveModel as WarehouseAdminAuditLogActiveModel;
+pub use warehouse_admin_audit_log::Entity as WarehouseAdminAuditLog;
+pub use warehouse_admin_audit_log::Model as WarehouseAdminAuditLogModel;
 
 pub use warehouse_artists::Entity as WarehouseArtists;
 pub use warehouse_artists::Model as WarehouseArtistsModel;

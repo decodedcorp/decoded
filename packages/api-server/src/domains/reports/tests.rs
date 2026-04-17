@@ -116,11 +116,13 @@ mod mock_db_tests {
         updated.resolution = Some("handled".to_string());
 
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            // find_by_id
+            // find_by_id (txn)
             .append_query_results([[fixtures::report_model()]])
             // update
             .append_query_results([[updated.clone()]])
-            // reporter lookup
+            // audit insert RETURNING
+            .append_query_results([[fixtures::audit_log_model()]])
+            // reporter lookup (post-commit)
             .append_query_results([[fixtures::user_model()]])
             .into_connection();
         let dto = UpdateReportStatusDto {
