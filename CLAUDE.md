@@ -49,6 +49,8 @@ Next.js 16.2 / React 19 / TypeScript 5.9 · Tailwind 3.4 · Zustand · TanStack 
 - **Env**: `packages/web/.env.local` from `.env.local.example` (gitignored)
 - **Supabase**: public schema (앱 데이터) + warehouse schema (ETL/Seed 파이프라인)
 - **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
+- **OMC (.omc/)**: `.omc/project-memory.json`만 공용으로 tracked — 팀 공유 프로젝트 컨텍스트. `sessions/`, `state/`, `plans/`, `research/`, `logs/`, `notepad.md` 등은 개인 세션 메타데이터로 gitignored. `project-memory.json` 업데이트는 팀에 영향을 주므로 커밋 시 diff 확인 필수
+- **이슈 추적**: 브랜치만 만들면 [프로젝트 보드](https://github.com/orgs/decodedcorp/projects/3)가 안 움직임. 작업 시작 시 `scripts/start-issue.sh <이슈번호>` 또는 Draft PR(`Closes #N`) 생성 → 자동 In Progress 전환. [GIT-WORKFLOW](docs/GIT-WORKFLOW.md) 참고
 
 ## Generated API Code
 

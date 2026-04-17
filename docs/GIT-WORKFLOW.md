@@ -121,11 +121,40 @@ hotfix/*  ──PR──▶ main (긴급 시에만)
 
 ### 워크플로우
 
-1. `dev`에서 작업 브랜치 생성: `git checkout -b feat/xxx dev`
-2. 작업 완료 후 `dev`로 PR 생성
-3. 리뷰 통과 후 `dev`에 머지
-4. 릴리스 준비 시 `dev` → `main` PR 생성
-5. CI 체크 통과 + 리뷰 후 `main`에 머지 → Vercel 자동 배포
+1. `dev`에서 작업 브랜치 생성: `git checkout -b feat/<issue#>-xxx dev`
+2. **즉시 Draft PR 생성** — 프로젝트 보드가 자동으로 **In Progress** 전환
+3. 작업 완료 → Draft 해제 → 리뷰 요청
+4. 리뷰 통과 후 `dev`에 머지 → 프로젝트 보드 자동 **Done** + 이슈 close
+5. 릴리스 준비 시 `dev` → `main` PR 생성
+6. CI 체크 통과 + 리뷰 후 `main`에 머지 → Vercel 자동 배포
+
+## 프로젝트 보드 자동 추적
+
+[decoded-monorepo 프로젝트 #3](https://github.com/orgs/decodedcorp/projects/3)의 활성 자동화:
+
+| 트리거 | 전환 |
+|--------|------|
+| 신규 이슈/PR 생성 | Todo로 자동 추가 |
+| **PR이 이슈에 링크됨** (`Closes #N`) | **In Progress** |
+| PR 머지 | Done + 이슈 자동 close |
+
+### 중요
+
+- **브랜치 생성만으로는 전환 안 됨** — Draft PR 필요
+- 브랜치 이름에 이슈 번호 포함 권장: `feat/27-follow-api`
+- 리뷰 전이라도 Draft PR을 먼저 올려 진행 가시화
+
+### 숏컷: `scripts/start-issue.sh`
+
+```bash
+./scripts/start-issue.sh 27
+# → feat/27-<이슈-슬러그> 브랜치 생성
+# → 빈 commit으로 초기화
+# → Draft PR 생성 (Closes #27 포함)
+# → 프로젝트 보드가 자동으로 In Progress 전환
+```
+
+`type`을 fix/chore 등으로 바꾸려면: `./scripts/start-issue.sh 27 fix`
 
 ### 긴급 핫픽스
 
