@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkIsAdmin } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/api/admin/audit-log";
 
 /**
  * GET /api/v1/admin/picks
@@ -95,12 +96,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "post_id is required" }, { status: 400 });
   }
 
+  const resolvedPickDate = pick_date || new Date().toISOString().slice(0, 10);
+
+  // Capture pre-state for upsert (null if pick_date slot was empty).
+  const { data: before } = await supabase
+    .from("decoded_picks")
+    .select("*")
+    .eq("pick_date", resolvedPickDate)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from("decoded_picks")
     .upsert(
       {
         post_id,
-        pick_date: pick_date || new Date().toISOString().slice(0, 10),
+        pick_date: resolvedPickDate,
         note: note || null,
         curated_by: curated_by || "editor",
       },
@@ -112,6 +122,15 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await writeAuditLog({
+    adminUserId: user.id,
+    action: before ? "pick_update" : "pick_create",
+    targetTable: "decoded_picks",
+    targetId: data.id,
+    beforeState: before ?? null,
+    afterState: data,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

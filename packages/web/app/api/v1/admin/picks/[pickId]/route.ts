@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkIsAdmin } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/api/admin/audit-log";
 
 /**
  * PATCH /api/v1/admin/picks/:pickId
@@ -38,6 +39,12 @@ export async function PATCH(
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
+  const { data: before } = await supabase
+    .from("decoded_picks")
+    .select("*")
+    .eq("id", pickId)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from("decoded_picks")
     .update(updates)
@@ -48,6 +55,16 @@ export async function PATCH(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await writeAuditLog({
+    adminUserId: user.id,
+    action: "pick_update",
+    targetTable: "decoded_picks",
+    targetId: pickId,
+    beforeState: before ?? null,
+    afterState: data,
+    metadata: { fields: Object.keys(updates) },
+  });
 
   return NextResponse.json(data);
 }
@@ -77,6 +94,12 @@ export async function DELETE(
 
   const { pickId } = await params;
 
+  const { data: before } = await supabase
+    .from("decoded_picks")
+    .select("*")
+    .eq("id", pickId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("decoded_picks")
     .delete()
@@ -85,6 +108,15 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await writeAuditLog({
+    adminUserId: user.id,
+    action: "pick_delete",
+    targetTable: "decoded_picks",
+    targetId: pickId,
+    beforeState: before ?? null,
+    afterState: null,
+  });
 
   return NextResponse.json({ success: true });
 }
