@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { isIPv6 } from "node:net";
 import {
   checkRateLimit,
   getClientKey,
@@ -6,53 +7,329 @@ import {
 } from "@/lib/rate-limit";
 
 /**
- * Image proxy for WebGL textures.
- * Fetches external images and serves them with CORS headers,
- * allowing CircularGallery (OGL) to use them as WebGL textures.
+ * Image proxy for WebGL textures and <img> direct usage.
+ * Defensive layers (in order): rate-limit → URL/SSRF validation → header
+ * injection (UA/Referer) → manual redirect (3 hops, re-validated each hop) →
+ * Content-Type whitelist → streaming 10MB cap → structured error.
  *
  * Usage: /api/v1/image-proxy?url=<encoded-image-url>
  */
+const PROXY_TIMEOUT_MS = 10_000;
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB decompressed
+const MAX_REDIRECTS = 3;
+
+const IMAGE_PROXY_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+// Exact match or suffix match (subdomain-safe; see resolveReferer)
+const REFERER_MAP: Record<string, string> = {
+  "i.pinimg.com": "https://www.pinterest.com/",
+  "pinimg.com": "https://www.pinterest.com/",
+  "pinterest.com": "https://www.pinterest.com/",
+};
+
+// SVG is intentionally excluded - ShopGrid/ImageDetailContent/DecodeShowcase/
+// MagazineItemsSection call /api/v1/image-proxy via <img src> directly,
+// bypassing Next optimizer. Raw SVG would reach the browser and enable XSS.
+const ALLOWED_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/gif",
+  "image/bmp",
+  "image/x-icon",
+]);
+
+type ErrorCode =
+  | "missing_url"
+  | "invalid_url"
+  | "ssrf_blocked"
+  | "upstream_error"
+  | "timeout"
+  | "too_large"
+  | "redirect_loop"
+  | "content_type_rejected"
+  | "fetch_failed";
+
+function errorResponse(
+  code: ErrorCode,
+  status: number,
+  extras?: { upstreamStatus?: number }
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: code,
+      code,
+      upstreamStatus: extras?.upstreamStatus,
+    }),
+    {
+      status,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+    }
+  );
+}
+
+function isPrivateIPv4(host: string): boolean {
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return false;
+  const parts = host.split(".").map((p) => Number(p));
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+  ) {
+    return false;
+  }
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
+}
+
+function isPrivateIPv6(host: string): boolean {
+  const lower = host.toLowerCase();
+  if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  if (lower.startsWith("fe80:")) return true;
+  // IPv4-mapped IPv6: ::ffff:a.b.c.d - SSRF bypass defense
+  if (lower.startsWith("::ffff:")) return true;
+  return false;
+}
+
+function validateUrl(
+  raw: string
+): { ok: true; url: URL } | { ok: false; code: ErrorCode } {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { ok: false, code: "invalid_url" };
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { ok: false, code: "invalid_url" };
+  }
+
+  // URL.hostname includes [] for IPv6 literals - strip before validation
+  // (net.isIPv6("[::1]") returns false; must strip first)
+  const hostname = url.hostname;
+  const bare =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
+
+  if (bare === "localhost" || bare === "") {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  if (isPrivateIPv4(bare)) {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  if (isIPv6(bare) && isPrivateIPv6(bare)) {
+    return { ok: false, code: "ssrf_blocked" };
+  }
+
+  return { ok: true, url };
+}
+
+function resolveReferer(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+  if (REFERER_MAP[host]) return REFERER_MAP[host];
+  for (const key of Object.keys(REFERER_MAP)) {
+    if (host.endsWith("." + key)) return REFERER_MAP[key];
+  }
+  return null;
+}
+
+async function fetchWithRedirect(
+  initial: URL,
+  signal: AbortSignal
+): Promise<
+  | { ok: true; response: Response; finalUrl: URL }
+  | { ok: false; code: ErrorCode; status?: number }
+> {
+  let currentUrl = initial;
+
+  // Iterations: initial fetch + up to MAX_REDIRECTS follows (4 total with MAX_REDIRECTS=3).
+  // The final iteration is what catches "still redirecting after 3 follows" → redirect_loop.
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    // Re-validate each hop (hostname-layer SSRF defense for redirect chains)
+    const v = validateUrl(currentUrl.toString());
+    if (!v.ok) return { ok: false, code: v.code };
+    currentUrl = v.url;
+
+    const headers: Record<string, string> = {
+      "User-Agent": IMAGE_PROXY_UA,
+      "X-Decoded-Proxy": "1",
+      Accept: "image/*",
+    };
+    const referer = resolveReferer(currentUrl.hostname);
+    if (referer) headers["Referer"] = referer;
+
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, {
+        signal,
+        headers,
+        redirect: "manual",
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return { ok: false, code: "timeout" };
+      }
+      return { ok: false, code: "fetch_failed" };
+    }
+
+    // 3xx with Location → follow manually
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        return { ok: false, code: "upstream_error", status: response.status };
+      }
+      try {
+        currentUrl = new URL(location, currentUrl);
+      } catch {
+        return { ok: false, code: "upstream_error", status: response.status };
+      }
+      // Drain body so the connection can be reused
+      await response.body?.cancel();
+      continue;
+    }
+
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { ok: false, code: "upstream_error", status: response.status };
+    }
+
+    return { ok: true, response, finalUrl: currentUrl };
+  }
+
+  return { ok: false, code: "redirect_loop" };
+}
+
+async function readBodyWithCap(
+  response: Response
+): Promise<
+  | { ok: true; buffer: ArrayBuffer; contentType: string }
+  | { ok: false; code: ErrorCode }
+> {
+  const rawCt = response.headers.get("content-type") ?? "";
+  const mime = rawCt.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (!ALLOWED_CONTENT_TYPES.has(mime)) {
+    await response.body?.cancel();
+    return { ok: false, code: "content_type_rejected" };
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return { ok: false, code: "fetch_failed" };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_BYTES) {
+      await reader.cancel();
+      return { ok: false, code: "too_large" };
+    }
+    chunks.push(value);
+  }
+
+  // Concat into a plain ArrayBuffer so Response() accepts it as BodyInit.
+  // Buffer.concat returns Uint8Array<ArrayBufferLike> which is not valid BodyInit in TS 5.7+.
+  const concat = Buffer.concat(chunks);
+  const buffer = concat.buffer.slice(
+    concat.byteOffset,
+    concat.byteOffset + concat.byteLength
+  ) as ArrayBuffer;
+  return { ok: true, buffer, contentType: mime };
+}
+
+function logFailure(
+  code: ErrorCode,
+  url: string,
+  extras?: Record<string, unknown>
+): void {
+  console.error("[image-proxy]", { code, url, ...extras });
+}
+
 export async function GET(request: NextRequest) {
   const clientKey = getClientKey(request);
   if (!checkRateLimit(clientKey, { windowMs: 60_000, max: 60 })) {
     return rateLimitResponse(60);
   }
 
-  const url = request.nextUrl.searchParams.get("url");
-
-  if (!url) {
-    return NextResponse.json(
-      { error: "Missing url parameter" },
-      { status: 400 }
-    );
+  const raw = request.nextUrl.searchParams.get("url");
+  if (!raw) {
+    return errorResponse("missing_url", 400);
   }
 
-  try {
-    const response = await fetch(url, {
-      headers: { Accept: "image/*" },
-    });
+  const validation = validateUrl(raw);
+  if (!validation.ok) {
+    logFailure(validation.code, raw);
+    return errorResponse(validation.code, 400);
+  }
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Upstream returned ${response.status}` },
-        { status: response.status }
-      );
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+
+  try {
+    const fetched = await fetchWithRedirect(validation.url, controller.signal);
+    if (!fetched.ok) {
+      logFailure(fetched.code, raw, { upstreamStatus: fetched.status });
+      const status =
+        fetched.code === "timeout"
+          ? 504
+          : fetched.code === "redirect_loop"
+            ? 400
+            : fetched.code === "upstream_error"
+              ? (fetched.status ?? 502)
+              : 502;
+      return errorResponse(fetched.code, status, {
+        upstreamStatus: fetched.status,
+      });
     }
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
+    const body = await readBodyWithCap(fetched.response);
+    if (!body.ok) {
+      logFailure(body.code, raw);
+      const status =
+        body.code === "too_large"
+          ? 413
+          : body.code === "content_type_rejected"
+            ? 415
+            : 502;
+      return errorResponse(body.code, status);
+    }
 
-    return new NextResponse(buffer, {
+    return new Response(body.buffer, {
+      status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": body.contentType,
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
         "Access-Control-Allow-Origin": "*",
       },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch image" },
-      { status: 502 }
-    );
+  } catch (err) {
+    const code: ErrorCode =
+      err instanceof Error && err.name === "AbortError"
+        ? "timeout"
+        : "fetch_failed";
+    logFailure(code, raw, { message: (err as Error)?.message });
+    return errorResponse(code, code === "timeout" ? 504 : 502);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
