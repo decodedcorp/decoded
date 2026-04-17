@@ -218,7 +218,7 @@ async function fetchWithRedirect(
 async function readBodyWithCap(
   response: Response
 ): Promise<
-  | { ok: true; buffer: Uint8Array; contentType: string }
+  | { ok: true; buffer: ArrayBuffer; contentType: string }
   | { ok: false; code: ErrorCode }
 > {
   const rawCt = response.headers.get("content-type") ?? "";
@@ -247,7 +247,13 @@ async function readBodyWithCap(
     chunks.push(value);
   }
 
-  const buffer = Buffer.concat(chunks);
+  // Concat into a plain ArrayBuffer so Response() accepts it as BodyInit.
+  // Buffer.concat returns Uint8Array<ArrayBufferLike> which is not valid BodyInit in TS 5.7+.
+  const concat = Buffer.concat(chunks);
+  const buffer = concat.buffer.slice(
+    concat.byteOffset,
+    concat.byteOffset + concat.byteLength
+  ) as ArrayBuffer;
   return { ok: true, buffer, contentType: mime };
 }
 
