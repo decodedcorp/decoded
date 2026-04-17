@@ -65,8 +65,8 @@
 
 | 분리 이슈                                   | 사유                                                                         |
 | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| **#152 Rust API audit 통합** (신규)         | `picks`, `post status` 등 Rust route의 audit은 Rust 서버 수정 필요. 별도 PR. |
-| **#153 entities/seed 실데이터 강화** (신규) | "점검"은 unbounded scope. 발견 시 개별 이슈화.                               |
+| **#237 Rust API audit 통합** (신규)         | `picks`, `post status` 등 Rust route의 audit은 Rust 서버 수정 필요. 별도 PR. |
+| **#238 entities/seed 실데이터 강화** (신규) | "점검"은 unbounded scope. 발견 시 개별 이슈화.                               |
 | **Editorial 승인 워크플로우** (추후 이슈)   | `editorial_posts` 테이블 신규 + 승인 흐름 = 별도 스펙.                       |
 | **Magazine 알림/rollback/역할 세분화**      | Wave 2 내 defer. 후속 이슈로.                                                |
 
@@ -75,7 +75,7 @@
 이 PR 머지 후 #151이 "closed"되기 위한 조건:
 
 - Wave 1/2/3 모두 머지
-- Issue body에 남은 작업(#152, #153, editorial 등) 링크 추가
+- Issue body에 남은 작업(#237, #238, editorial 등) 링크 추가
 - PR 설명에 "이 PR로 끝나지 않는 항목" 섹션 명시
 
 ---
@@ -230,7 +230,7 @@ GRANT EXECUTE ON FUNCTION public.update_magazine_status TO authenticated;
    - 없으면 **신규 `createAdminSupabaseClient()` 유틸** 생성 (service_role + 쿠키 미사용)
    - 파일: `packages/web/lib/supabase/admin-server.ts`
 2. 기존 `AdminEmptyState` 컴포넌트 props/variants 확인 (`packages/web/lib/components/admin/common/AdminEmptyState.tsx` 존재 확인)
-3. Rust API에 audit 관련 구조 존재 여부 재확인 (#152 범위 확정용)
+3. Rust API에 audit 관련 구조 존재 여부 재확인 (#237 범위 확정용)
 
 **산출물**: 코드 변경 없음. 조사 결과 스펙에 주석 형태로 남김 (본 문서 6절).
 
@@ -315,7 +315,7 @@ packages/web/lib/hooks/admin/
   - Wave 2에서 신규로 추가되는 magazine status → RPC가 처리하므로 자동 커버
   - `reports-status` (Next.js route 여부 확인 필요)
   - `post-images`, `post-spots` (조회만 있을 수 있음)
-- **Rust route(`picks` CRUD, `posts/status`)는 이 PR에서 다루지 않음** → #152로 이관
+- **Rust route(`picks` CRUD, `posts/status`)는 이 PR에서 다루지 않음** → #237로 이관
 
 **변경**: 누락된 Next.js route handler에 `writeAuditLog({ action, target_table, target_id, before, after, metadata })` 추가.
 
@@ -383,7 +383,7 @@ packages/web/lib/hooks/admin/
 
 - `packages/api-server/src/` 트리에 `audit` 명칭의 파일/모듈 **없음** (`grep -rn "audit" packages/api-server/src/` → 0건, 관련 모듈 부재 확인).
 - 디렉토리 구성: `batch/ bin/ config.rs constants.rs domains/ entities/ error.rs grpc/ handlers.rs lib.rs main.rs metrics/ middleware/ observability/ openapi.rs router.rs services/ tests/ utils/`.
-- **결론**: Rust 쪽은 audit 인프라가 전무 → **#152 별도 이슈로 분리**한다는 §2.2 결정이 정확. 본 PR에서 다루지 않음.
+- **결론**: Rust 쪽은 audit 인프라가 전무 → **#237 별도 이슈로 분리**한다는 §2.2 결정이 정확. 본 PR에서 다루지 않음.
 
 ### 6.7 후속 task 영향 요약
 
@@ -393,7 +393,7 @@ packages/web/lib/hooks/admin/
 | Task 7 (RLS 정책)      | `admin_can_update_magazines` 정책의 `public.is_admin(auth.uid())` 호출은 함수 추가 후 정상 동작.                       |
 | Task 11/12 (API route) | `import { checkIsAdmin } from "@/lib/supabase/admin"` 사용. service_role 클라이언트 신규 생성은 RPC 도입 시 선택.      |
 | Wave 1 (empty state)   | `AdminEmptyState` 경로는 `common/` (스펙 §5의 `shared/` 표기는 정정 필요). 기존 5개 사용처를 모범 예시로.              |
-| #152 분리 결정         | Rust audit 인프라 부재 재확인 → 별도 이슈 처리 결정 유지.                                                              |
+| #237 분리 결정         | Rust audit 인프라 부재 재확인 → 별도 이슈 처리 결정 유지.                                                              |
 
 ---
 
@@ -459,9 +459,9 @@ packages/web/lib/hooks/admin/
   4. `feat(admin): wave 2b API — magazine 승인 엔드포인트`
   5. `feat(admin): wave 2c UI — magazine 승인 탭 + 테이블`
   6. `feat(admin): wave 3 Next.js audit 갭 보완`
-  7. `docs(issue): #151 분리 이슈(#152/#153) 링크 및 완료 기준`
+  7. `docs(issue): #151 분리 이슈(#237/#238) 링크 및 완료 기준`
 - 리뷰 → **dev 브랜치로 머지 1 PR** (feature/151 → dev, main은 GIT-WORKFLOW 따라 dev→main PR로 별도 승격)
-- 후속: #152 (Rust audit), #153 (entities/seed 실데이터)
+- 후속: #237 (Rust audit), #238 (entities/seed 실데이터)
 
 ---
 
@@ -484,7 +484,7 @@ packages/web/lib/hooks/admin/
 | 위험                                                                          | 완화                                                                                   |
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | RLS 정책이 `public.is_admin(uuid)` 함수 가정 — 존재하지 않으면 migration 실패 | Wave 0.5에서 존재 확인. 없으면 migration에 함수 정의 포함 or admin role 체크 방식 변경 |
-| Orval 자동 생성 API에 magazine 추가가 맞물릴 수 있음                          | magazine 승인은 Next.js route라 Orval 영향 없음. Rust 쪽은 #152에서 처리               |
+| Orval 자동 생성 API에 magazine 추가가 맞물릴 수 있음                          | magazine 승인은 Next.js route라 Orval 영향 없음. Rust 쪽은 #237에서 처리               |
 | `#148 editorial OG fix`가 QA 브랜치에만 있어 관련 컴포넌트 충돌 가능          | QA 머지 완료 후 dev → feature 리베이스                                                 |
 | Magazine seed 데이터 부재로 E2E 테스트 어려움                                 | Playwright setup에서 fixture seed 스크립트 작성                                        |
 | 마이그레이션 순서 꼬임 (RPC가 컬럼보다 먼저)                                  | Migration 파일명 타임스탬프로 순서 보장                                                |
@@ -498,5 +498,5 @@ packages/web/lib/hooks/admin/
 - [ ] `warehouse.admin_audit_log`에 각 액션 레코드 생성
 - [ ] E2E 테스트 통과
 - [ ] PR #224 머지
-- [ ] 이슈 #152, #153 생성 + #151 본문에 링크
+- [ ] 이슈 #237, #238 생성 + #151 본문에 링크
 - [ ] `gstack /qa` 통과
