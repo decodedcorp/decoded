@@ -45,3 +45,10 @@ CREATE POLICY "admin_can_update_magazines"
 CREATE INDEX IF NOT EXISTS post_magazines_status_idx
   ON public.post_magazines(status)
   WHERE status IN ('pending', 'draft');
+
+-- 7) FK: approved_by ON DELETE SET NULL (historical audit reference 보존하면서 admin user 삭제 허용)
+ALTER TABLE public.post_magazines
+  DROP CONSTRAINT IF EXISTS post_magazines_approved_by_fkey;
+ALTER TABLE public.post_magazines
+  ADD CONSTRAINT post_magazines_approved_by_fkey
+    FOREIGN KEY (approved_by) REFERENCES auth.users(id) ON DELETE SET NULL;
