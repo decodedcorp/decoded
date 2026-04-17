@@ -18,6 +18,7 @@ const MAX_WIDTH_CLASS: Record<MaxWidth, string> = {
 interface RequestFlowModalProps {
   children: React.ReactNode;
   maxWidth?: MaxWidth;
+  onClose?: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ interface RequestFlowModalProps {
 export function RequestFlowModal({
   children,
   maxWidth = "4xl",
+  onClose,
 }: RequestFlowModalProps) {
   const router = useRouter();
 
@@ -44,6 +46,11 @@ export function RequestFlowModal({
     ctxRef.current.add(() => {
       const tl = gsap.timeline({
         onComplete: () => {
+          if (onClose) {
+            onClose();
+            return;
+          }
+          // Legacy fallback for callers that haven't migrated yet (e.g., detect modal).
           getRequestActions().resetRequestFlow();
           if (window.history.length > 1) {
             router.back();
@@ -75,7 +82,7 @@ export function RequestFlowModal({
         0
       );
     });
-  }, [router]);
+  }, [router, onClose]);
 
   // Mount/Enter Animation
   useEffect(() => {
@@ -137,6 +144,7 @@ export function RequestFlowModal({
       {/* Backdrop */}
       <div
         ref={backdropRef}
+        data-testid="request-flow-modal-backdrop"
         onClick={handleClose}
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         aria-hidden="true"
