@@ -4,16 +4,22 @@
 
 ## When to read what
 
-| Task | Document |
-|------|----------|
-| 패키지 구조, 명령어, 로컬 deps / 포트 | [monorepo.md](monorepo.md) |
-| 웹 라우트·기능 영역 | [web-routes-and-features.md](web-routes-and-features.md) |
-| Next.js `app/api/v1/*` 라우트 표 | [api-v1-routes.md](api-v1-routes.md) |
-| 훅 목록, 스토어·주요 경로 | [web-hooks-and-stores.md](web-hooks-and-stores.md) |
-| 디자인 시스템 import·컴포넌트 인벤토리 | [design-system-llm.md](design-system-llm.md) |
-| Warehouse 스키마 (ETL·Seed 파이프라인) | [warehouse-schema.md](warehouse-schema.md) |
-| 아키텍처·컨벤션·스택 심층 | [`.planning/codebase/`](../../.planning/codebase/) |
-| 디자인 토큰·UI 상세 | [`docs/design-system/`](../design-system/) |
+| Task                                           | Document                                                 |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| `docs/wiki/` 진입 가이드 (에이전트 워크플로우) | [wiki-entry.md](wiki-entry.md)                           |
+| 아키텍처 summary (설계 의도 vs 스냅샷)         | [architecture-summary.md](architecture-summary.md)       |
+| API summary (Next.js + Rust 레이어)            | [api-summary.md](api-summary.md)                         |
+| DB summary (public / warehouse 이중 스키마)    | [database-summary.md](database-summary.md)               |
+| 디자인 시스템 summary                          | [design-system-summary.md](design-system-summary.md)     |
+| AI playbook summary (에이전트별 프로필)        | [ai-playbook-summary.md](ai-playbook-summary.md)         |
+| 패키지 구조, 명령어, 로컬 deps / 포트          | [monorepo.md](monorepo.md)                               |
+| 웹 라우트·기능 영역                            | [web-routes-and-features.md](web-routes-and-features.md) |
+| Next.js `app/api/v1/*` 라우트 표               | [api-v1-routes.md](api-v1-routes.md)                     |
+| 훅 목록, 스토어·주요 경로                      | [web-hooks-and-stores.md](web-hooks-and-stores.md)       |
+| 디자인 시스템 import·컴포넌트 인벤토리         | [design-system-llm.md](design-system-llm.md)             |
+| Warehouse 스키마 (ETL·Seed 파이프라인)         | [warehouse-schema.md](warehouse-schema.md)               |
+| 아키텍처·컨벤션·스택 심층                      | [`.planning/codebase/`](../../.planning/codebase/)       |
+| 디자인 토큰·UI 상세                            | [`docs/design-system/`](../design-system/)               |
 
 | E2E 테스트 인프라·검증 항목 | [e2e-testing.md](e2e-testing.md) |
 
