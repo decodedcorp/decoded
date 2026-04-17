@@ -1,26 +1,38 @@
 "use client";
 
-import { useCallback, Suspense } from "react";
+import { useCallback, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FileTextIcon, FlagIcon } from "lucide-react";
+import { FileTextIcon, FlagIcon, BookOpenIcon } from "lucide-react";
 import { useAdminPostList } from "@/lib/hooks/admin/useAdminPosts";
 import { useAdminReportList } from "@/lib/hooks/admin/useAdminReports";
+import { useAdminMagazineList } from "@/lib/hooks/admin/useAdminMagazineList";
+import { useUpdateMagazineStatus } from "@/lib/hooks/admin/useUpdateMagazineStatus";
 import { AdminPostTable } from "@/lib/components/admin/content/AdminPostTable";
 import { AdminPostTableSkeleton } from "@/lib/components/admin/content/AdminPostTableSkeleton";
 import { PostStatusFilter } from "@/lib/components/admin/content/PostStatusFilter";
 import { ReportTable } from "@/lib/components/admin/content/ReportTable";
+import {
+  MagazineApprovalTable,
+  MagazineStatusFilter,
+  RejectModal,
+} from "@/lib/components/admin/magazines";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
 import { AdminEmptyState } from "@/lib/components/admin/common";
 import type { PostStatus } from "@/lib/api/admin/posts";
 import type { ReportStatus } from "@/lib/api/admin/reports";
+import {
+  isValidMagazineStatus,
+  type MagazineStatus,
+} from "@/lib/api/admin/magazines";
 
 // ─── Tab types ───────────────────────────────────────────────────────────────
 
-type ContentTab = "posts" | "reports";
+type ContentTab = "posts" | "reports" | "magazines";
 
 const TAB_OPTIONS: { label: string; value: ContentTab }[] = [
   { label: "Posts", value: "posts" },
   { label: "Reports", value: "reports" },
+  { label: "Magazines", value: "magazines" },
 ];
 
 const REPORT_STATUS_OPTIONS: {
@@ -35,6 +47,90 @@ const REPORT_STATUS_OPTIONS: {
   { label: "Dismissed", value: "dismissed", dotColor: "bg-gray-400" },
 ];
 
+// ─── Magazine tab ────────────────────────────────────────────────────────────
+
+interface MagazinesTabProps {
+  status: MagazineStatus | undefined;
+  page: number;
+  onStatusChange: (next: MagazineStatus | undefined) => void;
+  onPageChange: (page: number) => void;
+}
+
+function MagazinesTab({
+  status,
+  page,
+  onStatusChange,
+  onPageChange,
+}: MagazinesTabProps) {
+  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+
+  const limit = 20;
+  const listQuery = useAdminMagazineList({ status, page, limit });
+  const mutation = useUpdateMagazineStatus();
+
+  const handleApprove = (id: string) =>
+    mutation.mutate({ id, status: "published" });
+  const handleReject = (id: string) => setRejectTargetId(id);
+  const handleRevert = (id: string) => mutation.mutate({ id, status: "draft" });
+
+  const handleConfirmReject = (reason: string) => {
+    if (!rejectTargetId) return;
+    mutation.mutate(
+      { id: rejectTargetId, status: "rejected", rejectionReason: reason },
+      { onSuccess: () => setRejectTargetId(null) }
+    );
+  };
+
+  const items = listQuery.data?.data ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const isEmpty = !listQuery.isLoading && items.length === 0;
+
+  return (
+    <div className="space-y-4">
+      <MagazineStatusFilter value={status} onChange={onStatusChange} />
+
+      {listQuery.isLoading ? (
+        <AdminPostTableSkeleton />
+      ) : isEmpty ? (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<BookOpenIcon className="w-12 h-12" />}
+            title="No magazines in this bucket"
+            description="Magazines matching the current filter will appear here."
+          />
+        </div>
+      ) : (
+        <>
+          <MagazineApprovalTable
+            items={items}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onRevert={handleRevert}
+            mutatingId={
+              mutation.isPending ? (mutation.variables?.id ?? null) : null
+            }
+          />
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+            />
+          )}
+        </>
+      )}
+
+      <RejectModal
+        open={!!rejectTargetId}
+        onClose={() => setRejectTargetId(null)}
+        onSubmit={handleConfirmReject}
+        submitting={mutation.isPending}
+      />
+    </div>
+  );
+}
+
 // ─── Inner content ───────────────────────────────────────────────────────────
 
 function ContentManagementContent() {
@@ -45,16 +141,21 @@ function ContentManagementContent() {
   const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
   const statusParam = searchParams.get("status");
 
-  // Posts state
   const postStatus =
     currentTab === "posts" && statusParam
       ? (statusParam as PostStatus)
       : undefined;
 
-  // Reports state
   const reportStatus =
     currentTab === "reports" && statusParam
       ? (statusParam as ReportStatus)
+      : undefined;
+
+  const magazineStatus =
+    currentTab === "magazines" &&
+    statusParam &&
+    isValidMagazineStatus(statusParam)
+      ? statusParam
       : undefined;
 
   const postListQuery = useAdminPostList({
@@ -109,6 +210,13 @@ function ContentManagementContent() {
     [updateUrl]
   );
 
+  const handleMagazineStatusChange = useCallback(
+    (status: MagazineStatus | undefined) => {
+      updateUrl({ status, page: "1" });
+    },
+    [updateUrl]
+  );
+
   const handlePageChange = useCallback(
     (page: number) => {
       updateUrl({ page: page.toString() });
@@ -123,7 +231,7 @@ function ContentManagementContent() {
           Content Management
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage post visibility, status, and reports
+          Manage post visibility, status, reports, and magazine approval
         </p>
       </div>
 
@@ -246,6 +354,16 @@ function ContentManagementContent() {
             <AdminPostTableSkeleton />
           )}
         </>
+      )}
+
+      {/* Magazines tab */}
+      {currentTab === "magazines" && (
+        <MagazinesTab
+          status={magazineStatus}
+          page={currentPage}
+          onStatusChange={handleMagazineStatusChange}
+          onPageChange={handlePageChange}
+        />
       )}
     </div>
   );
