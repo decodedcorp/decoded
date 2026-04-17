@@ -6,15 +6,35 @@ import { X } from "lucide-react";
 import { gsap } from "gsap";
 import { getRequestActions } from "@/lib/stores/requestStore";
 
+export type MaxWidth = "4xl" | "5xl" | "6xl" | "7xl";
+
+const MAX_WIDTH_CLASS: Record<MaxWidth, string> = {
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
+const MOBILE_FULLSCREEN_CLASSES =
+  "max-sm:rounded-none max-sm:max-w-none max-sm:max-h-none max-sm:h-[100dvh] max-sm:w-full";
+
 interface RequestFlowModalProps {
   children: React.ReactNode;
+  maxWidth?: MaxWidth;
+  onClose?: () => void;
+  mobileFullScreen?: boolean;
 }
 
 /**
  * Modal wrapper for request flow (upload/detect) on desktop
  * Uses intercepting routes to show request pages as modal overlay
  */
-export function RequestFlowModal({ children }: RequestFlowModalProps) {
+export function RequestFlowModal({
+  children,
+  maxWidth = "4xl",
+  onClose,
+  mobileFullScreen = false,
+}: RequestFlowModalProps) {
   const router = useRouter();
 
   // Refs for animation
@@ -31,6 +51,11 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
     ctxRef.current.add(() => {
       const tl = gsap.timeline({
         onComplete: () => {
+          if (onClose) {
+            onClose();
+            return;
+          }
+          // Legacy fallback for callers that haven't migrated yet (e.g., detect modal).
           getRequestActions().resetRequestFlow();
           if (window.history.length > 1) {
             router.back();
@@ -62,7 +87,7 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
         0
       );
     });
-  }, [router]);
+  }, [router, onClose]);
 
   // Mount/Enter Animation
   useEffect(() => {
@@ -124,6 +149,7 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
       {/* Backdrop */}
       <div
         ref={backdropRef}
+        data-testid="request-flow-modal-backdrop"
         onClick={handleClose}
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         aria-hidden="true"
@@ -132,7 +158,8 @@ export function RequestFlowModal({ children }: RequestFlowModalProps) {
       {/* Modal Container */}
       <div
         ref={modalRef}
-        className="relative z-10 flex flex-col w-full max-w-4xl max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden"
+        data-testid="request-flow-modal-dialog"
+        className={`relative z-10 flex flex-col w-full ${MAX_WIDTH_CLASS[maxWidth]} max-h-[90vh] bg-background rounded-2xl shadow-2xl overflow-hidden${mobileFullScreen ? ` ${MOBILE_FULLSCREEN_CLASSES}` : ""}`}
       >
         {/* Close Button */}
         <button
