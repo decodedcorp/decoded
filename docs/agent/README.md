@@ -1,3 +1,11 @@
+---
+title: Agent reference (`docs/agent/`)
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, harness]
+---
+
 # Agent reference (`docs/agent/`)
 
 버전 관리되는 **에이전트·LLM용 참조** 모음입니다. 루트 [`CLAUDE.md`](../../CLAUDE.md)는 짧은 **맵**만 두고, 표·인벤토리·긴 트리는 이 폴더에 둡니다.
