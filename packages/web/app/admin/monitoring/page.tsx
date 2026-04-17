@@ -1,6 +1,8 @@
 "use client";
 
+import { ActivityIcon } from "lucide-react";
 import { useMonitoringMetrics } from "@/lib/hooks/admin/useMonitoring";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 import {
   MetricsKPICards,
   MetricsKPICardsSkeleton,
@@ -31,6 +33,15 @@ export default function MonitoringPage() {
     );
   }
 
+  // Snapshot has no traffic at all (no current sample, no history bucket,
+  // no per-endpoint row). Show a single shared empty state instead of
+  // four empty widgets stacked on top of each other.
+  const isEmpty =
+    !!data &&
+    !data.current &&
+    data.history.length === 0 &&
+    data.endpoints.length === 0;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -42,33 +53,45 @@ export default function MonitoringPage() {
         )}
       </div>
 
-      {/* KPI Cards */}
-      {isLoading || !data ? (
-        <MetricsKPICardsSkeleton />
+      {isEmpty ? (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<ActivityIcon className="w-12 h-12" />}
+            title="No monitoring data yet"
+            description="Backend traffic metrics will appear here once the API server starts handling requests. The dashboard auto-refreshes every 15 seconds."
+          />
+        </div>
       ) : (
-        <MetricsKPICards data={data} />
-      )}
+        <>
+          {/* KPI Cards */}
+          {isLoading || !data ? (
+            <MetricsKPICardsSkeleton />
+          ) : (
+            <MetricsKPICards data={data} />
+          )}
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {isLoading || !data ? (
-          <>
-            <LatencyChartSkeleton />
-            <ThroughputChartSkeleton />
-          </>
-        ) : (
-          <>
-            <LatencyChart data={data.history} />
-            <ThroughputChart data={data.history} />
-          </>
-        )}
-      </div>
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {isLoading || !data ? (
+              <>
+                <LatencyChartSkeleton />
+                <ThroughputChartSkeleton />
+              </>
+            ) : (
+              <>
+                <LatencyChart data={data.history} />
+                <ThroughputChart data={data.history} />
+              </>
+            )}
+          </div>
 
-      {/* Endpoint Table */}
-      {isLoading || !data ? (
-        <EndpointTableSkeleton />
-      ) : (
-        <EndpointTable data={data.endpoints} />
+          {/* Endpoint Table */}
+          {isLoading || !data ? (
+            <EndpointTableSkeleton />
+          ) : (
+            <EndpointTable data={data.endpoints} />
+          )}
+        </>
       )}
     </div>
   );
