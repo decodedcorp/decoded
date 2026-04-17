@@ -1,3 +1,11 @@
+---
+title: Codex Profile
+owner: human
+status: stale
+updated: 2026-04-17
+tags: [agent, harness, deprecated]
+---
+
 # Codex Profile – Specs & Templates
 
 **Last verified**: 2025-01-27  

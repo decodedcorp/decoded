@@ -20,57 +20,26 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 
 ## Agent reference (`docs/agent/`)
 
-| 문서 | 용도 |
-|------|------|
-| [`docs/agent/README.md`](docs/agent/README.md) | 목차·언제 무엇을 읽을지 |
-| [`docs/agent/web-routes-and-features.md`](docs/agent/web-routes-and-features.md) | 웹 라우트·기능 영역 |
-| [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md) | Next.js `/api/v1/*` 표 |
-| [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md) | 훅·스토어·주요 경로 |
-| [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md) | 디자인 시스템 import·컴포넌트 목록 |
-| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md) | Warehouse 스키마 (ETL·Seed 파이프라인) |
-| [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md) | Rust API 크레이트 전용 |
+| 문서                                                                             | 용도                                   |
+| -------------------------------------------------------------------------------- | -------------------------------------- |
+| [`docs/agent/README.md`](docs/agent/README.md)                                   | 목차·언제 무엇을 읽을지                |
+| [`docs/agent/web-routes-and-features.md`](docs/agent/web-routes-and-features.md) | 웹 라우트·기능 영역                    |
+| [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md)                     | Next.js `/api/v1/*` 표                 |
+| [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md)       | 훅·스토어·주요 경로                    |
+| [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md)             | 디자인 시스템 import·컴포넌트 목록     |
+| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md)               | Warehouse 스키마 (ETL·Seed 파이프라인) |
+| [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md)                   | Rust API 크레이트 전용                 |
 
-## Tech stack (one line)
+## Conventions (SSOT)
 
-Next.js 16.2 / React 19 / TypeScript 5.9 · Tailwind 3.4 · Zustand · TanStack Query 5.90 · Supabase · GSAP/Motion · Playwright 1.58 · ESLint v10 flat · bun · Node 22+ · Rust API (Axum 0.8) · Python AI (gRPC). 세부는 STACK.md.
+상세 컨벤션은 [docs/wiki/schema/conventions.md](docs/wiki/schema/conventions.md)를 참조한다. 이 파일은 agent routing과 docs 맵만 담는다.
 
-## Code style
+주요 규칙 요약:
 
-- TypeScript strict mode
-- ESLint + Prettier
+- bun + Turborepo
 - Conventional Commits
-
-## Important notes
-
-- **Package manager**: **bun** with Turborepo — use `bun` commands (not yarn/npm)
-- **Task runner**: [`Justfile`](Justfile) — `just local-fe`, `just local-be`, `just --list`
-- **ESLint**: flat config (`eslint.config.mjs`), Node 22+
-- **Git hooks**: clone 후 `just hook` 실행 필요 — `main` 직접 push 차단, 로컬 CI 활성화
-- **Env**: `packages/web/.env.local` from `.env.local.example` (gitignored)
-- **Supabase**: public schema (앱 데이터) + warehouse schema (ETL/Seed 파이프라인)
-- **Next.js 16**: `proxy.ts` (not `middleware.ts`); see [`.cursor/rules/monorepo.mdc`](.cursor/rules/monorepo.mdc) for repo-wide conventions
-- **OMC (.omc/)**: `.omc/project-memory.json`만 공용으로 tracked — 팀 공유 프로젝트 컨텍스트. `sessions/`, `state/`, `plans/`, `research/`, `logs/`, `notepad.md` 등은 개인 세션 메타데이터로 gitignored. `project-memory.json` 업데이트는 팀에 영향을 주므로 커밋 시 diff 확인 필수
-- **이슈 추적**: 브랜치만 만들면 [프로젝트 보드](https://github.com/orgs/decodedcorp/projects/3)가 안 움직임. 작업 시작 시 `scripts/start-issue.sh <이슈번호>` 또는 Draft PR(`Closes #N`) 생성 → 자동 In Progress 전환. [GIT-WORKFLOW](docs/GIT-WORKFLOW.md) 참고
-
-## Generated API Code
-
-> `packages/web/lib/api/generated/` is auto-generated. **NEVER manually edit** these files.
-
-| Rule | Detail |
-|------|--------|
-| Source of truth | `packages/api-server/openapi.json` (Rust backend utoipa) |
-| Generator | Orval 8.5.3 -- config: `packages/web/orval.config.ts` |
-| Regenerate | `cd packages/web && bun run generate:api` |
-| Git status | Gitignored (only `.gitkeep` tracked) -- always regenerated locally |
-| Extend behavior | Edit `lib/api/mutator/custom-instance.ts` or `orval.config.ts` -- not generated files |
-| Zod schemas | `lib/api/generated/zod/decodedApi.zod.ts` -- single file, all endpoint schemas |
-| Upload endpoints | Excluded from generation (4 multipart POST endpoints) -- see `orval.config.ts` transformer |
-
-When adding a new API endpoint:
-1. Update the backend OpenAPI spec (`packages/api-server/`)
-2. Copy the updated `openapi.json` to `packages/api-server/openapi.json`
-3. Run `cd packages/web && bun run generate:api`
-4. Import the generated hook from `@/lib/api/generated/{tag}/{operationId}`
+- Next.js 16은 `proxy.ts` 사용
+- `packages/web/lib/api/generated/`는 자동 생성, 수동 편집 금지
 
 ## Git workflow
 
@@ -78,15 +47,15 @@ When adding a new API endpoint:
 
 ## Codebase documentation
 
-| 문서 | 내용 |
-|------|------|
-| [STACK.md](.planning/codebase/STACK.md) | 기술 스택, 의존성, 설정 |
+| 문서                                                  | 내용                          |
+| ----------------------------------------------------- | ----------------------------- |
+| [STACK.md](.planning/codebase/STACK.md)               | 기술 스택, 의존성, 설정       |
 | [ARCHITECTURE.md](.planning/codebase/ARCHITECTURE.md) | 아키텍처, 레이어, 데이터 흐름 |
-| [STRUCTURE.md](.planning/codebase/STRUCTURE.md) | 디렉토리 구조 |
-| [CONVENTIONS.md](.planning/codebase/CONVENTIONS.md) | 코딩 컨벤션 |
-| [TESTING.md](.planning/codebase/TESTING.md) | 테스트 |
-| [INTEGRATIONS.md](.planning/codebase/INTEGRATIONS.md) | 외부 연동 |
-| [CONCERNS.md](.planning/codebase/CONCERNS.md) | 기술 부채 |
+| [STRUCTURE.md](.planning/codebase/STRUCTURE.md)       | 디렉토리 구조                 |
+| [CONVENTIONS.md](.planning/codebase/CONVENTIONS.md)   | 코딩 컨벤션                   |
+| [TESTING.md](.planning/codebase/TESTING.md)           | 테스트                        |
+| [INTEGRATIONS.md](.planning/codebase/INTEGRATIONS.md) | 외부 연동                     |
+| [CONCERNS.md](.planning/codebase/CONCERNS.md)         | 기술 부채                     |
 
 ## GSD Workflow
 
@@ -102,12 +71,12 @@ When adding a new API endpoint:
 
 ## Harness Workflow
 
-| Tool | Role | When |
-|------|------|------|
-| gstack | 기획/리뷰/QA/배포 | Think → Plan → Ship |
-| Superpowers | TDD, 코드 품질 강제 | Build (구현) |
-| OMC | Claude + Gemini 듀얼 | 대규모 작업 보조 |
-| GSD quick | 원자적 단발 패치 | 유지보수 |
+| Tool        | Role                 | When                |
+| ----------- | -------------------- | ------------------- |
+| gstack      | 기획/리뷰/QA/배포    | Think → Plan → Ship |
+| Superpowers | TDD, 코드 품질 강제  | Build (구현)        |
+| OMC         | Claude + Gemini 듀얼 | 대규모 작업 보조    |
+| GSD quick   | 원자적 단발 패치     | 유지보수            |
 
 ## Documentation
 
@@ -123,34 +92,36 @@ When adding a new API endpoint:
 Use gstack slash commands for the sprint workflow: **Think → Plan → Build → Review → Test → Ship → Reflect**.
 
 ### Available Skills
-| Phase | Command | Role |
-|-------|---------|------|
-| Think | `/office-hours` | YC Office Hours — reframe the product |
-| Plan | `/plan-ceo-review` | CEO — rethink scope |
-| Plan | `/plan-eng-review` | Eng Manager — lock architecture |
-| Plan | `/plan-design-review` | Designer — rate & improve design |
-| Plan | `/design-consultation` | Design Partner — build design system |
-| Plan | `/autoplan` | Auto-review pipeline: CEO → design → eng |
-| Build | `/browse` | Browser automation (Playwright) |
-| Review | `/review` | Staff Engineer — find production bugs |
-| Review | `/design-review` | Designer Who Codes — audit + fix |
-| Review | `/cso` | Security Officer — OWASP + STRIDE audit |
-| Test | `/qa` | QA Lead — real browser testing + auto-fix |
-| Test | `/qa-only` | QA report only (no fixes) |
-| Ship | `/ship` | Release Engineer — test, PR, ship |
-| Ship | `/land-and-deploy` | Merge → deploy → canary verify |
-| Monitor | `/canary` | Post-deploy monitoring |
-| Monitor | `/benchmark` | Performance regression detection |
-| Debug | `/investigate` | Systematic root-cause debugging |
-| Reflect | `/retro` | Sprint retrospective |
-| Docs | `/document-release` | Post-ship doc updates |
-| Safety | `/careful`, `/freeze`, `/guard`, `/unfreeze` | Destructive op protection |
-| Setup | `/setup-deploy`, `/setup-browser-cookies` | One-time config |
-| Utility | `/gstack-upgrade` | Update gstack |
-| Utility | `/codex` | Multi-AI second opinion |
-| Utility | `/connect-chrome` | Connect Chrome for browsing |
+
+| Phase   | Command                                      | Role                                      |
+| ------- | -------------------------------------------- | ----------------------------------------- |
+| Think   | `/office-hours`                              | YC Office Hours — reframe the product     |
+| Plan    | `/plan-ceo-review`                           | CEO — rethink scope                       |
+| Plan    | `/plan-eng-review`                           | Eng Manager — lock architecture           |
+| Plan    | `/plan-design-review`                        | Designer — rate & improve design          |
+| Plan    | `/design-consultation`                       | Design Partner — build design system      |
+| Plan    | `/autoplan`                                  | Auto-review pipeline: CEO → design → eng  |
+| Build   | `/browse`                                    | Browser automation (Playwright)           |
+| Review  | `/review`                                    | Staff Engineer — find production bugs     |
+| Review  | `/design-review`                             | Designer Who Codes — audit + fix          |
+| Review  | `/cso`                                       | Security Officer — OWASP + STRIDE audit   |
+| Test    | `/qa`                                        | QA Lead — real browser testing + auto-fix |
+| Test    | `/qa-only`                                   | QA report only (no fixes)                 |
+| Ship    | `/ship`                                      | Release Engineer — test, PR, ship         |
+| Ship    | `/land-and-deploy`                           | Merge → deploy → canary verify            |
+| Monitor | `/canary`                                    | Post-deploy monitoring                    |
+| Monitor | `/benchmark`                                 | Performance regression detection          |
+| Debug   | `/investigate`                               | Systematic root-cause debugging           |
+| Reflect | `/retro`                                     | Sprint retrospective                      |
+| Docs    | `/document-release`                          | Post-ship doc updates                     |
+| Safety  | `/careful`, `/freeze`, `/guard`, `/unfreeze` | Destructive op protection                 |
+| Setup   | `/setup-deploy`, `/setup-browser-cookies`    | One-time config                           |
+| Utility | `/gstack-upgrade`                            | Update gstack                             |
+| Utility | `/codex`                                     | Multi-AI second opinion                   |
+| Utility | `/connect-chrome`                            | Connect Chrome for browsing               |
 
 ### Rules
+
 - Use `/browse` for all web browsing — never use `mcp__claude-in-chrome__*` tools
 - If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup`
 - Follow the sprint order: Think → Plan → Build → Review → Test → Ship → Reflect
@@ -164,6 +135,7 @@ tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 The skill has specialized workflows that produce better results than ad-hoc answers.
 
 Key routing rules:
+
 - Product ideas, "is this worth building", brainstorming → invoke office-hours
 - Bugs, errors, "why is this broken", 500 errors → invoke investigate
 - Ship, deploy, push, create PR → invoke ship

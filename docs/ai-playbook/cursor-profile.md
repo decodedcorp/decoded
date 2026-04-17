@@ -1,3 +1,11 @@
+---
+title: Cursor Profile
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, cursor, harness]
+---
+
 # Cursor Profile – Main Coding Assistant (v1.0)
 
 **Last verified**: 2025-01-27

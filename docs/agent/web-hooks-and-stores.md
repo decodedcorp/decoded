@@ -1,37 +1,45 @@
+---
+title: Web Hooks & Stores — Agent Reference
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, ui]
+---
+
 # Key file locations & custom hooks
 
 Paths below are under `packages/web/` unless absolute from repo root.
 
 ## Key file locations
 
-| Area               | Location                            | Description                                                  |
-| ------------------ | ----------------------------------- | ------------------------------------------------------------ |
-| **Auth**           | `lib/stores/authStore.ts`           | OAuth (Kakao, Google, Apple) + session                       |
+| Area               | Location                            | Description                                                                                                       |
+| ------------------ | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Auth**           | `lib/stores/authStore.ts`           | OAuth (Kakao, Google, Apple) + session                                                                            |
 | **Search State**   | `lib/stores/searchStore.ts`         | Search query, debouncedQuery, filters (category/mediaType/context/sort), page; re-exported from `@decoded/shared` |
-| **Filter**         | `lib/stores/filterStore.ts`         | Category filter key (all/fashion/beauty/…); re-exported from `@decoded/shared` |
-| **Behavior**       | `lib/stores/behaviorStore.ts`       | Behavioral tracking state                                    |
-| **VTON**           | `lib/stores/vtonStore.ts`           | Virtual try-on state                                         |
-| **Collection**     | `lib/stores/collectionStore.ts`     | Collection/studio state                                      |
-| **Magazine**       | `lib/stores/magazineStore.ts`       | Magazine/editorial state                                     |
-| **Active Spot**    | `lib/stores/activeSpotStore.ts`     | Currently selected spot on image canvas                      |
-| **Studio**         | `lib/stores/studioStore.ts`         | Studio/collage creation state                                |
-| **Request**        | `lib/stores/requestStore.ts`        | Post request/upload flow state                               |
-| **Transition**     | `lib/stores/transitionStore.ts`     | Page transition animation state                              |
-| **API Client**     | `lib/api/`                          | Backend API calls                                            |
-| **API Generated**  | `lib/api/generated/`                | Orval 자동 생성 — 절대 수동 편집 금지 (아래 섹션 참조)        |
-| **API Routes**     | `app/api/v1/`                       | Next.js API proxy & server logic                             |
-| **Supabase**       | `lib/supabase/queries/`             | DB queries (events, images, posts, profile, personalization) |
-| **Shared Queries** | `packages/shared/supabase/queries/` | Cross-package queries (images, items)                        |
-| **Design System**  | `lib/design-system/`                | v2.0 components & tokens                                     |
-| **Components**     | `lib/components/`                   | Feature components                                           |
-| **Hooks**          | `lib/hooks/`                        | Custom hooks                                                 |
-| **Admin Hooks**    | `lib/hooks/admin/`                  | Admin dashboard hooks                                        |
-| **Stores**         | `lib/stores/`                       | Zustand stores                                               |
-| **Rust API**       | `packages/api-server/`              | Axum REST API, gRPC client to ai-server                      |
-| **AI / gRPC**      | `packages/ai-server/`               | Inference, metadata, gRPC (Python)                           |
-| **Frontend CI**    | `packages/web/scripts/pre-push.sh`  | ESLint, Prettier, TypeScript checks                          |
-| **Git workflow**   | `docs/GIT-WORKFLOW.md`              | Branch, commit, PR conventions                             |
-| **Code reviewer**  | `.claude/agents/code-reviewer.md`   | Repository code-review agent notes                           |
+| **Filter**         | `lib/stores/filterStore.ts`         | Category filter key (all/fashion/beauty/…); re-exported from `@decoded/shared`                                    |
+| **Behavior**       | `lib/stores/behaviorStore.ts`       | Behavioral tracking state                                                                                         |
+| **VTON**           | `lib/stores/vtonStore.ts`           | Virtual try-on state                                                                                              |
+| **Collection**     | `lib/stores/collectionStore.ts`     | Collection/studio state                                                                                           |
+| **Magazine**       | `lib/stores/magazineStore.ts`       | Magazine/editorial state                                                                                          |
+| **Active Spot**    | `lib/stores/activeSpotStore.ts`     | Currently selected spot on image canvas                                                                           |
+| **Studio**         | `lib/stores/studioStore.ts`         | Studio/collage creation state                                                                                     |
+| **Request**        | `lib/stores/requestStore.ts`        | Post request/upload flow state                                                                                    |
+| **Transition**     | `lib/stores/transitionStore.ts`     | Page transition animation state                                                                                   |
+| **API Client**     | `lib/api/`                          | Backend API calls                                                                                                 |
+| **API Generated**  | `lib/api/generated/`                | Orval 자동 생성 — 절대 수동 편집 금지 (아래 섹션 참조)                                                            |
+| **API Routes**     | `app/api/v1/`                       | Next.js API proxy & server logic                                                                                  |
+| **Supabase**       | `lib/supabase/queries/`             | DB queries (events, images, posts, profile, personalization)                                                      |
+| **Shared Queries** | `packages/shared/supabase/queries/` | Cross-package queries (images, items)                                                                             |
+| **Design System**  | `lib/design-system/`                | v2.0 components & tokens                                                                                          |
+| **Components**     | `lib/components/`                   | Feature components                                                                                                |
+| **Hooks**          | `lib/hooks/`                        | Custom hooks                                                                                                      |
+| **Admin Hooks**    | `lib/hooks/admin/`                  | Admin dashboard hooks                                                                                             |
+| **Stores**         | `lib/stores/`                       | Zustand stores                                                                                                    |
+| **Rust API**       | `packages/api-server/`              | Axum REST API, gRPC client to ai-server                                                                           |
+| **AI / gRPC**      | `packages/ai-server/`               | Inference, metadata, gRPC (Python)                                                                                |
+| **Frontend CI**    | `packages/web/scripts/pre-push.sh`  | ESLint, Prettier, TypeScript checks                                                                               |
+| **Git workflow**   | `docs/GIT-WORKFLOW.md`              | Branch, commit, PR conventions                                                                                    |
+| **Code reviewer**  | `.claude/agents/code-reviewer.md`   | Repository code-review agent notes                                                                                |
 
 ## Generated API (Orval + Zod)
 
@@ -69,13 +77,13 @@ lib/api/
 
 ### Orval 설정 (`orval.config.ts`)
 
-| 설정 | 값 |
-|------|-----|
-| **Input** | `../api-server/openapi.json` |
-| **Output mode** | `tags-split` (태그별 파일 분리) |
-| **Client** | `react-query` (TanStack Query 5) |
-| **HTTP client** | `axios` (custom-instance.ts mutator) |
-| **Zod output** | `lib/api/generated/zod/` (별도 client: zod) |
+| 설정                | 값                                                                |
+| ------------------- | ----------------------------------------------------------------- |
+| **Input**           | `../api-server/openapi.json`                                      |
+| **Output mode**     | `tags-split` (태그별 파일 분리)                                   |
+| **Client**          | `react-query` (TanStack Query 5)                                  |
+| **HTTP client**     | `axios` (custom-instance.ts mutator)                              |
+| **Zod output**      | `lib/api/generated/zod/` (별도 client: zod)                       |
 | **제외 엔드포인트** | multipart POST 4개 (create_post, with-solutions, upload, analyze) |
 
 ### 사용 패턴

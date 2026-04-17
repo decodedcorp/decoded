@@ -1,3 +1,11 @@
+---
+title: Claude Profile
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, claude-code, harness]
+---
+
 # Claude 프로필 – 간단한 리팩토링 & 코드 분석 (v1.0)
 
 **최종 검증**: 2025-01-27

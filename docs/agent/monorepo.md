@@ -1,3 +1,11 @@
+---
+title: Monorepo — Agent Reference
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, architecture]
+---
+
 # Monorepo overview & commands
 
 Paths are relative to the repository root unless noted.

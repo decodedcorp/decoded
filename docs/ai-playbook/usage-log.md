@@ -1,3 +1,11 @@
+---
+title: AI Usage Log
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, ops]
+---
+
 # AI Usage Log
 
 **Purpose**: Track AI tool usage for experiment evaluation and workflow optimization
