@@ -12,6 +12,7 @@ pub mod post_likes;
 pub mod post_magazines;
 pub mod posts;
 pub mod rankings;
+pub mod raw_posts;
 pub mod reports;
 pub mod saved_posts;
 pub mod search;

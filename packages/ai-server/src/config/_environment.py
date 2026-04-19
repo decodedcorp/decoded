@@ -103,6 +103,15 @@ class Environment(BaseModel):
     BATCH_FLUSH_INTERVAL: int = 30  # 배치 전송 주기 (초)
     RESULT_BATCH_SIZE: int = 50  # 배치 크기
 
+    # Raw Posts — Cloudflare R2 (#258)
+    RAW_POSTS_R2_ACCOUNT_ID: str = ""
+    RAW_POSTS_R2_ACCESS_KEY_ID: str = ""
+    RAW_POSTS_R2_SECRET_ACCESS_KEY: str = ""
+    RAW_POSTS_R2_BUCKET: str = "raw"
+    RAW_POSTS_R2_PUBLIC_URL: str = ""  # e.g. https://<id>.r2.dev or custom domain
+    RAW_POSTS_FETCH_DEFAULT_LIMIT: int = 50
+    RAW_POSTS_DOWNLOAD_TIMEOUT: int = 30
+
     @staticmethod
     def from_environ(*, env_file: Optional[str] = None):
         """Load env file(s). If `env_file` is set, only that path is used when it exists.

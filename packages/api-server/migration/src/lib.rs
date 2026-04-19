@@ -51,6 +51,7 @@ mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
+mod m20260419_000001_create_raw_posts_tables;
 
 pub struct Migrator;
 
@@ -109,6 +110,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
+            Box::new(m20260419_000001_create_raw_posts_tables::Migration),
         ]
     }
 }

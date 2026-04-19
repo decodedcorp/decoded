@@ -6,6 +6,45 @@ service Metadata {
     rpc ProcessedBatchUpdate (ProcessedBatchRequest) returns (ProcessedBatchResponse);
 }
 
+// #258 Raw Posts callback — ai-server calls api-server after scraping a source.
+// api-server UPSERTs raw_posts and updates raw_post_sources.last_scraped_at on SUCCESS.
+service RawPostsCallback {
+    rpc ReportRawPostsFetched (ReportRawPostsFetchedRequest) returns (ReportRawPostsFetchedResponse);
+}
+
+enum RawPostsFetchStatus {
+    RAW_POSTS_FETCH_STATUS_UNSPECIFIED = 0;
+    RAW_POSTS_FETCH_STATUS_SUCCESS = 1;
+    RAW_POSTS_FETCH_STATUS_PARTIAL = 2;
+    RAW_POSTS_FETCH_STATUS_FAILED = 3;
+}
+
+message RawPostResult {
+    string external_id = 1;
+    string external_url = 2;
+    string image_url = 3;       // plaform CDN url (source)
+    string r2_key = 4;          // key within the raw-posts bucket
+    string r2_url = 5;          // public URL to stored copy
+    optional string caption = 6;
+    optional string author_name = 7;
+    string platform_metadata_json = 8; // JSON string; api-server parses into jsonb
+}
+
+message ReportRawPostsFetchedRequest {
+    string source_id = 1;
+    string dispatch_id = 2;
+    string platform = 3;
+    repeated RawPostResult raw_posts = 4;
+    int32 fetched_count = 5;
+    RawPostsFetchStatus status = 6;
+    string error_message = 7;
+}
+
+message ReportRawPostsFetchedResponse {
+    bool received = 1;
+    int32 upserted_count = 2;
+}
+
 message QAPair {
     string question = 1;
     string answer = 2;

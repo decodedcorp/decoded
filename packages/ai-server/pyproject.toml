@@ -43,6 +43,10 @@ dependencies = [
     "supabase (>=2.0)",
     "tenacity (>=9.0)",
     "sentry-sdk[fastapi,grpcio]>=2.56.0,<3.0.0",
+    "hyperbrowser>=0.90.3",
+    "playwright>=1.58.0",
+    "pillow>=11",
+    "boto3>=1.35.0",
 ]
 
 [dependency-groups]
