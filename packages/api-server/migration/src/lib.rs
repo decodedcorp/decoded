@@ -1,5 +1,6 @@
 pub use sea_orm_migration::prelude::*;
 
+mod m20230101_000000_local_auth_stub;
 mod m20240101_000001_create_users;
 mod m20240101_000002_create_categories;
 mod m20240101_000003_create_posts;
@@ -51,9 +52,8 @@ mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
-// Note: m20260501_000001_decouple_auth_users_fk and m20260501_000002_auth_uid_stub land via
-// PR #273 (branch feature/267-auth-users-fk-migration). Once that PR merges to dev, this
-// branch will rebase and those modules can be registered here alongside the warehouse work.
+mod m20260501_000001_decouple_auth_users_fk;
+mod m20260501_000002_auth_uid_stub;
 mod m20260502_000001_enable_extensions;
 mod m20260502_000002_warehouse_schema_tables_and_rls;
 mod m20260502_000003_public_missing_tables_and_rls;
@@ -66,6 +66,8 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            // Ensure auth.users stub exists before any FK references it (#267).
+            Box::new(m20230101_000000_local_auth_stub::Migration),
             Box::new(m20240101_000001_create_users::Migration),
             Box::new(m20240101_000002_create_categories::Migration),
             Box::new(m20240101_000003_create_posts::Migration),
@@ -123,6 +125,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
+            // PR #273 — auth.uid() stub must run before RLS migrations that use it.
+            Box::new(m20260501_000002_auth_uid_stub::Migration),
+            Box::new(m20260501_000001_decouple_auth_users_fk::Migration),
             // #202 remaining migrations (warehouse schema already registered above)
             Box::new(m20260502_000003_public_missing_tables_and_rls::Migration),
             Box::new(m20260502_000004_embeddings_and_search_similar::Migration),

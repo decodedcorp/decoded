@@ -25,14 +25,16 @@ export function SupabaseProvider({ children }: Props) {
     // Get Supabase credentials from Expo config
     const supabaseUrl =
       Constants.expoConfig?.extra?.supabaseUrl ||
+      process.env.EXPO_PUBLIC_DATABASE_API_URL ||
       process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey =
       Constants.expoConfig?.extra?.supabaseAnonKey ||
+      process.env.EXPO_PUBLIC_DATABASE_ANON_KEY ||
       process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error(
-        "Missing Supabase credentials. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY."
+        "Missing auth credentials. Set EXPO_PUBLIC_DATABASE_API_URL and EXPO_PUBLIC_DATABASE_ANON_KEY (or legacy EXPO_PUBLIC_SUPABASE_* names)."
       );
       return;
     }

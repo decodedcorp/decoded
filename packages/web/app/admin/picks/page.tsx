@@ -11,20 +11,20 @@ import {
 } from "@/lib/hooks/admin/useAdminPicks";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
 import type { DecodedPickListItem } from "@/lib/api/admin/picks";
-import { createClient as createBrowserClient } from "@supabase/supabase-js";
+import { adminListPosts } from "@/lib/api/generated/admin/admin";
 
-// ─── Post search hook (Supabase direct for autocomplete) ────────────────────
+// ─── Post search hook (api-server 경유, admin_list_posts?q= 자동완성) ──────
 
-function usePostSearch(query: string) {
-  const [results, setResults] = useState<
-    {
-      id: string;
-      image_url: string | null;
-      artist_name: string | null;
-      group_name: string | null;
-      context: string | null;
-    }[]
-  >([]);
+type PostSearchItem = {
+  id: string;
+  image_url: string | null;
+  artist_name: string | null;
+  group_name: string | null;
+  context: string | null;
+};
+
+function usePostSearch() {
+  const [results, setResults] = useState<PostSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const search = useCallback(async (q: string) => {
@@ -34,20 +34,28 @@ function usePostSearch(query: string) {
     }
     setLoading(true);
     try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const res = await adminListPosts({
+        status: "active",
+        q,
+        sort: "recent",
+        per_page: 10,
+      });
+      // PostListItem 은 snake_case 필드를 그대로 유지 (generated Zod 기준)
+      const items = (res.data ?? []) as unknown as PostSearchItem[];
+      setResults(
+        items.map((p) => ({
+          id: p.id,
+          image_url: p.image_url,
+          artist_name: p.artist_name,
+          group_name: p.group_name,
+          context: p.context,
+        }))
       );
-      const { data } = await supabase
-        .from("posts")
-        .select("id, image_url, artist_name, group_name, context")
-        .eq("status", "active")
-        .or(
-          `artist_name.ilike.%${q}%,group_name.ilike.%${q}%,context.ilike.%${q}%`
-        )
-        .order("created_at", { ascending: false })
-        .limit(10);
-      setResults(data ?? []);
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[admin/picks] post search error:", err);
+      }
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -71,7 +79,7 @@ function CreatePickModal({ onClose }: { onClose: () => void }) {
   );
   const [note, setNote] = useState("");
   const [curatedBy, setCuratedBy] = useState<"editor" | "ai">("editor");
-  const { results, loading, search, setResults } = usePostSearch(postQuery);
+  const { results, loading, search, setResults } = usePostSearch();
   const createPick = useCreatePick();
 
   const handleSearch = (value: string) => {

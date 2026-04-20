@@ -6,11 +6,13 @@ import json
 import logging
 from typing import Any
 
+import asyncpg
 import httpx
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from supabase import AsyncClient, acreate_client
+
+from src.managers.database import DatabaseManager
 
 from ..state import PostEditorialState
 from ..config import get_settings
@@ -64,7 +66,7 @@ def _extract_brands(state: PostEditorialState) -> list[str]:
 
 
 async def _query_internal_items(
-    client: AsyncClient,
+    conn: asyncpg.Connection,
     brands: list[str],
     current_solution_ids: set[str],
 ) -> list[dict]:
@@ -72,18 +74,36 @@ async def _query_internal_items(
         return []
     all_results = []
     for brand in brands[:5]:
-        result = (
-            await client.table("solutions")
-            .select("id, title, thumbnail_url, original_url, metadata")
-            .ilike("metadata->>brand", f"%{brand}%")
-            .limit(10)
-            .execute()
+        pattern = f"%{brand}%"
+        rows = await conn.fetch(
+            """
+            SELECT id, title, thumbnail_url, original_url, metadata
+              FROM public.solutions
+             WHERE metadata->>'brand' ILIKE $1
+             LIMIT 10
+            """,
+            pattern,
         )
-        for row in result.data or []:
-            if row["id"] not in current_solution_ids:
-                all_results.append(row)
-    seen_ids = set()
-    deduped = []
+        for row in rows:
+            row_id = str(row["id"])
+            if row_id not in current_solution_ids:
+                metadata = row["metadata"]
+                if isinstance(metadata, str):
+                    try:
+                        metadata = json.loads(metadata)
+                    except json.JSONDecodeError:
+                        metadata = None
+                all_results.append(
+                    {
+                        "id": row_id,
+                        "title": row["title"],
+                        "thumbnail_url": row["thumbnail_url"],
+                        "original_url": row["original_url"],
+                        "metadata": metadata,
+                    }
+                )
+    seen_ids: set[str] = set()
+    deduped: list[dict] = []
     for r in all_results:
         if r["id"] not in seen_ids:
             seen_ids.add(r["id"])
@@ -243,6 +263,30 @@ def _get_metadata_extract_service(config: Any) -> Any:
         return None
 
 
+def _get_database_manager(config: Any) -> DatabaseManager | None:
+    """Get DatabaseManager from LangGraph config or DI fallback."""
+    configurable: dict = {}
+    if config is not None:
+        configurable = (
+            getattr(config, "configurable", {})
+            if hasattr(config, "configurable")
+            else config.get("configurable", {})
+            if isinstance(config, dict)
+            else {}
+        )
+    svc = configurable.get("database_manager")
+    if svc is not None:
+        return svc
+    try:
+        from src.config._container import Application
+
+        app = Application()
+        return app.infrastructure().database_manager()
+    except Exception:
+        logger.debug("DatabaseManager unavailable — internal item search will skip")
+        return None
+
+
 async def item_search_node(state: PostEditorialState, config: Any = None) -> dict:
     """Find related items via internal DB + Perplexity + decoded-ai OG."""
     existing = state.get("related_items")
@@ -254,6 +298,7 @@ async def item_search_node(state: PostEditorialState, config: Any = None) -> dic
         return {"related_items": []}
 
     metadata_extract_service = _get_metadata_extract_service(config)
+    database_manager = _get_database_manager(config)
 
     try:
         items = _extract_items_from_post(state)
@@ -266,10 +311,10 @@ async def item_search_node(state: PostEditorialState, config: Any = None) -> dic
             if sol.original_url
         }
 
-        settings = get_settings()
-        sb_client = await acreate_client(settings.supabase_url, settings.supabase_service_role_key)
-
-        internal_results = await _query_internal_items(sb_client, brands, current_sol_ids)
+        internal_results: list[dict] = []
+        if database_manager is not None:
+            async with database_manager.acquire() as conn:
+                internal_results = await _query_internal_items(conn, brands, current_sol_ids)
         internal_candidates = [
             {
                 "title": r.get("title", ""),
@@ -297,6 +342,7 @@ async def item_search_node(state: PostEditorialState, config: Any = None) -> dic
         if not deduped:
             return {"related_items": []}
 
+        settings = get_settings()
         genai_client = genai.Client(api_key=settings.gemini_api_key)
         artist_info = (
             " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
