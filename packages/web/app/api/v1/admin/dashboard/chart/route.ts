@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const data = await fetchChartData(days);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const data = await fetchChartData(days, session?.access_token);
   return NextResponse.json(data);
 }

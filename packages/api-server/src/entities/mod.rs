@@ -31,6 +31,7 @@ pub mod subcategories;
 pub mod synonyms;
 pub mod try_spot_tags;
 pub mod user_badges;
+pub mod user_events;
 pub mod user_social_accounts;
 pub mod user_tryon_history;
 pub mod users;
@@ -100,6 +101,10 @@ pub use badges::Model as BadgesModel;
 pub use user_badges::ActiveModel as UserBadgesActiveModel;
 pub use user_badges::Entity as UserBadges;
 pub use user_badges::Model as UserBadgesModel;
+
+pub use user_events::ActiveModel as UserEventsActiveModel;
+pub use user_events::Entity as UserEvents;
+pub use user_events::Model as UserEventsModel;
 
 pub use click_logs::ActiveModel as ClickLogsActiveModel;
 pub use click_logs::Entity as ClickLogs;

@@ -1214,6 +1214,7 @@ mod tests {
             .into_connection();
         let state = test_app_state(db);
         let query = AdminPostListQuery {
+            q: None,
             status: Some("active".to_string()),
             base_query: PostListQuery {
                 artist_name: None,
