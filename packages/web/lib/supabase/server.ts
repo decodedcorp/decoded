@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import type { Database } from "./types";
-import { getEnv } from "./env";
+import { getEnvWithAlias } from "./env";
 
-const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const supabaseUrl = getEnvWithAlias("NEXT_PUBLIC_DATABASE_API_URL");
+const supabaseAnonKey = getEnvWithAlias("NEXT_PUBLIC_DATABASE_ANON_KEY");
 
 /**
  * Creates a Supabase client for Server Components and Route Handlers.

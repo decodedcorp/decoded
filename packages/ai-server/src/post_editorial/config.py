@@ -14,8 +14,11 @@ def get_settings() -> PostEditorialSettings:
 @lru_cache()
 def _get_settings_impl() -> PostEditorialSettings:
     return PostEditorialSettings(
-        supabase_url=os.environ.get("SUPABASE_URL", ""),
-        supabase_service_role_key=os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+        supabase_url=os.environ.get("DATABASE_API_URL") or os.environ.get("SUPABASE_URL", ""),
+        supabase_service_role_key=(
+            os.environ.get("DATABASE_SERVICE_ROLE_KEY")
+            or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        ),
         gemini_api_key=os.environ.get("GEMINI_API_KEY", ""),
         gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
         gemini_pro_model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),

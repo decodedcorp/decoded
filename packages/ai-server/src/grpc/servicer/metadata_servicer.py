@@ -1,6 +1,5 @@
 import grpc
 import base64
-import os
 from src.grpc.proto.inbound import inbound_pb2, inbound_pb2_grpc
 from src.config._logger import LoggerService
 from src.managers.redis._manager import RedisManager
