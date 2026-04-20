@@ -59,6 +59,7 @@ mod m20260502_000002_warehouse_schema_tables_and_rls;
 mod m20260502_000003_public_missing_tables_and_rls;
 mod m20260502_000004_embeddings_and_search_similar;
 mod m20260502_000005_magazine_approval_and_rpcs;
+mod m20260502_000006_backfill_public_columns;
 
 pub struct Migrator;
 
@@ -132,6 +133,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260502_000003_public_missing_tables_and_rls::Migration),
             Box::new(m20260502_000004_embeddings_and_search_similar::Migration),
             Box::new(m20260502_000005_magazine_approval_and_rpcs::Migration),
+            Box::new(m20260502_000006_backfill_public_columns::Migration),
         ]
     }
 }
