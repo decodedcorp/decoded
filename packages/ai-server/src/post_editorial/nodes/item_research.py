@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from typing import Any
 
+import asyncpg
 import httpx
-from supabase import AsyncClient, acreate_client
+
+from src.managers.database import DatabaseManager
 
 from ..state import PostEditorialState
 from ..config import get_settings
@@ -13,24 +17,65 @@ from ..config import get_settings
 logger = logging.getLogger(__name__)
 
 
-async def _get_supabase_client() -> AsyncClient:
-    settings = get_settings()
-    return await acreate_client(settings.supabase_url, settings.supabase_service_role_key)
+def _get_database_manager(config: Any) -> DatabaseManager | None:
+    """Fetch DatabaseManager from LangGraph config or DI fallback.
+
+    Mirrors `_get_metadata_extract_service` pattern so nodes stay
+    orchestration-agnostic.
+    """
+    configurable: dict = {}
+    if config is not None:
+        configurable = (
+            getattr(config, "configurable", {})
+            if hasattr(config, "configurable")
+            else config.get("configurable", {})
+            if isinstance(config, dict)
+            else {}
+        )
+    svc = configurable.get("database_manager")
+    if svc is not None:
+        return svc
+    try:
+        from src.config._container import Application
+
+        app = Application()
+        return app.infrastructure().database_manager()
+    except Exception:
+        logger.debug("DatabaseManager unavailable — warehouse enrichment will be skipped")
+        return None
 
 
-async def _fetch_warehouse_brands(client: AsyncClient, brand_ids: list[str]) -> dict[str, dict]:
+async def _fetch_warehouse_brands(
+    conn: asyncpg.Connection, brand_ids: list[str]
+) -> dict[str, dict]:
     """Batch-fetch brand data from warehouse.brands by IDs."""
     if not brand_ids:
         return {}
     try:
-        result = (
-            await client.schema("warehouse")
-            .table("brands")
-            .select("id, name_ko, name_en, logo_image_url, metadata")
-            .in_("id", brand_ids)
-            .execute()
+        rows = await conn.fetch(
+            """
+            SELECT id, name_ko, name_en, logo_image_url, metadata
+              FROM warehouse.brands
+             WHERE id = ANY($1::uuid[])
+            """,
+            brand_ids,
         )
-        return {b["id"]: b for b in (result.data or [])}
+        result: dict[str, dict] = {}
+        for row in rows:
+            metadata = row["metadata"]
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except json.JSONDecodeError:
+                    metadata = None
+            result[str(row["id"])] = {
+                "id": str(row["id"]),
+                "name_ko": row["name_ko"],
+                "name_en": row["name_en"],
+                "logo_image_url": row["logo_image_url"],
+                "metadata": metadata,
+            }
+        return result
     except Exception:
         logger.debug("warehouse brands lookup failed", exc_info=True)
         return {}
@@ -192,19 +237,20 @@ def _extract_artist_brand_context(raw_content: str, state: PostEditorialState) -
     return " ".join(relevant[:5])
 
 
-async def item_research_node(state: PostEditorialState) -> dict:
+async def item_research_node(state: PostEditorialState, config: Any = None) -> dict:
     """Research item backstories via Perplexity Sonar, enriched with warehouse brand data."""
     try:
         post_data = state["post_data"]
+        database_manager = _get_database_manager(config)
 
         # Collect distinct brand_ids and fetch from warehouse
         brand_ids = list(
             {sol.brand_id for spot in post_data.spots for sol in spot.solutions if sol.brand_id}
         )
         warehouse_brands: dict[str, dict] = {}
-        if brand_ids:
-            sb_client = await _get_supabase_client()
-            warehouse_brands = await _fetch_warehouse_brands(sb_client, brand_ids)
+        if brand_ids and database_manager is not None:
+            async with database_manager.acquire() as conn:
+                warehouse_brands = await _fetch_warehouse_brands(conn, brand_ids)
 
         query = _build_research_query(state, warehouse_brands)
         raw_content, source_urls = await _perplexity_search_async(query)

@@ -66,19 +66,16 @@ class WorkerSettings:
         )
 
 
-async def create_worker(environment, metadata_container) -> Worker:
+async def create_worker(
+    environment, metadata_container, infrastructure_container=None
+) -> Worker:
     """
     Create and configure an ARQ worker with injected dependencies
 
-    This function:
-    1. Creates Redis connection settings from environment
-    2. Gets required services from the metadata container
-    3. Creates a context dictionary for job access
-    4. Initializes and returns the ARQ worker
-
     Args:
         environment: Environment configuration object
-        metadata_container: Metadata service container for dependency injection
+        metadata_container: Metadata service container
+        infrastructure_container: Infrastructure container (needed for database_manager)
 
     Returns:
         Configured ARQ Worker instance
@@ -101,6 +98,10 @@ async def create_worker(environment, metadata_container) -> Worker:
             "result_batch_service": result_batch_service,
             "environment": environment,
         }
+
+        # #266 DatabaseManager for post_editorial asyncpg access
+        if infrastructure_container is not None:
+            ctx["database_manager"] = infrastructure_container.database_manager()
 
         # Create worker with settings
         worker = Worker(

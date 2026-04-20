@@ -92,8 +92,8 @@ async def start_arq_worker(environment, metadata_container, infrastructure_conta
 
     worker = None
     try:
-        # Create worker with injected dependencies
-        worker = await create_worker(environment, metadata_container)
+        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial)
+        worker = await create_worker(environment, metadata_container, infrastructure_container)
 
         # Initialize QueueManager (NEW - replaces service.initialize_arq_pool)
         queue_manager = infrastructure_container.queue_manager()
@@ -163,6 +163,13 @@ async def main():
             logger.info("Backend client closed")
         except Exception as e:
             logger.warning(f"Error closing backend client: {str(e)}")
+
+        # Cleanup asyncpg pool (#266)
+        try:
+            await infrastructure_container.database_manager().close()
+            logger.info("Database pool closed")
+        except Exception as e:
+            logger.warning(f"Error closing database pool: {str(e)}")
 
 
 if __name__ == "__main__":
