@@ -41,6 +41,8 @@ pub mod warehouse_admin_audit_log;
 pub mod warehouse_artists;
 pub mod warehouse_brands;
 pub mod warehouse_groups;
+pub mod warehouse_raw_post_sources;
+pub mod warehouse_raw_posts;
 
 pub use categories::ActiveModel as CategoriesActiveModel;
 pub use categories::Entity as Categories;
@@ -170,3 +172,11 @@ pub use warehouse_brands::Model as WarehouseBrandsModel;
 
 pub use warehouse_groups::Entity as WarehouseGroups;
 pub use warehouse_groups::Model as WarehouseGroupsModel;
+
+pub use warehouse_raw_post_sources::ActiveModel as WarehouseRawPostSourcesActiveModel;
+pub use warehouse_raw_post_sources::Entity as WarehouseRawPostSources;
+pub use warehouse_raw_post_sources::Model as WarehouseRawPostSourcesModel;
+
+pub use warehouse_raw_posts::ActiveModel as WarehouseRawPostsActiveModel;
+pub use warehouse_raw_posts::Entity as WarehouseRawPosts;
+pub use warehouse_raw_posts::Model as WarehouseRawPostsModel;

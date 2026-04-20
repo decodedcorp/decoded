@@ -10,9 +10,11 @@ pub mod audit;
 pub mod backend_grpc;
 pub mod decoded_ai_grpc;
 pub mod embedding;
+pub mod raw_posts_callback;
 
 pub use backend_grpc::BackendGrpcService;
 pub use decoded_ai_grpc::DecodedAIGrpcClient;
+pub use raw_posts_callback::RawPostsCallbackService;
 pub mod metadata;
 pub mod search;
 pub mod storage;

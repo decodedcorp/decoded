@@ -25,10 +25,11 @@ async def start_grpc_server(grpc_container, host: str, port: int) -> None:
     metadata_servicer = grpc_container.metadata_servicer()
     inbound_pb2_grpc.add_QueueServicer_to_server(metadata_servicer, server)
 
-    # TODO: Add more servicers here as they are added
-    # Example:
-    # other_servicer = grpc_container.other_servicer()
-    # other_pb2_grpc.add_OtherServicer_to_server(other_servicer, server)
+    # #258 Raw posts worker — api-server -> ai-server enqueue
+    raw_posts_worker_servicer = grpc_container.raw_posts_worker_servicer()
+    inbound_pb2_grpc.add_RawPostsWorkerServicer_to_server(
+        raw_posts_worker_servicer, server
+    )
 
     listen_addr = f"{host}:{port}"
     server.add_insecure_port(listen_addr)
@@ -79,7 +80,9 @@ async def start_task_scheduler(metadata_container) -> None:
         shutdown_event.set()
 
 
-async def start_arq_worker(environment, metadata_container, infrastructure_container) -> None:
+async def start_arq_worker(
+    environment, metadata_container, infrastructure_container, raw_posts_container
+) -> None:
     """
     Start ARQ worker for processing async jobs
 
@@ -92,8 +95,14 @@ async def start_arq_worker(environment, metadata_container, infrastructure_conta
 
     worker = None
     try:
-        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial)
-        worker = await create_worker(environment, metadata_container, infrastructure_container)
+        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial
+        # and raw_posts container for #258 raw-posts pipeline)
+        worker = await create_worker(
+            environment,
+            metadata_container,
+            infrastructure_container=infrastructure_container,
+            raw_posts_container=raw_posts_container,
+        )
 
         # Initialize QueueManager (NEW - replaces service.initialize_arq_pool)
         queue_manager = infrastructure_container.queue_manager()
@@ -125,6 +134,7 @@ async def main():
     grpc_container = app.grpc()
     metadata_container = app.metadata()
     infrastructure_container = app.infrastructure()
+    raw_posts_container = app.raw_posts()
 
     # Initialize backend client connection
     backend_client = metadata_container.backend_client()
@@ -149,7 +159,12 @@ async def main():
     try:
         await asyncio.gather(
             start_task_scheduler(metadata_container),
-            start_arq_worker(environment, metadata_container, infrastructure_container),
+            start_arq_worker(
+                environment,
+                metadata_container,
+                infrastructure_container,
+                raw_posts_container,
+            ),
             start_grpc_server(grpc_container, grpc_host, grpc_port),
             start_api_server(),
             return_exceptions=False,
@@ -163,6 +178,13 @@ async def main():
             logger.info("Backend client closed")
         except Exception as e:
             logger.warning(f"Error closing backend client: {str(e)}")
+
+        # Cleanup raw posts callback client (#258)
+        try:
+            await infrastructure_container.raw_posts_callback_client().close()
+            logger.info("Raw posts callback client closed")
+        except Exception as e:
+            logger.warning(f"Error closing raw posts callback client: {str(e)}")
 
         # Cleanup asyncpg pool (#266)
         try:

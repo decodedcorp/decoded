@@ -52,6 +52,7 @@ mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
+mod m20260419_000001_create_raw_posts_tables;
 mod m20260501_000001_decouple_auth_users_fk;
 mod m20260501_000002_auth_uid_stub;
 mod m20260502_000001_enable_extensions;
@@ -126,6 +127,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
+            // #258 raw_posts pipeline tables
+            Box::new(m20260419_000001_create_raw_posts_tables::Migration),
             // PR #273 — auth.uid() stub must run before RLS migrations that use it.
             Box::new(m20260501_000002_auth_uid_stub::Migration),
             Box::new(m20260501_000001_decouple_auth_users_fk::Migration),

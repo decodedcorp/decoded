@@ -14,6 +14,7 @@ def _get_functions():
     """Lazy-load job functions to avoid circular imports."""
     from src.services.metadata.core.metadata_extract_service import MetadataExtractService
     from src.services.post_editorial.post_editorial_service import PostEditorialService
+    from src.services.raw_posts.jobs import fetch_raw_posts_job
 
     return [
         func(MetadataExtractService.analyze_link_job, name="analyze_link_job"),
@@ -22,6 +23,8 @@ def _get_functions():
             name="post_editorial_job",
             max_tries=1,
         ),
+        # #258 Raw posts collection — scrape via adapter + R2 upload + callback to api-server
+        func(fetch_raw_posts_job, name="fetch_raw_posts_job", max_tries=3),
     ]
 
 
@@ -67,15 +70,20 @@ class WorkerSettings:
 
 
 async def create_worker(
-    environment, metadata_container, infrastructure_container=None
+    environment,
+    metadata_container,
+    infrastructure_container=None,
+    raw_posts_container=None,
 ) -> Worker:
     """
     Create and configure an ARQ worker with injected dependencies
 
     Args:
         environment: Environment configuration object
-        metadata_container: Metadata service container
-        infrastructure_container: Infrastructure container (needed for database_manager)
+        metadata_container: Metadata service container for dependency injection
+        infrastructure_container: Infrastructure container (required for database_manager
+            and raw_posts_callback_client)
+        raw_posts_container: Raw posts container (required for raw_posts jobs, #258)
 
     Returns:
         Configured ARQ Worker instance
@@ -99,8 +107,14 @@ async def create_worker(
             "environment": environment,
         }
 
-        # #266 DatabaseManager for post_editorial asyncpg access
+        # Inject raw_posts dependencies when available (#258)
+        if raw_posts_container is not None:
+            ctx["raw_posts_pipeline"] = raw_posts_container.pipeline()
         if infrastructure_container is not None:
+            ctx["raw_posts_callback_client"] = (
+                infrastructure_container.raw_posts_callback_client()
+            )
+            # #266 DatabaseManager for post_editorial asyncpg access
             ctx["database_manager"] = infrastructure_container.database_manager()
 
         # Create worker with settings

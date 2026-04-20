@@ -122,6 +122,14 @@ use utoipa::OpenApi;
         crate::domains::admin::badges::update_badge,
         crate::domains::admin::badges::delete_badge,
         crate::domains::admin::badges::list_badges,
+        // #258 Raw posts
+        crate::domains::raw_posts::handlers::list_sources,
+        crate::domains::raw_posts::handlers::create_source,
+        crate::domains::raw_posts::handlers::update_source,
+        crate::domains::raw_posts::handlers::delete_source,
+        crate::domains::raw_posts::handlers::list_items,
+        crate::domains::raw_posts::handlers::get_item,
+        crate::domains::raw_posts::handlers::stats,
     ),
     tags(
         (name = "health", description = "Health check endpoints"),
@@ -141,6 +149,7 @@ use utoipa::OpenApi;
         (name = "events", description = "Behavioral events ingest"),
         (name = "admin", description = "Admin operations"),
         (name = "warehouse", description = "Warehouse entity profiles"),
+        (name = "raw-posts", description = "Raw posts collection pipeline (#258)"),
     ),
     components(
         schemas(
@@ -294,6 +303,15 @@ use utoipa::OpenApi;
                 crate::domains::warehouse::dto::WarehouseProfile,
                 crate::domains::warehouse::dto::WarehouseBrandProfile,
                 crate::domains::warehouse::dto::WarehouseProfilesResponse,
+                // #258 Raw posts
+                crate::domains::raw_posts::dto::RawPostSource,
+                crate::domains::raw_posts::dto::CreateRawPostSourceDto,
+                crate::domains::raw_posts::dto::UpdateRawPostSourceDto,
+                crate::domains::raw_posts::dto::RawPost,
+                crate::domains::raw_posts::dto::RawPostSourcesPage,
+                crate::domains::raw_posts::dto::RawPostsItemsPage,
+                crate::domains::raw_posts::dto::RawPostsStatsEntry,
+                crate::domains::raw_posts::dto::RawPostsStatsResponse,
                 crate::domains::spots::dto::SpotsByPostItem,
                 crate::domains::spots::dto::SpotsByPostsResponse,
                 crate::domains::spots::dto::SpotsByPostSolution,
