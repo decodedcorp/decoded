@@ -1,5 +1,6 @@
 pub use sea_orm_migration::prelude::*;
 
+mod m20230101_000000_local_auth_stub;
 mod m20240101_000001_create_users;
 mod m20240101_000002_create_categories;
 mod m20240101_000003_create_posts;
@@ -60,6 +61,8 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            // Ensure auth.users stub exists before any FK references it (#267).
+            Box::new(m20230101_000000_local_auth_stub::Migration),
             Box::new(m20240101_000001_create_users::Migration),
             Box::new(m20240101_000002_create_categories::Migration),
             Box::new(m20240101_000003_create_posts::Migration),
