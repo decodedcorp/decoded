@@ -123,9 +123,30 @@ services:
     networks:
       - decoded-backend
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: decoded-backend-postgres-dev
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: decoded
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+    networks:
+      - decoded-backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d decoded"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 networks:
   decoded-backend:
     driver: bridge
 
 volumes:
   meilisearch-data-dev:
+  postgres-data-dev:

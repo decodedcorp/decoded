@@ -9,13 +9,16 @@ import type { MainCPost } from "@/lib/components/main-c/types";
 
 function getSharedClient() {
   const url =
-    process.env.SHARED_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.SHARED_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_DATABASE_API_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
     process.env.SHARED_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_DATABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     throw new Error(
-      "[main-c] Missing SHARED_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL"
+      "[main-c] Missing SHARED_SUPABASE_URL / NEXT_PUBLIC_DATABASE_API_URL / NEXT_PUBLIC_SUPABASE_URL"
     );
   }
   return createClient<Database>(url, key);

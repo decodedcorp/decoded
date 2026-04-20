@@ -422,8 +422,10 @@ class MetadataServicer(inbound_pb2_grpc.QueueServicer):
             self.logger.info(f"ExtractPostContext for post {post_id}")
 
             service = PostContextService()
-            supabase_url = os.environ.get("SUPABASE_URL", "")
-            supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+            supabase_url = os.environ.get("DATABASE_API_URL") or os.environ.get("SUPABASE_URL", "")
+            supabase_key = os.environ.get("DATABASE_SERVICE_ROLE_KEY") or os.environ.get(
+                "SUPABASE_SERVICE_ROLE_KEY", ""
+            )
 
             result = await service.extract_and_update(
                 post_id, image_url, supabase_url, supabase_key
