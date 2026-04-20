@@ -1,5 +1,6 @@
 pub use sea_orm_migration::prelude::*;
 
+mod m20230101_000000_local_auth_stub;
 mod m20240101_000001_create_users;
 mod m20240101_000002_create_categories;
 mod m20240101_000003_create_posts;
@@ -51,6 +52,8 @@ mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
+mod m20260501_000001_decouple_auth_users_fk;
+mod m20260501_000002_auth_uid_stub;
 
 pub struct Migrator;
 
@@ -58,6 +61,8 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            // Ensure auth.users stub exists before any FK references it (#267).
+            Box::new(m20230101_000000_local_auth_stub::Migration),
             Box::new(m20240101_000001_create_users::Migration),
             Box::new(m20240101_000002_create_categories::Migration),
             Box::new(m20240101_000003_create_posts::Migration),
@@ -109,6 +114,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
+            Box::new(m20260501_000002_auth_uid_stub::Migration),
+            Box::new(m20260501_000001_decouple_auth_users_fk::Migration),
         ]
     }
 }
