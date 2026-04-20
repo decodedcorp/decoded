@@ -28,6 +28,9 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const summary = await fetchTodaySummary();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const summary = await fetchTodaySummary(session?.access_token);
   return NextResponse.json(summary);
 }

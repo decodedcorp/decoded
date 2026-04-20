@@ -22,9 +22,25 @@ pub struct WarehouseProfile {
     pub profile_image_url: Option<String>,
 }
 
+/// 단일 브랜드 프로필 (브랜드는 logo_image_url 사용)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WarehouseBrandProfile {
+    pub id: Uuid,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_ko: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_en: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_image_url: Option<String>,
+}
+
 /// `GET /api/v1/warehouse/profiles` 응답
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WarehouseProfilesResponse {
     pub artists: Vec<WarehouseProfile>,
     pub groups: Vec<WarehouseProfile>,
+    pub brands: Vec<WarehouseBrandProfile>,
 }

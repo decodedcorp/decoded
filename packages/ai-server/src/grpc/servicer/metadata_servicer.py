@@ -1,6 +1,5 @@
 import grpc
 import base64
-import os
 from src.grpc.proto.inbound import inbound_pb2, inbound_pb2_grpc
 from src.config._logger import LoggerService
 from src.managers.redis._manager import RedisManager
@@ -422,14 +421,13 @@ class MetadataServicer(inbound_pb2_grpc.QueueServicer):
             self.logger.info(f"ExtractPostContext for post {post_id}")
 
             service = PostContextService()
-            supabase_url = os.environ.get("DATABASE_API_URL") or os.environ.get("SUPABASE_URL", "")
-            supabase_key = os.environ.get("DATABASE_SERVICE_ROLE_KEY") or os.environ.get(
-                "SUPABASE_SERVICE_ROLE_KEY", ""
-            )
+            # asyncpg pool via DI — DATABASE_URL 로 투명 전환 (#266)
+            from src.config._container import Application
 
-            result = await service.extract_and_update(
-                post_id, image_url, supabase_url, supabase_key
-            )
+            app = Application()
+            database_manager = app.infrastructure().database_manager()
+
+            result = await service.extract_and_update(post_id, image_url, database_manager)
 
             return inbound_pb2.ExtractPostContextResponse(
                 success=True,

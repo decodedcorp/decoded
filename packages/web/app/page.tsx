@@ -344,7 +344,7 @@ export default async function Home({
     const key = p.artist_name || p.group_name || "";
     if (!key) continue;
     const existing = artistCounts.get(key);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const warehouseImg =
       (p as { artist_profile_image_url?: string | null })
         .artist_profile_image_url ||
