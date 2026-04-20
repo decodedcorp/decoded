@@ -124,7 +124,9 @@ services:
       - decoded-backend
 
   postgres:
-    image: postgres:17-alpine
+    # pgvector/pgvector bundles pgvector with Postgres — needed for the `vector`
+    # extension used by public.embeddings + search_similar() (see #202).
+    image: pgvector/pgvector:pg17
     container_name: decoded-backend-postgres-dev
     restart: unless-stopped
     ports:
