@@ -27,6 +27,11 @@ pub struct AdminPostListQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
 
+    /// 통합 검색어 (artist_name | group_name | context 에 부분매칭 OR).
+    /// 2글자 이상 권장. 주로 admin 자동완성 UX 에서 사용.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q: Option<String>,
+
     /// 기존 PostListQuery 필드들
     #[serde(flatten)]
     pub base_query: PostListQuery,
@@ -52,9 +57,10 @@ pub struct PostStatusUpdate {
     ),
     params(
         ("status" = Option<String>, Query, description = "상태 필터 (active, hidden, deleted 등)"),
-        ("artist_name" = Option<String>, Query, description = "아티스트명 필터"),
-        ("group_name" = Option<String>, Query, description = "그룹명 필터"),
-        ("context" = Option<String>, Query, description = "상황 필터"),
+        ("q" = Option<String>, Query, description = "통합 검색어 (artist_name/group_name/context 부분매칭 OR)"),
+        ("artist_name" = Option<String>, Query, description = "아티스트명 필터 (정확매칭)"),
+        ("group_name" = Option<String>, Query, description = "그룹명 필터 (정확매칭)"),
+        ("context" = Option<String>, Query, description = "상황 필터 (정확매칭)"),
         ("user_id" = Option<Uuid>, Query, description = "사용자 ID 필터"),
         ("sort" = Option<String>, Query, description = "정렬: recent | popular | trending"),
         ("page" = Option<u64>, Query, description = "페이지 번호"),

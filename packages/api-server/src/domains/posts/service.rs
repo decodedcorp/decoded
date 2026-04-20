@@ -1339,6 +1339,19 @@ pub async fn admin_list_posts(
         select = select.filter(Column::Status.eq(status));
     }
 
+    // 통합 검색어 q 적용 — artist_name/group_name/context 부분매칭 OR (admin 자동완성 용도)
+    if let Some(ref q) = query.q {
+        let trimmed = q.trim();
+        if !trimmed.is_empty() {
+            let pattern = format!("%{trimmed}%");
+            let cond = sea_orm::Condition::any()
+                .add(Column::ArtistName.like(&pattern))
+                .add(Column::GroupName.like(&pattern))
+                .add(Column::Context.like(&pattern));
+            select = select.filter(cond);
+        }
+    }
+
     // 필터 적용
     if let Some(ref artist_name) = query.base_query.artist_name {
         select = select.filter(Column::ArtistName.eq(artist_name));
@@ -3585,6 +3598,7 @@ mod tests {
             ]) // comments
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: Some("hidden".to_string()),
             base_query: PostListQuery {
                 artist_name: Some("X".to_string()),
@@ -3623,6 +3637,7 @@ mod tests {
             ])
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,
@@ -3660,6 +3675,7 @@ mod tests {
             ])
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,
@@ -4057,6 +4073,7 @@ mod tests {
             ]) // comment_counts
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,

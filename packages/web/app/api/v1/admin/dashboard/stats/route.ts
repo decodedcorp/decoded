@@ -26,6 +26,9 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const stats = await fetchDashboardStats();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const stats = await fetchDashboardStats(session?.access_token);
   return NextResponse.json(stats);
 }

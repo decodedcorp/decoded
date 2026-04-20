@@ -92,6 +92,8 @@ use utoipa::OpenApi;
         crate::domains::earnings::handlers::get_settlements,
         crate::domains::earnings::handlers::create_withdraw,
         crate::domains::earnings::handlers::get_withdraw_status,
+        // Events 도메인 핸들러
+        crate::domains::events::handlers::ingest_events,
         // Admin 도메인 핸들러
         crate::domains::admin::curations::create_curation,
         crate::domains::admin::curations::update_curation,
@@ -136,6 +138,7 @@ use utoipa::OpenApi;
         (name = "rankings", description = "Rankings"),
         (name = "badges", description = "Badges"),
         (name = "earnings", description = "Earnings and settlements"),
+        (name = "events", description = "Behavioral events ingest"),
         (name = "admin", description = "Admin operations"),
         (name = "warehouse", description = "Warehouse entity profiles"),
     ),
@@ -259,6 +262,9 @@ use utoipa::OpenApi;
                 crate::domains::earnings::dto::SettlementsResponse,
                 crate::domains::earnings::dto::SettlementItem,
                 crate::domains::earnings::dto::WithdrawRequest,
+                // Events 도메인 DTO
+                crate::domains::events::dto::EventItem,
+                crate::domains::events::dto::IngestEventsResponse,
                 // Admin 도메인 DTO
                 crate::domains::admin::curations::CurationResponse,
                 crate::domains::admin::curations::CreateCurationDto,
@@ -286,6 +292,7 @@ use utoipa::OpenApi;
                 crate::domains::admin::badges::CreateBadgeDto,
                 crate::domains::admin::badges::UpdateBadgeDto,
                 crate::domains::warehouse::dto::WarehouseProfile,
+                crate::domains::warehouse::dto::WarehouseBrandProfile,
                 crate::domains::warehouse::dto::WarehouseProfilesResponse,
                 crate::domains::spots::dto::SpotsByPostItem,
                 crate::domains::spots::dto::SpotsByPostsResponse,
