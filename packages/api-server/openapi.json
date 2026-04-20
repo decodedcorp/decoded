@@ -750,9 +750,18 @@
             }
           },
           {
+            "name": "q",
+            "in": "query",
+            "description": "통합 검색어 (artist_name/group_name/context 부분매칭 OR)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "artist_name",
             "in": "query",
-            "description": "아티스트명 필터",
+            "description": "아티스트명 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -761,7 +770,7 @@
           {
             "name": "group_name",
             "in": "query",
-            "description": "그룹명 필터",
+            "description": "그룹명 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -770,7 +779,7 @@
           {
             "name": "context",
             "in": "query",
-            "description": "상황 필터",
+            "description": "상황 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -1788,6 +1797,52 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "인증 필요"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "POST /api/v1/events — behavioral event batch ingest.",
+        "description": "인증된 유저만 허용 (middleware 가 401 처리).\nuser_id 는 서버 주입 (JWT 의 User.id) — client 가 지정한 값 무시.\n빈 배열은 200 OK + accepted=0.",
+        "operationId": "events_ingest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EventItem"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "수락된 이벤트 수",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "배치 크기 초과 등"
           },
           "401": {
             "description": "인증 필요"
@@ -6861,6 +6916,49 @@
           }
         }
       },
+      "EventItem": {
+        "type": "object",
+        "description": "Client 가 보내는 단일 이벤트.\n`user_id` 는 서버가 JWT 에서 강제 주입하므로 client 가 지정할 수 없다.",
+        "required": [
+          "event_type",
+          "session_id",
+          "page_path",
+          "timestamp"
+        ],
+        "properties": {
+          "entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          },
+          "page_path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "클라이언트가 이벤트 발생 순간에 기록한 ISO timestamp.\n서버에서 보정할 수 있으나 기본은 client 값 유지."
+          }
+        }
+      },
       "ExtractMetadataDto": {
         "type": "object",
         "description": "링크 메타데이터 추출 요청",
@@ -7181,6 +7279,23 @@
             ],
             "format": "int32",
             "description": "이미지 가로 크기 (픽셀)"
+          }
+        }
+      },
+      "IngestEventsResponse": {
+        "type": "object",
+        "description": "Ingest 응답 — sendBeacon 은 응답 body 를 읽지 않으므로 최소 형태.",
+        "required": [
+          "ok",
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ok": {
+            "type": "boolean"
           }
         }
       },
@@ -11506,6 +11621,37 @@
           "different"
         ]
       },
+      "WarehouseBrandProfile": {
+        "type": "object",
+        "description": "단일 브랜드 프로필 (브랜드는 logo_image_url 사용)",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "logo_image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ko": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "WarehouseProfile": {
         "type": "object",
         "description": "단일 아티스트/그룹 프로필",
@@ -11542,13 +11688,20 @@
         "description": "`GET /api/v1/warehouse/profiles` 응답",
         "required": [
           "artists",
-          "groups"
+          "groups",
+          "brands"
         ],
         "properties": {
           "artists": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/WarehouseProfile"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarehouseBrandProfile"
             }
           },
           "groups": {
@@ -11646,6 +11799,10 @@
     {
       "name": "earnings",
       "description": "Earnings and settlements"
+    },
+    {
+      "name": "events",
+      "description": "Behavioral events ingest"
     },
     {
       "name": "admin",

@@ -7,6 +7,7 @@ pub mod badges;
 pub mod categories;
 pub mod comments;
 pub mod earnings;
+pub mod events;
 pub mod feed;
 pub mod post_likes;
 pub mod post_magazines;

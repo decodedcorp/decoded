@@ -22,6 +22,50 @@ local-deps:
 local-deps-down:
     bash "{{ repo }}/scripts/local-deps-down.sh"
 
+# 풀 로컬 개발 스택 — deps (컨테이너) + BE + FE 한 번에. Ctrl+C 로 BE/FE 동시 종료.
+# 인프라(deps) 는 백그라운드에 그대로 남음 — 종료하려면 `just dev-down`
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just local-deps
+    echo ""
+    echo "⏳ Waiting 3s for postgres/redis/meili to be ready..."
+    sleep 3
+    echo ""
+    echo "🚀 Starting BE + FE. Ctrl+C to stop both."
+    trap 'kill 0' SIGINT SIGTERM EXIT
+    just local-be &
+    just local-fe &
+    wait
+
+# 전체 로컬 인프라 종료
+dev-down:
+    bash "{{ repo }}/scripts/local-deps-down.sh"
+
+# DB 볼륨 제거 + 인프라 재시작 + seed — 깨끗한 상태로 리셋
+dev-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "⚠️  Stopping deps and dropping postgres volume..."
+    bash "{{ repo }}/scripts/local-deps-down.sh" || true
+    docker volume rm decoded-backend_postgres-data-dev 2>/dev/null || true
+    bash "{{ repo }}/scripts/local-deps-up.sh"
+    echo "⏳ Waiting 3s for postgres..."
+    sleep 3
+    just seed
+    echo "✅ DB reset + seeded. Start apps with: just dev"
+
+# seed.sql 적용 — postgres 가 기동 중이어야 함
+seed DATABASE_URL="postgresql://postgres:postgres@localhost:5432/decoded":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v psql >/dev/null 2>&1; then
+        echo "❌ psql not found. Install with: brew install libpq && brew link --force libpq"
+        exit 1
+    fi
+    psql "{{ DATABASE_URL }}" -f "{{ repo }}/scripts/seed.sql"
+    echo "✅ Seed applied to {{ DATABASE_URL }}"
+
 # Git pre-push — 모노레포 로컬 CI (프론트 슬롯 + ai-server + api-server)
 hook:
     #!/usr/bin/env bash

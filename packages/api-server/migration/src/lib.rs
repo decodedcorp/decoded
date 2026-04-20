@@ -1,5 +1,6 @@
 pub use sea_orm_migration::prelude::*;
 
+mod m20230101_000000_local_auth_stub;
 mod m20240101_000001_create_users;
 mod m20240101_000002_create_categories;
 mod m20240101_000003_create_posts;
@@ -52,6 +53,14 @@ mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
 mod m20260419_000001_create_raw_posts_tables;
+mod m20260501_000001_decouple_auth_users_fk;
+mod m20260501_000002_auth_uid_stub;
+mod m20260502_000001_enable_extensions;
+mod m20260502_000002_warehouse_schema_tables_and_rls;
+mod m20260502_000003_public_missing_tables_and_rls;
+mod m20260502_000004_embeddings_and_search_similar;
+mod m20260502_000005_magazine_approval_and_rpcs;
+mod m20260502_000006_backfill_public_columns;
 
 pub struct Migrator;
 
@@ -59,6 +68,8 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            // Ensure auth.users stub exists before any FK references it (#267).
+            Box::new(m20230101_000000_local_auth_stub::Migration),
             Box::new(m20240101_000001_create_users::Migration),
             Box::new(m20240101_000002_create_categories::Migration),
             Box::new(m20240101_000003_create_posts::Migration),
@@ -103,6 +114,12 @@ impl MigratorTrait for Migrator {
             Box::new(m20260320_000001_add_system_uncategorized_subcategory::Migration),
             Box::new(m20260402_000001_add_try_fields_to_posts::Migration),
             Box::new(m20260402_000002_create_try_spot_tags::Migration),
+            // Warehouse schema must exist before the FK migration references it.
+            // On prod the schema already exists (Supabase CLI ran earlier); these new
+            // SeaORM migrations are idempotent no-ops there. On fresh local, these run
+            // first and create the schema so the FK migration below can succeed.
+            Box::new(m20260502_000001_enable_extensions::Migration),
+            Box::new(m20260502_000002_warehouse_schema_tables_and_rls::Migration),
             Box::new(m20260402_000001_add_warehouse_fk_posts_solutions::Migration),
             Box::new(m20260403_000001_backfill_created_with_solutions::Migration),
             Box::new(m20260406_000001_drop_post_magazines_thread_id::Migration),
@@ -110,7 +127,16 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
+            // #258 raw_posts pipeline tables
             Box::new(m20260419_000001_create_raw_posts_tables::Migration),
+            // PR #273 — auth.uid() stub must run before RLS migrations that use it.
+            Box::new(m20260501_000002_auth_uid_stub::Migration),
+            Box::new(m20260501_000001_decouple_auth_users_fk::Migration),
+            // #202 remaining migrations (warehouse schema already registered above)
+            Box::new(m20260502_000003_public_missing_tables_and_rls::Migration),
+            Box::new(m20260502_000004_embeddings_and_search_similar::Migration),
+            Box::new(m20260502_000005_magazine_approval_and_rpcs::Migration),
+            Box::new(m20260502_000006_backfill_public_columns::Migration),
         ]
     }
 }

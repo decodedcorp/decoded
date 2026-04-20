@@ -1,16 +1,18 @@
 /**
- * Admin dashboard data fetching layer (server-side only).
+ * Admin dashboard data fetching — served by api-server.
  *
- * Queries real Supabase tables:
- * - post / item → content counts
- * - users → total user count
- * - user_events → DAU / MAU (distinct user_id)
- * - view_logs, click_logs, search_logs → time-series chart data
+ * Previously queried Supabase directly from Next.js server routes; after the
+ * #265 refactor all reads go through api-server (`/api/v1/admin/dashboard`
+ * family). The same function interface is preserved so existing Next.js
+ * route handlers stay unchanged.
+ *
+ * Auth: Next.js route handlers validate admin session first, then forward the
+ * access token to api-server for service-role enforcement.
  */
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { API_BASE_URL } from "@/lib/server-env";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types (unchanged public interface) ─────────────────────────────────────
 
 export interface DailyMetric {
   /** ISO date string (YYYY-MM-DD) */
@@ -29,7 +31,11 @@ export interface KPIStats {
   totalUsers: number;
   totalPosts: number;
   totalSolutions: number;
-  /** Percentage change from previous period (positive = growth) */
+  /**
+   * Percentage change from previous period.
+   * Currently returned as 0 — api-server does not compute deltas yet.
+   * Follow-up: expose delta fields on DashboardStatsResponse.
+   */
   dauDelta?: number;
   mauDelta?: number;
   totalUsersDelta?: number;
@@ -45,105 +51,84 @@ export interface TodaySummary {
   timestamp: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── api-server wire types ──────────────────────────────────────────────────
 
-function todayStartUTC(): Date {
+interface BackendDashboardStats {
+  dau: number;
+  mau: number;
+  total_users: number;
+  total_posts: number;
+  total_solutions: number;
+  total_clicks: number;
+  today_posts: number;
+  today_solutions: number;
+  today_clicks: number;
+}
+
+interface BackendDailyTraffic {
+  date: string;
+  dau: number;
+  search_count: number;
+  click_count: number;
+}
+
+interface BackendTrafficAnalysis {
+  daily_traffic: BackendDailyTraffic[];
+  total_searches: number;
+  total_clicks: number;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function backendFetch<T>(
+  path: string,
+  accessToken: string | undefined
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`[admin/dashboard] ${path} failed: ${res.status}`);
+      return null;
+    }
+    return (await res.json()) as T;
+  } catch (err) {
+    console.error(`[admin/dashboard] ${path} error:`, err);
+    return null;
+  }
+}
+
+function daysAgoIso(days: number): string {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
-  return d;
-}
-
-function daysAgoUTC(days: number): Date {
-  const d = todayStartUTC();
   d.setUTCDate(d.getUTCDate() - days);
-  return d;
+  return d.toISOString().slice(0, 10);
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function calcDelta(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 1000) / 10;
-}
-
-// ─── Data fetchers ───────────────────────────────────────────────────────────
+// ─── Data fetchers (preserved public API) ───────────────────────────────────
 
 /**
- * Fetches KPI statistics for the dashboard overview cards.
- * All values come from real Supabase tables.
+ * Fetches KPI statistics. Delta fields are currently 0 — extend api-server's
+ * DashboardStatsResponse to return deltas when needed.
  */
-export async function fetchDashboardStats(): Promise<KPIStats> {
-  const supabase = await createSupabaseServerClient();
-
-  const today = todayStartUTC();
-  const yesterday = daysAgoUTC(1);
-  const thirtyDaysAgo = daysAgoUTC(30);
-  const sixtyDaysAgo = daysAgoUTC(60);
-
-  try {
-    // Parallel queries for current stats
-    const [
-      { count: postCount },
-      { count: itemCount },
-      { count: userCount },
-      { data: dauData },
-      { data: mauData },
-      // Previous period for deltas
-      { data: prevDauData },
-      { data: prevMauData },
-    ] = await Promise.all([
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase.from("post" as any).select("*", { count: "exact", head: true }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase.from("item" as any).select("*", { count: "exact", head: true }),
-      supabase.from("users").select("*", { count: "exact", head: true }),
-      // DAU: distinct user_id today
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", today.toISOString()),
-      // MAU: distinct user_id last 30 days
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", thirtyDaysAgo.toISOString()),
-      // Previous DAU: yesterday
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", yesterday.toISOString())
-        .lt("created_at", today.toISOString()),
-      // Previous MAU: 60-30 days ago
-      supabase
-        .from("user_events")
-        .select("user_id")
-        .gte("created_at", sixtyDaysAgo.toISOString())
-        .lt("created_at", thirtyDaysAgo.toISOString()),
-    ]);
-
-    const dau = new Set(dauData?.map((r) => r.user_id)).size;
-    const mau = new Set(mauData?.map((r) => r.user_id)).size;
-    const prevDau = new Set(prevDauData?.map((r) => r.user_id)).size;
-    const prevMau = new Set(prevMauData?.map((r) => r.user_id)).size;
-
-    return {
-      dau,
-      mau,
-      totalUsers: userCount ?? 0,
-      totalPosts: postCount ?? 0,
-      totalSolutions: itemCount ?? 0,
-      dauDelta: calcDelta(dau, prevDau),
-      mauDelta: calcDelta(mau, prevMau),
-      totalUsersDelta: 0,
-      totalPostsDelta: 0,
-      totalSolutionsDelta: 0,
-    };
-  } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[fetchDashboardStats] Supabase error:", err);
-    }
+export async function fetchDashboardStats(
+  accessToken?: string
+): Promise<KPIStats> {
+  const stats = await backendFetch<BackendDashboardStats>(
+    "/api/v1/admin/dashboard",
+    accessToken
+  );
+  if (!stats) {
     return {
       dau: 0,
       mau: 0,
@@ -152,150 +137,56 @@ export async function fetchDashboardStats(): Promise<KPIStats> {
       totalSolutions: 0,
     };
   }
+  return {
+    dau: stats.dau,
+    mau: stats.mau,
+    totalUsers: stats.total_users,
+    totalPosts: stats.total_posts,
+    totalSolutions: stats.total_solutions,
+    // Deltas are placeholders — compute server-side when the metric becomes actionable
+    dauDelta: 0,
+    mauDelta: 0,
+    totalUsersDelta: 0,
+    totalPostsDelta: 0,
+    totalSolutionsDelta: 0,
+  };
 }
 
 /**
- * Fetches time-series chart data from real log tables.
- *
- * Queries view_logs, click_logs, search_logs, and user_events
- * grouped by date for the last N days.
- *
- * @param days - Number of days to return (default 30, max 90)
+ * Fetches daily traffic metrics for the last N days (max 90).
  */
 export async function fetchChartData(
-  days: number = 30
+  days: number = 30,
+  accessToken?: string
 ): Promise<DailyMetric[]> {
   const clampedDays = Math.min(Math.max(1, days), 90);
-  const since = daysAgoUTC(clampedDays);
-  const sinceIso = since.toISOString();
-
-  const supabase = await createSupabaseServerClient();
-
-  try {
-    const [
-      { data: viewRows },
-      { data: clickRows },
-      { data: searchRows },
-      { data: eventRows },
-    ] = await Promise.all([
-      supabase
-        .from("view_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("click_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("search_logs")
-        .select("created_at")
-        .gte("created_at", sinceIso),
-      supabase
-        .from("user_events")
-        .select("created_at, user_id")
-        .gte("created_at", sinceIso),
-    ]);
-
-    // Build date → counts map
-    const dateMap = new Map<
-      string,
-      { views: number; clicks: number; searches: number; userIds: Set<string> }
-    >();
-
-    // Initialize all dates
-    for (let i = clampedDays - 1; i >= 0; i--) {
-      const d = daysAgoUTC(i);
-      dateMap.set(formatDate(d), {
-        views: 0,
-        clicks: 0,
-        searches: 0,
-        userIds: new Set(),
-      });
-    }
-
-    const getDate = (ts: string) => ts.slice(0, 10);
-
-    viewRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.views++;
-    });
-
-    clickRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.clicks++;
-    });
-
-    searchRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.searches++;
-    });
-
-    eventRows?.forEach((r) => {
-      const key = getDate(r.created_at);
-      const entry = dateMap.get(key);
-      if (entry) entry.userIds.add(r.user_id);
-    });
-
-    // Convert to sorted array
-    const metrics: DailyMetric[] = [];
-    for (const [date, data] of dateMap) {
-      metrics.push({
-        date,
-        dau: data.userIds.size,
-        searches: data.searches,
-        clicks: data.clicks,
-      });
-    }
-
-    metrics.sort((a, b) => a.date.localeCompare(b.date));
-    return metrics;
-  } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[fetchChartData] Supabase error:", err);
-    }
-    return [];
-  }
+  const start = daysAgoIso(clampedDays - 1); // inclusive range
+  const end = todayIso();
+  const traffic = await backendFetch<BackendTrafficAnalysis>(
+    `/api/v1/admin/dashboard/traffic?start_date=${start}&end_date=${end}`,
+    accessToken
+  );
+  if (!traffic) return [];
+  return traffic.daily_traffic.map((d) => ({
+    date: d.date,
+    dau: d.dau,
+    searches: d.search_count,
+    clicks: d.click_count,
+  }));
 }
 
 /**
- * Fetches today's activity summary from real tables.
+ * Today-only activity summary — derived from the main dashboard stats endpoint
+ * (today_posts/today_solutions/today_clicks fields).
  */
-export async function fetchTodaySummary(): Promise<TodaySummary> {
-  const todayIso = todayStartUTC().toISOString();
-  const supabase = await createSupabaseServerClient();
-
-  try {
-    const [{ count: newPosts }, { count: newSolutions }, { count: clicks }] =
-      await Promise.all([
-        supabase
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .from("post" as any)
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", todayIso),
-        supabase
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .from("item" as any)
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", todayIso),
-        supabase
-          .from("click_logs")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", todayIso),
-      ]);
-
-    return {
-      newPosts: newPosts ?? 0,
-      newSolutions: newSolutions ?? 0,
-      clicks: clicks ?? 0,
-      timestamp: new Date().toISOString(),
-    };
-  } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[fetchTodaySummary] Supabase error:", err);
-    }
+export async function fetchTodaySummary(
+  accessToken?: string
+): Promise<TodaySummary> {
+  const stats = await backendFetch<BackendDashboardStats>(
+    "/api/v1/admin/dashboard",
+    accessToken
+  );
+  if (!stats) {
     return {
       newPosts: 0,
       newSolutions: 0,
@@ -303,4 +194,10 @@ export async function fetchTodaySummary(): Promise<TodaySummary> {
       timestamp: new Date().toISOString(),
     };
   }
+  return {
+    newPosts: stats.today_posts,
+    newSolutions: stats.today_solutions,
+    clicks: stats.today_clicks,
+    timestamp: new Date().toISOString(),
+  };
 }

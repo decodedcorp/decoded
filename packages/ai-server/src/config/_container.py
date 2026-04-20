@@ -14,6 +14,7 @@ from ._logger import LoggerService, get_logger
 from src.managers.redis._manager import RedisManager
 from src.managers.queue.queue_manager import QueueManager
 from src.managers.storage.r2_client import R2Client
+from src.managers.database import DatabaseManager
 from src.services.metadata.core.metadata_extract_service import MetadataExtractService
 from src.services.metadata.core.result_batch_service import ResultBatchService
 from src.services.metadata.management.failed_items_manager import FailedItemsManager
@@ -63,6 +64,12 @@ class InfrastructureContainer(DeclarativeContainer):
         host=Callable(lambda env: env.API_SERVER_GRPC_HOST, environment),
         port=Callable(lambda env: env.API_SERVER_GRPC_PORT, environment),
         logger_service=logger,
+    )
+
+    # Postgres direct access — asyncpg pool. DATABASE_URL로 로컬/prod 투명 전환.
+    database_manager: Singleton[DatabaseManager] = Singleton(
+        DatabaseManager,
+        environment=environment,
     )
 
 

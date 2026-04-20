@@ -1,6 +1,6 @@
 //! Dev tool: write the current OpenAPI spec to `openapi.json`.
 //!
-//! Usage: `cargo run --bin dump-openapi`
+//! Usage: `cargo run --bin dump_openapi`
 //! Path can be overridden with the `OPENAPI_OUT` env var.
 use decoded_api::openapi::ApiDoc;
 use std::fs;

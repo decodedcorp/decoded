@@ -42,6 +42,11 @@ class Environment(BaseModel):
 
     QUEUE_BATCH_SIZE: int = 10
 
+    # Postgres 직접 연결 (asyncpg pool) — 로컬/prod 투명 전환 (DATABASE_URL 값만 교체)
+    DATABASE_URL: str = ""
+    DATABASE_POOL_MIN: int = 1
+    DATABASE_POOL_MAX: int = 5
+
     API_SERVER_HTTP_URL: str
     API_SERVER_ACCESS_TOKEN: str
 

@@ -95,7 +95,8 @@ async def start_arq_worker(
 
     worker = None
     try:
-        # Create worker with injected dependencies
+        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial
+        # and raw_posts container for #258 raw-posts pipeline)
         worker = await create_worker(
             environment,
             metadata_container,
@@ -184,6 +185,13 @@ async def main():
             logger.info("Raw posts callback client closed")
         except Exception as e:
             logger.warning(f"Error closing raw posts callback client: {str(e)}")
+
+        # Cleanup asyncpg pool (#266)
+        try:
+            await infrastructure_container.database_manager().close()
+            logger.info("Database pool closed")
+        except Exception as e:
+            logger.warning(f"Error closing database pool: {str(e)}")
 
 
 if __name__ == "__main__":

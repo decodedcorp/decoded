@@ -158,14 +158,19 @@ impl AppConfig {
                 ),
             },
             auth: AuthConfig {
-                jwt_secret: std::env::var("SUPABASE_JWT_SECRET")
-                    .expect("SUPABASE_JWT_SECRET must be set in environment"),
-                supabase_url: std::env::var("SUPABASE_URL")
-                    .expect("SUPABASE_URL must be set in environment"),
-                supabase_anon_key: std::env::var("SUPABASE_ANON_KEY")
-                    .expect("SUPABASE_ANON_KEY must be set in environment"),
-                supabase_service_role_key: std::env::var("SUPABASE_SERVICE_ROLE_KEY")
-                    .expect("SUPABASE_SERVICE_ROLE_KEY must be set in environment"),
+                jwt_secret: env_primary_or_legacy("DATABASE_JWT_SECRET", "SUPABASE_JWT_SECRET")
+                    .expect("DATABASE_JWT_SECRET (or legacy SUPABASE_JWT_SECRET) must be set"),
+                supabase_url: env_primary_or_legacy("DATABASE_API_URL", "SUPABASE_URL")
+                    .expect("DATABASE_API_URL (or legacy SUPABASE_URL) must be set"),
+                supabase_anon_key: env_primary_or_legacy("DATABASE_ANON_KEY", "SUPABASE_ANON_KEY")
+                    .expect("DATABASE_ANON_KEY (or legacy SUPABASE_ANON_KEY) must be set"),
+                supabase_service_role_key: env_primary_or_legacy(
+                    "DATABASE_SERVICE_ROLE_KEY",
+                    "SUPABASE_SERVICE_ROLE_KEY",
+                )
+                .expect(
+                    "DATABASE_SERVICE_ROLE_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) must be set",
+                ),
             },
             storage: StorageConfig {
                 endpoint: std::env::var("R2_ACCOUNT_ID")
