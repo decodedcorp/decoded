@@ -25,6 +25,11 @@ echo "🟢 Supabase self-hosted stack 기동 (supabase/config.toml 사용)..."
 ( cd "$ROOT" && supabase start )
 
 echo ""
+# env 파일 부트스트랩 + Supabase 키 동기화 (개인 secret 은 건드리지 않음).
+# docker compose 가 .env.backend.dev 를 요구하므로 반드시 stack 기동 전에 실행.
+bash "$ROOT/scripts/local-env-sync.sh"
+
+echo ""
 echo "🟢 Meilisearch / Redis / SearXNG 기동..."
 docker compose -f "$STACK_COMPOSE" up -d meilisearch redis searxng
 
@@ -33,10 +38,6 @@ echo ""
 # `supabase db reset` 등이 컨테이너를 재시작하면 네트워크 연결이 사라지므로
 # 같은 스크립트를 `local-deps-connect.sh` 로도 호출 가능.
 bash "$ROOT/scripts/local-deps-connect.sh"
-
-echo ""
-# env 파일 부트스트랩 + Supabase 키 동기화 (개인 secret 은 건드리지 않음)
-bash "$ROOT/scripts/local-env-sync.sh"
 
 echo ""
 echo "✅ 로컬 의존 스택 준비 완료"
