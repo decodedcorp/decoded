@@ -1,0 +1,51 @@
+# Daily digest of decoded monorepo activity → Telegram.
+# Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY
+name: Daily digest
+
+on:
+  schedule:
+    # Daily 00:00 UTC = 09:00 KST. Schedule only runs on default branch.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      window_hours:
+        description: "Look-back window in hours"
+        required: false
+        default: "24"
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate secrets
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          missing=()
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && missing+=("TELEGRAM_BOT_TOKEN")
+          [ -z "$TELEGRAM_CHAT_ID" ] && missing+=("TELEGRAM_CHAT_ID")
+          [ -z "$ANTHROPIC_API_KEY" ] && missing+=("ANTHROPIC_API_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repo secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run daily digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WINDOW_HOURS: ${{ github.event.inputs.window_hours || '24' }}
+        run: bash .github/scripts/daily-digest.sh
