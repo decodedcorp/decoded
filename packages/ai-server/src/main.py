@@ -8,6 +8,7 @@ from src.grpc.proto.inbound import inbound_pb2_grpc
 from src.services.common.task_scheduler import TaskScheduler
 from src.services.metadata.management.task_configuration import configure_metadata_tasks
 from src.managers.queue.worker import create_worker
+from src.services.media.scheduler import MediaParseScheduler
 from src.services.raw_posts.scheduler import RawPostsScheduler
 
 
@@ -96,6 +97,25 @@ async def start_raw_posts_scheduler(
         await scheduler.shutdown()
 
 
+async def start_media_parse_scheduler(
+    media_container, shutdown_event: asyncio.Event
+) -> None:
+    """#260 — start vision parsing scheduler, keep coroutine alive."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+    scheduler: MediaParseScheduler = media_container.scheduler()
+    try:
+        scheduler.start()
+        await shutdown_event.wait()
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        logger.exception("media parse scheduler crashed")
+    finally:
+        await scheduler.shutdown()
+
+
 async def start_arq_worker(
     environment, metadata_container, infrastructure_container
 ) -> None:
@@ -149,6 +169,7 @@ async def main():
     metadata_container = app.metadata()
     infrastructure_container = app.infrastructure()
     raw_posts_container = app.raw_posts()
+    media_container = app.media()
 
     # Initialize backend client connection
     backend_client = metadata_container.backend_client()
@@ -171,6 +192,7 @@ async def main():
 
     # Run all services concurrently
     raw_posts_shutdown = asyncio.Event()
+    media_shutdown = asyncio.Event()
     try:
         await asyncio.gather(
             start_task_scheduler(metadata_container),
@@ -180,6 +202,7 @@ async def main():
                 infrastructure_container,
             ),
             start_raw_posts_scheduler(raw_posts_container, raw_posts_shutdown),
+            start_media_parse_scheduler(media_container, media_shutdown),
             start_grpc_server(grpc_container, grpc_host, grpc_port),
             start_api_server(),
             return_exceptions=False,
@@ -187,8 +210,9 @@ async def main():
     except Exception as e:
         logger.error(f"Error in main: {e}", exc_info=True)
     finally:
-        # Signal raw_posts scheduler to stop
+        # Signal schedulers to stop
         raw_posts_shutdown.set()
+        media_shutdown.set()
 
         # Cleanup backend client connection
         try:

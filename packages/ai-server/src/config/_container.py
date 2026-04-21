@@ -18,6 +18,10 @@ from src.managers.database import DatabaseManager
 from src.services.metadata.core.metadata_extract_service import MetadataExtractService
 from src.services.metadata.core.result_batch_service import ResultBatchService
 from src.services.metadata.management.failed_items_manager import FailedItemsManager
+from src.services.media.repository import MediaRepository
+from src.services.media.scheduler import MediaParseScheduler
+from src.services.media.seed_writer import SeedWriter
+from src.services.media.vision_parser import MediaVisionParser
 from src.services.raw_posts.adapters import build_default_adapters
 from src.services.raw_posts.pipeline import RawPostsPipeline
 from src.services.raw_posts.repository import RawPostsRepository
@@ -188,6 +192,41 @@ class RawPostsContainer(DeclarativeContainer):
     )
 
 
+# Media Parsing Domain Container (#260)
+class MediaContainer(DeclarativeContainer):
+    environment: Dependency[Environment] = Dependency(Environment)
+    logger: Dependency[LoggerService] = Dependency(LoggerService)
+    infrastructure: DependenciesContainer[InfrastructureContainer] = DependenciesContainer()
+
+    repository: Singleton[MediaRepository] = Singleton(
+        MediaRepository,
+        database_manager=infrastructure.database_manager,
+    )
+
+    vision_parser: Singleton[MediaVisionParser] = Singleton(
+        MediaVisionParser,
+        environment=environment,
+    )
+
+    seed_writer: Singleton[SeedWriter] = Singleton(
+        SeedWriter,
+        database_manager=infrastructure.database_manager,
+    )
+
+    scheduler: Singleton[MediaParseScheduler] = Singleton(
+        MediaParseScheduler,
+        repository=repository,
+        parser=vision_parser,
+        writer=seed_writer,
+        r2_client=infrastructure.r2_client,
+        interval_seconds=Callable(
+            lambda env: env.MEDIA_PARSE_INTERVAL_SECONDS, environment
+        ),
+        batch_size=Callable(lambda env: env.MEDIA_PARSE_BATCH_SIZE, environment),
+        max_attempts=Callable(lambda env: env.MEDIA_PARSE_MAX_ATTEMPTS, environment),
+    )
+
+
 # GRPC API Layer
 class GRPCContainer(DeclarativeContainer):
     environment: Dependency[Environment] = Dependency(Environment)
@@ -240,6 +279,14 @@ class Application(DeclarativeContainer):
     # Raw Posts Domain Layer (#258)
     raw_posts: Container[RawPostsContainer] = Container(
         RawPostsContainer,
+        environment=environment,
+        logger=logger,
+        infrastructure=infrastructure,
+    )
+
+    # Media Parsing Domain Layer (#260)
+    media: Container[MediaContainer] = Container(
+        MediaContainer,
         environment=environment,
         logger=logger,
         infrastructure=infrastructure,

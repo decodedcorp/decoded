@@ -125,6 +125,13 @@ class Environment(BaseModel):
     PINTEREST_INCREMENTAL_LIMIT: int = 25    # pins per periodic polling cycle
     PINTEREST_PAGE_DELAY_MS: int = 500       # polite delay between paginated feed requests
 
+    # Media vision parser (#260) — raw_posts → seed_* via Gemini Vision
+    MEDIA_PARSE_INTERVAL_SECONDS: int = 600
+    MEDIA_PARSE_BATCH_SIZE: int = 10
+    MEDIA_PARSE_MAX_ATTEMPTS: int = 3
+    GEMINI_VISION_MODEL: str = "gemini-2.5-flash"
+    GEMINI_VISION_FALLBACK_MODEL: str = "gemini-2.5-flash-lite"
+
     @staticmethod
     def from_environ(*, env_file: Optional[str] = None):
         """Load env file(s). If `env_file` is set, only that path is used when it exists.

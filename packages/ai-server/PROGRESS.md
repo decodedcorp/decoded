@@ -1,5 +1,47 @@
 # Development Progress
 
+## Recent Refactoring (2026-04-21)
+
+### ✅ **Vision 파싱 파이프라인 (#260 — raw_posts → seed_\*)** (2026-04-21)
+
+- **목표**: `warehouse.raw_posts` 의 `parse_status='pending'` 레코드를 Gemini Vision
+  으로 파싱해 `ParsedDecodeResult` 로 만든 뒤 `seed_posts / seed_spots /
+  seed_solutions / seed_asset` 에 적재. 플랫폼 무관 — raw_posts 가 곧
+  source_media 역할을 하므로 신규 테이블 없음.
+- **Architecture**:
+  - `services/media/` 신규 패키지: `models` / `repository` / `vision_parser` /
+    `seed_writer` / `scheduler` + `api/media_controller.py`
+  - `MediaParseScheduler` — APScheduler, 10 min interval, claim_pending
+    (`FOR UPDATE SKIP LOCKED` + attempts bump) → R2 GET → Gemini →
+    SeedWriter → mark_parsed / mark_skipped / mark_failed
+  - `MediaVisionParser` — `google-genai` + structured output
+    (`response_schema=ParsedDecodeResult`) + `call_gemini_with_fallback`
+    재사용 (transient 503/429 → fallback 모델)
+  - `SeedWriter` — 단일 트랜잭션으로 seed_posts → seed_asset(ON CONFLICT
+    image_hash) → spots+solutions. raw_posts.image_hash 가 비어있으면 sha256
+    으로 backfill
+  - `POST /media/items/{raw_post_id}/reparse` — admin 수동 재파싱. 동기 await
+- **Schema gotchas resolved**:
+  - `seed_spots.position_left/top` 이 `text NOT NULL` — int → str(clamp 0–100)
+  - `seed_posts.source_post_id/source_image_id` FK (`warehouse.posts/images`)
+    는 현재 대응 row 없음 → NULL 유지, 포인터는 `media_source` +
+    `metadata.source_raw_post_id` 에 보관
+  - `seed_asset.image_hash` UNIQUE → reparse 안전을 위해 `ON CONFLICT DO NOTHING`
+  - **SeaORM migration file vs 실제 Supabase dev/prod 스키마 drift 발견**:
+    실 스키마에는 `seed_solutions` 테이블 없음, `seed_posts.context` 없음,
+    `seed_spots.solutions JSONB` 컬럼이 솔루션 임베드용. SeedWriter 는 실
+    스키마(=프로덕션 진실) 기준으로 작성 — solutions 를 JSONB 배열로 임베드,
+    seed_solutions INSERT 제거, context → metadata JSON 으로 이전. migration
+    파일 자체의 동기화는 후속 작업.
+- **Env vars**: `MEDIA_PARSE_INTERVAL_SECONDS=600`, `MEDIA_PARSE_BATCH_SIZE=10`,
+  `MEDIA_PARSE_MAX_ATTEMPTS=3`, `GEMINI_VISION_MODEL=gemini-2.5-flash`,
+  `GEMINI_VISION_FALLBACK_MODEL=gemini-2.5-flash-lite`
+- **Tests**: 31 신규 unit tests (vision_parser 7 / seed_writer 6 / repository 10
+  / scheduler 8). 전체 ai-server unit 수트 66/66 통과.
+- **Admin UI**: 파싱 결과 표시 + reparse 버튼은 follow-up PR 로 이관.
+
+---
+
 ## Recent Refactoring (2026-04-12)
 
 ### ✅ **Prompts switched to English (Decoded editorial voice)** (2026-04-12)
