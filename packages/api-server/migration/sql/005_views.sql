@@ -3,7 +3,7 @@
 -- Name: explore_posts; Type: VIEW; Schema: public; Owner: -
 --
 
-CREATE VIEW public.explore_posts WITH (security_invoker='true') AS
+CREATE OR REPLACE VIEW public.explore_posts WITH (security_invoker='true') AS
  SELECT p.id,
     p.user_id,
     p.image_url,

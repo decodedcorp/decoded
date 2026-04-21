@@ -68,7 +68,7 @@ impl MigrationTrait for Migration {
                 DROP CONSTRAINT IF EXISTS post_magazines_status_check;
             ALTER TABLE public.post_magazines
                 ADD CONSTRAINT post_magazines_status_check
-                CHECK (status IN ('draft', 'pending', 'published', 'rejected'));
+                CHECK (status IN ('draft', 'pending', 'published', 'rejected', 'failed'));
 
             CREATE INDEX IF NOT EXISTS post_magazines_status_idx
                 ON public.post_magazines(status)

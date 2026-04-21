@@ -10,7 +10,7 @@ SET default_table_access_method = heap;
 -- Name: post_magazines; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.post_magazines (
+CREATE TABLE IF NOT EXISTS public.post_magazines (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying DEFAULT 'Untitled'::character varying NOT NULL,
     subtitle text,
@@ -24,7 +24,7 @@ CREATE TABLE public.post_magazines (
     published_at timestamp with time zone,
     approved_by uuid,
     rejection_reason text,
-    CONSTRAINT post_magazines_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'pending'::character varying, 'published'::character varying, 'rejected'::character varying])::text[])))
+    CONSTRAINT post_magazines_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'pending'::character varying, 'published'::character varying, 'rejected'::character varying, 'failed'::character varying])::text[])))
 );
 
 
@@ -33,7 +33,7 @@ CREATE TABLE public.post_magazines (
 -- Name: agent_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.agent_sessions (
+CREATE TABLE IF NOT EXISTS public.agent_sessions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     thread_id character varying(100) NOT NULL,
     magazine_id uuid,
@@ -53,7 +53,7 @@ CREATE TABLE public.agent_sessions (
 -- Name: badges; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.badges (
+CREATE TABLE IF NOT EXISTS public.badges (
     id uuid NOT NULL,
     type character varying(50) NOT NULL,
     name character varying(255) NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE public.badges (
 -- Name: categories; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.categories (
+CREATE TABLE IF NOT EXISTS public.categories (
     id uuid NOT NULL,
     code character varying(50) NOT NULL,
     name json NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE public.categories (
 -- Name: checkpoint_blobs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.checkpoint_blobs (
+CREATE TABLE IF NOT EXISTS public.checkpoint_blobs (
     thread_id text NOT NULL,
     checkpoint_ns text DEFAULT ''::text NOT NULL,
     channel text NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE public.checkpoint_blobs (
 -- Name: checkpoint_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.checkpoint_migrations (
+CREATE TABLE IF NOT EXISTS public.checkpoint_migrations (
     v integer NOT NULL
 );
 
@@ -115,7 +115,7 @@ CREATE TABLE public.checkpoint_migrations (
 -- Name: checkpoint_writes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.checkpoint_writes (
+CREATE TABLE IF NOT EXISTS public.checkpoint_writes (
     thread_id text NOT NULL,
     checkpoint_ns text DEFAULT ''::text NOT NULL,
     checkpoint_id text NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE public.checkpoint_writes (
 -- Name: checkpoints; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.checkpoints (
+CREATE TABLE IF NOT EXISTS public.checkpoints (
     thread_id text NOT NULL,
     checkpoint_ns text DEFAULT ''::text NOT NULL,
     checkpoint_id text NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE public.checkpoints (
 -- Name: click_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.click_logs (
+CREATE TABLE IF NOT EXISTS public.click_logs (
     id uuid NOT NULL,
     user_id uuid,
     solution_id uuid NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE public.click_logs (
 -- Name: comments; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.comments (
+CREATE TABLE IF NOT EXISTS public.comments (
     id uuid NOT NULL,
     post_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -181,7 +181,7 @@ CREATE TABLE public.comments (
 -- Name: content_reports; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.content_reports (
+CREATE TABLE IF NOT EXISTS public.content_reports (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     target_type character varying(32) DEFAULT 'post'::character varying NOT NULL,
     target_id uuid NOT NULL,
@@ -201,7 +201,7 @@ CREATE TABLE public.content_reports (
 -- Name: credit_transactions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.credit_transactions (
+CREATE TABLE IF NOT EXISTS public.credit_transactions (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     amount integer NOT NULL,
@@ -217,7 +217,7 @@ CREATE TABLE public.credit_transactions (
 -- Name: curation_posts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.curation_posts (
+CREATE TABLE IF NOT EXISTS public.curation_posts (
     curation_id uuid NOT NULL,
     post_id uuid NOT NULL,
     display_order integer DEFAULT 0 NOT NULL
@@ -229,7 +229,7 @@ CREATE TABLE public.curation_posts (
 -- Name: curations; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.curations (
+CREATE TABLE IF NOT EXISTS public.curations (
     id uuid NOT NULL,
     title character varying(255) NOT NULL,
     description text,
@@ -246,7 +246,7 @@ CREATE TABLE public.curations (
 -- Name: decoded_picks; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.decoded_picks (
+CREATE TABLE IF NOT EXISTS public.decoded_picks (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     post_id uuid NOT NULL,
     pick_date date DEFAULT CURRENT_DATE NOT NULL,
@@ -262,7 +262,7 @@ CREATE TABLE public.decoded_picks (
 -- Name: earnings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.earnings (
+CREATE TABLE IF NOT EXISTS public.earnings (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     solution_id uuid NOT NULL,
@@ -279,7 +279,7 @@ CREATE TABLE public.earnings (
 -- Name: embeddings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.embeddings (
+CREATE TABLE IF NOT EXISTS public.embeddings (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     entity_type character varying(20) NOT NULL,
     entity_id uuid NOT NULL,
@@ -294,7 +294,7 @@ CREATE TABLE public.embeddings (
 -- Name: posts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.posts (
+CREATE TABLE IF NOT EXISTS public.posts (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     image_url text NOT NULL,
@@ -359,7 +359,7 @@ COMMENT ON COLUMN public.posts.image_height IS 'Original image height in pixels'
 -- Name: failed_batch_items; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.failed_batch_items (
+CREATE TABLE IF NOT EXISTS public.failed_batch_items (
     id uuid NOT NULL,
     item_id character varying(255) NOT NULL,
     batch_id character varying(255) NOT NULL,
@@ -378,7 +378,7 @@ CREATE TABLE public.failed_batch_items (
 -- Name: magazine_posts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.magazine_posts (
+CREATE TABLE IF NOT EXISTS public.magazine_posts (
     magazine_id uuid NOT NULL,
     post_id uuid NOT NULL,
     section_index integer DEFAULT 0 NOT NULL
@@ -390,7 +390,7 @@ CREATE TABLE public.magazine_posts (
 -- Name: magazines; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.magazines (
+CREATE TABLE IF NOT EXISTS public.magazines (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     subtitle text,
@@ -417,7 +417,7 @@ CREATE TABLE public.magazines (
 -- Name: point_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.point_logs (
+CREATE TABLE IF NOT EXISTS public.point_logs (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     activity_type character varying NOT NULL,
@@ -434,7 +434,7 @@ CREATE TABLE public.point_logs (
 -- Name: post_likes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.post_likes (
+CREATE TABLE IF NOT EXISTS public.post_likes (
     id uuid NOT NULL,
     post_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -447,7 +447,7 @@ CREATE TABLE public.post_likes (
 -- Name: post_magazine_news_references; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.post_magazine_news_references (
+CREATE TABLE IF NOT EXISTS public.post_magazine_news_references (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     post_magazine_id uuid NOT NULL,
     title character varying NOT NULL,
@@ -470,7 +470,7 @@ CREATE TABLE public.post_magazine_news_references (
 -- Name: processed_batches; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.processed_batches (
+CREATE TABLE IF NOT EXISTS public.processed_batches (
     batch_id character varying(255) NOT NULL,
     processing_timestamp timestamp with time zone NOT NULL,
     total_count integer NOT NULL,
@@ -487,7 +487,7 @@ CREATE TABLE public.processed_batches (
 -- Name: saved_posts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.saved_posts (
+CREATE TABLE IF NOT EXISTS public.saved_posts (
     id uuid NOT NULL,
     post_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -500,7 +500,7 @@ CREATE TABLE public.saved_posts (
 -- Name: search_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.search_logs (
+CREATE TABLE IF NOT EXISTS public.search_logs (
     id uuid NOT NULL,
     user_id uuid,
     query character varying(255) NOT NULL,
@@ -514,7 +514,7 @@ CREATE TABLE public.search_logs (
 -- Name: settlements; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.settlements (
+CREATE TABLE IF NOT EXISTS public.settlements (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     amount numeric(12,2) NOT NULL,
@@ -531,7 +531,7 @@ CREATE TABLE public.settlements (
 -- Name: solutions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.solutions (
+CREATE TABLE IF NOT EXISTS public.solutions (
     id uuid NOT NULL,
     spot_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -607,7 +607,7 @@ COMMENT ON COLUMN public.solutions.brand_id IS 'FK to warehouse.brands.id (backf
 -- Name: spots; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.spots (
+CREATE TABLE IF NOT EXISTS public.spots (
     id uuid NOT NULL,
     post_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -625,7 +625,7 @@ CREATE TABLE public.spots (
 -- Name: subcategories; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.subcategories (
+CREATE TABLE IF NOT EXISTS public.subcategories (
     id uuid NOT NULL,
     category_id uuid NOT NULL,
     code character varying(50) NOT NULL,
@@ -643,7 +643,7 @@ CREATE TABLE public.subcategories (
 -- Name: synonyms; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.synonyms (
+CREATE TABLE IF NOT EXISTS public.synonyms (
     id uuid NOT NULL,
     type character varying(50) NOT NULL,
     canonical character varying(255) NOT NULL,
@@ -659,7 +659,7 @@ CREATE TABLE public.synonyms (
 -- Name: try_spot_tags; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.try_spot_tags (
+CREATE TABLE IF NOT EXISTS public.try_spot_tags (
     id uuid NOT NULL,
     try_post_id uuid NOT NULL,
     spot_id uuid NOT NULL,
@@ -672,7 +672,7 @@ CREATE TABLE public.try_spot_tags (
 -- Name: user_badges; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_badges (
+CREATE TABLE IF NOT EXISTS public.user_badges (
     user_id uuid NOT NULL,
     badge_id uuid NOT NULL,
     earned_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -684,7 +684,7 @@ CREATE TABLE public.user_badges (
 -- Name: user_collections; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_collections (
+CREATE TABLE IF NOT EXISTS public.user_collections (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     magazine_id uuid NOT NULL,
@@ -698,7 +698,7 @@ CREATE TABLE public.user_collections (
 -- Name: user_events; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_events (
+CREATE TABLE IF NOT EXISTS public.user_events (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     event_type character varying NOT NULL,
@@ -715,7 +715,7 @@ CREATE TABLE public.user_events (
 -- Name: user_follows; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_follows (
+CREATE TABLE IF NOT EXISTS public.user_follows (
     follower_id uuid NOT NULL,
     following_id uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -727,7 +727,7 @@ CREATE TABLE public.user_follows (
 -- Name: user_magazines; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_magazines (
+CREATE TABLE IF NOT EXISTS public.user_magazines (
     id uuid NOT NULL,
     created_by uuid NOT NULL,
     magazine_type character varying(20) NOT NULL,
@@ -744,7 +744,7 @@ CREATE TABLE public.user_magazines (
 -- Name: user_social_accounts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_social_accounts (
+CREATE TABLE IF NOT EXISTS public.user_social_accounts (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(20) NOT NULL,
@@ -762,7 +762,7 @@ CREATE TABLE public.user_social_accounts (
 -- Name: user_tryon_history; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_tryon_history (
+CREATE TABLE IF NOT EXISTS public.user_tryon_history (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     image_url text NOT NULL,
@@ -784,7 +784,7 @@ COMMENT ON TABLE public.user_tryon_history IS 'Virtual try-on (VTON) history for
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
     id uuid NOT NULL,
     email character varying(255) NOT NULL,
     username character varying(50) NOT NULL,
@@ -807,7 +807,7 @@ CREATE TABLE public.users (
 -- Name: view_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.view_logs (
+CREATE TABLE IF NOT EXISTS public.view_logs (
     id uuid NOT NULL,
     user_id uuid,
     reference_type character varying(20) NOT NULL,
@@ -821,7 +821,7 @@ CREATE TABLE public.view_logs (
 -- Name: votes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.votes (
+CREATE TABLE IF NOT EXISTS public.votes (
     id uuid NOT NULL,
     solution_id uuid NOT NULL,
     user_id uuid NOT NULL,

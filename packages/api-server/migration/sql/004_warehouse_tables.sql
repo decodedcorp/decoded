@@ -3,7 +3,7 @@
 -- Name: admin_audit_log; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.admin_audit_log (
+CREATE TABLE IF NOT EXISTS warehouse.admin_audit_log (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     admin_user_id uuid NOT NULL,
     action text NOT NULL,
@@ -29,7 +29,7 @@ COMMENT ON TABLE warehouse.admin_audit_log IS 'Admin action audit trail for all 
 -- Name: artists; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.artists (
+CREATE TABLE IF NOT EXISTS warehouse.artists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name_ko text,
     name_en text,
@@ -46,7 +46,7 @@ CREATE TABLE warehouse.artists (
 -- Name: brands; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.brands (
+CREATE TABLE IF NOT EXISTS warehouse.brands (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name_ko text,
     name_en text,
@@ -63,7 +63,7 @@ CREATE TABLE warehouse.brands (
 -- Name: group_members; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.group_members (
+CREATE TABLE IF NOT EXISTS warehouse.group_members (
     group_id uuid NOT NULL,
     artist_id uuid NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE warehouse.group_members (
 -- Name: groups; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.groups (
+CREATE TABLE IF NOT EXISTS warehouse.groups (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name_ko text,
     name_en text,
@@ -95,7 +95,7 @@ CREATE TABLE warehouse.groups (
 -- Name: images; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.images (
+CREATE TABLE IF NOT EXISTS warehouse.images (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     post_id uuid NOT NULL,
     image_hash text NOT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE warehouse.images (
 -- Name: instagram_accounts; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.instagram_accounts (
+CREATE TABLE IF NOT EXISTS warehouse.instagram_accounts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     username text NOT NULL,
     account_type warehouse.account_type NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE warehouse.instagram_accounts (
 -- Name: posts; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.posts (
+CREATE TABLE IF NOT EXISTS warehouse.posts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     account_id uuid NOT NULL,
     posted_at timestamp with time zone NOT NULL,
@@ -158,7 +158,7 @@ CREATE TABLE warehouse.posts (
 -- Name: raw_post_sources; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.raw_post_sources (
+CREATE TABLE IF NOT EXISTS warehouse.raw_post_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     platform text NOT NULL,
     source_type text NOT NULL,
@@ -179,7 +179,7 @@ CREATE TABLE warehouse.raw_post_sources (
 -- Name: raw_posts; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.raw_posts (
+CREATE TABLE IF NOT EXISTS warehouse.raw_posts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     source_id uuid NOT NULL,
     platform text NOT NULL,
@@ -209,7 +209,7 @@ CREATE TABLE warehouse.raw_posts (
 -- Name: seed_asset; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.seed_asset (
+CREATE TABLE IF NOT EXISTS warehouse.seed_asset (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     seed_post_id uuid NOT NULL,
     source_url text,
@@ -227,7 +227,7 @@ CREATE TABLE warehouse.seed_asset (
 -- Name: seed_posts; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.seed_posts (
+CREATE TABLE IF NOT EXISTS warehouse.seed_posts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     source_post_id uuid,
     source_image_id uuid,
@@ -249,7 +249,7 @@ CREATE TABLE warehouse.seed_posts (
 -- Name: seed_spots; Type: TABLE; Schema: warehouse; Owner: -
 --
 
-CREATE TABLE warehouse.seed_spots (
+CREATE TABLE IF NOT EXISTS warehouse.seed_spots (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     seed_post_id uuid NOT NULL,
     request_order integer NOT NULL,
