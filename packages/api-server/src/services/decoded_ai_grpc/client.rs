@@ -6,18 +6,16 @@ use tonic::transport::{Channel, Endpoint};
 use crate::domains::posts::dto::{ImageAnalysisMetadata, ItemWithCoordinates};
 use crate::error::AppError;
 use crate::grpc::inbound::{
-    queue_client::QueueClient, raw_posts_worker_client::RawPostsWorkerClient, AnalyzeImageRequest,
-    AnalyzeImageResponse, AnalyzeLinkDirectResponse, AnalyzeLinkRequest, AnalyzeLinkResponse,
-    CategoryRule, EnqueueFetchRawPostsRequest, EnqueueFetchRawPostsResponse, ExtractOgDataRequest,
-    ExtractOgDataResponse, ExtractPostContextRequest, ExtractPostContextResponse,
-    ProcessPostEditorialRequest, ProcessPostEditorialResponse,
+    queue_client::QueueClient, AnalyzeImageRequest, AnalyzeImageResponse,
+    AnalyzeLinkDirectResponse, AnalyzeLinkRequest, AnalyzeLinkResponse, CategoryRule,
+    ExtractOgDataRequest, ExtractOgDataResponse, ExtractPostContextRequest,
+    ExtractPostContextResponse, ProcessPostEditorialRequest, ProcessPostEditorialResponse,
 };
 use crate::observability::grpc::record_decoded_ai_call;
 
 #[derive(Clone, Debug)]
 pub struct DecodedAIGrpcClient {
     client: QueueClient<Channel>,
-    raw_posts_client: RawPostsWorkerClient<Channel>,
 }
 
 impl DecodedAIGrpcClient {
@@ -25,38 +23,8 @@ impl DecodedAIGrpcClient {
     /// decoded-ai 서버가 아직 준비되지 않아도 백엔드가 기동됩니다.
     pub fn new(url: String) -> Result<Self, Box<dyn std::error::Error>> {
         let channel = Endpoint::from_shared(url)?.connect_lazy();
-        let client = QueueClient::new(channel.clone());
-        let raw_posts_client = RawPostsWorkerClient::new(channel);
-        Ok(Self {
-            client,
-            raw_posts_client,
-        })
-    }
-
-    /// #258 — dispatch a raw-posts fetch job to ai-server.
-    /// Returns immediately after ai-server enqueues the ARQ job.
-    pub async fn enqueue_fetch_raw_posts(
-        &self,
-        source_id: String,
-        platform: String,
-        source_type: String,
-        source_identifier: String,
-        limit: i32,
-        dispatch_id: String,
-    ) -> Result<EnqueueFetchRawPostsResponse, tonic::Status> {
-        let start = Instant::now();
-        let mut client = self.raw_posts_client.clone();
-        let request = tonic::Request::new(EnqueueFetchRawPostsRequest {
-            source_id,
-            platform,
-            source_type,
-            source_identifier,
-            limit,
-            dispatch_id,
-        });
-        let res = client.enqueue_fetch_raw_posts(request).await;
-        record_decoded_ai_call("enqueue_fetch_raw_posts", res.is_ok(), start.elapsed());
-        res.map(|r| r.into_inner())
+        let client = QueueClient::new(channel);
+        Ok(Self { client })
     }
 
     /// URL에서 OG 데이터를 추출합니다.

@@ -124,22 +124,17 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_addr_clone = grpc_addr.clone();
     tokio::spawn(async move {
         use decoded_api::grpc::outbound::metadata_server::MetadataServer;
-        use decoded_api::grpc::outbound::raw_posts_callback_server::RawPostsCallbackServer;
         use decoded_api::services::backend_grpc::BackendGrpcService;
-        use decoded_api::services::raw_posts_callback::RawPostsCallbackService;
         use tonic::transport::Server;
 
         let backend_service =
             BackendGrpcService::new(grpc_state.db.clone(), grpc_state.embedding_client.clone());
         let metadata_server = MetadataServer::new(backend_service);
 
-        // #258 Raw posts callback — receives results after ai-server scrape
-        let raw_posts_callback_service = RawPostsCallbackService::new(grpc_state.db.clone());
-        let raw_posts_callback_server = RawPostsCallbackServer::new(raw_posts_callback_service);
+        // #214 raw_posts callback removed — ai-server writes DB directly now.
 
         match Server::builder()
             .add_service(metadata_server)
-            .add_service(raw_posts_callback_server)
             .serve(grpc_addr_clone.parse().expect("Invalid gRPC address"))
             .await
         {

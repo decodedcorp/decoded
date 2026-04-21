@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.metadata_controller import router as metadata_router
+from src.api.raw_posts_controller import router as raw_posts_router
 from src.config import Application
 from src.middleware import global_exception_handler, logging_middleware
 
@@ -94,6 +95,9 @@ def configure_routes(app: FastAPI, application: Application) -> FastAPI:
 
     # 메타데이터 추출 테스트 컨트롤러 라우터 등록
     app.include_router(metadata_router)
+
+    # #214 raw_posts 수동 trigger
+    app.include_router(raw_posts_router)
 
     return app
 

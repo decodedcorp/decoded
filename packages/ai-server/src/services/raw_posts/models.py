@@ -1,17 +1,20 @@
 """Shared data models for the raw_posts pipeline.
 
 - `RawMedia`: what a SourceAdapter returns per scraped post (pre-R2).
-- `RawPostResult`: what the pipeline returns to the caller (post-R2).
+- `RawPostResult`: what the pipeline returns to its caller (post-R2).
 - `SourceAdapter`: Protocol each platform adapter implements.
-- `FetchRequest`: flat DTO mirroring the gRPC EnqueueFetchRawPosts payload.
+- `FetchRequest`: input DTO produced by the ai-server scheduler.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
+
+
+FetchMode = Literal["initial", "incremental"]
 
 
 class RawMedia(BaseModel):
@@ -26,7 +29,7 @@ class RawMedia(BaseModel):
 
 
 class RawPostResult(BaseModel):
-    """A fully-processed raw post ready to be sent to api-server via gRPC callback."""
+    """A fully-processed raw post ready for DB upsert (post-R2)."""
 
     external_id: str
     external_url: str
@@ -40,7 +43,12 @@ class RawPostResult(BaseModel):
 
 @dataclass(frozen=True)
 class FetchRequest:
-    """Adapter input. Mirrors gRPC EnqueueFetchRawPostsRequest fields."""
+    """Adapter input produced by the ai-server scheduler.
+
+    `mode` lets adapters distinguish the first "deep" scrape of a newly
+    registered source (`initial`) from routine polling for new items
+    (`incremental`) — see `warehouse.raw_post_sources.initial_scraped_at`.
+    """
 
     source_id: str
     platform: str
@@ -48,6 +56,7 @@ class FetchRequest:
     source_identifier: str
     dispatch_id: str
     limit: int = 50
+    mode: FetchMode = "incremental"
 
 
 @runtime_checkable
