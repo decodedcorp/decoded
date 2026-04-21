@@ -81,13 +81,17 @@ DATA_JSON=$(jq -n \
 PROMPT_TEXT='당신은 decoded 모노레포의 일일 리포트를 한국어로 작성합니다.
 아래 JSON은 지난 24시간의 GitHub 활동입니다.
 
+브랜치 맥락: decoded는 `feature/* → dev → main` 플로우. 대부분 작업은 dev에 병합되고, main은 릴리즈/CI 전용.
+
 요청:
 - 주요 변화 3~5개 bullet (가장 임팩트 큰 것부터)
+- 각 항목 끝에 **어느 브랜치로 갔는지** 명시 (예: "(→dev)", "(→main)")
+- open PR 언급 시 base 브랜치도 함께 명시
 - review 대기중이거나 오래된 open PR 있으면 "주의" 섹션
-- 전체 300자 이내, plain text (마크다운 금지)
+- 전체 350자 이내, plain text (마크다운 금지)
 - 형식:
 ✨ 하이라이트
-• ...
+• 내용 요약 (#PR번호, →baseBranch)
 
 ⚠️ 주의
 • ... (해당 없으면 이 섹션 생략)'
@@ -125,13 +129,23 @@ top_merged=$(echo "$MERGED_PRS" | jq -r '
   .[:5] | map("• #\(.number) \(.title) (→\(.baseRefName), by \(.author.login))") | join("\n")')
 top_open=$(echo "$OPEN_PRS" | jq -r '
   .[:5] | map(
-    "• #\(.number) \(.title) by \(.author.login)" +
+    "• #\(.number) \(.title) (→\(.baseRefName), by \(.author.login))" +
     (if .isDraft then " [draft]" else "" end)
   ) | join("\n")')
+top_commits_main=$(echo "$COMMITS_MAIN" | jq -r '
+  .[:3] | map("• \(.short) \(.subject) (by \(.author))") | join("\n")')
+top_commits_dev=$(echo "$COMMITS_DEV" | jq -r '
+  .[:3] | map("• \(.short) \(.subject) (by \(.author))") | join("\n")')
 top_issues=$(echo "$NEW_ISSUES" | jq -r '
   .[:5] | map("• #\(.number) \(.title) by \(.author.login)") | join("\n")')
 
 BODY=""
+if [ -n "$top_commits_main" ]; then
+  BODY+="📦 commits → main (${COMMITS_MAIN_COUNT})"$'\n'"$top_commits_main"$'\n\n'
+fi
+if [ -n "$top_commits_dev" ]; then
+  BODY+="📦 commits → dev (${COMMITS_DEV_COUNT})"$'\n'"$top_commits_dev"$'\n\n'
+fi
 if [ -n "$top_merged" ]; then
   BODY+="🔀 merged PRs (${MERGED_COUNT})"$'\n'"$top_merged"$'\n\n'
 fi
