@@ -21,6 +21,7 @@
 | 디자인 시스템 import·컴포넌트 목록 | [docs/agent/design-system-llm.md](docs/agent/design-system-llm.md) |
 | Warehouse 스키마 (ETL·Seed) | [docs/agent/warehouse-schema.md](docs/agent/warehouse-schema.md) |
 | Rust API 서버 (`api-server`) | [packages/api-server/AGENT.md](packages/api-server/AGENT.md) |
+| DB 마이그레이션 역할(SeaORM vs `supabase/migrations`) | [packages/api-server/AGENT.md — §2.4](packages/api-server/AGENT.md) |
 
 ## 반드시 지킬 것
 
@@ -34,4 +35,4 @@
 - 디자인 시스템 토큰·UI 가이드: [docs/design-system/README.md](docs/design-system/README.md)
 - 문서 인덱스: [docs/README.md](docs/README.md)
 
-**마지막 업데이트**: 2026-04-02
+**마지막 업데이트**: 2026-04-21

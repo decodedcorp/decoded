@@ -1,7 +1,7 @@
 # DECODED - Coding Agent 행동 규칙
 
-**Version:** 3.1.0
-**Last Updated:** 2026.01.12
+**Version:** 3.2.0
+**Last Updated:** 2026.04.21
 **Purpose:** Coding Agent가 개발 시 반드시 준수해야 하는 실행 가능한 규칙
 
 ---
@@ -42,6 +42,21 @@
 Axum v0.7에서는 경로 파라미터를 `{param}` 형식으로 사용해야 합니다. `:param` 형식은 지원되지 않습니다. 이는 공개 라우트, 보호된 라우트, 중첩 라우터에서 모두 동일하게 적용됩니다.
 
 **에러 메시지**: `Path segments must not start with ':'. For capture groups, use {capture}.`
+
+### 2.4 마이그레이션 트랙 역할 분리 (SeaORM vs Supabase SQL)
+
+앱 스키마는 **`public`** 과 **`warehouse`** 를 사용한다. 변경을 넣을 때 **아래 구분**을 따른다.
+
+| 담당 | 도구 | 넣는 것 |
+|------|------|---------|
+| DDL·구조 | SeaORM (`packages/api-server/migration/`) | `CREATE EXTENSION`, 테이블·컬럼·인덱스·**외래키(FK)** 등 ORM이 소유하는 스키마 |
+| Supabase 플랫폼 | Supabase CLI 마이그레이션 (`supabase/migrations/*.sql`) | **RLS** 정책, `SECURITY DEFINER` 함수, `auth.uid()` 등과 맞물리는 트리거·RPC 등 |
+
+**Greenfield 권장 적용 순서**: (1) 확장 및 SeaORM 마이그레이션 적용 → (2) `supabase/migrations` SQL을 파일명(타임스탬프) 순으로 적용.
+
+SeaORM 마이그레이션 안에서 raw SQL로 RLS를 넣는 것은 가능하지만, **RLS·함수는 Supabase 트랙에 모아** 링크된 프로젝트에서 `supabase db push` 로 같이 올리기 쉽게 유지하는 것을 권장한다. 뷰 등 그 밖의 객체는 팀이 한쪽 트랙으로만 모은다.
+
+상세: [`migration/README.md`](migration/README.md), [루트 `supabase/migrations/README.md`](../../supabase/migrations/README.md).
 
 ---
 
@@ -194,6 +209,7 @@ some_async_fn().await;
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 3.2.0 | 2026.04.21 | 마이그레이션 트랙 역할 분리(SeaORM vs `supabase/migrations`) 추가 |
 | 3.1.0 | 2026.01.12 | 비동기 프로그래밍 규칙(Send 트레이트) 추가 |
 | 3.0.0 | 2026.01.08 | 코드 예제 제거, 텍스트 설명 중심으로 재구성 (510줄 → 250줄) |
 | 2.0.0 | 2026.01.08 | 문서 대폭 축소 및 구조 개편 (2,338줄 → ~510줄) |
