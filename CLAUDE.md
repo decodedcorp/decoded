@@ -23,6 +23,9 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 | 문서                                                                             | 용도                                   |
 | -------------------------------------------------------------------------------- | -------------------------------------- |
 | [`docs/agent/README.md`](docs/agent/README.md)                                   | 목차·언제 무엇을 읽을지                |
+| [`docs/agent/environments.md`](docs/agent/environments.md)                       | **env matrix (dev=local / prod=Cloud Supabase)** |
+| [`docs/DATABASE-MIGRATIONS.md`](docs/DATABASE-MIGRATIONS.md)                     | **DB 마이그레이션 SOT / 워크플로우**   |
+| [`docs/agent/staging.md`](docs/agent/staging.md)                                 | staging 정의 (현재 없음)               |
 | [`docs/agent/web-routes-and-features.md`](docs/agent/web-routes-and-features.md) | 웹 라우트·기능 영역                    |
 | [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md)                     | Next.js `/api/v1/*` 표                 |
 | [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md)       | 훅·스토어·주요 경로                    |
