@@ -1,12 +1,12 @@
 ---
 title: Staging — Agent Reference
 owner: human
-status: placeholder
+status: draft
 updated: 2026-04-21
-tags: [agent, harness, env]
+tags: [agent, harness, ops]
 ---
 
-# Staging
+# Staging — Agent Reference
 
 **현재 staging 환경은 정의되어 있지 않습니다.**
 

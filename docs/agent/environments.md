@@ -3,10 +3,10 @@ title: Environments — Agent Reference
 owner: human
 status: approved
 updated: 2026-04-21
-tags: [agent, harness, env, supabase]
+tags: [agent, harness, ops, db]
 ---
 
-# Environments — dev / staging / prod
+# Environments — Agent Reference
 
 **한 줄 요약**: dev 는 Supabase CLI 로 로컬 self-hosted, prod 는 Cloud Supabase. staging 은 현재 정의되지 않음.
 
