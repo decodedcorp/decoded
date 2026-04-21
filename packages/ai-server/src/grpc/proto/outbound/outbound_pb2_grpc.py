@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from src.grpc.proto.outbound import outbound_pb2 as outbound_dot_outbound__pb2
+from src.grpc.proto.outbound import outbound_pb2 as src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2
 
 GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in outbound/outbound_pb2_grpc.py depends on'
+        + ' but the generated code in src/grpc/proto/outbound/outbound_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,8 +36,8 @@ class MetadataStub(object):
         """
         self.ProcessedBatchUpdate = channel.unary_unary(
                 '/outbound.Metadata/ProcessedBatchUpdate',
-                request_serializer=outbound_dot_outbound__pb2.ProcessedBatchRequest.SerializeToString,
-                response_deserializer=outbound_dot_outbound__pb2.ProcessedBatchResponse.FromString,
+                request_serializer=src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchRequest.SerializeToString,
+                response_deserializer=src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchResponse.FromString,
                 _registered_method=True)
 
 
@@ -55,8 +55,8 @@ def add_MetadataServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ProcessedBatchUpdate': grpc.unary_unary_rpc_method_handler(
                     servicer.ProcessedBatchUpdate,
-                    request_deserializer=outbound_dot_outbound__pb2.ProcessedBatchRequest.FromString,
-                    response_serializer=outbound_dot_outbound__pb2.ProcessedBatchResponse.SerializeToString,
+                    request_deserializer=src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchRequest.FromString,
+                    response_serializer=src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -84,86 +84,8 @@ class Metadata(object):
             request,
             target,
             '/outbound.Metadata/ProcessedBatchUpdate',
-            outbound_dot_outbound__pb2.ProcessedBatchRequest.SerializeToString,
-            outbound_dot_outbound__pb2.ProcessedBatchResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-
-class RawPostsCallbackStub(object):
-    """#258 Raw Posts callback — ai-server calls api-server after scraping a source.
-    api-server UPSERTs raw_posts and updates raw_post_sources.last_scraped_at on SUCCESS.
-    """
-
-    def __init__(self, channel):
-        """Constructor.
-
-        Args:
-            channel: A grpc.Channel.
-        """
-        self.ReportRawPostsFetched = channel.unary_unary(
-                '/outbound.RawPostsCallback/ReportRawPostsFetched',
-                request_serializer=outbound_dot_outbound__pb2.ReportRawPostsFetchedRequest.SerializeToString,
-                response_deserializer=outbound_dot_outbound__pb2.ReportRawPostsFetchedResponse.FromString,
-                _registered_method=True)
-
-
-class RawPostsCallbackServicer(object):
-    """#258 Raw Posts callback — ai-server calls api-server after scraping a source.
-    api-server UPSERTs raw_posts and updates raw_post_sources.last_scraped_at on SUCCESS.
-    """
-
-    def ReportRawPostsFetched(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-
-def add_RawPostsCallbackServicer_to_server(servicer, server):
-    rpc_method_handlers = {
-            'ReportRawPostsFetched': grpc.unary_unary_rpc_method_handler(
-                    servicer.ReportRawPostsFetched,
-                    request_deserializer=outbound_dot_outbound__pb2.ReportRawPostsFetchedRequest.FromString,
-                    response_serializer=outbound_dot_outbound__pb2.ReportRawPostsFetchedResponse.SerializeToString,
-            ),
-    }
-    generic_handler = grpc.method_handlers_generic_handler(
-            'outbound.RawPostsCallback', rpc_method_handlers)
-    server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('outbound.RawPostsCallback', rpc_method_handlers)
-
-
- # This class is part of an EXPERIMENTAL API.
-class RawPostsCallback(object):
-    """#258 Raw Posts callback — ai-server calls api-server after scraping a source.
-    api-server UPSERTs raw_posts and updates raw_post_sources.last_scraped_at on SUCCESS.
-    """
-
-    @staticmethod
-    def ReportRawPostsFetched(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/outbound.RawPostsCallback/ReportRawPostsFetched',
-            outbound_dot_outbound__pb2.ReportRawPostsFetchedRequest.SerializeToString,
-            outbound_dot_outbound__pb2.ReportRawPostsFetchedResponse.FromString,
+            src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchRequest.SerializeToString,
+            src_dot_grpc_dot_proto_dot_outbound_dot_outbound__pb2.ProcessedBatchResponse.FromString,
             options,
             channel_credentials,
             insecure,

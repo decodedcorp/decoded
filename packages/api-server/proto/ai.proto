@@ -23,27 +23,7 @@ service Queue {
   rpc ExtractPostContext (ExtractPostContextRequest) returns (ExtractPostContextResponse);
 }
 
-// #258 Raw Posts worker — api-server calls ai-server to enqueue a scrape job.
-// ai-server's ARQ worker picks up the job, scrapes via adapter, uploads to R2,
-// then calls back api-server's RawPostsCallback.ReportRawPostsFetched.
-service RawPostsWorker {
-  rpc EnqueueFetchRawPosts (EnqueueFetchRawPostsRequest) returns (EnqueueFetchRawPostsResponse);
-}
-
-message EnqueueFetchRawPostsRequest {
-  string source_id = 1;         // uuid (warehouse.raw_post_sources.id)
-  string platform = 2;          // 'pinterest' | 'instagram' | ...
-  string source_type = 3;       // adapter-specific (free-form)
-  string source_identifier = 4; // adapter-specific (free-form)
-  int32  limit = 5;             // default 50 if 0
-  string dispatch_id = 6;       // idempotency key from api-server batch cycle
-}
-
-message EnqueueFetchRawPostsResponse {
-  bool success = 1;
-  string message = 2;
-  string job_id = 3;            // ARQ job id for tracing
-}
+// #214 RawPostsWorker service removed — ai-server now schedules itself.
 
 // Post Editorial messages (Asynchronous)
 message ProcessPostEditorialRequest {

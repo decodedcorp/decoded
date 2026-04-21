@@ -1,8 +1,10 @@
-"""MockAdapter — used in #258 to verify the pipeline end-to-end.
+"""MockAdapter — pipeline smoke test.
 
 Returns a deterministic, fixed list of RawMedia pointing at small public
 placeholder images so R2 upload succeeds without any external credentials.
-Replaced by real Pinterest adapter in #214.
+Used for pipeline / scheduler regression tests; kept alongside PinterestAdapter
+(#214). Exposed under `platform='mock'` so real `pinterest` sources go to
+PinterestAdapter.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from ..models import FetchRequest, RawMedia
 
 
 class MockAdapter:
-    platform: str = "pinterest"
+    platform: str = "mock"
 
     async def fetch(self, req: FetchRequest) -> List[RawMedia]:
         limit = max(1, min(req.limit, 5))

@@ -117,6 +117,14 @@ class Environment(BaseModel):
     RAW_POSTS_FETCH_DEFAULT_LIMIT: int = 50
     RAW_POSTS_DOWNLOAD_TIMEOUT: int = 30
 
+    # Raw Posts scheduler (#214)
+    RAW_POSTS_SCHEDULER_INTERVAL_SECONDS: int = 300  # scheduler polls every 5 min
+
+    # Pinterest adapter (#214)
+    PINTEREST_INITIAL_LIMIT: int = 500       # max pins on the first deep scrape of a board
+    PINTEREST_INCREMENTAL_LIMIT: int = 25    # pins per periodic polling cycle
+    PINTEREST_PAGE_DELAY_MS: int = 500       # polite delay between paginated feed requests
+
     @staticmethod
     def from_environ(*, env_file: Optional[str] = None):
         """Load env file(s). If `env_file` is set, only that path is used when it exists.

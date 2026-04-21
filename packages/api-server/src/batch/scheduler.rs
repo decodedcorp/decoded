@@ -82,19 +82,7 @@ pub async fn start_scheduler(state: Arc<AppState>) -> Result<(), Box<dyn std::er
         })?)
         .await?;
 
-    // #258 Raw posts dispatcher
-    // 5분마다 — cron: "0 */5 * * * *"
-    let raw_posts_state = state.clone();
-    sched
-        .add(Job::new_async("0 */5 * * * *", move |_uuid, _l| {
-            let state = raw_posts_state.clone();
-            Box::pin(async move {
-                if let Err(e) = batch::run_raw_posts_dispatch(state).await {
-                    error!("Raw posts dispatch batch job failed: {}", e);
-                }
-            })
-        })?)
-        .await?;
+    // #214 raw_posts dispatcher — scheduler now lives in ai-server (was #258).
 
     // 검색 인덱스 재색인 — 매일 04:00
     let reindex_state = state.clone();

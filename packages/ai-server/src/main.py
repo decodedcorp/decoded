@@ -8,6 +8,7 @@ from src.grpc.proto.inbound import inbound_pb2_grpc
 from src.services.common.task_scheduler import TaskScheduler
 from src.services.metadata.management.task_configuration import configure_metadata_tasks
 from src.managers.queue.worker import create_worker
+from src.services.raw_posts.scheduler import RawPostsScheduler
 
 
 async def start_api_server() -> None:
@@ -25,11 +26,7 @@ async def start_grpc_server(grpc_container, host: str, port: int) -> None:
     metadata_servicer = grpc_container.metadata_servicer()
     inbound_pb2_grpc.add_QueueServicer_to_server(metadata_servicer, server)
 
-    # #258 Raw posts worker — api-server -> ai-server enqueue
-    raw_posts_worker_servicer = grpc_container.raw_posts_worker_servicer()
-    inbound_pb2_grpc.add_RawPostsWorkerServicer_to_server(
-        raw_posts_worker_servicer, server
-    )
+    # #214 RawPostsWorker removed — raw_posts scheduler lives in-process.
 
     listen_addr = f"{host}:{port}"
     server.add_insecure_port(listen_addr)
@@ -80,8 +77,27 @@ async def start_task_scheduler(metadata_container) -> None:
         shutdown_event.set()
 
 
+async def start_raw_posts_scheduler(
+    raw_posts_container, shutdown_event: asyncio.Event
+) -> None:
+    """#214 — start APScheduler-driven raw_posts dispatcher, keep coroutine alive."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+    scheduler: RawPostsScheduler = raw_posts_container.scheduler()
+    try:
+        scheduler.start()
+        await shutdown_event.wait()
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        logger.exception("raw_posts scheduler crashed")
+    finally:
+        await scheduler.shutdown()
+
+
 async def start_arq_worker(
-    environment, metadata_container, infrastructure_container, raw_posts_container
+    environment, metadata_container, infrastructure_container
 ) -> None:
     """
     Start ARQ worker for processing async jobs
@@ -95,13 +111,11 @@ async def start_arq_worker(
 
     worker = None
     try:
-        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial
-        # and raw_posts container for #258 raw-posts pipeline)
+        # Create worker with injected dependencies (incl. DatabaseManager for post_editorial)
         worker = await create_worker(
             environment,
             metadata_container,
             infrastructure_container=infrastructure_container,
-            raw_posts_container=raw_posts_container,
         )
 
         # Initialize QueueManager (NEW - replaces service.initialize_arq_pool)
@@ -156,6 +170,7 @@ async def main():
     logger.info(f"GRPC Server: {grpc_host}:{grpc_port}")
 
     # Run all services concurrently
+    raw_posts_shutdown = asyncio.Event()
     try:
         await asyncio.gather(
             start_task_scheduler(metadata_container),
@@ -163,8 +178,8 @@ async def main():
                 environment,
                 metadata_container,
                 infrastructure_container,
-                raw_posts_container,
             ),
+            start_raw_posts_scheduler(raw_posts_container, raw_posts_shutdown),
             start_grpc_server(grpc_container, grpc_host, grpc_port),
             start_api_server(),
             return_exceptions=False,
@@ -172,19 +187,15 @@ async def main():
     except Exception as e:
         logger.error(f"Error in main: {e}", exc_info=True)
     finally:
+        # Signal raw_posts scheduler to stop
+        raw_posts_shutdown.set()
+
         # Cleanup backend client connection
         try:
             await backend_client.close()
             logger.info("Backend client closed")
         except Exception as e:
             logger.warning(f"Error closing backend client: {str(e)}")
-
-        # Cleanup raw posts callback client (#258)
-        try:
-            await infrastructure_container.raw_posts_callback_client().close()
-            logger.info("Raw posts callback client closed")
-        except Exception as e:
-            logger.warning(f"Error closing raw posts callback client: {str(e)}")
 
         # Cleanup asyncpg pool (#266)
         try:
