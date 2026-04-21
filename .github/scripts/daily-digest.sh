@@ -131,16 +131,16 @@ top_open=$(echo "$OPEN_PRS" | jq -r '
 top_issues=$(echo "$NEW_ISSUES" | jq -r '
   .[:5] | map("• #\(.number) \(.title) by \(.author.login)") | join("\n")')
 
-section() {
-  local title="$1" body="$2"
-  [ -z "$body" ] && return 0
-  printf '%s\n%s\n\n' "$title" "$body"
-}
-
 BODY=""
-BODY+=$(section "🔀 merged PRs (${MERGED_COUNT})" "$top_merged")
-BODY+=$(section "📝 open PRs (${OPEN_COUNT})" "$top_open")
-BODY+=$(section "📌 new issues (${ISSUES_COUNT})" "$top_issues")
+if [ -n "$top_merged" ]; then
+  BODY+="🔀 merged PRs (${MERGED_COUNT})"$'\n'"$top_merged"$'\n\n'
+fi
+if [ -n "$top_open" ]; then
+  BODY+="📝 open PRs (${OPEN_COUNT})"$'\n'"$top_open"$'\n\n'
+fi
+if [ -n "$top_issues" ]; then
+  BODY+="📌 new issues (${ISSUES_COUNT})"$'\n'"$top_issues"$'\n\n'
+fi
 
 MSG=$(cat <<EOF
 🌅 decoded 일일 요약 — ${TODAY_KST}
