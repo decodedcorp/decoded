@@ -10,14 +10,19 @@ use sea_orm_migration::prelude::*;
 /// be created. Later migrations (this PR's `m20260501_000001_decouple_auth_users_fk`)
 /// drop that FK entirely.
 ///
-/// Idempotent + non-destructive on prod:
-/// - `CREATE SCHEMA IF NOT EXISTS auth` → no-op where `auth` exists
-/// - `CREATE TABLE IF NOT EXISTS auth.users` → no-op where it exists (prod has GoTrue-managed
-///   table with many more columns; we never touch it)
+/// Idempotent + non-destructive in all environments (#282 fix):
+/// - Wrapped in a PL/pgSQL `DO` block that first checks `information_schema.tables`.
+/// - If `auth.users` already exists (Supabase self-hosted, remote Supabase, or re-run on local),
+///   the block returns immediately without executing `CREATE SCHEMA` / `CREATE TABLE`.
+/// - Only when `auth.users` is missing (plain Postgres first-run) do we create the schema + stub.
+///
+/// Why not just `CREATE TABLE IF NOT EXISTS`: Postgres evaluates CREATE privilege on the target
+/// schema *before* the IF NOT EXISTS existence check, so on Supabase (where `auth` is owned by
+/// `supabase_auth_admin`) the migration used to fail with `permission denied for schema auth`
+/// even though it would logically be a no-op.
 ///
 /// Registered at the TOP of `Migrator::migrations()` so on fresh local it runs before the
-/// 2024-dated table migrations. On prod it runs once (after existing migrations complete),
-/// but because the schema+table already exist, it's a no-op.
+/// 2024-dated table migrations. On prod / Supabase it's a no-op.
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -28,14 +33,25 @@ impl MigrationTrait for Migration {
             .get_connection()
             .execute_unprepared(
                 r#"
-                CREATE SCHEMA IF NOT EXISTS auth;
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'auth' AND table_name = 'users'
+                    ) THEN
+                        -- auth.users already exists (Supabase self-hosted / remote). No-op.
+                        RETURN;
+                    END IF;
 
-                -- Minimal stub — prod's real auth.users has dozens more columns,
-                -- all of which we leave untouched. We only care that `id` exists
-                -- as the FK target for public.users.
-                CREATE TABLE IF NOT EXISTS auth.users (
-                    id uuid PRIMARY KEY
-                );
+                    CREATE SCHEMA IF NOT EXISTS auth;
+
+                    -- Minimal stub — only relevant on plain Postgres without GoTrue.
+                    -- Real auth.users (managed by GoTrue) has many more columns.
+                    CREATE TABLE auth.users (
+                        id uuid PRIMARY KEY
+                    );
+                END
+                $$;
                 "#,
             )
             .await?;

@@ -109,7 +109,7 @@ bun run dev:local-be         # API + AI together; logs -> .logs/local/api.log & 
 # Local host env templates: packages/api-server/.env.dev.example , packages/ai-server/.dev.env.example
 # Port alignment (호스트 실행):
 #   DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres  (Supabase CLI Postgres)
-#   DATABASE_API_URL=http://localhost:54321                                (로컬 GoTrue)
+#   DATABASE_API_URL=http://127.0.0.1:54321                                (로컬 GoTrue)
 #   Studio UI: http://localhost:54323  |  Inbucket (email): http://localhost:54324
 #   MEILISEARCH_URL=http://localhost:7700 ; AI_SERVER_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
 #   API API_SERVER_GRPC_PORT must equal AI API_SERVER_GRPC_PORT ; 레거시 GRPC_PORT / GRPC_BACKEND_* 도 아직 지원.

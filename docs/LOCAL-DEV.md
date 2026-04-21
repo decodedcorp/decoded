@@ -85,13 +85,13 @@ supabase status          # anon key / service_role key / JWT secret 출력
 DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 
 # 로컬 GoTrue (Auth)
-DATABASE_API_URL=http://localhost:54321
+DATABASE_API_URL=http://127.0.0.1:54321
 DATABASE_ANON_KEY=<supabase status 에서 복사>
 DATABASE_SERVICE_ROLE_KEY=<supabase status 에서 복사>
 DATABASE_JWT_SECRET=<supabase status 에서 복사>
 
 # Web public (브라우저 노출)
-NEXT_PUBLIC_DATABASE_API_URL=http://localhost:54321
+NEXT_PUBLIC_DATABASE_API_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_DATABASE_ANON_KEY=<supabase status 에서 복사 (동일값)>
 ```
 
@@ -103,7 +103,7 @@ Legacy `SUPABASE_*` 이름도 fallback 으로 읽힘 (#268). 매핑은 `packages
 Browser  ──► localhost:3000  ──► supabase-js (Auth)
                                   │
                                   ▼
-                          로컬 GoTrue  http://localhost:54321/auth/v1/*
+                          로컬 GoTrue  http://127.0.0.1:54321/auth/v1/*
                                   │
                           JWT 발급 (로컬 JWT secret)
                                   │
