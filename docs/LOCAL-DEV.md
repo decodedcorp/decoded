@@ -54,29 +54,27 @@ just dev-reset   # supabase db reset → supabase/migrations/*.sql 적용 + scri
 | `just dev` | `local-deps` → 3s wait → `local-be & local-fe` (Ctrl+C kills both) |
 | `just dev-down` | Supabase + 의존 컨테이너 정지 (볼륨 유지) |
 | `just dev-reset` | `supabase db reset` — 마이그레이션 재적용 + `scripts/seed.sql` |
-| `just local-deps` | Supabase 스택 + 의존 컨테이너만 기동 |
+| `just local-deps` | Supabase 스택 + 의존 컨테이너 기동 + **env 자동 셋업** |
+| `just local-env-sync` | env 파일만 재동기화 (Supabase 키 변경 시) |
 | `just local-be` | api-server + ai-server native, 로그는 `.logs/local/{api,ai}.log` |
 | `just local-fe` | Next.js dev server |
 | `just seed [URL]` | `scripts/seed.sql` 적용 (기본: 로컬 Postgres 54322) |
 
-## Env setup
+## Env setup (자동화)
 
-1. 템플릿 복사:
+`just local-deps` 가 알아서 합니다:
 
-```bash
-cp .env.backend.example .env.backend.dev
-cp packages/api-server/.env.dev.example packages/api-server/.env.dev
-cp packages/web/.env.local.example packages/web/.env.local
-```
+1. `.env.backend.dev` / `packages/api-server/.env.dev` / `packages/web/.env.local` 이 없으면 각 `*.example` 에서 복사
+2. `supabase status -o env` 의 값으로 Supabase 관련 키 (`DATABASE_*`, `SUPABASE_*` legacy, `NEXT_PUBLIC_*`)만 in-place 업데이트
+3. OPENAI / R2 / Rakuten 등 개인 secret 은 절대 건드리지 않음 — allowlist 기반
 
-2. Supabase CLI 기동 후 로컬 키 확인:
+Supabase 키가 바뀐 경우 env 만 재동기화:
 
 ```bash
-just local-deps          # supabase start 포함
-supabase status          # anon key / service_role key / JWT secret 출력
+just local-env-sync
 ```
 
-3. 위 출력을 `.env.*` 파일의 `DATABASE_ANON_KEY` / `DATABASE_SERVICE_ROLE_KEY` / `DATABASE_JWT_SECRET` / `NEXT_PUBLIC_DATABASE_ANON_KEY` 에 붙여넣기.
+스크립트: `scripts/local-env-sync.sh` (idempotent)
 
 ### Primary env names
 

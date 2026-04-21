@@ -15,9 +15,16 @@ local-fe:
 local-be:
     bun run dev:local-be
 
-# Docker deps only — Supabase CLI + meili/redis/searxng (no app containers)
+# Docker deps + env bootstrap
+#   - Supabase CLI + meili/redis/searxng 기동
+#   - supabase_db/kong/auth 을 decoded-backend 네트워크에 alias 연결
+#   - 누락된 .env.* 파일 자동 생성 + Supabase 키 동기화 (개인 secret 보존)
 local-deps:
     bash "{{ repo }}/scripts/local-deps-up.sh"
+
+# env 파일만 재동기화 (Supabase 키 변경 등 필요 시)
+local-env-sync:
+    bash "{{ repo }}/scripts/local-env-sync.sh"
 
 local-deps-down:
     bash "{{ repo }}/scripts/local-deps-down.sh"
@@ -81,9 +88,8 @@ hook:
 # 온보딩용 안내
 local-help:
     @echo "0) 사전 준비: brew install supabase/tap/supabase  (Supabase CLI)"
-    @echo "   Env: .env.dev + .dev.env (see .env.dev.example / .dev.env.example in each package)"
-    @echo "   supabase status 로 anon / service_role / JWT secret 복사 → .env 에 붙여넣기"
-    @echo "1) 의존 서비스: just local-deps  (Supabase CLI + meili + redis + searxng)"
+    @echo "1) 의존 서비스 + env 자동 셋업: just local-deps"
+    @echo "   (없는 .env.* 파일 생성 + Supabase 키 자동 동기화; 개인 secret 은 보존)"
     @echo "2) DB 스키마 초기화: just dev-reset  (최초 1회, supabase db reset + seed)"
     @echo "3) 터미널 A: just local-be  (API+AI 동시 기동, 로그는 파일로만)"
     @echo "   터미널 B: tail -f .logs/local/api.log"
