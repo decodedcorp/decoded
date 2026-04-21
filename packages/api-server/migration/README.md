@@ -2,6 +2,8 @@
 
 **supabase-dev** 스키마에 맞춰 새로 추가하는 SeaORM 마이그레이션만 둔다.
 
+- Baseline DDL은 `sql/*.sql`(Rust에서는 `include_str!`)로 두고, 갱신 절차는 저장소 루트 [`plan.md`](../../../plan.md)와 [`scripts/split_dev_schema.py`](scripts/split_dev_schema.py)를 본다.
+
 **주의**: 이미 `seaql_migrations`가 채워진 기존 DB에 연결할 때는, 첫 마이그레이션부터 스키마와 충돌하지 않게 작성해야 한다. 완전히 빈 DB(greenfield)에 맞추는 것이 목표다.
 
 - 과거 전체 마이그레이션 소스: [`../legacy/`](../legacy/) (보관, 크레이트 이름 `migration_legacy`)
