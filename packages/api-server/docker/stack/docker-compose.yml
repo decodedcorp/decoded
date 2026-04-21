@@ -1,6 +1,12 @@
 # Decoded backend: api + ai + Meilisearch + Redis + SearXNG (multi-container).
 # From repo root: bash scripts/deploy-backend.sh dev up --build
 # Requires .env.backend.dev (repo root, unified)
+#
+# NOTE (#282): Postgres 는 이 compose 에 더 이상 포함되지 않습니다.
+# 로컬 개발은 Supabase CLI (`just local-deps`) 가 제공하는 Postgres(port 54322)를 사용.
+# 컨테이너 내부에서는 alias `supabase-db:5432` 로 접근 (supabase_db_decoded-backend 와
+# 동일, `scripts/local-deps-up.sh` 가 네트워크 연결 처리).
+# 스테이징/프로덕션은 원격 Supabase DB URL 을 DATABASE_URL 로 지정.
 
 name: decoded-backend
 
@@ -123,32 +129,9 @@ services:
     networks:
       - decoded-backend
 
-  postgres:
-    # pgvector/pgvector bundles pgvector with Postgres — needed for the `vector`
-    # extension used by public.embeddings + search_similar() (see #202).
-    image: pgvector/pgvector:pg17
-    container_name: decoded-backend-postgres-dev
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: decoded
-    volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
-    networks:
-      - decoded-backend
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d decoded"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
 networks:
   decoded-backend:
     driver: bridge
 
 volumes:
   meilisearch-data-dev:
-  postgres-data-dev:

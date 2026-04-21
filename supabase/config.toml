@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "decoded-monorepo"
+project_id = "decoded-backend"
 
 [api]
 enabled = true
@@ -312,6 +312,19 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+# Google OAuth (#282 로컬 self-hosted dev 용)
+# client_id 와 secret 은 Google Cloud Console > Credentials > OAuth 2.0 Client 에서 생성.
+# Redirect URI 에 `http://127.0.0.1:54321/auth/v1/callback` 등록 필요.
+# secret 은 커밋 금지 — env var (SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET) 로 주입.
+# skip_nonce_check 는 로컬 sign in 시 true 권장 (위 주석 참고).
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = true
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

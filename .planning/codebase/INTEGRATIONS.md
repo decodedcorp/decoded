@@ -1,13 +1,15 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-26 (updated 2026-04-21 for #282 self-hosted dev)
+
+> **Env split (#282)**: dev 는 Supabase CLI **self-hosted** (port 54322, `just dev` 로 기동). prod 는 **Cloud Supabase**. 상세 endpoint matrix: [`docs/agent/environments.md`](../../docs/agent/environments.md). 마이그레이션: [`docs/DATABASE-MIGRATIONS.md`](../../docs/DATABASE-MIGRATIONS.md).
 
 ## External Services
 
 | Service | Purpose | Auth |
 |---------|---------|------|
-| Supabase (PostgreSQL) | Primary DB, RLS | Anon key + service role key |
-| Supabase Auth | OAuth (Kakao, Google, Apple) | Managed |
+| Supabase (PostgreSQL) | Primary DB, RLS. Dev=CLI self-hosted / Prod=Cloud | Anon key + service role key |
+| Supabase Auth | OAuth (Kakao, Google, Apple). Dev=로컬 GoTrue / Prod=Cloud | Managed |
 | Cloudflare R2 | Image storage (S3-compatible) | AWS SDK config |
 | Meilisearch | Full-text search index | API key |
 | OpenAI | LLM inference | API key |

@@ -96,19 +96,26 @@ AI package docs: [`packages/ai-server/README.md`](packages/ai-server/README.md).
 [`just`](https://github.com/casey/just) 설치 후 모노레포 루트에서:
 
 ```bash
-just local-deps          # Docker 의존 서비스 기동 (Meilisearch, Redis 등)
+just local-deps          # Supabase CLI + Meilisearch/Redis/SearXNG 기동 (#282)
 just local-be            # API + AI 서버 로컬 실행 (로그: .logs/local/api.log, ai.log)
 just local-fe            # Next.js 프론트엔드 실행
 just local-deps-down     # 의존 서비스 중지
+just dev-reset           # DB 재초기화 (supabase db reset + seed)
 just local-help          # 온보딩 안내
 ```
 
+**사전 준비**: `brew install supabase/tap/supabase`  (Supabase CLI; dev 는 self-hosted)
+
 **로컬 개발 순서:**
 
-1. `just local-deps` — Meilisearch 등 의존 서비스 Docker로 기동
-2. `just local-be` — API 서버(Rust) + AI 서버(Python) 로컬 프로세스로 실행
-3. 별도 터미널에서 `tail -f .logs/local/api.log` / `tail -f .logs/local/ai.log`로 로그 확인
-4. `just local-fe` — 프론트엔드 실행
+1. `just local-deps` — Supabase 스택 + 의존 서비스(Meilisearch/Redis/SearXNG) Docker로 기동
+2. (최초 1회) `just dev-reset` — 로컬 Postgres 에 스키마 + seed 적용
+3. `supabase status` 로 anon / service_role / JWT secret 확인 후 `.env.backend.dev` 등에 설정
+4. `just local-be` — API 서버(Rust) + AI 서버(Python) 로컬 프로세스로 실행
+5. 별도 터미널에서 `tail -f .logs/local/api.log` / `tail -f .logs/local/ai.log`로 로그 확인
+6. `just local-fe` — 프론트엔드 실행
+
+자세한 내용: [`docs/LOCAL-DEV.md`](docs/LOCAL-DEV.md)
 
 `Ctrl+C`로 `local-be` 종료 시 API/AI 프로세스 자동 정리.
 

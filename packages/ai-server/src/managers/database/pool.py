@@ -2,7 +2,7 @@
 
 Uses `asyncpg` for direct TCP access to the Postgres instance pointed to by
 `DATABASE_URL`. Works transparently against:
-- 로컬 Postgres 컨테이너 (`postgresql://postgres:postgres@localhost:5432/decoded`)
+- 로컬 Supabase CLI Postgres (`postgresql://postgres:postgres@localhost:54322/postgres`) (#282)
 - 원격 Supabase pooler (`postgresql://postgres.<ref>:<pwd>@aws-...pooler.supabase.com:5432/postgres`)
 
 Pool is lazily initialized on first `pool()` call and reused for the process

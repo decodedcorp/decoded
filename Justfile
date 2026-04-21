@@ -7,32 +7,66 @@ repo := justfile_directory()
 default:
     @just --list
 
-# Split terminals: API / AI / Web logs stay separate (see local-help)
+# Next.js web dev server (foreground)
 local-fe:
     bun run dev:local-fe
 
-# API + AI together; logs -> .logs/local/api.log and .logs/local/ai.log (tail -f in other terminals)
+# api-server (Rust) + ai-server (Python) 동시 기동, 로그는 .logs/local/{api,ai}.log 로만
 local-be:
     bun run dev:local-be
 
-# Docker deps only — no app containers
+# 의존 스택 + env 자동 셋업 (Supabase CLI + meili/redis/searxng + 네트워크 alias + env sync)
 local-deps:
     bash "{{ repo }}/scripts/local-deps-up.sh"
 
+# 의존 스택 중지 (볼륨/데이터는 유지)
 local-deps-down:
     bash "{{ repo }}/scripts/local-deps-down.sh"
 
-# 풀 로컬 개발 스택 — deps (컨테이너) + BE + FE 한 번에. Ctrl+C 로 BE/FE 동시 종료.
-# 인프라(deps) 는 백그라운드에 그대로 남음 — 종료하려면 `just dev-down`
+# .env.* 파일만 재동기화 (Supabase 키 변경 시)
+local-env-sync:
+    bash "{{ repo }}/scripts/local-env-sync.sh"
+
+# 🚀 원커맨드 풀 로컬 개발 스택 (deps + BE + FE, Ctrl+C 로 전체 종료)
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    # ---- prereq 체크 ------------------------------------------------------
+    missing=()
+    command -v supabase >/dev/null 2>&1 || missing+=("supabase (brew install supabase/tap/supabase)")
+    command -v docker   >/dev/null 2>&1 || missing+=("docker (Docker Desktop)")
+    command -v bun      >/dev/null 2>&1 || missing+=("bun (https://bun.sh)")
+    if (( ${#missing[@]} > 0 )); then
+        echo "❌ 누락된 도구:"
+        printf '   - %s\n' "${missing[@]}"
+        exit 1
+    fi
+    if ! docker info >/dev/null 2>&1; then
+        echo "❌ Docker 데몬이 실행 중이 아닙니다. Docker Desktop 을 먼저 기동하세요."
+        exit 1
+    fi
+
+    # ---- 앱 포트 선점 체크 (Supabase/meili 포트는 local-deps 가 관리) ----
+    for port in 8000 3000; do
+        if lsof -i :$port -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "⚠️  포트 $port 가 이미 사용 중 — 기존 프로세스 종료 후 재시도"
+            echo "    $(lsof -i :$port -sTCP:LISTEN 2>/dev/null | tail -n +2 | awk '{print $1, $2}' | head -1)"
+            exit 1
+        fi
+    done
+
+    # ---- 1. deps + env --------------------------------------------------
     just local-deps
+
+    # ---- 2. BE + FE -------------------------------------------------------
     echo ""
-    echo "⏳ Waiting 3s for postgres/redis/meili to be ready..."
-    sleep 3
+    echo "🚀 Starting api-server + ai-server + web. Ctrl+C 로 전체 종료."
+    echo "   📡 http://localhost:3000  (web)"
+    echo "   🔧 http://localhost:8000  (api-server)"
+    echo "   📋 tail -f .logs/local/api.log   # api-server 로그"
+    echo "   📋 tail -f .logs/local/ai.log    # ai-server 로그"
     echo ""
-    echo "🚀 Starting BE + FE. Ctrl+C to stop both."
     trap 'kill 0' SIGINT SIGTERM EXIT
     just local-be &
     just local-fe &
@@ -42,21 +76,25 @@ dev:
 dev-down:
     bash "{{ repo }}/scripts/local-deps-down.sh"
 
-# DB 볼륨 제거 + 인프라 재시작 + seed — 깨끗한 상태로 리셋
+# DB 초기화 + 마이그레이션 + seed — 깨끗한 상태로 리셋 (Supabase CLI 필요)
 dev-reset:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "⚠️  Stopping deps and dropping postgres volume..."
-    bash "{{ repo }}/scripts/local-deps-down.sh" || true
-    docker volume rm decoded-backend_postgres-data-dev 2>/dev/null || true
-    bash "{{ repo }}/scripts/local-deps-up.sh"
+    if ! command -v supabase >/dev/null 2>&1; then
+        echo "❌ supabase CLI not found. Install: brew install supabase/tap/supabase"
+        exit 1
+    fi
+    echo "⚠️  Supabase 로컬 DB 를 리셋합니다 (볼륨 유지, schema 재적용)..."
+    ( cd "{{ repo }}" && supabase db reset ) || true
     echo "⏳ Waiting 3s for postgres..."
     sleep 3
-    just seed
-    echo "✅ DB reset + seeded. Start apps with: just dev"
+    # supabase db reset 은 컨테이너를 재시작하므로 decoded-backend 네트워크 재연결 필요
+    bash "{{ repo }}/scripts/local-deps-connect.sh"
+    just seed || echo "⚠️  seed 실패 (Auth 유저 FK 등) — Studio 에서 유저 생성 후 재시도"
+    echo "✅ DB reset 완료. Start apps with: just dev"
 
-# seed.sql 적용 — postgres 가 기동 중이어야 함
-seed DATABASE_URL="postgresql://postgres:postgres@localhost:5432/decoded":
+# seed.sql 적용 — postgres 가 기동 중이어야 함 (Supabase CLI 기본 DB)
+seed DATABASE_URL="postgresql://postgres:postgres@localhost:54322/postgres":
     #!/usr/bin/env bash
     set -euo pipefail
     if ! command -v psql >/dev/null 2>&1; then
@@ -76,15 +114,25 @@ hook:
 
 # 온보딩용 안내
 local-help:
-    @echo "0) Env: .env.dev + .dev.env (see .env.dev.example / .dev.env.example in each package)"
-    @echo "1) 의존 서비스: just local-deps  (또는: bun run dev:local-deps)"
-    @echo "2) 터미널 A: just local-be  (API+AI 동시 기동, 로그는 파일로만)"
-    @echo "   터미널 B: tail -f .logs/local/api.log"
-    @echo "   터미널 C: tail -f .logs/local/ai.log"
-    @echo "3) 터미널 D: just local-fe"
-    @echo "   local-be 종료: 터미널 A에서 Ctrl+C"
-    @echo "전체 한 터미널: bun run dev  (turbo, 로그 한 스트림)"
-    @echo "push 전 로컬 CI: just hook  후 bun run ci:local  (또는 git push 가 훅 실행)"
+    @echo "0) 사전 준비: brew install supabase/tap/supabase  (Supabase CLI)"
+    @echo ""
+    @echo "🚀 원커맨드:  just dev"
+    @echo "   → deps + env 자동 셋업 + api-server + ai-server + web 전부 기동"
+    @echo "   → Ctrl+C 로 전체 종료 (인프라는 백그라운드 유지)"
+    @echo ""
+    @echo "최초 1회: just dev-reset  (로컬 DB 스키마 초기화 + seed)"
+    @echo ""
+    @echo "Endpoints"
+    @echo "  Web:      http://localhost:3000"
+    @echo "  API:      http://localhost:8000"
+    @echo "  Studio:   http://localhost:54323"
+    @echo "  Inbucket: http://localhost:54324  (로컬 이메일)"
+    @echo ""
+    @echo "Logs (다른 터미널에서)"
+    @echo "  tail -f .logs/local/api.log"
+    @echo "  tail -f .logs/local/ai.log"
+    @echo ""
+    @echo "세부 타스크: just --list  |  push 전 CI: just hook"
 
 # Web 프론트엔드 로컬 CI (lint + format + tsc)
 ci-web:
