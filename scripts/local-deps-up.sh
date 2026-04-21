@@ -3,7 +3,7 @@
 #   - Supabase self-hosted (postgres + gotrue + postgrest + storage + realtime + studio + kong)
 #     via Supabase CLI using repo-root `supabase/config.toml`
 #   - Meilisearch / Redis / SearXNG via packages/api-server/docker/stack/docker-compose.yml
-#   - Supabase 핵심 컨테이너(db, kong)를 `decoded-backend` 네트워크에 연결 →
+#   - Supabase 핵심 컨테이너(db, kong, auth)를 `decoded-backend` 네트워크에 연결 →
 #     컨테이너로 실행되는 api/ai 가 호스트명으로 접근 가능
 #
 # 앱 런타임(api-server / ai-server / web)은 호스트에서 실행.
@@ -15,7 +15,6 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STACK_COMPOSE="$ROOT/packages/api-server/docker/stack/docker-compose.yml"
-BACKEND_NETWORK="decoded-backend_decoded-backend"
 
 if ! command -v supabase >/dev/null 2>&1; then
   echo "❌ supabase CLI not found. Install: brew install supabase/tap/supabase" >&2
@@ -30,22 +29,10 @@ echo "🟢 Meilisearch / Redis / SearXNG 기동..."
 docker compose -f "$STACK_COMPOSE" up -d meilisearch redis searxng
 
 echo ""
-echo "🔗 Supabase 컨테이너를 ${BACKEND_NETWORK} 네트워크에 연결..."
-# 컨테이너 alias 로 접근 가능: supabase-db:5432, supabase-kong:8000
-connect_to_backend() {
-  local container="$1"
-  local alias="$2"
-  if ! docker network inspect "$BACKEND_NETWORK" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -qw "$container"; then
-    docker network connect --alias "$alias" "$BACKEND_NETWORK" "$container" 2>/dev/null \
-      && echo "   ✓ ${container} (alias: ${alias})" \
-      || echo "   ⚠️  ${container} 연결 실패 (이미 연결되었거나 네트워크 없음)"
-  else
-    echo "   · ${container} 이미 연결됨"
-  fi
-}
-connect_to_backend supabase_db_decoded-monorepo supabase-db
-connect_to_backend supabase_kong_decoded-monorepo supabase-kong
-connect_to_backend supabase_auth_decoded-monorepo supabase-auth
+# Supabase 컨테이너를 decoded-backend 네트워크에 alias 로 연결 (idempotent).
+# `supabase db reset` 등이 컨테이너를 재시작하면 네트워크 연결이 사라지므로
+# 같은 스크립트를 `local-deps-connect.sh` 로도 호출 가능.
+bash "$ROOT/scripts/local-deps-connect.sh"
 
 echo ""
 echo "✅ 로컬 의존 스택 준비 완료"

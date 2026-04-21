@@ -51,11 +51,13 @@ dev-reset:
         exit 1
     fi
     echo "⚠️  Supabase 로컬 DB 를 리셋합니다 (볼륨 유지, schema 재적용)..."
-    ( cd "{{ repo }}" && supabase db reset )
-    echo "⏳ Waiting 2s for postgres..."
-    sleep 2
-    just seed
-    echo "✅ DB reset + seeded. Start apps with: just dev"
+    ( cd "{{ repo }}" && supabase db reset ) || true
+    echo "⏳ Waiting 3s for postgres..."
+    sleep 3
+    # supabase db reset 은 컨테이너를 재시작하므로 decoded-backend 네트워크 재연결 필요
+    bash "{{ repo }}/scripts/local-deps-connect.sh"
+    just seed || echo "⚠️  seed 실패 (Auth 유저 FK 등) — Studio 에서 유저 생성 후 재시도"
+    echo "✅ DB reset 완료. Start apps with: just dev"
 
 # seed.sql 적용 — postgres 가 기동 중이어야 함 (Supabase CLI 기본 DB)
 seed DATABASE_URL="postgresql://postgres:postgres@localhost:54322/postgres":
