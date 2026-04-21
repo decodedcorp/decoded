@@ -15,7 +15,8 @@ import { getEnvWithAlias } from "./env";
 export function createAdminSupabaseClient() {
   const supabaseUrl = getEnvWithAlias("NEXT_PUBLIC_DATABASE_API_URL");
   const serviceRoleKey =
-    process.env.DATABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.DATABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
     throw new Error(
       "DATABASE_SERVICE_ROLE_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) is not set. Admin mutations require service_role."

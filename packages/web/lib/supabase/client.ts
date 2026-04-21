@@ -6,9 +6,11 @@ import type { Database } from "./types";
 
 // Environment variables — dual-read new DATABASE_* then legacy SUPABASE_* (see #268)
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_DATABASE_API_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_DATABASE_API_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_DATABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  process.env.NEXT_PUBLIC_DATABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
