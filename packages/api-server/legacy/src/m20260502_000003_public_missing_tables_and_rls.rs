@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 
 /// Create `user_follows`, `user_tryon_history`, `content_reports` — tables that were
-/// previously only in `packages/api-server/migration/sql/` (manual Supabase Dashboard runs).
+/// previously only in `packages/api-server/legacy/sql/` (manual Supabase Dashboard runs).
 ///
 /// FK direction: these tables reference `public.users(id)` instead of `auth.users(id)` —
 /// matches the decoupling done by PR #267 (`m20260501_000001_decouple_auth_users_fk`).

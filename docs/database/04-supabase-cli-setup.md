@@ -23,9 +23,9 @@ supabase link --project-ref fvxchskblyhuswzlcmql
 
 | 변경 유형 | 관리 도구 | 위치 |
 |---------|----------|------|
-| 테이블/컬럼 (API 서버 관련) | SeaORM | `packages/api-server/migration/` |
-| RLS, 함수, 트리거, 뷰 | Supabase CLI | `supabase/migrations/` |
-| warehouse 스키마 | Supabase CLI | `supabase/migrations/` |
+| 테이블/컬럼 (API 서버 관련) | SeaORM | `packages/api-server/migration/` (활성), 보관 `packages/api-server/legacy/` |
+| RLS, 함수, 트리거, 뷰 | Supabase CLI | `supabase/migrations/` (활성), 보관 `supabase/legacy/` |
+| warehouse 스키마 | SeaORM 또는 Supabase CLI (팀 합의) | 위 경로 중 하나 |
 
 ## Common Commands
 

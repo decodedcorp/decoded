@@ -2,7 +2,7 @@ use sea_orm_migration::prelude::*;
 
 /// #258 — create warehouse.raw_post_sources + warehouse.raw_posts.
 ///
-/// This migration mirrors `supabase/migrations/20260419120000_create_raw_posts_tables.sql`
+/// This migration mirrors `supabase/legacy/20260419120000_create_raw_posts_tables.sql`
 /// so local dev environments using the SeaORM runner stay in sync with
 /// Supabase-managed ones.
 #[derive(DeriveMigrationName)]

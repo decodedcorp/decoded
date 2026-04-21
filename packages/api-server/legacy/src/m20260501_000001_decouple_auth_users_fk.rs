@@ -5,13 +5,13 @@ use sea_orm_migration::prelude::*;
 /// Why: Path X-1 (#267) requires public schema to stand alone on plain Postgres.
 /// `auth.users` only exists when Supabase GoTrue is running; local dev doesn't have it.
 /// `public.users` is already kept in sync with `auth.users` via the handle_new_user trigger
-/// (see migration/sql/01_auth_trigger_handle_new_user.sql), so `public.users.id` is the
+/// (see legacy/sql/01_auth_trigger_handle_new_user.sql), so `public.users.id` is the
 /// authoritative application-side identity.
 ///
 /// Idempotent: every step uses `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT` wrapped in
 /// `IF EXISTS` table checks. Prod (where old constraints exist) and fresh local (where
 /// some tables — content_reports, user_follows, user_tryon_history — haven't been created
-/// yet because they still live in migration/sql/*) both converge safely.
+/// yet because they still live in legacy/sql/*) both converge safely.
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -57,7 +57,7 @@ impl MigrationTrait for Migration {
         .await?;
 
         // 3) public.user_follows: follower_id + following_id → public.users(id) CASCADE
-        //    (table comes from migration/sql/04_user_follows.sql — may be absent locally)
+        //    (table comes from legacy/sql/04_user_follows.sql — may be absent locally)
         conn.execute_unprepared(
             r#"
             DO $$
@@ -81,7 +81,7 @@ impl MigrationTrait for Migration {
         .await?;
 
         // 4) public.user_tryon_history.user_id → public.users(id) CASCADE
-        //    (table comes from migration/sql/05_user_tryon_history.sql)
+        //    (table comes from legacy/sql/05_user_tryon_history.sql)
         conn.execute_unprepared(
             r#"
             DO $$
@@ -99,7 +99,7 @@ impl MigrationTrait for Migration {
         .await?;
 
         // 5) public.content_reports.{reporter_id,reviewed_by} → public.users(id)
-        //    (table comes from migration/sql/06_content_reports.sql)
+        //    (table comes from legacy/sql/06_content_reports.sql)
         conn.execute_unprepared(
             r#"
             DO $$

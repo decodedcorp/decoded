@@ -3,7 +3,7 @@ use sea_orm_migration::prelude::*;
 /// Bootstrap the entire `warehouse` schema: 12 tables + ENUMs + indexes + RLS + trigger.
 ///
 /// Why: `warehouse.*` was previously created only by
-/// `supabase/migrations/20260409075040_remote_schema.sql` (Supabase CLI). After #202 the
+/// `supabase/legacy/20260409075040_remote_schema.sql` (Supabase CLI). After #202 the
 /// SeaORM migrator is the single source of truth, so local plain Postgres needs to build
 /// the whole schema too. Prod already has everything — all statements are idempotent, so
 /// re-running against prod is a no-op.

@@ -1,0 +1,18 @@
+[package]
+name = "migration_legacy"
+version = "0.5.1"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lib]
+name = "migration_legacy"
+path = "src/lib.rs"
+
+[dependencies]
+sea-orm-migration = { workspace = true }
+tokio = { workspace = true }
+dotenvy = { workspace = true }
+
+[lints.rust]
+unused_imports = "deny"

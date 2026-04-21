@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["migration", "entity"]
+members = ["migration", "legacy", "entity"]
 
 [workspace.dependencies]
 # Web Framework

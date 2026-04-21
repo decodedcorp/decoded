@@ -1,68 +1,28 @@
-# Database Migrations
+# Database Migrations (active)
 
-SeaORM 마이그레이션 및 Supabase 설정 가이드
+**supabase-dev** 스키마에 맞춰 새로 추가하는 SeaORM 마이그레이션만 둔다.
 
-## 마이그레이션 실행
+**주의**: 이미 `seaql_migrations`가 채워진 기존 DB에 연결할 때는, 첫 마이그레이션부터 스키마와 충돌하지 않게 작성해야 한다. 완전히 빈 DB(greenfield)에 맞추는 것이 목표다.
 
-### 1. Rust 마이그레이션 실행
+- 과거 전체 마이그레이션 소스: [`../legacy/`](../legacy/) (보관, 크레이트 이름 `migration_legacy`)
+- Supabase CLI SQL: [`../../supabase/migrations/`](../../supabase/migrations/)
+- 에이전트 규칙: [`../AGENT.md`](../AGENT.md) §2.4
+
+## 실행
 
 ```bash
-# 마이그레이션 디렉토리로 이동
-cd migration
-
-# 마이그레이션 적용
+cd packages/api-server/migration
 cargo run -- up
-
-# 마이그레이션 롤백
-cargo run -- down
-
-# 마이그레이션 상태 확인
-cargo run -- status
-
-# 마이그레이션 새로고침 (down → up)
-cargo run -- refresh
 ```
-
-### 2. Supabase SQL 스크립트 실행
-
-Rust 마이그레이션 후, Supabase Dashboard의 SQL Editor에서 다음 파일들을 순서대로 실행하세요:
-
-1. **Auth 트리거**: `sql/01_auth_trigger_handle_new_user.sql`
-   - Supabase Auth에서 새 사용자 생성 시 자동으로 users 테이블에 레코드 생성
-
-2. **RLS 정책**: `sql/02_rls_policy_users.sql`
-   - users 테이블에 Row Level Security 정책 적용
-   - 모든 사용자가 프로필 조회 가능
-   - 사용자는 자신의 프로필만 수정/삭제 가능
-
-## 마이그레이션 목록
-
-### m20240101_000001_create_users
-
-- users 테이블 생성
-- auth.users 외래키 참조 (CASCADE DELETE)
-- updated_at 자동 업데이트 트리거
-- 인덱스: email, username, rank
 
 ## Entity 생성
 
-마이그레이션 실행 후 SeaORM Entity를 생성합니다:
+스키마 반영 후 (기존과 동일):
 
 ```bash
-# 프로젝트 루트로 이동
 cd ..
-
-# entity 디렉토리 생성 (없는 경우)
-mkdir -p src/entities
-
-# Entity 생성
 sea-orm-cli generate entity \
   --database-url "$DATABASE_URL" \
   --output-dir src/entities \
   --with-serde both
 ```
-
-## 참고
-
-- [SeaORM Migration 문서](https://www.sea-ql.org/SeaORM/docs/migration/writing-migration/)
-- [Supabase RLS 문서](https://supabase.com/docs/guides/auth/row-level-security)
