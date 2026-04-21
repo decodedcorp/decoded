@@ -12,6 +12,11 @@ on:
         description: "Look-back window in hours"
         required: false
         default: "24"
+  # Lets PRs that touch the digest itself verify end-to-end before landing.
+  pull_request:
+    paths:
+      - ".github/workflows/daily-digest.yml"
+      - ".github/scripts/daily-digest.sh"
 
 permissions:
   contents: read
