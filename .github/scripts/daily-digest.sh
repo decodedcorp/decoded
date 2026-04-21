@@ -84,17 +84,21 @@ PROMPT_TEXT='당신은 decoded 모노레포의 일일 리포트를 한국어로 
 브랜치 맥락: decoded는 `feature/* → dev → main` 플로우. 대부분 작업은 dev에 병합되고, main은 릴리즈/CI 전용.
 
 요청:
-- 주요 변화 3~5개 bullet (가장 임팩트 큰 것부터)
-- 각 항목 끝에 **어느 브랜치로 갔는지** 명시 (예: "(→dev)", "(→main)")
-- open PR 언급 시 base 브랜치도 함께 명시
-- review 대기중이거나 오래된 open PR 있으면 "주의" 섹션
-- 전체 350자 이내, plain text (마크다운 금지)
-- 형식:
+- 주요 변화 3~5개를 **base 브랜치별로 그룹핑**해서 제시 (main → dev 순서)
+- 브랜치에 해당 항목이 없으면 해당 그룹 생략
+- review 대기중이거나 오래된 open PR 있으면 "주의" 섹션 (주의는 그룹핑 없이 평평하게)
+- 전체 400자 이내, plain text (마크다운 금지)
+- 형식 (정확히 이 들여쓰기/기호 사용):
 ✨ 하이라이트
-• 내용 요약 (#PR번호, →baseBranch)
+
+  → main
+  • 내용 요약 (#PR번호)
+
+  → dev
+  • 내용 요약 (#PR번호)
 
 ⚠️ 주의
-• ... (해당 없으면 이 섹션 생략)'
+• 이슈 설명 (#번호, →base) — (해당 없으면 이 섹션 전체 생략)'
 
 CLAUDE_REQ=$(jq -n \
   --arg model "claude-haiku-4-5-20251001" \
@@ -125,13 +129,29 @@ echo "::endgroup::"
 
 # --- compose top-N bullet lists for telegram body ---
 
-top_merged=$(echo "$MERGED_PRS" | jq -r '
-  .[:5] | map("• #\(.number) \(.title) (→\(.baseRefName), by \(.author.login))") | join("\n")')
-top_open=$(echo "$OPEN_PRS" | jq -r '
-  .[:5] | map(
-    "• #\(.number) \(.title) (→\(.baseRefName), by \(.author.login))" +
-    (if .isDraft then " [draft]" else "" end)
-  ) | join("\n")')
+# Groups PRs by base branch (main first, dev second, others after), top 5 per group.
+group_prs_by_base() {
+  local json="$1" render_mode="$2"  # render_mode: merged | open
+  echo "$json" | jq -r --arg mode "$render_mode" '
+    group_by(.baseRefName) |
+    map({
+      base: .[0].baseRefName,
+      count: length,
+      items: .[0:5]
+    }) |
+    sort_by(if .base == "main" then 0 elif .base == "dev" then 1 else 2 end) |
+    map(
+      "  → \(.base) (\(.count))\n" +
+      (.items | map(
+        "  • #\(.number) \(.title) by \(.author.login)"
+        + (if $mode == "open" and .isDraft then " [draft]" else "" end)
+      ) | join("\n"))
+    ) | join("\n\n")
+  '
+}
+
+top_merged=$(group_prs_by_base "$MERGED_PRS" merged)
+top_open=$(group_prs_by_base "$OPEN_PRS" open)
 top_commits_main=$(echo "$COMMITS_MAIN" | jq -r '
   .[:3] | map("• \(.short) \(.subject) (by \(.author))") | join("\n")')
 top_commits_dev=$(echo "$COMMITS_DEV" | jq -r '
