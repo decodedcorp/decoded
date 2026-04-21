@@ -19,13 +19,10 @@ supabase link --project-ref fvxchskblyhuswzlcmql
 
 ## Migration Strategy
 
-스키마 변경은 **두 트랙**으로 관리합니다:
+> **공식 SOT 정책 (#282 이후)**: `supabase/migrations/*.sql` 이 단일 진실원천입니다.  
+> 워크플로우 / 안전 체크리스트 / `SKIP_DB_MIGRATIONS` 플래그는 [`docs/DATABASE-MIGRATIONS.md`](../DATABASE-MIGRATIONS.md) 참조.
 
-| 변경 유형 | 관리 도구 | 위치 |
-|---------|----------|------|
-| 테이블/컬럼 (API 서버 관련) | SeaORM | `packages/api-server/migration/` |
-| RLS, 함수, 트리거, 뷰 | Supabase CLI | `supabase/migrations/` |
-| warehouse 스키마 | Supabase CLI | `supabase/migrations/` |
+SeaORM 마이그레이션(`packages/api-server/migration/`)은 공존하지만 dev 에서는 `SKIP_DB_MIGRATIONS=1` 로 꺼져있고, prod 에서도 partial coverage 라 사실상 no-op 에 가깝습니다. 신규 스키마 변경은 `supabase/migrations/` 에만 추가하세요.
 
 ## Common Commands
 
@@ -66,18 +63,18 @@ supabase db pull --schema public
 
 ## Docker Dependency
 
-| Docker 필요 | Docker 불필요 |
-|------------|-------------|
-| `db pull` | `migration list` |
-| `db diff` | `migration new` |
-| `start` (로컬 DB) | `db push` |
-| `db reset` | `gen types` |
+| Docker 필요       | Docker 불필요    |
+| ----------------- | ---------------- |
+| `db pull`         | `migration list` |
+| `db diff`         | `migration new`  |
+| `start` (로컬 DB) | `db push`        |
+| `db reset`        | `gen types`      |
 
 ## Environment
 
-| 환경 | Project Ref | 용도 |
-|------|------------|------|
-| DEV | `fvxchskblyhuswzlcmql` | 개발/테스트 (기본 링크) |
-| PROD | `womgfycekpzodibauiyl` | 프로덕션 |
+| 환경 | Project Ref            | 용도                    |
+| ---- | ---------------------- | ----------------------- |
+| DEV  | `fvxchskblyhuswzlcmql` | 개발/테스트 (기본 링크) |
+| PROD | `womgfycekpzodibauiyl` | 프로덕션                |
 
 PROD에 작업할 때는 `--project-ref womgfycekpzodibauiyl` 플래그를 명시하거나 `supabase link`로 전환합니다.
