@@ -1,12 +1,14 @@
--- Local dev seed (#269)
+-- Local dev seed (#269, updated #282)
 --
 -- Prereqs:
---   1. Local postgres running: `just local-deps`
---   2. api-server migrated the schema: `just local-be` once (SeaORM migrator runs on startup)
+--   1. Local Supabase stack running: `just local-deps`
+--   2. Schema applied: `just dev-reset` (runs `supabase db reset` → supabase/migrations/*.sql)
+--      또는 api-server 가 SeaORM 마이그레이션을 startup 시 실행
 --   3. This file is idempotent — safe to re-run.
 --
 -- Scope: minimum data to render home feed + admin pages. Auth users are NOT created here —
--- the dev team shares a common dev auth user (real Supabase Auth), whose UUID is pinned below.
+-- 로컬 GoTrue(#282, http://localhost:54321) 에 테스트 유저 생성 후 해당 UUID 를 사용.
+-- Studio (http://localhost:54323) 의 Authentication 탭에서 가장 빠르게 생성 가능.
 
 BEGIN;
 

@@ -126,6 +126,10 @@ services:
   postgres:
     # pgvector/pgvector bundles pgvector with Postgres — needed for the `vector`
     # extension used by public.embeddings + search_similar() (see #202).
+    #
+    # NOTE (#282): 기본 로컬 개발(`just local-deps`)은 Supabase CLI 의 Postgres(port 54322)를
+    # 사용합니다. 이 `postgres` 서비스는 `scripts/deploy-backend.sh dev up` 이 API+AI+의존
+    # 전부를 컨테이너로 띄우는 full-stack 모드에서만 사용. 기본 dev 워크플로우와는 분리됨.
     image: pgvector/pgvector:pg17
     container_name: decoded-backend-postgres-dev
     restart: unless-stopped
