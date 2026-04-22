@@ -18,6 +18,11 @@ from src.managers.database import DatabaseManager
 from src.services.metadata.core.metadata_extract_service import MetadataExtractService
 from src.services.metadata.core.result_batch_service import ResultBatchService
 from src.services.metadata.management.failed_items_manager import FailedItemsManager
+from src.services.media.original_search import (
+    OriginalArchiver,
+    OriginalImageSearcher,
+    OriginalSearchRepository,
+)
 from src.services.media.repository import MediaRepository
 from src.services.media.scheduler import MediaParseScheduler
 from src.services.media.seed_writer import SeedWriter
@@ -213,17 +218,44 @@ class MediaContainer(DeclarativeContainer):
         database_manager=infrastructure.database_manager,
     )
 
+    # #261 — reverse image search providers
+    original_searcher: Singleton[OriginalImageSearcher] = Singleton(
+        OriginalImageSearcher,
+    )
+
+    original_repository: Singleton[OriginalSearchRepository] = Singleton(
+        OriginalSearchRepository,
+        database_manager=infrastructure.database_manager,
+    )
+
+    original_archiver: Singleton[OriginalArchiver] = Singleton(
+        OriginalArchiver,
+        r2_client=infrastructure.r2_client,
+        min_width=Callable(lambda env: env.ORIGINAL_SEARCH_MIN_WIDTH, environment),
+        min_height=Callable(lambda env: env.ORIGINAL_SEARCH_MIN_HEIGHT, environment),
+        min_bytes=Callable(lambda env: env.ORIGINAL_SEARCH_MIN_BYTES, environment),
+        download_timeout=Callable(
+            lambda env: env.ORIGINAL_SEARCH_DOWNLOAD_TIMEOUT, environment
+        ),
+    )
+
     scheduler: Singleton[MediaParseScheduler] = Singleton(
         MediaParseScheduler,
         repository=repository,
         parser=vision_parser,
         writer=seed_writer,
         r2_client=infrastructure.r2_client,
+        original_searcher=original_searcher,
+        original_archiver=original_archiver,
+        original_repository=original_repository,
         interval_seconds=Callable(
             lambda env: env.MEDIA_PARSE_INTERVAL_SECONDS, environment
         ),
         batch_size=Callable(lambda env: env.MEDIA_PARSE_BATCH_SIZE, environment),
         max_attempts=Callable(lambda env: env.MEDIA_PARSE_MAX_ATTEMPTS, environment),
+        original_search_enabled=Callable(
+            lambda env: env.ORIGINAL_SEARCH_ENABLED, environment
+        ),
     )
 
 

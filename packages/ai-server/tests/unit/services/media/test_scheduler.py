@@ -73,9 +73,21 @@ class _Writer:
         self._sid = seed_post_id or uuid.uuid4()
         self._raise_exc = raise_exc
         self.calls = 0
+        self.last_image_url = None
+        self.last_original_status = None
 
-    async def write_for_parse_result(self, candidate, parsed, *, image_sha256):
+    async def write_for_parse_result(
+        self,
+        candidate,
+        parsed,
+        *,
+        image_sha256,
+        image_url=None,
+        original_status="not_found",
+    ):
         self.calls += 1
+        self.last_image_url = image_url
+        self.last_original_status = original_status
         if self._raise_exc is not None:
             raise self._raise_exc
         return self._sid
@@ -248,3 +260,193 @@ async def test_reparse_by_id_raises_when_row_missing():
     sch = _make(repo, _Parser(), _Writer(), _R2())
     with pytest.raises(KeyError):
         await sch.reparse_by_id(uuid.uuid4())
+
+
+# --------------------------------------------------------------------------
+# Original image reverse search integration (#261)
+# --------------------------------------------------------------------------
+
+
+class _RecordingOriginalRepo:
+    def __init__(self):
+        self.statuses = []
+        self.inserted = []
+
+    async def mark_searching(self, raw_post_id):
+        self.statuses.append(("searching", str(raw_post_id)))
+
+    async def set_status(self, raw_post_id, status):
+        self.statuses.append((status, str(raw_post_id)))
+
+    async def insert_archived(self, raw_post_id, archived, *, is_primary=True):
+        self.inserted.append((str(raw_post_id), archived, is_primary))
+        return uuid.uuid4()
+
+
+class _StubSearcher:
+    def __init__(self, result):
+        self._result = result
+
+    def search(self, image_bytes):
+        return self._result
+
+
+class _StubArchiver:
+    def __init__(self, archived=None):
+        self._archived = archived
+        self.calls = 0
+
+    async def archive_first_viable(self, raw_post_id, candidates):
+        self.calls += 1
+        return self._archived
+
+
+def _make_with_original(
+    *,
+    repo,
+    parser,
+    writer,
+    r2,
+    searcher,
+    archiver,
+    original_repo,
+    enabled=True,
+) -> MediaParseScheduler:
+    return MediaParseScheduler(
+        repository=repo,
+        parser=parser,
+        writer=writer,
+        r2_client=r2,
+        original_searcher=searcher,
+        original_archiver=archiver,
+        original_repository=original_repo,
+        interval_seconds=60,
+        batch_size=5,
+        max_attempts=3,
+        original_search_enabled=enabled,
+    )
+
+
+@pytest.mark.asyncio
+async def test_original_found_passes_archived_url_to_seed_writer():
+    from src.services.media.original_search.models import (
+        ArchivedOriginal,
+        OriginalCandidate,
+    )
+    from src.services.media.original_search.searcher import SearchResult
+
+    cand = _candidate()
+    repo = _RecordingRepo(claim_return=[cand])
+    writer = _Writer()
+    orig_repo = _RecordingOriginalRepo()
+    candidates = [OriginalCandidate("https://news.example.com/x.jpg", "partial_match")]
+    search_result = SearchResult(entities=[], candidates=candidates)
+    searcher = _StubSearcher(search_result)
+    archived = ArchivedOriginal(
+        origin_url="https://news.example.com/x.jpg",
+        origin_domain="news.example.com",
+        r2_key=f"originals/{cand.id}.jpg",
+        r2_url=f"https://r2.test/originals/{cand.id}.jpg",
+        width=800, height=1200, byte_size=200_000,
+        image_hash="sha", search_provider="gcp", source="partial_match",
+    )
+    archiver = _StubArchiver(archived=archived)
+
+    sch = _make_with_original(
+        repo=repo, parser=_Parser(result=_result_with_items(1)),
+        writer=writer, r2=_R2(bytes_=_fake_composite_bytes()),
+        searcher=searcher, archiver=archiver, original_repo=orig_repo,
+    )
+
+    await sch.run_once()
+
+    assert writer.last_image_url == archived.r2_url
+    assert writer.last_original_status == "found"
+    # searching → found sequence
+    assert ("searching", str(cand.id)) in orig_repo.statuses
+    assert ("found", str(cand.id)) in orig_repo.statuses
+    # archive record persisted
+    assert len(orig_repo.inserted) == 1
+    assert orig_repo.inserted[0][2] is True  # is_primary
+
+
+@pytest.mark.asyncio
+async def test_original_not_found_falls_back_to_composite():
+    from src.services.media.original_search.searcher import SearchResult
+
+    cand = _candidate()
+    repo = _RecordingRepo(claim_return=[cand])
+    writer = _Writer()
+    orig_repo = _RecordingOriginalRepo()
+    # No candidates surfaced
+    searcher = _StubSearcher(SearchResult(entities=[], candidates=[]))
+    archiver = _StubArchiver(archived=None)
+
+    sch = _make_with_original(
+        repo=repo, parser=_Parser(result=_result_with_items(1)),
+        writer=writer, r2=_R2(bytes_=_fake_composite_bytes()),
+        searcher=searcher, archiver=archiver, original_repo=orig_repo,
+    )
+    await sch.run_once()
+
+    assert writer.last_image_url == cand.r2_url            # composite fallback
+    assert writer.last_original_status == "not_found"
+    assert ("not_found", str(cand.id)) in orig_repo.statuses
+
+
+@pytest.mark.asyncio
+async def test_original_search_disabled_skips_flow_entirely():
+    cand = _candidate()
+    repo = _RecordingRepo(claim_return=[cand])
+    writer = _Writer()
+    orig_repo = _RecordingOriginalRepo()
+    # These should never be called when disabled
+    searcher = _StubSearcher(None)       # would crash if used
+    archiver = _StubArchiver(archived=None)
+
+    sch = _make_with_original(
+        repo=repo, parser=_Parser(result=_result_with_items(1)),
+        writer=writer, r2=_R2(bytes_=_fake_composite_bytes()),
+        searcher=searcher, archiver=archiver, original_repo=orig_repo,
+        enabled=False,
+    )
+    await sch.run_once()
+
+    assert writer.last_image_url == cand.r2_url
+    assert writer.last_original_status == "skipped"
+    assert archiver.calls == 0
+    assert orig_repo.statuses == []
+
+
+@pytest.mark.asyncio
+async def test_original_search_exception_falls_back_to_composite():
+    cand = _candidate()
+    repo = _RecordingRepo(claim_return=[cand])
+    writer = _Writer()
+    orig_repo = _RecordingOriginalRepo()
+
+    class _Boom:
+        def search(self, image_bytes):
+            raise RuntimeError("vision down")
+
+    sch = _make_with_original(
+        repo=repo, parser=_Parser(result=_result_with_items(1)),
+        writer=writer, r2=_R2(bytes_=_fake_composite_bytes()),
+        searcher=_Boom(), archiver=_StubArchiver(), original_repo=orig_repo,
+    )
+
+    status = await sch.run_once()
+    assert status == 1
+    assert writer.last_image_url == cand.r2_url
+    assert writer.last_original_status == "not_found"
+
+
+def _fake_composite_bytes() -> bytes:
+    """Minimal 200×200 JPEG to exercise crop_left_panel in scheduler."""
+    from io import BytesIO
+    from PIL import Image
+
+    img = Image.new("RGB", (200, 200), "red")
+    buf = BytesIO()
+    img.save(buf, "JPEG", quality=80)
+    return buf.getvalue()

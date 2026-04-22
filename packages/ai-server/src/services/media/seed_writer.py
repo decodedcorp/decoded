@@ -33,7 +33,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -77,7 +77,10 @@ def _solution_payload(item: ParsedItem) -> dict:
 
 
 def _build_metadata(
-    candidate: ParseCandidate, parsed: ParsedDecodeResult
+    candidate: ParseCandidate,
+    parsed: ParsedDecodeResult,
+    *,
+    original_status: str,
 ) -> dict:
     return {
         "source_raw_post_id": str(candidate.id),
@@ -85,6 +88,7 @@ def _build_metadata(
         "group_name": parsed.group_name,
         "occasion": parsed.occasion,
         "parsed_at": datetime.now(timezone.utc).isoformat(),
+        "original_status": original_status,
     }
 
 
@@ -98,11 +102,19 @@ class SeedWriter:
         parsed: ParsedDecodeResult,
         *,
         image_sha256: str,
+        image_url: Optional[str] = None,
+        original_status: str = "not_found",
     ) -> UUID:
         """Write a full seed row set. Returns the new seed_posts.id.
 
         Invariant: `parsed.items` must be non-empty; the scheduler filters
         zero-item results to `parse_status='skipped'` without calling here.
+
+        `image_url` is what `seed_posts.image_url` points at. Defaults to
+        `candidate.r2_url` (the composite fallback) when the reverse-search
+        step didn't find a better original. `original_status` is surfaced
+        into `seed_posts.metadata` so curators can quickly filter seeds
+        that still need an original upgrade.
         """
         if not parsed.items:
             raise SeedWriterError(
@@ -113,6 +125,12 @@ class SeedWriter:
                 "SeedWriter.write_for_parse_result called with empty r2_url"
             )
 
+        effective_image_url = image_url or candidate.r2_url
+        if not effective_image_url:
+            raise SeedWriterError(
+                "SeedWriter.write_for_parse_result: no usable image_url"
+            )
+
         media_source = json.dumps(
             {
                 "platform": candidate.platform,
@@ -120,7 +138,9 @@ class SeedWriter:
                 "external_url": candidate.external_url,
             }
         )
-        metadata = json.dumps(_build_metadata(candidate, parsed))
+        metadata = json.dumps(
+            _build_metadata(candidate, parsed, original_status=original_status)
+        )
         asset_metadata = json.dumps(
             {"r2_key": candidate.r2_key} if candidate.r2_key else {}
         )
@@ -134,7 +154,7 @@ class SeedWriter:
                     VALUES ($1, $2::jsonb, $3::jsonb, 'draft')
                     RETURNING id
                     """,
-                    candidate.r2_url,
+                    effective_image_url,
                     media_source,
                     metadata,
                 )
