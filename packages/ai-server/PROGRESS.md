@@ -1,5 +1,40 @@
 # Development Progress
 
+## Recent Refactoring (2026-04-22)
+
+### ✅ **원본 이미지 역검색 파이프라인 (#261 — composite → 고화질 원본)** (2026-04-22)
+
+- **목표**: Fashion Decode composite 의 좌측 셀럽 패널을 기준으로 GCP Cloud
+  Vision Web Detection 을 돌려 web 상 고화질 원본을 찾아 R2 에 아카이브.
+  `seed_posts.image_url` 이 composite 대신 진짜 원본을 가리키게 함.
+- **Architecture**:
+  - `services/media/original_search/` 신규 패키지: `cropper` / `searcher` /
+    `selector` / `archiver` / `repository` / `models`
+  - `MediaParseScheduler._resolve_original`: Vision 파싱 후 best-effort 실행.
+    예외는 파이프라인 중단 안 함 — 실패 시 composite fallback + `original_status='not_found'`
+  - 셀렉터 철학: **도메인 하드코딩 없음**. 구조적으로 배제해야 할 소스
+    (`pinimg.com`, `redditmedia.com`, `lookaside.fbsbx.com`, `twimg`, `tiktok`,
+    `ytimg`) 만 exclusion 리스트. 랭킹은 Vision API 신호(`full_match` >
+    `partial_match`) 와 다운로드 가능성으로만 결정. `visually_similar` 는 노이즈가
+    커서 드롭.
+  - CDN resize 파라미터(`?w=540`, `?type=w540` 등) 는 generic pattern 으로 strip —
+    도메인 무관, 고해상도 variant 먼저 시도
+- **스키마 (supabase/migrations/20260422000001_...)**:
+  - `raw_posts.original_status` (pending/searching/found/not_found/skipped)
+  - `warehouse.source_media_originals` 테이블 — raw_post 당 여러 원본 후보 +
+    `is_primary` partial unique index 로 활성 원본 1개 보장
+- **Env vars**: `ORIGINAL_SEARCH_ENABLED`, `ORIGINAL_SEARCH_MIN_WIDTH=500`,
+  `ORIGINAL_SEARCH_MIN_HEIGHT=500`, `ORIGINAL_SEARCH_MIN_BYTES=40000`,
+  `ORIGINAL_SEARCH_DOWNLOAD_TIMEOUT=15`, `GOOGLE_APPLICATION_CREDENTIALS`
+  (SDK 자동 인식)
+- **Tests**: 32 신규 unit (selector 16 / cropper 7 / searcher 4 / archiver 5) +
+  scheduler original_search 통합 4 = 67/67 통과
+- **E2E (dev Supabase + R2)**: 10 Pinterest 핀 → 10/10 `parsed`, 5/10 `found`
+  원본 확보(Vogue/Newsen/Future CDN), 5/10 `not_found` composite fallback 정상
+  동작. 파이프라인 예외 0. **도메인 하드코딩 없이 editorial 소스가 자연스럽게 선택됨** — selector 가 pinimg/reddit 만 배제하고 나머지는 Vision 신호 순위에 맡긴 결과.
+
+---
+
 ## Recent Refactoring (2026-04-21)
 
 ### ✅ **Vision 파싱 파이프라인 (#260 — raw_posts → seed_\*)** (2026-04-21)
