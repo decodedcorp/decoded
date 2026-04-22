@@ -91,12 +91,72 @@ pub struct RawPost {
     pub caption: Option<String>,
     pub author_name: Option<String>,
     pub parse_status: String,
+    pub original_status: String,
     pub parse_attempts: i32,
+    pub parse_result: Option<JsonValue>,
     pub seed_post_id: Option<Uuid>,
     pub platform_metadata: Option<JsonValue>,
     pub dispatch_id: Option<String>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
+}
+
+// -----------------------
+// source_media_originals (#261)
+// -----------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SourceMediaOriginal {
+    pub id: Uuid,
+    pub raw_post_id: Uuid,
+    pub origin_url: String,
+    pub origin_domain: String,
+    pub r2_key: String,
+    pub r2_url: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub byte_size: Option<i32>,
+    pub image_hash: Option<String>,
+    pub search_provider: String,
+    pub is_primary: bool,
+    pub metadata: Option<JsonValue>,
+    pub created_at: DateTime<FixedOffset>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SourceMediaOriginalsResponse {
+    pub items: Vec<SourceMediaOriginal>,
+}
+
+// -----------------------
+// admin actions (#289)
+// -----------------------
+
+#[derive(Debug, Clone, Deserialize, ToSchema, Validate)]
+pub struct UpdateSeedStatusDto {
+    #[validate(custom(function = "validate_seed_status"))]
+    pub status: String,
+}
+
+fn validate_seed_status(s: &str) -> Result<(), validator::ValidationError> {
+    match s {
+        "draft" | "approved" | "rejected" => Ok(()),
+        _ => Err(validator::ValidationError::new("invalid_seed_status")),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ReparseResponse {
+    pub triggered: bool,
+    pub raw_post_id: Uuid,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateSeedStatusResponse {
+    pub raw_post_id: Uuid,
+    pub seed_post_id: Uuid,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

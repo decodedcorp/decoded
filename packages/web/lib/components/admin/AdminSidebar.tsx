@@ -18,6 +18,7 @@ import {
   Image,
   MapPin,
   CheckCircle,
+  Inbox,
   Mic2,
   Tag,
   UsersRound,
@@ -52,6 +53,7 @@ const SIDEBAR_ENTRIES: SidebarEntry[] = [
   {
     label: "Seed Pipeline",
     items: [
+      { href: "/admin/seed/raw-posts", label: "Raw Posts", icon: Inbox },
       { href: "/admin/seed/candidates", label: "Candidates", icon: Users },
       { href: "/admin/seed/post-images", label: "Post Images", icon: Image },
       { href: "/admin/seed/post-spots", label: "Post Spots", icon: MapPin },

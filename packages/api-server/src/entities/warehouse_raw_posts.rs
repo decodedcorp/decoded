@@ -34,6 +34,10 @@ pub struct Model {
 
     pub parse_status: String,
 
+    /// Original image reverse search lifecycle (#261):
+    /// pending | searching | found | not_found | skipped
+    pub original_status: String,
+
     #[sea_orm(nullable, column_type = "JsonBinary")]
     pub parse_result: Option<Json>,
 

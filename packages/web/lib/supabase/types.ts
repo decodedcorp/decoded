@@ -2480,6 +2480,190 @@ export type Database = {
           },
         ];
       };
+      raw_post_sources: {
+        Row: {
+          created_at: string;
+          fetch_interval_seconds: number;
+          id: string;
+          is_active: boolean;
+          label: string | null;
+          last_enqueued_at: string | null;
+          last_scraped_at: string | null;
+          metadata: Json | null;
+          platform: string;
+          source_identifier: string;
+          source_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          fetch_interval_seconds?: number;
+          id?: string;
+          is_active?: boolean;
+          label?: string | null;
+          last_enqueued_at?: string | null;
+          last_scraped_at?: string | null;
+          metadata?: Json | null;
+          platform: string;
+          source_identifier: string;
+          source_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          fetch_interval_seconds?: number;
+          id?: string;
+          is_active?: boolean;
+          label?: string | null;
+          last_enqueued_at?: string | null;
+          last_scraped_at?: string | null;
+          metadata?: Json | null;
+          platform?: string;
+          source_identifier?: string;
+          source_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      raw_posts: {
+        Row: {
+          author_name: string | null;
+          caption: string | null;
+          created_at: string;
+          dispatch_id: string | null;
+          external_id: string;
+          external_url: string;
+          id: string;
+          image_hash: string | null;
+          image_url: string;
+          original_status: string;
+          parse_attempts: number;
+          parse_error: string | null;
+          parse_result: Json | null;
+          parse_status: string;
+          platform: string;
+          platform_metadata: Json | null;
+          r2_key: string | null;
+          r2_url: string | null;
+          seed_post_id: string | null;
+          source_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          caption?: string | null;
+          created_at?: string;
+          dispatch_id?: string | null;
+          external_id: string;
+          external_url: string;
+          id?: string;
+          image_hash?: string | null;
+          image_url: string;
+          original_status?: string;
+          parse_attempts?: number;
+          parse_error?: string | null;
+          parse_result?: Json | null;
+          parse_status?: string;
+          platform: string;
+          platform_metadata?: Json | null;
+          r2_key?: string | null;
+          r2_url?: string | null;
+          seed_post_id?: string | null;
+          source_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          caption?: string | null;
+          created_at?: string;
+          dispatch_id?: string | null;
+          external_id?: string;
+          external_url?: string;
+          id?: string;
+          image_hash?: string | null;
+          image_url?: string;
+          original_status?: string;
+          parse_attempts?: number;
+          parse_error?: string | null;
+          parse_result?: Json | null;
+          parse_status?: string;
+          platform?: string;
+          platform_metadata?: Json | null;
+          r2_key?: string | null;
+          r2_url?: string | null;
+          seed_post_id?: string | null;
+          source_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "raw_posts_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "raw_post_sources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      source_media_originals: {
+        Row: {
+          byte_size: number | null;
+          created_at: string;
+          height: number | null;
+          id: string;
+          image_hash: string | null;
+          is_primary: boolean;
+          metadata: Json | null;
+          origin_domain: string;
+          origin_url: string;
+          r2_key: string;
+          r2_url: string;
+          raw_post_id: string;
+          search_provider: string;
+          width: number | null;
+        };
+        Insert: {
+          byte_size?: number | null;
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          image_hash?: string | null;
+          is_primary?: boolean;
+          metadata?: Json | null;
+          origin_domain: string;
+          origin_url: string;
+          r2_key: string;
+          r2_url: string;
+          raw_post_id: string;
+          search_provider: string;
+          width?: number | null;
+        };
+        Update: {
+          byte_size?: number | null;
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          image_hash?: string | null;
+          is_primary?: boolean;
+          metadata?: Json | null;
+          origin_domain?: string;
+          origin_url?: string;
+          r2_key?: string;
+          r2_url?: string;
+          raw_post_id?: string;
+          search_provider?: string;
+          width?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "source_media_originals_raw_post_id_fkey";
+            columns: ["raw_post_id"];
+            isOneToOne: false;
+            referencedRelation: "raw_posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       seed_spots: {
         Row: {
           backend_spot_id: string | null;

@@ -7,9 +7,10 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    routing::{get, patch},
+    routing::{get, patch, post},
     Json, Router,
 };
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
@@ -20,7 +21,9 @@ use crate::{
 use super::{
     dto::{
         CreateRawPostSourceDto, ListItemsQuery, ListSourcesQuery, RawPost, RawPostSource,
-        RawPostSourcesPage, RawPostsItemsPage, RawPostsStatsResponse, UpdateRawPostSourceDto,
+        RawPostSourcesPage, RawPostsItemsPage, RawPostsStatsResponse, ReparseResponse,
+        SourceMediaOriginalsResponse, UpdateRawPostSourceDto, UpdateSeedStatusDto,
+        UpdateSeedStatusResponse,
     },
     service,
 };
@@ -190,6 +193,140 @@ pub async fn get_item(
 }
 
 // --------------------
+// originals (#261)
+// --------------------
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/raw-posts/items/{id}/originals",
+    operation_id = "raw_posts_list_originals",
+    tag = "raw-posts",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "raw_post id")),
+    responses(
+        (status = 200, description = "원본 후보 목록", body = SourceMediaOriginalsResponse),
+        (status = 401),
+        (status = 403)
+    )
+)]
+pub async fn list_originals(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<SourceMediaOriginalsResponse>> {
+    let items = service::list_originals(state.db.as_ref(), id).await?;
+    Ok(Json(SourceMediaOriginalsResponse { items }))
+}
+
+// --------------------
+// reparse (proxy to ai-server, #260)
+// --------------------
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/raw-posts/items/{id}/reparse",
+    operation_id = "raw_posts_reparse_item",
+    tag = "raw-posts",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "raw_post id")),
+    responses(
+        (status = 200, description = "ai-server 재파싱 트리거 결과", body = ReparseResponse),
+        (status = 404),
+        (status = 502, description = "ai-server 통신 실패"),
+        (status = 401),
+        (status = 403)
+    )
+)]
+pub async fn reparse_item(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ReparseResponse>> {
+    // Best-effort proxy to ai-server's FastAPI endpoint.
+    let base = std::env::var("AI_SERVER_HTTP_URL")
+        .unwrap_or_else(|_| "http://localhost:10000".to_string());
+    let url = format!("{}/media/items/{}/reparse", base.trim_end_matches('/'), id);
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("reparse proxy failed: {}", e);
+            crate::error::AppError::ExternalService(format!("ai-server unreachable: {e}"))
+        })?;
+    let status = resp.status();
+    if !status.is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        return Err(crate::error::AppError::ExternalService(format!(
+            "ai-server responded {status}: {body}"
+        )));
+    }
+    let payload: serde_json::Value = resp.json().await.map_err(|e| {
+        crate::error::AppError::ExternalService(format!("invalid ai-server response: {e}"))
+    })?;
+    let triggered = payload
+        .get("triggered")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let final_status = payload
+        .get("status")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    // echo a minimal shape back so the UI can just read it.
+    let _ = json!({}); // silence "unused import" lint
+    Ok(Json(ReparseResponse {
+        triggered,
+        raw_post_id: id,
+        status: final_status,
+    }))
+}
+
+// --------------------
+// seed status transition (#289)
+// --------------------
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/raw-posts/items/{id}/seed-status",
+    operation_id = "raw_posts_update_seed_status",
+    tag = "raw-posts",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "raw_post id")),
+    request_body = UpdateSeedStatusDto,
+    responses(
+        (status = 200, description = "seed_posts.status 전환", body = UpdateSeedStatusResponse),
+        (status = 400, description = "아직 seed_post 없음 or 잘못된 status"),
+        (status = 404),
+        (status = 401),
+        (status = 403)
+    )
+)]
+pub async fn update_seed_status(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<UpdateSeedStatusDto>,
+) -> AppResult<Json<UpdateSeedStatusResponse>> {
+    // Lightweight allowlist validation (the validator derive runs only if we
+    // plumb it through ValidatedJson; keep this inline for explicitness).
+    match dto.status.as_str() {
+        "draft" | "approved" | "rejected" => {}
+        other => {
+            return Err(crate::error::AppError::BadRequest(format!(
+                "invalid seed status: {other}"
+            )))
+        }
+    }
+    let (seed_post_id, new_status) =
+        service::update_seed_status(state.db.as_ref(), id, &dto.status).await?;
+    Ok(Json(UpdateSeedStatusResponse {
+        raw_post_id: id,
+        seed_post_id,
+        status: new_status,
+    }))
+}
+
+// --------------------
 // stats
 // --------------------
 
@@ -220,6 +357,9 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/sources/{id}", patch(update_source).delete(delete_source))
         .route("/items", get(list_items))
         .route("/items/{id}", get(get_item))
+        .route("/items/{id}/originals", get(list_originals))
+        .route("/items/{id}/reparse", post(reparse_item))
+        .route("/items/{id}/seed-status", patch(update_seed_status))
         .route("/stats", get(stats))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
