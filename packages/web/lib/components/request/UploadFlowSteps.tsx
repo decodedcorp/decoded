@@ -14,6 +14,7 @@ import {
   selectArtistName,
   selectGroupName,
   selectContext,
+  selectHasInProgressWork,
   type DetectedSpot,
   type SpotSolutionData,
 } from "@/lib/stores/requestStore";
@@ -29,7 +30,16 @@ import {
   type MetadataFormValues,
 } from "@/lib/components/request/MetadataInputForm";
 import { ImageEditor } from "@/lib/components/request/ImageEditor";
-import { Trash2, Plus, Loader2, RefreshCw, Crop } from "lucide-react";
+import { DiscardProgressDialog } from "@/lib/components/request/DiscardProgressDialog";
+import { clearDraft } from "@/lib/utils/offlineDraft";
+import {
+  Trash2,
+  Plus,
+  Loader2,
+  RefreshCw,
+  Crop,
+  ArrowLeft,
+} from "lucide-react";
 
 /**
  * Renders the full step-switch UI for the upload request flow.
@@ -78,6 +88,32 @@ export function UploadFlowSteps() {
       : hasImages && userKnowsItems !== null
         ? 2
         : 1;
+
+  const hasInProgressWork = useRequestStore(selectHasInProgressWork);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  // Back button 노출/활성화
+  const anyImageUploading = images.some((img) => img.status === "uploading");
+  const showBackButton = currentStep === 2 || currentStep === 3;
+  const backDisabled = anyImageUploading;
+
+  const performBack = useCallback(() => {
+    if (currentStep === 3) {
+      getRequestActions().backToFork();
+    } else if (currentStep === 2) {
+      getRequestActions().backToUpload();
+    }
+    // 어떤 경로든 draft는 의미 없어짐
+    clearDraft();
+  }, [currentStep]);
+
+  const handleBackClick = useCallback(() => {
+    if (currentStep === 3 && hasInProgressWork) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    performBack();
+  }, [currentStep, hasInProgressWork, performBack]);
 
   const handleUserTypeSelect = useCallback((knows: boolean) => {
     getRequestActions().setUserKnowsItems(knows);
@@ -181,7 +217,18 @@ export function UploadFlowSteps() {
   const localImage = images[0];
 
   return (
-    <div data-testid="upload-flow-steps">
+    <div data-testid="upload-flow-steps" className="relative">
+      {showBackButton && (
+        <button
+          type="button"
+          onClick={handleBackClick}
+          disabled={backDisabled}
+          aria-label="Go back"
+          className="absolute top-4 left-4 z-20 rounded-full p-2 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      )}
       <main className="flex-1 min-h-0 flex flex-col px-4 py-4 md:py-6">
         <StepProgress currentStep={currentStep} className="py-4" />
 
@@ -435,6 +482,15 @@ export function UploadFlowSteps() {
           onCancel={() => setShowEditor(false)}
         />
       )}
+
+      <DiscardProgressDialog
+        open={showDiscardDialog}
+        onCancel={() => setShowDiscardDialog(false)}
+        onConfirm={() => {
+          setShowDiscardDialog(false);
+          performBack();
+        }}
+      />
     </div>
   );
 }
