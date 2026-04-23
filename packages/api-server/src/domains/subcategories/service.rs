@@ -119,7 +119,12 @@ pub async fn resolve_uncategorized_subcategory_id(db: &impl ConnectionTrait) -> 
         .await
         .map_err(AppError::DatabaseError)?
         .ok_or_else(|| {
-            AppError::InternalError("system category not found; run migrations".to_string())
+            AppError::InternalError(
+                "system category not found — apply \
+                 supabase/migrations/20260423075700_seed_system_uncategorized.sql \
+                 (or SeaORM m20260320_000001_add_system_uncategorized_subcategory)"
+                    .to_string(),
+            )
         })?;
 
     let sub = Subcategories::find()
@@ -130,7 +135,10 @@ pub async fn resolve_uncategorized_subcategory_id(db: &impl ConnectionTrait) -> 
         .map_err(AppError::DatabaseError)?
         .ok_or_else(|| {
             AppError::InternalError(
-                "uncategorized subcategory not found; run migrations".to_string(),
+                "uncategorized subcategory not found — apply \
+                 supabase/migrations/20260423075700_seed_system_uncategorized.sql \
+                 (or SeaORM m20260320_000001_add_system_uncategorized_subcategory)"
+                    .to_string(),
             )
         })?;
 

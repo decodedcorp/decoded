@@ -100,6 +100,22 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Database migrations completed successfully");
     }
 
+    // #312: system/uncategorized 시드 존재 검증.
+    // 부재 시 POST /api/v1/posts 가 500 으로 실패하므로 부팅 시 명확히 로깅.
+    // 서버 기동은 계속한다 — 운영자가 로그를 보고 마이그레이션을 적용할 수 있게.
+    match decoded_api::domains::subcategories::service::resolve_uncategorized_subcategory_id(
+        &db_connection,
+    )
+    .await
+    {
+        Ok(_) => tracing::info!("system/uncategorized seed verified"),
+        Err(e) => tracing::error!(
+            error = %e,
+            "system/uncategorized seed missing — POST /api/v1/posts will fail until \
+             supabase/migrations/20260423075700_seed_system_uncategorized.sql is applied"
+        ),
+    }
+
     // AppState 생성 (마이그레이션용 연결 재사용)
     let state = AppState::with_db_connection(config.clone(), Some(db_connection)).await?;
 
