@@ -519,7 +519,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   changeMediaType: (type) => {
     set((state) => {
       const allowed = new Set<keyof StructuredFieldsState>(
-        STRUCTURED_KEYS_PER_TYPE[type],
+        STRUCTURED_KEYS_PER_TYPE[type]
       );
       const filtered: StructuredFieldsState = {};
       for (const [k, v] of Object.entries(state.structuredMetadata) as Array<
