@@ -7,6 +7,15 @@ const nextConfig = {
   transpilePackages: ["@decoded/shared"],
   images: {
     localPatterns: [{ pathname: "/**" }],
+    // Direct-optimization allowlist — must stay in sync with
+    // `lib/image-loader.ts` ALLOWED_OPTIMIZER_HOSTS (see #253).
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "pub-6354054b117b46b9a0fe99e4a546e681.r2.dev",
+        pathname: "/**",
+      },
+    ],
     loaderFile: "./lib/image-loader.ts",
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 1080, 1920],
