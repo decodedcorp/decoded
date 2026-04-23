@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, X, Check, Users } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
   AdminImagePreview,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import {
   useArtistList,
@@ -154,7 +155,11 @@ function ArtistsPageContent() {
   }, [searchQuery]);
 
   // Data
-  const { data, isLoading } = useArtistList(currentPage, 20, searchQuery);
+  const { data, isLoading, isError } = useArtistList(
+    currentPage,
+    20,
+    searchQuery
+  );
   const createArtist = useCreateArtist();
   const updateArtist = useUpdateArtist();
   const deleteArtist = useDeleteArtist();
@@ -263,6 +268,8 @@ function ArtistsPageContent() {
 
   const artists = data?.data ?? [];
   const pagination = data?.pagination;
+  const hasFilter = Boolean(searchQuery);
+  const isEmpty = !isLoading && !isError && artists.length === 0 && !hasFilter;
 
   return (
     <div className="space-y-6">
@@ -334,15 +341,39 @@ function ArtistsPageContent() {
           );
         })()}
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load artists. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state: no data AND no active filter */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<Users className="w-12 h-12" />}
+            title="No artists yet"
+            description="Create your first artist entity using the button above."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={artists}
-        rowKey={(row) => row.id}
-        isLoading={isLoading}
-        onRowClick={(row) => setEditingId(row.id === editingId ? null : row.id)}
-        emptyMessage="No artists found"
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={artists}
+          rowKey={(row) => row.id}
+          isLoading={isLoading}
+          onRowClick={(row) =>
+            setEditingId(row.id === editingId ? null : row.id)
+          }
+          emptyMessage="No artists found"
+        />
+      )}
 
       {/* Pagination */}
       {pagination && (

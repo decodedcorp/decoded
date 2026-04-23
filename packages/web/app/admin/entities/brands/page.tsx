@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, X, Check, Tag } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
   AdminImagePreview,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import {
   useBrandList,
@@ -152,7 +153,11 @@ function BrandsPageContent() {
     setInputValue(searchQuery);
   }, [searchQuery]);
 
-  const { data, isLoading } = useBrandList(currentPage, 20, searchQuery);
+  const { data, isLoading, isError } = useBrandList(
+    currentPage,
+    20,
+    searchQuery
+  );
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
   const deleteBrand = useDeleteBrand();
@@ -251,6 +256,8 @@ function BrandsPageContent() {
 
   const brands = data?.data ?? [];
   const pagination = data?.pagination;
+  const hasFilter = Boolean(searchQuery);
+  const isEmpty = !isLoading && !isError && brands.length === 0 && !hasFilter;
 
   return (
     <div className="space-y-6">
@@ -322,15 +329,39 @@ function BrandsPageContent() {
           );
         })()}
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load brands. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state: no data AND no active filter */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<Tag className="w-12 h-12" />}
+            title="No brands yet"
+            description="Create your first brand entity using the button above."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={brands}
-        rowKey={(row) => row.id}
-        isLoading={isLoading}
-        onRowClick={(row) => setEditingId(row.id === editingId ? null : row.id)}
-        emptyMessage="No brands found"
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={brands}
+          rowKey={(row) => row.id}
+          isLoading={isLoading}
+          onRowClick={(row) =>
+            setEditingId(row.id === editingId ? null : row.id)
+          }
+          emptyMessage="No brands found"
+        />
+      )}
 
       {/* Pagination */}
       {pagination && (

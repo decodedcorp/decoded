@@ -2,7 +2,7 @@
 
 import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, ImageIcon } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
@@ -11,6 +11,7 @@ import {
   type BulkAction,
   AdminImagePreview,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import {
   useCandidateList,
@@ -38,7 +39,7 @@ function CandidatesPageContent() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data, isLoading } = useCandidateList(
+  const { data, isLoading, isError } = useCandidateList(
     currentPage,
     20,
     currentStatus,
@@ -80,6 +81,9 @@ function CandidatesPageContent() {
 
   const candidates = data?.data ?? [];
   const pagination = data?.pagination;
+  const hasFilter = Boolean(currentStatus || searchQuery);
+  const isEmpty =
+    !isLoading && !isError && candidates.length === 0 && !hasFilter;
 
   const columns: Column<Candidate>[] = [
     {
@@ -197,15 +201,37 @@ function CandidatesPageContent() {
         ))}
       </div>
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load candidates. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state: no data AND no active filter */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<ImageIcon className="w-12 h-12" />}
+            title="No candidates yet"
+            description="Seed post candidates will appear here once the ETL pipeline runs."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={candidates}
-        rowKey={(row) => row.id}
-        isLoading={isLoading}
-        onRowClick={(row) => router.push(`/admin/seed/candidates/${row.id}`)}
-        emptyMessage="No candidates found"
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={candidates}
+          rowKey={(row) => row.id}
+          isLoading={isLoading}
+          onRowClick={(row) => router.push(`/admin/seed/candidates/${row.id}`)}
+          emptyMessage="No candidates found"
+        />
+      )}
 
       {/* Pagination */}
       {pagination && (

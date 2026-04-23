@@ -2,11 +2,13 @@
 
 import { useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Users } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
   AdminStatusBadge,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import { useGroupMemberList, type GroupMember } from "@/lib/api/admin/entities";
 
@@ -30,7 +32,7 @@ function GroupMembersPageContent() {
     [searchParams, router]
   );
 
-  const { data, isLoading } = useGroupMemberList(currentPage, 20);
+  const { data, isLoading, isError } = useGroupMemberList(currentPage, 20);
 
   const columns: Column<GroupMember>[] = [
     {
@@ -75,6 +77,7 @@ function GroupMembersPageContent() {
 
   const members = data?.data ?? [];
   const pagination = data?.pagination;
+  const isEmpty = !isLoading && !isError && members.length === 0;
 
   return (
     <div className="space-y-6">
@@ -91,14 +94,36 @@ function GroupMembersPageContent() {
         </p>
       </div>
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load group members. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<Users className="w-12 h-12" />}
+            title="No group members"
+            description="Artist–group relationships will appear here once they are seeded."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={members}
-        rowKey={(row) => `${row.artist_id}:${row.group_id}`}
-        isLoading={isLoading}
-        emptyMessage="No group members found"
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={members}
+          rowKey={(row) => `${row.artist_id}:${row.group_id}`}
+          isLoading={isLoading}
+          emptyMessage="No group members found"
+        />
+      )}
 
       {/* Pagination */}
       {pagination && (
