@@ -60,6 +60,9 @@ Back의 **전이**마다 단계에 맞춰 필드를 정리한다. "하나의 범
 
 ```ts
 // Step 3 → Step 2: 스팟과 메타데이터 초기화, 이미지/fork 선택은 유지
+// 참고: userKnowsItems를 보존하므로 fork 질문 화면(userKnowsItems===null일 때만 렌더)은
+//      재표시되지 않음. 사용자는 "빈 Step 2"로 돌아가서 스팟을 새로 찍는 UX.
+//      Fork 재선택이 필요하면 한 번 더 Back → Step 1 → 재업로드 경로.
 backToFork: () => void;
 // 초기화: detectedSpots, selectedSpotId,
 //         mediaSource (type은 'user_upload'로 복원, title=''),
@@ -107,7 +110,7 @@ disabledReason: () => DisabledReason;
 
 ### 위치/노출
 
-- `UploadFlowSteps.tsx` 모달 상단 좌측 (기존 close 버튼 반대편). 또는 기존 `RequestFlowHeader` 구조 확인 후 왼쪽 슬롯 사용
+- `RequestFlowModal`은 close 버튼을 `absolute top-4 right-4`에 배치 (`RequestFlowModal.tsx:165-172`). Back 버튼은 대칭 슬롯 `absolute top-4 left-4`에 배치
 - 노출 조건: 파생 `currentStep in [2, 3]`. Step 1/4에서는 숨김
 
 ### 동작
@@ -289,7 +292,8 @@ function mapDisabledReasonToCopy(r: DisabledReason): string {
 
 ### `canRetry` 전제
 
-- 현재 로직이 복잡한 실패 상태에서만 true. 본 spec에선 조건 불변. 구현 단계에서 실제 경로 점검.
+- 소스: `flow.submitError`가 truthy일 때 (`UploadFlowSteps.tsx:391-405`에서 이미 Retry 버튼이 해당 조건에 묶여 있음)
+- 본 spec에서 조건 불변 — 기존 핸들러/버튼 로직 재사용. 구현 단계에서 컴포넌트 추출 없이 인라인 유지.
 
 ## Draft 자동 저장 정리
 
