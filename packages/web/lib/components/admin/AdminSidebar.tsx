@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   ArrowLeft,
@@ -128,10 +128,15 @@ export function AdminSidebar({
   adminName,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    // AdminLayout is a Server Component — it does not re-render on client
+    // auth state changes. After signing out we must push to /admin/login
+    // ourselves, otherwise the admin chrome stays visible with stale data.
+    await logout();
+    router.replace("/admin/login");
   }
 
   return (
