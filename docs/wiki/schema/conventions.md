@@ -2,12 +2,15 @@
 title: Coding & Build Conventions
 owner: human
 status: approved
-updated: 2026-04-17
+updated: 2026-04-23
 tags: [harness, agent]
 related:
   - docs/wiki/schema/ownership-matrix.md
   - CLAUDE.md
   - .cursor/rules/monorepo.mdc
+  - .cursor/rules/api-routes.mdc
+  - .cursor/rules/react-components.mdc
+  - .cursor/rules/rust-api.mdc
 ---
 
 # Coding & Build Conventions

@@ -56,3 +56,7 @@ export function MyComponent({ title, variant = 'default', className, ...props }:
 ## State Management
 - Zustand stores in `lib/stores/` (e.g., `authStore.ts`, `searchStore.ts`)
 - Pattern: `create<T>()((set, get) => ({ ... }))`
+
+## Conventions (shared)
+
+공용 컨벤션(commit, lint, env, generated API 등)은 [docs/wiki/schema/conventions.md](../../docs/wiki/schema/conventions.md)를 참조한다. React 19 / Next.js 16 / Design System 전역 사항은 [.cursor/rules/monorepo.mdc](./monorepo.mdc)가 담고, 이 파일은 tsx 컴포넌트 패턴 특이사항만 유지한다.
