@@ -2,7 +2,18 @@
  * Admin Reports types — matches Rust API response shapes.
  */
 
-export type ReportStatus = "pending" | "reviewed" | "dismissed" | "actioned";
+export const REPORT_STATUSES = [
+  "pending",
+  "reviewed",
+  "dismissed",
+  "actioned",
+] as const;
+
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
+
+export function isValidReportStatus(s: string): s is ReportStatus {
+  return (REPORT_STATUSES as readonly string[]).includes(s);
+}
 
 export interface ReporterInfo {
   id: string;
