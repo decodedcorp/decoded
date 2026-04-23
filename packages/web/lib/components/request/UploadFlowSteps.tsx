@@ -31,6 +31,7 @@ import {
 } from "@/lib/components/request/MetadataInputForm";
 import { ImageEditor } from "@/lib/components/request/ImageEditor";
 import { DiscardProgressDialog } from "@/lib/components/request/DiscardProgressDialog";
+import { RECOMMENDED_SPOT_COUNT } from "@/lib/components/request/constants";
 import { clearDraft } from "@/lib/utils/offlineDraft";
 import {
   Trash2,
@@ -330,18 +331,30 @@ export function UploadFlowSteps() {
               {/* Spot list + Metadata panel */}
               <div className="w-full md:w-80 flex-shrink-0 overflow-y-auto space-y-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium">
-                      Spots ({detectedSpots.length})
-                    </h3>
-                    {detectedSpots.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {userKnowsItems
-                          ? "Tap a spot to add a link"
-                          : "Curious locations marked"}
-                      </p>
-                    )}
-                  </div>
+                  {detectedSpots.length >= 1 && (
+                    <div className="flex flex-col gap-1">
+                      <div className="text-sm font-medium text-foreground">
+                        <span className="tabular-nums">
+                          Spots {detectedSpots.length}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / {RECOMMENDED_SPOT_COUNT}
+                        </span>
+                      </div>
+                      {detectedSpots.length < RECOMMENDED_SPOT_COUNT && (
+                        <p className="text-xs text-muted-foreground">
+                          Tap image to add more, or drag to reposition
+                        </p>
+                      )}
+                      {detectedSpots.length === RECOMMENDED_SPOT_COUNT && (
+                        <p className="text-xs text-muted-foreground">
+                          Nice. Add more if needed.
+                        </p>
+                      )}
+                      {/* count > RECOMMENDED_SPOT_COUNT: no subtext (intentional, per spec) */}
+                    </div>
+                  )}
 
                   {detectedSpots.length === 0 && (
                     <div className="py-8 text-center space-y-2">
