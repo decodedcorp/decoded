@@ -54,3 +54,7 @@ const limit = Number(request.nextUrl.searchParams.get('limit')) || 20;
 - Set appropriate status codes (200, 201, 400, 401, 404, 500)
 - Log errors server-side before returning generic error messages
 - Use `export const dynamic = 'force-dynamic'` for non-cacheable routes
+
+## Conventions (shared)
+
+공용 컨벤션(commit, lint, env, generated API 등)은 [docs/wiki/schema/conventions.md](../../docs/wiki/schema/conventions.md)를 참조한다. 이 파일은 Next.js API route 특이사항만 유지한다.

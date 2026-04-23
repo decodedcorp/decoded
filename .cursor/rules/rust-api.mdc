@@ -62,3 +62,7 @@ packages/api-server/
 - This package is NOT in bun workspaces (independent Cargo workspace)
 - gRPC communication with `packages/ai-server`
 - Port alignment: GRPC_PORT must match AI server's GRPC_BACKEND_PORT
+
+## Conventions (shared)
+
+공용 컨벤션(commit, env, migration 등)은 [docs/wiki/schema/conventions.md](../../docs/wiki/schema/conventions.md)를 참조한다. api-server 전용 세부 규칙은 [`packages/api-server/CLAUDE.md`](../../packages/api-server/CLAUDE.md)에 있으며, 이 파일은 Cursor 네이티브 규칙(globs, description)과 핵심 스택 요약만 유지한다.
