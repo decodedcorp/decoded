@@ -72,11 +72,16 @@ describe("UploadFlowSteps — step branches", () => {
 
     const preview = screen.getByTestId("upload-flow-fork-preview");
     expect(preview).toBeInTheDocument();
-    // next/image renders an <img> with the previewUrl as src and the file
-    // name as alt text so screen readers and users both get context.
     const imgEl = preview.querySelector("img");
     expect(imgEl).not.toBeNull();
-    expect(imgEl?.getAttribute("alt")).toBe("outfit.jpg");
+    // Screen readers should announce this as an uploaded preview, not
+    // just the raw (often cryptic) filename.
+    expect(imgEl?.getAttribute("alt")).toBe(
+      "Uploaded image preview: outfit.jpg"
+    );
+    // Loader may wrap the URL, but the mocked previewUrl token must be
+    // referenced so the rendered <img> reflects the uploaded file.
+    expect(imgEl?.getAttribute("src")).toContain(img.previewUrl);
   });
 });
 

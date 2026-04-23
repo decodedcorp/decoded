@@ -218,10 +218,11 @@ export function UploadFlowSteps() {
             >
               <Image
                 src={localImage.previewUrl}
-                alt={localImage.file.name}
+                alt={`Uploaded image preview: ${localImage.file.name}`}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 220px, 320px"
+                priority
               />
             </div>
             <p className="text-lg font-medium text-center">
