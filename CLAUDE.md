@@ -20,18 +20,39 @@ Monorepo for the decoded platform — image/item discovery and curation with beh
 
 ## Agent reference (`docs/agent/`)
 
-| 문서                                                                             | 용도                                   |
-| -------------------------------------------------------------------------------- | -------------------------------------- |
-| [`docs/agent/README.md`](docs/agent/README.md)                                   | 목차·언제 무엇을 읽을지                |
+### Topic routing (1순위: `*-summary.md` → canonical)
+
+Topic 질의(아키텍처 / API / DB / 디자인 시스템 / AI playbook)는 **먼저 summary**를 읽고, summary가 가리키는 canonical(`.planning/codebase/*`, `docs/architecture/`, `docs/api/`, `docs/database/`, `docs/ai-playbook/`) 으로 내려간다. canonical을 먼저 열면 설계 의도와 스냅샷을 혼동한다.
+
+| Topic         | Summary (먼저 읽기)                                                          |
+| ------------- | ---------------------------------------------------------------------------- |
+| architecture  | [`docs/agent/architecture-summary.md`](docs/agent/architecture-summary.md)   |
+| api           | [`docs/agent/api-summary.md`](docs/agent/api-summary.md)                     |
+| database      | [`docs/agent/database-summary.md`](docs/agent/database-summary.md)           |
+| design-system | [`docs/agent/design-system-summary.md`](docs/agent/design-system-summary.md) |
+| ai-playbook   | [`docs/agent/ai-playbook-summary.md`](docs/agent/ai-playbook-summary.md)     |
+
+### 참조 인벤토리 (표·라우트·훅)
+
+| 문서                                                                             | 용도                                             |
+| -------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [`docs/agent/README.md`](docs/agent/README.md)                                   | 목차·언제 무엇을 읽을지                          |
 | [`docs/agent/environments.md`](docs/agent/environments.md)                       | **env matrix (dev=local / prod=Cloud Supabase)** |
-| [`docs/DATABASE-MIGRATIONS.md`](docs/DATABASE-MIGRATIONS.md)                     | **DB 마이그레이션 SOT / 워크플로우**   |
-| [`docs/agent/staging.md`](docs/agent/staging.md)                                 | staging 정의 (현재 없음)               |
-| [`docs/agent/web-routes-and-features.md`](docs/agent/web-routes-and-features.md) | 웹 라우트·기능 영역                    |
-| [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md)                     | Next.js `/api/v1/*` 표                 |
-| [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md)       | 훅·스토어·주요 경로                    |
-| [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md)             | 디자인 시스템 import·컴포넌트 목록     |
-| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md)               | Warehouse 스키마 (ETL·Seed 파이프라인) |
-| [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md)                   | Rust API 크레이트 전용                 |
+| [`docs/DATABASE-MIGRATIONS.md`](docs/DATABASE-MIGRATIONS.md)                     | **DB 마이그레이션 SOT / 워크플로우**             |
+| [`docs/agent/staging.md`](docs/agent/staging.md)                                 | staging 정의 (현재 없음)                         |
+| [`docs/agent/web-routes-and-features.md`](docs/agent/web-routes-and-features.md) | 웹 라우트·기능 영역                              |
+| [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md)                     | Next.js `/api/v1/*` 표                           |
+| [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md)       | 훅·스토어·주요 경로                              |
+| [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md)             | 디자인 시스템 import·컴포넌트 목록               |
+| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md)               | Warehouse 스키마 (ETL·Seed 파이프라인)           |
+| [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md)                   | Rust API 크레이트 전용                           |
+
+### Harness knowledge (세션 규율)
+
+- [`docs/wiki/wiki/harness/claude-code.md`](docs/wiki/wiki/harness/claude-code.md) — Claude Code 세션·worktree·Draft PR·Auto Mode
+- [`docs/wiki/wiki/harness/session-discipline.md`](docs/wiki/wiki/harness/session-discipline.md) — 세션 분리, 상태 격리, cwd 리셋
+- [`docs/wiki/wiki/harness/commit-protocol.md`](docs/wiki/wiki/harness/commit-protocol.md) — Conventional Commits, fmt/check, PR 범위
+- [`docs/wiki/wiki/harness/review-flow.md`](docs/wiki/wiki/harness/review-flow.md) — 리뷰/검증 레인 분리, self-approve 금지
 
 ## Conventions (SSOT)
 
