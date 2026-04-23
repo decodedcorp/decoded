@@ -26,6 +26,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    return NextResponse.json({ error: "No session" }, { status: 401 });
+  }
+
   const { searchParams } = request.nextUrl;
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const perPage = Math.min(
@@ -38,7 +45,7 @@ export async function GET(request: NextRequest) {
       `${API_BASE_URL}/api/v1/admin/editorial-candidates?page=${page}&per_page=${perPage}`,
       {
         headers: {
-          Authorization: request.headers.get("Authorization") ?? "",
+          Authorization: `Bearer ${session.access_token}`,
         },
       }
     );
