@@ -36,8 +36,15 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
-  // Allow /admin/login through without auth
+  // /admin/login: allow unauthenticated access, but bounce already-authenticated
+  // admins to /admin so the layout doesn't render AdminLayoutClient chrome
+  // around the login form (happens when an admin hits /admin/login directly
+  // while still signed in — Supabase emits INITIAL_SESSION, not SIGNED_IN,
+  // so the page-level onAuthStateChange handler cannot catch this case).
   if (pathname === "/admin/login") {
+    if (session && (await checkIsAdmin(supabase, session.user.id))) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
     return res;
   }
 
