@@ -62,3 +62,57 @@ describe("UploadFlowSteps — step branches", () => {
     expect(screen.getByTestId("upload-flow-fork")).toBeInTheDocument();
   });
 });
+
+describe("UploadFlowSteps — step indicator progression", () => {
+  beforeEach(() => {
+    cleanup();
+    useRequestStore.getState().resetRequestFlow();
+    useRequestStore.getState().setActiveInstance(null);
+  });
+
+  const currentStepLabel = () => {
+    // StepProgress marks the current step's label with the text-foreground
+    // class (non-current labels use text-muted-foreground).
+    const labels = ["Upload", "Detect", "Details", "Submit"];
+    for (const label of labels) {
+      const el = screen.getByText(label);
+      if (el.className.includes("text-foreground")) return label;
+    }
+    return null;
+  };
+
+  test("step 1 Upload active before image upload", () => {
+    render(<UploadFlowSteps />);
+    expect(currentStepLabel()).toBe("Upload");
+  });
+
+  test("step 1 Upload active while on fork screen", () => {
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    render(<UploadFlowSteps />);
+    expect(currentStepLabel()).toBe("Upload");
+  });
+
+  test("step 2 Detect active after fork selected, before any spot", () => {
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    getRequestActions().setUserKnowsItems(false);
+    render(<UploadFlowSteps />);
+    expect(currentStepLabel()).toBe("Detect");
+  });
+
+  test("step 3 Details active once a spot is placed", () => {
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    getRequestActions().setUserKnowsItems(false);
+    getRequestActions().addSpot(0.5, 0.5);
+    render(<UploadFlowSteps />);
+    expect(currentStepLabel()).toBe("Details");
+  });
+});
