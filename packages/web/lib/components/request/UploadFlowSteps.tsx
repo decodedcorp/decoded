@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import {
   useRequestStore,
   getRequestActions,
-  selectCurrentStep,
   selectHasImages,
   selectDetectedSpots,
   selectSelectedSpotId,
@@ -41,7 +40,6 @@ export function UploadFlowSteps() {
   const [showEditor, setShowEditor] = useState(false);
 
   // Store subscriptions (render-only)
-  const currentStep = useRequestStore(selectCurrentStep);
   const hasImages = useRequestStore(selectHasImages);
   const userKnowsItems = useRequestStore(selectUserKnowsItems);
   const detectedSpots = useRequestStore(selectDetectedSpots);
@@ -67,6 +65,17 @@ export function UploadFlowSteps() {
         detectedSpots.every(
           (s) => s.solution?.originalUrl && s.solution?.title
         )));
+
+  // Step indicator progression: Upload → Detect → Details → Submit.
+  // Derived from UI state rather than store.currentStep, which is only
+  // written by the legacy AI-detection path and otherwise stays at 1.
+  const currentStep: number = flow.isSubmitting
+    ? 4
+    : detectedSpots.length > 0
+      ? 3
+      : hasImages && userKnowsItems !== null
+        ? 2
+        : 1;
 
   const handleUserTypeSelect = useCallback((knows: boolean) => {
     getRequestActions().setUserKnowsItems(knows);
@@ -145,7 +154,7 @@ export function UploadFlowSteps() {
   return (
     <div data-testid="upload-flow-steps">
       <main className="flex-1 min-h-0 flex flex-col px-4 py-4 md:py-6">
-        <StepProgress currentStep={1} className="py-4" />
+        <StepProgress currentStep={currentStep} className="py-4" />
 
         {!hasImages && (
           <div data-testid="upload-flow-dropzone">
