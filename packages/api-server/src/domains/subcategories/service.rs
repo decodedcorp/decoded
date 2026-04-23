@@ -16,6 +16,11 @@ use crate::{
 
 use super::dto::{CategoryWithSubcategories, SubcategoryName, SubcategoryResponse};
 
+/// 운영자용 remediation 메시지 (로그 전용 — HTTP 응답에는 노출하지 않음).
+pub const MIGRATION_HINT: &str =
+    "apply supabase/migrations/20260423075700_seed_system_uncategorized.sql \
+     (or SeaORM m20260320_000001_add_system_uncategorized_subcategory)";
+
 /// 모든 Subcategories 조회 (Category별 그룹화)
 pub async fn list_all_with_categories(
     db: &DatabaseConnection,
@@ -119,7 +124,8 @@ pub async fn resolve_uncategorized_subcategory_id(db: &impl ConnectionTrait) -> 
         .await
         .map_err(AppError::DatabaseError)?
         .ok_or_else(|| {
-            AppError::InternalError("system category not found; run migrations".to_string())
+            tracing::error!(hint = %MIGRATION_HINT, "system category seed missing");
+            AppError::InternalError("service misconfigured".to_string())
         })?;
 
     let sub = Subcategories::find()
@@ -129,9 +135,8 @@ pub async fn resolve_uncategorized_subcategory_id(db: &impl ConnectionTrait) -> 
         .await
         .map_err(AppError::DatabaseError)?
         .ok_or_else(|| {
-            AppError::InternalError(
-                "uncategorized subcategory not found; run migrations".to_string(),
-            )
+            tracing::error!(hint = %MIGRATION_HINT, "uncategorized subcategory seed missing");
+            AppError::InternalError("service misconfigured".to_string())
         })?;
 
     Ok(sub.id)
