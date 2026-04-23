@@ -21,11 +21,14 @@ export async function checkIsAdmin(
   userId: string
 ): Promise<boolean> {
   try {
+    // maybeSingle() returns null (no error) when the row is absent — a
+    // legitimate state for auth users whose public.users profile has not yet
+    // been created (see migration 20260423170000).
     const { data, error } = await supabase
       .from("users")
       .select("is_admin")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       if (process.env.NODE_ENV === "development") {
