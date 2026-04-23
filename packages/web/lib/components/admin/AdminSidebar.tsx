@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Activity,
   ArrowLeft,
@@ -128,15 +128,25 @@ export function AdminSidebar({
   adminName,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
 
   async function handleLogout() {
-    // AdminLayout is a Server Component — it does not re-render on client
-    // auth state changes. After signing out we must push to /admin/login
-    // ourselves, otherwise the admin chrome stays visible with stale data.
+    // AdminLayout is a Server Component, so client soft-nav (router.replace)
+    // would leave the sidebar mounted around the login page. Three things must
+    // happen in order before we navigate:
+    //   1) Supabase signOut (clears localStorage tokens)
+    //   2) DELETE /api/auth/session (clears server cookies — AuthProvider's
+    //      SIGNED_OUT handler does this async, but we cannot await it here,
+    //      and proxy.ts will bounce /admin/login → /admin if the session
+    //      cookie still validates as admin)
+    //   3) Hard navigation so the server layout re-runs without admin chrome
     await logout();
-    router.replace("/admin/login");
+    try {
+      await fetch("/api/auth/session", { method: "DELETE" });
+    } catch {
+      // Cookie clear is best-effort; signOut already invalidated tokens.
+    }
+    window.location.assign("/admin/login");
   }
 
   return (
