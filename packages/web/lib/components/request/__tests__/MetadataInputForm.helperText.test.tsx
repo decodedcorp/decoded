@@ -3,7 +3,7 @@
  */
 import React from "react";
 import { describe, test, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import {
   MetadataInputForm,
@@ -85,5 +85,56 @@ describe("MetadataInputForm — helper text + dynamic placeholder (ported from P
     expect(
       screen.getByPlaceholderText("e.g., 2024 Met Gala, Coachella")
     ).toBeInTheDocument();
+  });
+});
+
+describe("MetadataInputForm — context picker (#292 Part A)", () => {
+  afterEach(() => cleanup());
+
+  const expectedLabels = [
+    "Daily",
+    "Street",
+    "Airport",
+    "Stage",
+    "Photoshoot",
+    "Campaign",
+    "Event",
+    "Drama",
+    "Variety",
+    "SNS",
+    "Fan Meeting",
+    "Interview",
+  ];
+
+  test("renders all 12 context chips including the newly added options", () => {
+    renderForm();
+    for (const label of expectedLabels) {
+      expect(
+        screen.getByRole("button", { name: new RegExp(label, "i") })
+      ).toBeInTheDocument();
+    }
+  });
+
+  test("clicking a chip emits the value through onChange", () => {
+    const onChange = vi.fn();
+    render(<MetadataInputForm values={baseValues} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /street/i }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ context: "street" })
+    );
+  });
+
+  test("clicking the already-selected chip toggles the value back to null", () => {
+    const onChange = vi.fn();
+    render(
+      <MetadataInputForm
+        values={{ ...baseValues, context: "airport" }}
+        onChange={onChange}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /airport/i }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ context: null })
+    );
   });
 });
