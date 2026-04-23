@@ -86,6 +86,16 @@ describe("MetadataInputForm — helper text + dynamic placeholder (ported from P
       screen.getByPlaceholderText("e.g., 2024 Met Gala, Coachella")
     ).toBeInTheDocument();
   });
+
+  test("Movie source type is selectable and has its own placeholder (#293)", () => {
+    renderForm({ mediaType: "movie" });
+    // Movie option exists in the dropdown.
+    expect(screen.getByRole("option", { name: "Movie" })).toBeInTheDocument();
+    // Description field picks up the movie-specific example.
+    expect(
+      screen.getByPlaceholderText("e.g., Parasite (2019), Exhuma (2024)")
+    ).toBeInTheDocument();
+  });
 });
 
 describe("MetadataInputForm — context picker (#292 Part A)", () => {
