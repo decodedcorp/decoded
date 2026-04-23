@@ -3,10 +3,11 @@
  */
 import React from "react";
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { UploadFlowSteps } from "../UploadFlowSteps";
 import { useRequestStore, getRequestActions } from "@/lib/stores/requestStore";
+import { toast } from "sonner";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -114,5 +115,53 @@ describe("UploadFlowSteps — step indicator progression", () => {
     getRequestActions().addSpot(0.5, 0.5);
     render(<UploadFlowSteps />);
     expect(currentStepLabel()).toBe("Details");
+  });
+});
+
+describe("UploadFlowSteps — spot delete undo (#291)", () => {
+  beforeEach(() => {
+    cleanup();
+    useRequestStore.getState().resetRequestFlow();
+    useRequestStore.getState().setActiveInstance(null);
+    vi.mocked(toast).mockClear();
+  });
+
+  test("clicking trash deletes the spot and offers an Undo toast that restores it", () => {
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    getRequestActions().setUserKnowsItems(false);
+    getRequestActions().addSpot(0.25, 0.5);
+    getRequestActions().addSpot(0.75, 0.5);
+    const [, second] = useRequestStore.getState().detectedSpots;
+
+    render(<UploadFlowSteps />);
+
+    // Trash icons live on each spot row in the sidebar; pick the second.
+    const trashButtons = screen.getAllByRole("button", {
+      name: /remove spot/i,
+    });
+    expect(trashButtons).toHaveLength(2);
+    fireEvent.click(trashButtons[1]);
+
+    // Spot was removed from the store…
+    const afterDelete = useRequestStore.getState().detectedSpots;
+    expect(afterDelete).toHaveLength(1);
+    expect(afterDelete.find((s) => s.id === second.id)).toBeUndefined();
+
+    // …and a toast was raised with an Undo action.
+    const mockedToast = toast as unknown as ReturnType<typeof vi.fn>;
+    expect(mockedToast).toHaveBeenCalledTimes(1);
+    const [, options] = mockedToast.mock.calls[0];
+    expect(options.action?.label).toBe("Undo");
+
+    // Invoking the Undo action restores the deleted spot at its original slot
+    // with indices renumbered.
+    options.action.onClick();
+    const afterUndo = useRequestStore.getState().detectedSpots;
+    expect(afterUndo).toHaveLength(2);
+    expect(afterUndo.map((s) => s.index)).toEqual([1, 2]);
+    expect(afterUndo.find((s) => s.id === second.id)).toBeDefined();
   });
 });
