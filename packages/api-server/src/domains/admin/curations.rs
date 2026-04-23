@@ -235,12 +235,13 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/", post(create_curation))
         .route("/{id}", patch(update_curation).delete(delete_curation))
         .route("/order", put(update_curation_order))
+        // Layer order: admin INNER, auth OUTER — see #257.
+        .layer(axum::middleware::from_fn(
+            crate::middleware::admin_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
             crate::middleware::auth_middleware,
-        ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
         ))
 }
 

@@ -158,11 +158,12 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/", get(list_posts))
         .route("/{id}", patch(admin_update_post))
         .route("/{id}/status", patch(update_post_status))
+        // Layer order: admin INNER, auth OUTER — see #257.
+        .layer(axum::middleware::from_fn(
+            crate::middleware::admin_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
             crate::middleware::auth_middleware,
-        ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
         ))
 }

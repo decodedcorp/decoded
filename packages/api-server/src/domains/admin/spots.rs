@@ -85,11 +85,12 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .route("/", get(list_spots))
         .route("/{id}/subcategory", patch(update_spot_subcategory))
+        // Layer order: admin INNER, auth OUTER — see #257.
+        .layer(axum::middleware::from_fn(
+            crate::middleware::admin_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
             crate::middleware::auth_middleware,
-        ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
         ))
 }
