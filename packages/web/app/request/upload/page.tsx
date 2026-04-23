@@ -15,6 +15,7 @@ import {
   selectArtistName,
   selectGroupName,
   selectContext,
+  selectStructuredMetadata,
   type DetectedSpot,
   type SpotSolutionData,
 } from "@/lib/stores/requestStore";
@@ -59,6 +60,7 @@ export default function RequestUploadPage() {
   const artistName = useRequestStore(selectArtistName);
   const groupName = useRequestStore(selectGroupName);
   const context = useRequestStore(selectContext);
+  const structuredMetadata = useRequestStore(selectStructuredMetadata);
 
   // autoUpload: false, autoAnalyze: false - 자동 업로드/분석 비활성화
   const { images, isMaxImages, handleFilesSelected, removeImage, retryUpload } =
@@ -161,17 +163,27 @@ export default function RequestUploadPage() {
     groupName: groupName ?? "",
     artistName: artistName ?? "",
     context: context ?? null,
+    structured: structuredMetadata,
   };
 
-  const handleMetadataChange = useCallback((values: MetadataFormValues) => {
-    getRequestActions().setMediaSource({
-      type: values.mediaType,
-      title: values.mediaDescription,
-    });
-    getRequestActions().setGroupName(values.groupName);
-    getRequestActions().setArtistName(values.artistName);
-    getRequestActions().setContext(values.context);
-  }, []);
+  const handleMetadataChange = useCallback(
+    (values: MetadataFormValues) => {
+      const actions = getRequestActions();
+      // Media type 변경은 changeMediaType으로 라우팅 — 타입-불일치 structured key drop
+      if (values.mediaType !== (mediaSource?.type ?? "user_upload")) {
+        actions.changeMediaType(values.mediaType);
+      }
+      actions.setMediaSource({
+        type: values.mediaType,
+        title: values.mediaDescription,
+      });
+      actions.setGroupName(values.groupName);
+      actions.setArtistName(values.artistName);
+      actions.setContext(values.context);
+      actions.setStructuredMetadata(values.structured);
+    },
+    [mediaSource?.type]
+  );
 
   // Next 버튼: 이미지 업로드 + POST API 호출
   const handleNext = async () => {
