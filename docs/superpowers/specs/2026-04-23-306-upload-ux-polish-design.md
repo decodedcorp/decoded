@@ -1,3 +1,12 @@
+---
+title: "Upload 모달 UX 폴리시 (#306) — Design"
+owner: llm
+status: approved
+updated: 2026-04-23
+tags:
+  - ui
+---
+
 # Upload 모달 UX 폴리시 (#306) — Design
 
 - **Issue**: [#306 feat(upload): UX 폴리시 — Back 버튼 + Spot 가이드 + Submit 버튼 개선](https://github.com/decoded-app/decoded-monorepo/issues/306)

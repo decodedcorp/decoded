@@ -1,3 +1,12 @@
+---
+title: "Source Type별 구조화 필드 — Phase A (FE-only) 설계"
+owner: llm
+status: draft
+updated: 2026-04-23
+tags:
+  - ui
+---
+
 # Source Type별 구조화 필드 — Phase A (FE-only) 설계
 
 **Issue:** #305 (author: thxforall, 2026-04-23)
