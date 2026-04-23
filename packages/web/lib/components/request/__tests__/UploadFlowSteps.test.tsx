@@ -62,6 +62,22 @@ describe("UploadFlowSteps — step branches", () => {
     render(<UploadFlowSteps />);
     expect(screen.getByTestId("upload-flow-fork")).toBeInTheDocument();
   });
+
+  test("fork screen shows an image preview so users can confirm the upload (#295)", () => {
+    const file = new File(["x"], "outfit.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    render(<UploadFlowSteps />);
+
+    const preview = screen.getByTestId("upload-flow-fork-preview");
+    expect(preview).toBeInTheDocument();
+    // next/image renders an <img> with the previewUrl as src and the file
+    // name as alt text so screen readers and users both get context.
+    const imgEl = preview.querySelector("img");
+    expect(imgEl).not.toBeNull();
+    expect(imgEl?.getAttribute("alt")).toBe("outfit.jpg");
+  });
 });
 
 describe("UploadFlowSteps — step indicator progression", () => {
