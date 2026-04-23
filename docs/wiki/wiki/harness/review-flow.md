@@ -3,14 +3,14 @@ title: Review Flow — Harness Knowledge
 owner: llm
 status: draft
 updated: 2026-04-23
-tags: [harness, agent, review, verification]
+tags: [harness, agent, testing]
 related:
   - CLAUDE.md
   - docs/wiki/wiki/harness/commit-protocol.md
   - docs/GIT-WORKFLOW.md
 ---
 
-# Review Flow
+# Review Flow — Harness Knowledge
 
 작성(write) 레인과 검토(review/verify) 레인을 **같은 세션에서 겸하지 않는다**. self-approve는 금지.
 

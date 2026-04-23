@@ -3,7 +3,7 @@ title: Commit Protocol — Harness Knowledge
 owner: llm
 status: draft
 updated: 2026-04-23
-tags: [harness, agent, git, commit]
+tags: [harness, agent]
 related:
   - CLAUDE.md
   - docs/GIT-WORKFLOW.md
@@ -11,7 +11,7 @@ related:
   - packages/api-server/CLAUDE.md
 ---
 
-# Commit Protocol
+# Commit Protocol — Harness Knowledge
 
 Conventional Commits + 패키지 스코프 + 사전 체크가 전제. 로컬에서 실패할 체크는 커밋하지 않는다.
 

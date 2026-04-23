@@ -3,7 +3,7 @@ title: Session Discipline — Harness Knowledge
 owner: llm
 status: draft
 updated: 2026-04-23
-tags: [harness, agent, session, worktree]
+tags: [harness, agent, claude-code]
 related:
   - CLAUDE.md
   - docs/wiki/wiki/harness/claude-code.md
@@ -11,7 +11,7 @@ related:
   - docs/GIT-WORKFLOW.md
 ---
 
-# Session Discipline
+# Session Discipline — Harness Knowledge
 
 한 repo를 여러 에이전트 세션이 동시에 다룬다는 가정에서 세션을 충돌 없이 운영하기 위한 규율 모음.
 
