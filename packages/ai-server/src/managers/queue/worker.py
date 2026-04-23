@@ -1,8 +1,8 @@
 """
 ARQ Worker configuration and initialization
 """
+
 import logging
-from typing import Dict, Any
 from arq import create_pool
 from arq.connections import RedisSettings
 from arq.worker import Worker, func
@@ -22,6 +22,7 @@ def _get_functions():
             name="post_editorial_job",
             max_tries=1,
         ),
+        # #214 fetch_raw_posts_job removed — raw_posts scheduler runs in-process.
     ]
 
 
@@ -34,27 +35,27 @@ class WorkerSettings:
     - Job functions to register
     - Worker behavior (max_jobs, timeout, etc.)
     """
-    
+
     # Worker behavior settings
     # max_jobs=1: post_editorial jobs call Gemini/Perplexity heavily; concurrent runs hit API rate limits
     max_jobs = 1
     job_timeout = 600  # Job timeout in seconds (10 min for post_editorial)
     keep_result = 3600  # Keep job results for 1 hour
-    
+
     # Health check interval
     health_check_interval = 60  # seconds
-    
+
     # Queue name
     queue_name = "arq:queue"
-    
+
     @classmethod
     def create_redis_settings(cls, environment) -> RedisSettings:
         """
         Create Redis settings from environment configuration
-        
+
         Args:
             environment: Environment configuration object
-            
+
         Returns:
             RedisSettings configured for ARQ
         """
@@ -62,33 +63,32 @@ class WorkerSettings:
             host=environment.REDIS_HOST,
             port=environment.REDIS_PORT,
             password=environment.REDIS_PASSWORD or None,
-            database=environment.REDIS_DB
+            database=environment.REDIS_DB,
         )
 
 
-async def create_worker(environment, metadata_container) -> Worker:
+async def create_worker(
+    environment,
+    metadata_container,
+    infrastructure_container=None,
+) -> Worker:
     """
     Create and configure an ARQ worker with injected dependencies
-    
-    This function:
-    1. Creates Redis connection settings from environment
-    2. Gets required services from the metadata container
-    3. Creates a context dictionary for job access
-    4. Initializes and returns the ARQ worker
-    
+
     Args:
         environment: Environment configuration object
         metadata_container: Metadata service container for dependency injection
-        
+        infrastructure_container: Infrastructure container (required for database_manager)
+
     Returns:
         Configured ARQ Worker instance
     """
     try:
         logger.info("Initializing ARQ worker...")
-        
+
         # Create Redis settings
         redis_settings = WorkerSettings.create_redis_settings(environment)
-        
+
         # Get services from container for job context
         metadata_extract_service = metadata_container.metadata_extract_service()
         failed_items_manager = metadata_container.failed_items_manager()
@@ -96,12 +96,16 @@ async def create_worker(environment, metadata_container) -> Worker:
 
         # Create context dictionary that will be available to all jobs
         ctx = {
-            'metadata_extract_service': metadata_extract_service,
-            'failed_items_manager': failed_items_manager,
-            'result_batch_service': result_batch_service,
-            'environment': environment,
+            "metadata_extract_service": metadata_extract_service,
+            "failed_items_manager": failed_items_manager,
+            "result_batch_service": result_batch_service,
+            "environment": environment,
         }
-        
+
+        if infrastructure_container is not None:
+            # #266 DatabaseManager for post_editorial asyncpg access
+            ctx["database_manager"] = infrastructure_container.database_manager()
+
         # Create worker with settings
         worker = Worker(
             functions=_get_functions(),
@@ -113,16 +117,16 @@ async def create_worker(environment, metadata_container) -> Worker:
             queue_name=WorkerSettings.queue_name,
             ctx=ctx,
         )
-        
+
         logger.info(
             f"ARQ worker initialized successfully - "
             f"max_jobs: {WorkerSettings.max_jobs}, "
             f"timeout: {WorkerSettings.job_timeout}s, "
             f"queue: {WorkerSettings.queue_name}"
         )
-        
+
         return worker
-        
+
     except Exception as e:
         logger.error(f"Failed to create ARQ worker: {str(e)}", exc_info=True)
         raise
@@ -131,13 +135,13 @@ async def create_worker(environment, metadata_container) -> Worker:
 async def get_arq_pool(environment):
     """
     Create an ARQ connection pool for enqueueing jobs
-    
+
     This is used by the application to enqueue jobs to the ARQ queue.
     The worker consumes jobs from this queue.
-    
+
     Args:
         environment: Environment configuration object
-        
+
     Returns:
         ARQ connection pool (ArqRedis instance)
     """

@@ -1,4 +1,12 @@
-# AI 협업 원칙 (v1.0)
+---
+title: AI Playbook — Principles
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, harness]
+---
+
+# AI Playbook — Principles
 
 **최종 검증**: 2025-01-27
 **버전**: 1.0

@@ -6,11 +6,75 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class ProcessPostEditorialRequest(_message.Message):
+    __slots__ = ("post_magazine_id", "post_data_json")
+    POST_MAGAZINE_ID_FIELD_NUMBER: _ClassVar[int]
+    POST_DATA_JSON_FIELD_NUMBER: _ClassVar[int]
+    post_magazine_id: str
+    post_data_json: str
+    def __init__(self, post_magazine_id: _Optional[str] = ..., post_data_json: _Optional[str] = ...) -> None: ...
+
+class ProcessPostEditorialResponse(_message.Message):
+    __slots__ = ("success", "message", "batch_id")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    BATCH_ID_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    batch_id: str
+    def __init__(self, success: bool = ..., message: _Optional[str] = ..., batch_id: _Optional[str] = ...) -> None: ...
+
+class DataItem(_message.Message):
+    __slots__ = ("item_id", "type", "url", "post_id")
+    ITEM_ID_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    POST_ID_FIELD_NUMBER: _ClassVar[int]
+    item_id: str
+    type: str
+    url: str
+    post_id: str
+    def __init__(self, item_id: _Optional[str] = ..., type: _Optional[str] = ..., url: _Optional[str] = ..., post_id: _Optional[str] = ...) -> None: ...
+
+class ProcessDataBatchRequest(_message.Message):
+    __slots__ = ("items",)
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    items: _containers.RepeatedCompositeFieldContainer[DataItem]
+    def __init__(self, items: _Optional[_Iterable[_Union[DataItem, _Mapping]]] = ...) -> None: ...
+
+class ProcessDataBatchResponse(_message.Message):
+    __slots__ = ("success", "message", "batch_id")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    BATCH_ID_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    batch_id: str
+    def __init__(self, success: bool = ..., message: _Optional[str] = ..., batch_id: _Optional[str] = ...) -> None: ...
+
 class ExtractOGDataRequest(_message.Message):
     __slots__ = ("url",)
     URL_FIELD_NUMBER: _ClassVar[int]
     url: str
     def __init__(self, url: _Optional[str] = ...) -> None: ...
+
+class LinkMetadata(_message.Message):
+    __slots__ = ("price", "currency", "brand", "material", "origin", "category", "sub_category")
+    PRICE_FIELD_NUMBER: _ClassVar[int]
+    CURRENCY_FIELD_NUMBER: _ClassVar[int]
+    BRAND_FIELD_NUMBER: _ClassVar[int]
+    MATERIAL_FIELD_NUMBER: _ClassVar[int]
+    ORIGIN_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    SUB_CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    price: str
+    currency: str
+    brand: str
+    material: _containers.RepeatedScalarFieldContainer[str]
+    origin: str
+    category: str
+    sub_category: str
+    def __init__(self, price: _Optional[str] = ..., currency: _Optional[str] = ..., brand: _Optional[str] = ..., material: _Optional[_Iterable[str]] = ..., origin: _Optional[str] = ..., category: _Optional[str] = ..., sub_category: _Optional[str] = ...) -> None: ...
 
 class ExtractOGDataResponse(_message.Message):
     __slots__ = ("success", "url", "title", "description", "image", "site_name", "error_message")
@@ -208,3 +272,27 @@ class AnalyzeImageResponse(_message.Message):
     items: _containers.MessageMap[str, ItemList]
     error_message: str
     def __init__(self, success: bool = ..., subject: _Optional[str] = ..., title: _Optional[str] = ..., artist_name: _Optional[str] = ..., group_name: _Optional[str] = ..., context: _Optional[str] = ..., items: _Optional[_Mapping[str, ItemList]] = ..., error_message: _Optional[str] = ...) -> None: ...
+
+class ExtractPostContextRequest(_message.Message):
+    __slots__ = ("post_id", "image_url")
+    POST_ID_FIELD_NUMBER: _ClassVar[int]
+    IMAGE_URL_FIELD_NUMBER: _ClassVar[int]
+    post_id: str
+    image_url: str
+    def __init__(self, post_id: _Optional[str] = ..., image_url: _Optional[str] = ...) -> None: ...
+
+class ExtractPostContextResponse(_message.Message):
+    __slots__ = ("success", "context", "style_tags", "mood", "setting", "error_message")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    STYLE_TAGS_FIELD_NUMBER: _ClassVar[int]
+    MOOD_FIELD_NUMBER: _ClassVar[int]
+    SETTING_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    context: str
+    style_tags: _containers.RepeatedScalarFieldContainer[str]
+    mood: str
+    setting: str
+    error_message: str
+    def __init__(self, success: bool = ..., context: _Optional[str] = ..., style_tags: _Optional[_Iterable[str]] = ..., mood: _Optional[str] = ..., setting: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...

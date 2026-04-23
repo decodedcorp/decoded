@@ -2,7 +2,14 @@
 
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { FileText, MapPin, Lightbulb, Bookmark, Sparkles, Heart } from "lucide-react";
+import {
+  FileText,
+  MapPin,
+  Lightbulb,
+  Bookmark,
+  Sparkles,
+  Heart,
+} from "lucide-react";
 import type { ActivityTab } from "./ActivityTabs";
 
 interface EmptyStateProps {

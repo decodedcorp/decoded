@@ -78,10 +78,10 @@ def enhance_stealth_setup(
             const getParameter = WebGLRenderingContext.prototype.getParameter;
             WebGLRenderingContext.prototype.getParameter = function(parameter) {{
                 if (parameter === 37445) {{
-                    return '{webgl['vendor']}';
+                    return '{webgl["vendor"]}';
                 }}
                 if (parameter === 37446) {{
-                    return '{webgl['renderer']}';
+                    return '{webgl["renderer"]}';
                 }}
                 return getParameter.apply(this, arguments);
             }};
@@ -100,7 +100,7 @@ def enhance_stealth_setup(
                         length: 4,
                         refresh: function() {},
                         item: function(index) { return this[index] },
-                        namedItem: function(name) { 
+                        namedItem: function(name) {
                             return Object.values(this).find(plugin => plugin.name === name);
                         }
                     };

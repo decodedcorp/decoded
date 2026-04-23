@@ -1,4 +1,12 @@
-# 워크플로우 개요 (v1.0)
+---
+title: AI Playbook — Workflow Overview
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, harness]
+---
+
+# AI Playbook — Workflow Overview
 
 **최종 검증**: 2025-01-27
 **버전**: 1.0

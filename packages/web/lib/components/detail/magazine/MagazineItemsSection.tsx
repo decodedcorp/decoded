@@ -279,7 +279,8 @@ export function MagazineItemsSection({
                     {item.brand && (
                       <div className="mb-1 flex items-center gap-2">
                         {"brand_logo_url" in item &&
-                          (item as { brand_logo_url?: string }).brand_logo_url && (
+                          (item as { brand_logo_url?: string })
+                            .brand_logo_url && (
                             <img
                               src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
                               alt={item.brand ?? ""}
@@ -291,7 +292,9 @@ export function MagazineItemsSection({
                         </p>
                       </div>
                     )}
-                    <h3 className="text-base font-semibold mb-1">{item.title}</h3>
+                    <h3 className="text-base font-semibold mb-1">
+                      {item.title}
+                    </h3>
                     {item.editorial_paragraphs.length > 0 && (
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
                         {item.editorial_paragraphs[0]}
@@ -372,7 +375,8 @@ export function MagazineItemsSection({
                       {item.brand && (
                         <div className="mb-2 flex items-center gap-2">
                           {"brand_logo_url" in item &&
-                            (item as { brand_logo_url?: string }).brand_logo_url && (
+                            (item as { brand_logo_url?: string })
+                              .brand_logo_url && (
                               <img
                                 src={`/api/v1/image-proxy?url=${encodeURIComponent((item as { brand_logo_url: string }).brand_logo_url)}`}
                                 alt={item.brand ?? ""}
@@ -387,7 +391,9 @@ export function MagazineItemsSection({
                       <h3
                         className="typography-h4 mb-2"
                         style={
-                          titleHeight > 0 ? { minHeight: titleHeight } : undefined
+                          titleHeight > 0
+                            ? { minHeight: titleHeight }
+                            : undefined
                         }
                       >
                         {item.title}
@@ -436,11 +442,7 @@ export function MagazineItemsSection({
 
               {spotRelated.length > 0 && (
                 <div
-                  className={
-                    compact
-                      ? "mt-3 max-w-[220px]"
-                      : "mt-4 max-w-xs"
-                  }
+                  className={compact ? "mt-3 max-w-[220px]" : "mt-4 max-w-xs"}
                 >
                   <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/50">
                     Similar

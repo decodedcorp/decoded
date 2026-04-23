@@ -27,7 +27,9 @@ class ClipEmbeddingModel:
         self.device = device or (
             "cuda"
             if torch.cuda.is_available()
-            else "mps" if torch.backends.mps.is_available() else "cpu"
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
         )
         self.logger.info(f"Embedding Model Using device: {self.device}")
         self.clip_model = clip_model
@@ -164,9 +166,7 @@ class ClipEmbeddingModel:
 
         return text_features
 
-    def get_image_embedding(
-        self, image: Image.Image, return_tensors: str = "pt"
-    ) -> torch.Tensor:
+    def get_image_embedding(self, image: Image.Image, return_tensors: str = "pt") -> torch.Tensor:
         """
         이미지 임베딩을 생성합니다.
 
@@ -182,9 +182,7 @@ class ClipEmbeddingModel:
             self.processor = AutoProcessor.from_pretrained(self.clip_model.model_name)
             self.logger.info("Processor loaded successfully")
         # 이미지 전처리
-        inputs = self.processor(images=image, return_tensors=return_tensors).to(
-            self.device
-        )
+        inputs = self.processor(images=image, return_tensors=return_tensors).to(self.device)
 
         # 임베딩 생성
         with torch.no_grad():

@@ -4,7 +4,7 @@
 
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, QuerySelect, Set,
+    QueryOrder, QuerySelect, Set, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -159,11 +159,14 @@ pub async fn admin_update_report_status(
         )));
     }
 
+    let txn = db.begin().await.map_err(AppError::DatabaseError)?;
+
     let report = ContentReports::find_by_id(report_id)
-        .one(db)
+        .one(&txn)
         .await
         .map_err(AppError::DatabaseError)?
         .ok_or(AppError::NotFound("Report not found".to_string()))?;
+    let before_state = serde_json::to_value(&report).ok();
 
     let mut active: ActiveModel = report.into();
     active.status = Set(dto.status);
@@ -173,9 +176,27 @@ pub async fn admin_update_report_status(
         active.resolution = Set(Some(resolution));
     }
 
-    let updated = active.update(db).await.map_err(AppError::DatabaseError)?;
+    let updated = active.update(&txn).await.map_err(AppError::DatabaseError)?;
+    let after_state = serde_json::to_value(&updated).ok();
 
-    // 신고자 정보 로딩
+    crate::services::audit::write_audit_log(
+        &txn,
+        crate::services::audit::AuditLogEntry {
+            admin_user_id: admin_id,
+            action: "report.status.update".to_string(),
+            target_table: "content_reports".to_string(),
+            target_id: Some(report_id),
+            before_state,
+            after_state,
+            metadata: None,
+        },
+    )
+    .await
+    .map_err(AppError::DatabaseError)?;
+
+    txn.commit().await.map_err(AppError::DatabaseError)?;
+
+    // 신고자 정보 로딩 — 커밋 후 read-only 조회
     let reporter = crate::entities::users::Entity::find_by_id(updated.reporter_id)
         .one(db)
         .await

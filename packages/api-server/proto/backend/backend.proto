@@ -6,6 +6,8 @@ service Metadata {
     rpc ProcessedBatchUpdate (ProcessedBatchRequest) returns (ProcessedBatchResponse);
 }
 
+// #214 RawPostsCallback removed — ai-server writes raw_posts directly via asyncpg.
+
 message QAPair {
     string question = 1;
     string answer = 2;

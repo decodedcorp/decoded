@@ -81,6 +81,40 @@ function mapSupabaseUser(supabaseUser: SupabaseUser): User {
   };
 }
 
+/**
+ * Guest 세션 sessionStorage 키. hard navigation 후(`/login` → `/request/upload`)
+ * 에도 `isGuest` 상태를 복원할 수 있도록 persist한다. `logout()` / `setUser(logged-in)`
+ * 시 클리어된다. #296.
+ */
+const GUEST_SESSION_STORAGE_KEY = "decoded_guest_session";
+
+function persistGuestSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(GUEST_SESSION_STORAGE_KEY, "1");
+  } catch {
+    // sessionStorage 접근 실패(프라이빗 모드/쿼터 초과 등)는 무시
+  }
+}
+
+function clearGuestSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(GUEST_SESSION_STORAGE_KEY);
+  } catch {
+    // noop
+  }
+}
+
+function readGuestSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(GUEST_SESSION_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
@@ -130,11 +164,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         }
       } else {
-        set({ isInitialized: true, user: null, isAdmin: false });
+        // Supabase 세션 없으면 sessionStorage에서 guest 플래그 복원 (#296)
+        const guestRestored = readGuestSession();
+        set({
+          isInitialized: true,
+          user: null,
+          isAdmin: false,
+          isGuest: guestRestored,
+        });
       }
     } catch (error) {
       console.error("Auth initialization error:", error);
-      set({ isInitialized: true, user: null, isAdmin: false });
+      // 실패 경로에서도 guest 세션 복원 시도 (로컬 상태로 fallback)
+      const guestRestored = readGuestSession();
+      set({
+        isInitialized: true,
+        user: null,
+        isAdmin: false,
+        isGuest: guestRestored,
+      });
     }
   },
 
@@ -159,8 +207,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // OAuth는 리다이렉트되므로 여기서 loading 상태는 유지됨
       // 실제 로그인 완료는 onAuthStateChange에서 처리
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Login failed.";
+      const message = error instanceof Error ? error.message : "Login failed.";
       set({
         error: message,
         isLoading: false,
@@ -173,6 +220,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    * 게스트 로그인
    */
   guestLogin: () => {
+    persistGuestSession();
     set({ isGuest: true, user: null, isAdmin: false, error: null });
   },
 
@@ -189,6 +237,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw error;
       }
 
+      clearGuestSession();
       set({
         user: null,
         profile: null,
@@ -199,8 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         sessionExpired: false,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Logout failed.";
+      const message = error instanceof Error ? error.message : "Logout failed.";
       set({
         error: message,
         isLoading: false,
@@ -224,6 +272,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    */
   setUser: async (supabaseUser: SupabaseUser | null) => {
     if (supabaseUser) {
+      // 실제 user가 설정되면 guest 세션을 폐기 (권한/상태 충돌 방지)
+      clearGuestSession();
       set({
         user: mapSupabaseUser(supabaseUser),
         isGuest: false,

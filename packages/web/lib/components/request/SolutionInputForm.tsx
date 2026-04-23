@@ -109,7 +109,9 @@ export const SolutionInputForm = memo(
 
         {/* Product name */}
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Product name *</label>
+          <label className="text-xs text-muted-foreground">
+            Product name *
+          </label>
           <input
             type="text"
             value={title}

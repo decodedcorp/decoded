@@ -6,6 +6,7 @@
 //! - 벤더 종속(Vendor Lock-in) 방지
 
 pub mod affiliate;
+pub mod audit;
 pub mod backend_grpc;
 pub mod decoded_ai_grpc;
 pub mod embedding;

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+
 class SeleniumManager:
     def __init__(
         self,
@@ -17,11 +18,15 @@ class SeleniumManager:
         self.options = Options()
         self.options.add_argument("--no-sandbox")
         self.options.add_argument("--disable-dev-shm-usage")
-        
+
         # Add Twitter Bot headers
-        self.options.add_argument("--user-agent=Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)")
+        self.options.add_argument(
+            "--user-agent=Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"
+        )
         self.options.add_argument("--accept-language=ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-        self.options.add_argument("--accept=text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+        self.options.add_argument(
+            "--accept=text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+        )
         self.options.add_argument("--x-slackbot-client=Slackbot-LinkExpanding")
         self.options.add_argument("--x-slackbot-client-version=1.0")
 

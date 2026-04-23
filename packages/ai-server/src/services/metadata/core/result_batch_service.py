@@ -1,10 +1,11 @@
 """
 ResultBatchService: ARQ job 결과를 버퍼링하고 배치로 백엔드에 전송하는 서비스
 """
+
 import json
 import time
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import logging
 from src.managers.redis._manager import RedisManager
 from src.grpc.client.backend_client import GRPCBackendClient
@@ -37,10 +38,10 @@ class ResultBatchService:
     async def buffer_result(self, result: LinkProcessingResult) -> bool:
         """
         결과를 Redis 리스트에 추가
-        
+
         Args:
             result: LinkProcessingResult 객체
-            
+
         Returns:
             True if buffered successfully, False otherwise
         """
@@ -52,7 +53,7 @@ class ResultBatchService:
 
             # SUCCESS, PARTIAL 상태만 버퍼링
             # Pydantic v2: model_dump(mode='json')으로 JSON 호환 형식 변환
-            result_dict = result.model_dump(mode='json')
+            result_dict = result.model_dump(mode="json")
             result_json = json.dumps(result_dict)
 
             await self.redis_manager.rpush(self.BUFFER_KEY, result_json)
@@ -67,10 +68,10 @@ class ResultBatchService:
     async def flush_results(self, max_batch_size: int = None) -> Dict[str, Any]:
         """
         버퍼된 결과를 배치로 백엔드에 전송
-        
+
         Args:
             max_batch_size: 최대 배치 크기 (None이면 환경 변수 값 사용)
-            
+
         Returns:
             전송 결과 통계 딕셔너리
         """
@@ -78,9 +79,7 @@ class ResultBatchService:
 
         try:
             # 1. Redis LRANGE로 결과 가져오기
-            results_json = await self.redis_manager.lrange(
-                self.BUFFER_KEY, 0, batch_size - 1
-            )
+            results_json = await self.redis_manager.lrange(self.BUFFER_KEY, 0, batch_size - 1)
 
             if not results_json:
                 return {"flushed": 0, "success": True, "message": "No results to flush"}
@@ -94,9 +93,7 @@ class ResultBatchService:
 
             if success:
                 # 4. 성공 시 Redis LTRIM으로 처리된 항목 제거
-                await self.redis_manager.ltrim(
-                    self.BUFFER_KEY, len(results_json), -1
-                )
+                await self.redis_manager.ltrim(self.BUFFER_KEY, len(results_json), -1)
                 self.logger.info(
                     f"Flushed {len(results_json)} results successfully (batch_id: {batch_id})"
                 )
@@ -124,7 +121,7 @@ class ResultBatchService:
     async def get_pending_count(self) -> int:
         """
         버퍼에 대기 중인 결과 수 조회
-        
+
         Returns:
             대기 중인 결과 수
         """
@@ -138,10 +135,10 @@ class ResultBatchService:
     def _build_batch_data(self, results_json: List[str]) -> Dict[str, Any]:
         """
         Redis에서 가져온 JSON 문자열들을 배치 형식으로 변환
-        
+
         Args:
             results_json: JSON 문자열 리스트
-            
+
         Returns:
             백엔드가 기대하는 배치 데이터 형식
         """
@@ -153,7 +150,7 @@ class ResultBatchService:
         for result_json in results_json:
             try:
                 result_dict = json.loads(result_json)
-                
+
                 # LinkProcessingResult를 백엔드 형식으로 변환
                 # item_id는 solution_id와 동일한 값 (백엔드에서 솔루션 식별에 사용)
                 result_item = {
@@ -208,16 +205,14 @@ class ResultBatchService:
             },
         }
 
-    async def _send_with_retry(
-        self, batch_id: str, batch_data: Dict[str, Any]
-    ) -> bool:
+    async def _send_with_retry(self, batch_id: str, batch_data: Dict[str, Any]) -> bool:
         """
         재시도 로직으로 배치 전송
-        
+
         Args:
             batch_id: 배치 ID
             batch_data: 배치 데이터
-            
+
         Returns:
             True if sent successfully, False otherwise
         """
@@ -238,7 +233,7 @@ class ResultBatchService:
                     f"Connection error on attempt {attempt + 1}/{self.MAX_RETRIES}: {str(e)}"
                 )
                 if attempt < self.MAX_RETRIES - 1:
-                    wait_time = 2 ** attempt * 2  # 2s, 4s, 8s
+                    wait_time = 2**attempt * 2  # 2s, 4s, 8s
                     self.logger.info(f"Retrying in {wait_time} seconds...")
                     await asyncio.sleep(wait_time)
             except Exception as e:
@@ -246,7 +241,7 @@ class ResultBatchService:
                     f"Unexpected error on attempt {attempt + 1}: {str(e)}", exc_info=True
                 )
                 if attempt < self.MAX_RETRIES - 1:
-                    wait_time = 2 ** attempt * 2
+                    wait_time = 2**attempt * 2
                     await asyncio.sleep(wait_time)
                 else:
                     return False

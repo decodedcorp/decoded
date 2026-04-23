@@ -26,26 +26,18 @@ HTTP_CODE=$(curl -sS -o /tmp/health_body.json \
 
 BODY=$(cat /tmp/health_body.json 2>/dev/null || echo "{}")
 STATUS=$(echo "$BODY" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
-DB=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null || echo "unknown")
-SEARCH=$(echo "$BODY" | jq -r '.meilisearch.status // "unknown"' 2>/dev/null || echo "unknown")
-STORAGE=$(echo "$BODY" | jq -r '.storage.status // "unknown"' 2>/dev/null || echo "unknown")
-AI=$(echo "$BODY" | jq -r '.decoded_ai_grpc.status // "unknown"' 2>/dev/null || echo "unknown")
 
 echo "HTTP: $HTTP_CODE | status: $STATUS"
 
 if [ "$HTTP_CODE" = "200" ] && [ "$STATUS" = "ok" ]; then
-  MSG=$(printf '%s\n' \
-    "[DECODED API] Server OK" \
-    "----------------" \
-    "database    $(status_icon "$DB")" \
-    "meilisearch $(status_icon "$SEARCH")" \
-    "storage     $(status_icon "$STORAGE")" \
-    "ai-grpc     $(status_icon "$AI")" \
-    "$NOW")
-  send_telegram "$MSG"
   echo "Health check passed"
   exit 0
 fi
+
+DB=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null || echo "unknown")
+SEARCH=$(echo "$BODY" | jq -r '.meilisearch.status // "unknown"' 2>/dev/null || echo "unknown")
+STORAGE=$(echo "$BODY" | jq -r '.storage.status // "unknown"' 2>/dev/null || echo "unknown")
+AI=$(echo "$BODY" | jq -r '.decoded_ai_grpc.status // "unknown"' 2>/dev/null || echo "unknown")
 
 if [ "$HTTP_CODE" = "000" ]; then
   DETAIL="unreachable (timeout)"

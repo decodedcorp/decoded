@@ -1,7 +1,7 @@
 # DECODED - Coding Agent 행동 규칙
 
-**Version:** 3.1.0
-**Last Updated:** 2026.01.12
+**Version:** 3.2.0
+**Last Updated:** 2026.04.21
 **Purpose:** Coding Agent가 개발 시 반드시 준수해야 하는 실행 가능한 규칙
 
 ---
@@ -190,10 +190,30 @@ some_async_fn().await;
 
 ---
 
+## 11. Environment-Specific Setup ⚠️
+
+dev 환경은 **Supabase CLI self-hosted** (port 54322), prod 는 **Cloud Supabase**. 두 환경의 실제 endpoint / key 위치는 별도 matrix 문서를 참조:
+
+- env matrix: [`docs/agent/environments.md`](../../docs/agent/environments.md)
+- 마이그레이션 SOT / 워크플로우: [`docs/DATABASE-MIGRATIONS.md`](../../docs/DATABASE-MIGRATIONS.md)
+
+### 주의할 env 플래그
+
+- `SKIP_DB_MIGRATIONS=1` **(dev 전용)**: `main.rs` 가 이 플래그를 읽어 SeaORM 마이그레이션을 건너뜀. dev 에서는 `supabase/migrations/*.sql` 이 SOT 라 객체 충돌을 피하기 위해 필수. **prod/staging 에서는 절대 1 로 두지 말 것** — `scripts/local-env-sync.sh` 가 dev `.env` 에만 자동 설정.
+- `DATABASE_*` primary / `SUPABASE_*` legacy 이름 공존 (#268). `src/config.rs` 의 `env_primary_or_legacy()` 헬퍼 사용.
+
+### 로컬 기동 전 체크
+
+- `just dev` (또는 `just local-deps` + `just local-be`) 로 Supabase CLI + deps 기동 상태인지
+- `.env.dev` 가 있고 `SKIP_DB_MIGRATIONS=1` 포함되어 있는지 (`just local-env-sync` 로 재동기화)
+
+---
+
 ## 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 3.2.0 | 2026.04.21 | Environment-Specific Setup 섹션 추가 (#282 self-hosted 전환 반영) |
 | 3.1.0 | 2026.01.12 | 비동기 프로그래밍 규칙(Send 트레이트) 추가 |
 | 3.0.0 | 2026.01.08 | 코드 예제 제거, 텍스트 설명 중심으로 재구성 (510줄 → 250줄) |
 | 2.0.0 | 2026.01.08 | 문서 대폭 축소 및 구조 개편 (2,338줄 → ~510줄) |

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.metadata_controller import router as metadata_router
+from src.api.raw_posts_controller import router as raw_posts_router
 from src.config import Application
 from src.middleware import global_exception_handler, logging_middleware
 
@@ -12,6 +13,7 @@ def create_app(application: Application) -> FastAPI:
     """기본 FastAPI 앱 생성 및 동기적 설정"""
     # Sentry는 FastAPI 인스턴스 생성 전에 초기화해야 한다
     from .app import _init_sentry
+
     _init_sentry()
     environment = application.environment()
 
@@ -39,8 +41,6 @@ async def initialize_async_resources(application: Application):
 
 
 def configure_routes(app: FastAPI, application: Application) -> FastAPI:
-    logger = application.logger()
-    infrastructure = application.infrastructure()
     environment = application.environment()
 
     # CORS 설정
@@ -95,6 +95,9 @@ def configure_routes(app: FastAPI, application: Application) -> FastAPI:
 
     # 메타데이터 추출 테스트 컨트롤러 라우터 등록
     app.include_router(metadata_router)
+
+    # #214 raw_posts 수동 trigger
+    app.include_router(raw_posts_router)
 
     return app
 

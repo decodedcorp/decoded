@@ -16,7 +16,7 @@ describe("toDecodeShowcaseData", () => {
       sub_category: "Outerwear",
     } as unknown as string[],
     created_at: "2026-01-01",
-    spot_id: "spot-1",
+    spot_id: null,
     normalizedCenter: { x: 0.25, y: 0.35 },
     normalizedBox: { top: 0.3, left: 0.2, width: 0.1, height: 0.1 },
     // Required ItemRow fields

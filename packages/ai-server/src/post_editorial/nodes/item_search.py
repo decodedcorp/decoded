@@ -6,11 +6,13 @@ import json
 import logging
 from typing import Any
 
+import asyncpg
 import httpx
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from supabase import AsyncClient, acreate_client
+
+from src.managers.database import DatabaseManager
 
 from ..state import PostEditorialState
 from ..config import get_settings
@@ -41,12 +43,14 @@ def _extract_items_from_post(state: PostEditorialState) -> list[dict]:
             brand = None
             if sol.metadata and isinstance(sol.metadata, dict):
                 brand = sol.metadata.get("brand")
-            items.append({
-                "title": sol.title,
-                "brand": brand,
-                "original_url": sol.original_url,
-                "spot_id": spot.id,
-            })
+            items.append(
+                {
+                    "title": sol.title,
+                    "brand": brand,
+                    "original_url": sol.original_url,
+                    "spot_id": spot.id,
+                }
+            )
     return items
 
 
@@ -62,7 +66,7 @@ def _extract_brands(state: PostEditorialState) -> list[str]:
 
 
 async def _query_internal_items(
-    client: AsyncClient,
+    conn: asyncpg.Connection,
     brands: list[str],
     current_solution_ids: set[str],
 ) -> list[dict]:
@@ -70,18 +74,36 @@ async def _query_internal_items(
         return []
     all_results = []
     for brand in brands[:5]:
-        result = (
-            await client.table("solutions")
-            .select("id, title, thumbnail_url, original_url, metadata")
-            .ilike("metadata->>brand", f"%{brand}%")
-            .limit(10)
-            .execute()
+        pattern = f"%{brand}%"
+        rows = await conn.fetch(
+            """
+            SELECT id, title, thumbnail_url, original_url, metadata
+              FROM public.solutions
+             WHERE metadata->>'brand' ILIKE $1
+             LIMIT 10
+            """,
+            pattern,
         )
-        for row in (result.data or []):
-            if row["id"] not in current_solution_ids:
-                all_results.append(row)
-    seen_ids = set()
-    deduped = []
+        for row in rows:
+            row_id = str(row["id"])
+            if row_id not in current_solution_ids:
+                metadata = row["metadata"]
+                if isinstance(metadata, str):
+                    try:
+                        metadata = json.loads(metadata)
+                    except json.JSONDecodeError:
+                        metadata = None
+                all_results.append(
+                    {
+                        "id": row_id,
+                        "title": row["title"],
+                        "thumbnail_url": row["thumbnail_url"],
+                        "original_url": row["original_url"],
+                        "metadata": metadata,
+                    }
+                )
+    seen_ids: set[str] = set()
+    deduped: list[dict] = []
     for r in all_results:
         if r["id"] not in seen_ids:
             seen_ids.add(r["id"])
@@ -113,7 +135,12 @@ async def _perplexity_search_items(items: list[dict]) -> tuple[str, list[str]]:
         "Authorization": f"Bearer {settings.perplexity_api_key}",
         "Content-Type": "application/json",
     }
-    payload = {"model": "sonar", "messages": [{"role": "user", "content": prompt}], "max_tokens": 2048, "temperature": 0.2}
+    payload = {
+        "model": "sonar",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 2048,
+        "temperature": 0.2,
+    }
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(url, json=payload, headers=headers)
@@ -141,12 +168,14 @@ async def _extract_metadata_from_urls(
             try:
                 link_preview = await metadata_extract_service.extract_og_metadata(url=url)
                 if link_preview and link_preview.title:
-                    results.append({
-                        "title": link_preview.title or "",
-                        "image_url": link_preview.img_url,
-                        "original_url": url,
-                        "site_name": link_preview.site_name,
-                    })
+                    results.append(
+                        {
+                            "title": link_preview.title or "",
+                            "image_url": link_preview.img_url,
+                            "original_url": url,
+                            "site_name": link_preview.site_name,
+                        }
+                    )
             except Exception as e:
                 logger.debug("[item_search] extract_og failed for %s: %s", url[:60], e)
         logger.info("[item_search] OG extraction: %d/%d URLs (internal)", len(results), len(urls))
@@ -167,7 +196,13 @@ async def _search_external_items(
         return []
     og_results = await _extract_metadata_from_urls(citation_urls, metadata_extract_service)
     return [
-        {"title": r["title"], "brand": None, "image_url": r.get("image_url"), "original_url": r["original_url"], "source": "external"}
+        {
+            "title": r["title"],
+            "brand": None,
+            "image_url": r.get("image_url"),
+            "original_url": r["original_url"],
+            "source": "external",
+        }
         for r in og_results
     ]
 
@@ -208,16 +243,47 @@ def _get_metadata_extract_service(config: Any) -> Any:
     """Get metadata_extract_service from config, or from DI container as fallback."""
     configurable = {}
     if config is not None:
-        configurable = getattr(config, "configurable", {}) if hasattr(config, "configurable") else config.get("configurable", {}) if isinstance(config, dict) else {}
+        configurable = (
+            getattr(config, "configurable", {})
+            if hasattr(config, "configurable")
+            else config.get("configurable", {})
+            if isinstance(config, dict)
+            else {}
+        )
     svc = configurable.get("metadata_extract_service")
     if svc is not None:
         return svc
     # Fallback: get from Application container (same process as ARQ worker)
     try:
         from src.config._container import Application
+
         app = Application()
         return app.metadata().metadata_extract_service()
     except Exception:
+        return None
+
+
+def _get_database_manager(config: Any) -> DatabaseManager | None:
+    """Get DatabaseManager from LangGraph config or DI fallback."""
+    configurable: dict = {}
+    if config is not None:
+        configurable = (
+            getattr(config, "configurable", {})
+            if hasattr(config, "configurable")
+            else config.get("configurable", {})
+            if isinstance(config, dict)
+            else {}
+        )
+    svc = configurable.get("database_manager")
+    if svc is not None:
+        return svc
+    try:
+        from src.config._container import Application
+
+        app = Application()
+        return app.infrastructure().database_manager()
+    except Exception:
+        logger.debug("DatabaseManager unavailable — internal item search will skip")
         return None
 
 
@@ -232,17 +298,23 @@ async def item_search_node(state: PostEditorialState, config: Any = None) -> dic
         return {"related_items": []}
 
     metadata_extract_service = _get_metadata_extract_service(config)
+    database_manager = _get_database_manager(config)
 
     try:
         items = _extract_items_from_post(state)
         brands = _extract_brands(state)
         current_sol_ids = {sol.id for spot in post_data.spots for sol in spot.solutions}
-        current_urls = {sol.original_url for spot in post_data.spots for sol in spot.solutions if sol.original_url}
+        current_urls = {
+            sol.original_url
+            for spot in post_data.spots
+            for sol in spot.solutions
+            if sol.original_url
+        }
 
-        settings = get_settings()
-        sb_client = await acreate_client(settings.supabase_url, settings.supabase_service_role_key)
-
-        internal_results = await _query_internal_items(sb_client, brands, current_sol_ids)
+        internal_results: list[dict] = []
+        if database_manager is not None:
+            async with database_manager.acquire() as conn:
+                internal_results = await _query_internal_items(conn, brands, current_sol_ids)
         internal_candidates = [
             {
                 "title": r.get("title", ""),
@@ -270,11 +342,16 @@ async def item_search_node(state: PostEditorialState, config: Any = None) -> dic
         if not deduped:
             return {"related_items": []}
 
+        settings = get_settings()
         genai_client = genai.Client(api_key=settings.gemini_api_key)
-        artist_info = " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
+        artist_info = (
+            " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
+        )
         items_summary = ", ".join(f"{i.get('brand', '')} {i['title']}".strip() for i in items)
         post_summary = f"아티스트: {artist_info}, 아이템: {items_summary}"
-        original_items_for_prompt = [{"spot_id": i["spot_id"], "title": i["title"], "brand": i.get("brand")} for i in items]
+        original_items_for_prompt = [
+            {"spot_id": i["spot_id"], "title": i["title"], "brand": i.get("brand")} for i in items
+        ]
 
         prompt = _build_ranking_prompt(
             post_summary,

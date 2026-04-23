@@ -61,8 +61,35 @@ pub async fn admin_db_middleware(
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 mod tests {
+    use axum::{
+        body::Body,
+        http::{Request as HttpRequest, StatusCode},
+        middleware, routing, Router,
+    };
+    use tower::ServiceExt;
+
     use crate::middleware::auth::User;
     use uuid::Uuid;
+
+    async fn ok_handler() -> StatusCode {
+        StatusCode::OK
+    }
+
+    fn admin_app() -> Router {
+        Router::new()
+            .route("/admin", routing::get(ok_handler))
+            .layer(middleware::from_fn(super::admin_middleware))
+    }
+
+    fn admin_db_app(state: crate::config::AppState) -> Router {
+        Router::new()
+            .route("/admin", routing::get(ok_handler))
+            .with_state(state.clone())
+            .layer(middleware::from_fn_with_state(
+                state,
+                super::admin_db_middleware,
+            ))
+    }
 
     /// User 구조체의 is_admin 필드 검증 테스트
     #[test]
@@ -84,5 +111,97 @@ mod tests {
             is_admin: false,
         };
         assert!(!regular_user.is_admin);
+    }
+
+    #[tokio::test]
+    async fn admin_middleware_allows_admin_user() {
+        let app = admin_app();
+        let mut request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(crate::tests::helpers::mock_admin_user());
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn admin_middleware_rejects_missing_user() {
+        let app = admin_app();
+        let request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn admin_middleware_rejects_non_admin_user() {
+        let app = admin_app();
+        let mut request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(crate::tests::helpers::mock_user());
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn admin_db_middleware_allows_database_admin() {
+        let db = crate::tests::helpers::mock_db_with_query_results(vec![vec![
+            crate::tests::fixtures::admin_user_model(),
+        ]]);
+        let app = admin_db_app(crate::tests::helpers::test_app_state(db));
+        let mut request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(crate::tests::helpers::mock_admin_user());
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn admin_db_middleware_rejects_missing_user() {
+        let app = admin_db_app(crate::tests::helpers::test_app_state(
+            crate::tests::helpers::empty_mock_db(),
+        ));
+        let request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn admin_db_middleware_rejects_non_admin_database_user() {
+        let db = crate::tests::helpers::mock_db_with_query_results(vec![vec![
+            crate::tests::fixtures::user_model(),
+        ]]);
+        let app = admin_db_app(crate::tests::helpers::test_app_state(db));
+        let mut request = HttpRequest::builder()
+            .uri("/admin")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(crate::tests::helpers::mock_user());
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 }

@@ -1,4 +1,12 @@
-# Gemini Profile – Documentation & Explanation
+---
+title: Gemini Profile
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, harness]
+---
+
+# Gemini Profile
 
 **Last verified**: 2025-01-27  
 **Version**: 1.0

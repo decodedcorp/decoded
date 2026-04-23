@@ -81,12 +81,24 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database connection established");
 
     // 데이터베이스 마이그레이션 자동 실행
-    tracing::info!("Running database migrations...");
-    if let Err(e) = Migrator::up(&db_connection, None).await {
-        tracing::error!("Failed to run migrations: {}", e);
-        return Err(format!("Migration failed: {}", e).into());
+    // #282: Supabase self-hosted dev 환경에서는 `supabase/migrations/*.sql`이 SOT이고
+    // SeaORM 마이그레이션과 객체가 중복되므로 SKIP_DB_MIGRATIONS=1 로 우회 가능.
+    // B.3 에서 SeaORM 통합이 완료되면 제거.
+    let skip_migrations = std::env::var("SKIP_DB_MIGRATIONS")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if skip_migrations {
+        tracing::warn!(
+            "SKIP_DB_MIGRATIONS=1 set — skipping SeaORM migrations (dev Supabase self-hosted)"
+        );
+    } else {
+        tracing::info!("Running database migrations...");
+        if let Err(e) = Migrator::up(&db_connection, None).await {
+            tracing::error!("Failed to run migrations: {}", e);
+            return Err(format!("Migration failed: {}", e).into());
+        }
+        tracing::info!("Database migrations completed successfully");
     }
-    tracing::info!("Database migrations completed successfully");
 
     // AppState 생성 (마이그레이션용 연결 재사용)
     let state = AppState::with_db_connection(config.clone(), Some(db_connection)).await?;
@@ -129,10 +141,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
         let backend_service =
             BackendGrpcService::new(grpc_state.db.clone(), grpc_state.embedding_client.clone());
-        let grpc_server = MetadataServer::new(backend_service);
+        let metadata_server = MetadataServer::new(backend_service);
+
+        // #214 raw_posts callback removed — ai-server writes DB directly now.
 
         match Server::builder()
-            .add_service(grpc_server)
+            .add_service(metadata_server)
             .serve(grpc_addr_clone.parse().expect("Invalid gRPC address"))
             .await
         {

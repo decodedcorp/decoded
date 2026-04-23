@@ -27,6 +27,11 @@ pub struct AdminPostListQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
 
+    /// 통합 검색어 (artist_name | group_name | context 에 부분매칭 OR).
+    /// 2글자 이상 권장. 주로 admin 자동완성 UX 에서 사용.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q: Option<String>,
+
     /// 기존 PostListQuery 필드들
     #[serde(flatten)]
     pub base_query: PostListQuery,
@@ -52,9 +57,10 @@ pub struct PostStatusUpdate {
     ),
     params(
         ("status" = Option<String>, Query, description = "상태 필터 (active, hidden, deleted 등)"),
-        ("artist_name" = Option<String>, Query, description = "아티스트명 필터"),
-        ("group_name" = Option<String>, Query, description = "그룹명 필터"),
-        ("context" = Option<String>, Query, description = "상황 필터"),
+        ("q" = Option<String>, Query, description = "통합 검색어 (artist_name/group_name/context 부분매칭 OR)"),
+        ("artist_name" = Option<String>, Query, description = "아티스트명 필터 (정확매칭)"),
+        ("group_name" = Option<String>, Query, description = "그룹명 필터 (정확매칭)"),
+        ("context" = Option<String>, Query, description = "상황 필터 (정확매칭)"),
         ("user_id" = Option<Uuid>, Query, description = "사용자 ID 필터"),
         ("sort" = Option<String>, Query, description = "정렬: recent | popular | trending"),
         ("page" = Option<u64>, Query, description = "페이지 번호"),
@@ -97,7 +103,7 @@ pub async fn list_posts(
 )]
 pub async fn update_post_status(
     State(state): State<AppState>,
-    _extension: axum::Extension<User>, // Admin 미들웨어에서 이미 검증됨
+    axum::Extension(user): axum::Extension<User>,
     Path(post_id): Path<Uuid>,
     Json(dto): Json<PostStatusUpdate>,
 ) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
@@ -115,6 +121,7 @@ pub async fn update_post_status(
         state.db.as_ref(),
         post_id,
         &dto.status,
+        user.id,
     )
     .await?;
     Ok(Json(post))
@@ -137,11 +144,11 @@ pub async fn update_post_status(
 )]
 pub async fn admin_update_post(
     State(state): State<AppState>,
-    _extension: axum::Extension<User>,
+    axum::Extension(user): axum::Extension<User>,
     Path(post_id): Path<Uuid>,
     Json(dto): Json<UpdatePostDto>,
 ) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
-    let post = service::admin_update_post(&state, post_id, dto).await?;
+    let post = service::admin_update_post(&state, post_id, dto, user.id).await?;
     Ok(Json(post))
 }
 

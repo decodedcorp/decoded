@@ -24,6 +24,14 @@ import type { StructuredFieldsState } from "@/lib/api/mutation-types";
 export type UploadStatus = "pending" | "uploading" | "uploaded" | "error";
 export type RequestStep = 1 | 2 | 3;
 
+export type DisabledReason =
+  | "need_image"
+  | "need_fork_choice"
+  | "need_spot"
+  | "need_solution"
+  | "submitting"
+  | null;
+
 export interface UploadedImage {
   id: string;
   file: File;
@@ -106,6 +114,9 @@ interface RequestState {
   isSubmitting: boolean;
   submitError: string | null;
 
+  // Instance guard (prevents stale writes from unmounted hook owners)
+  activeInstanceId: string | null;
+
   // Actions - Images
   addImage: (file: File) => string | null;
   addImages: (files: File[]) => string[];
@@ -129,7 +140,9 @@ interface RequestState {
   setDetectedSpots: (spots: DetectedSpot[]) => void;
   selectSpot: (spotId: string | null) => void;
   addSpot: (x: number, y: number, categoryCode?: string) => void;
+  moveSpot: (spotId: string, x: number, y: number) => void;
   removeSpot: (spotId: string) => void;
+  restoreSpot: (spot: DetectedSpot, atIndex?: number) => void;
 
   // Actions - Solution
   setSpotSolution: (spotId: string, solution: SpotSolutionData) => void;
@@ -154,8 +167,20 @@ interface RequestState {
   setStep: (step: RequestStep) => void;
   canProceedToNextStep: () => boolean;
 
+  // Actions - Back navigation
+  backToFork: () => void;
+  backToUpload: () => void;
+
+  // Selectors
+  hasInProgressWork: () => boolean;
+  disabledReason: () => DisabledReason;
+
   // Actions - Reset
   resetRequestFlow: () => void;
+
+  // Actions - Instance guard
+  setActiveInstance: (id: string | null) => void;
+  resetIfActive: (id: string) => void;
 
   // User type selection
   setUserKnowsItems: (value: boolean) => void;
@@ -224,6 +249,8 @@ const initialState = {
   // Step 4
   isSubmitting: false,
   submitError: null as string | null,
+  // Instance guard
+  activeInstanceId: null as string | null,
 };
 
 export const useRequestStore = create<RequestState>((set, get) => ({
@@ -406,6 +433,18 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }));
   },
 
+  moveSpot: (spotId, x, y) => {
+    const clampedX = Math.max(0, Math.min(1, x));
+    const clampedY = Math.max(0, Math.min(1, y));
+    set((state) => ({
+      detectedSpots: state.detectedSpots.map((spot) =>
+        spot.id === spotId
+          ? { ...spot, center: { x: clampedX, y: clampedY } }
+          : spot
+      ),
+    }));
+  },
+
   removeSpot: (spotId) => {
     set((state) => {
       const filteredSpots = state.detectedSpots.filter((s) => s.id !== spotId);
@@ -420,6 +459,26 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         selectedSpotId:
           state.selectedSpotId === spotId ? null : state.selectedSpotId,
       };
+    });
+  },
+
+  restoreSpot: (spot, atIndex) => {
+    set((state) => {
+      // Reject duplicates (e.g., if the user already re-added the same id manually)
+      if (state.detectedSpots.some((s) => s.id === spot.id)) return {};
+      const insertAt =
+        atIndex !== undefined && atIndex >= 0
+          ? Math.min(atIndex, state.detectedSpots.length)
+          : state.detectedSpots.length;
+      const next = [...state.detectedSpots];
+      next.splice(insertAt, 0, spot);
+      // Re-index after insertion so numbering stays contiguous
+      const reindexed = next.map((s, idx) => ({
+        ...s,
+        index: idx + 1,
+        title: s.solution?.title || s.title || `Spot ${idx + 1}`,
+      }));
+      return { detectedSpots: reindexed };
     });
   },
 
@@ -537,6 +596,55 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     });
   },
 
+  backToFork: () => {
+    // Step 2/3에서 fork 화면(userKnowsItems === null)으로 가시적 전이.
+    // Confirm 후에도 "같은 화면에 머무는" 느낌을 주지 않기 위해 userKnowsItems까지 클리어한다.
+    set({
+      detectedSpots: [],
+      selectedSpotId: null,
+      mediaSource: { type: "user_upload", title: "" },
+      groupName: "",
+      artistName: "",
+      context: null,
+      userKnowsItems: null,
+    });
+  },
+
+  backToUpload: () => {
+    const { images } = get();
+    images.forEach((img) => revokePreviewUrl(img.previewUrl));
+    set({
+      images: [],
+      userKnowsItems: null,
+    });
+  },
+
+  hasInProgressWork: () => {
+    const { detectedSpots, mediaSource, context, artistName } = get();
+    return (
+      detectedSpots.length > 0 ||
+      !!mediaSource?.title?.trim() ||
+      context !== null ||
+      !!artistName?.trim()
+    );
+  },
+
+  disabledReason: () => {
+    const { images, userKnowsItems, detectedSpots, isSubmitting } = get();
+    if (isSubmitting) return "submitting";
+    const hasUploaded = images.some((img) => img.status === "uploaded");
+    if (!hasUploaded) return "need_image";
+    if (userKnowsItems === null) return "need_fork_choice";
+    if (detectedSpots.length === 0) return "need_spot";
+    if (
+      userKnowsItems === true &&
+      !detectedSpots.every((s) => s.solution?.originalUrl && s.solution?.title)
+    ) {
+      return "need_solution";
+    }
+    return null;
+  },
+
   resetRequestFlow: () => {
     const { images } = get();
     images.forEach((img) => revokePreviewUrl(img.previewUrl));
@@ -545,6 +653,17 @@ export const useRequestStore = create<RequestState>((set, get) => ({
 
   setUserKnowsItems: (value) => {
     set({ userKnowsItems: value });
+  },
+
+  setActiveInstance: (id) => {
+    set({ activeInstanceId: id });
+  },
+
+  resetIfActive: (id) => {
+    if (get().activeInstanceId !== id) return;
+    const { images } = get();
+    images.forEach((img) => revokePreviewUrl(img.previewUrl));
+    set({ ...initialState, activeInstanceId: null });
   },
 }));
 
@@ -614,6 +733,13 @@ export const selectContext = (state: RequestState) => state.context;
 export const selectIsSubmitting = (state: RequestState) => state.isSubmitting;
 export const selectSubmitError = (state: RequestState) => state.submitError;
 
+// Back navigation selectors
+export const selectHasInProgressWork = (state: RequestState): boolean =>
+  state.hasInProgressWork();
+
+export const selectDisabledReason = (state: RequestState): DisabledReason =>
+  state.disabledReason();
+
 /**
  * Action들을 렌더링 없이 직접 접근
  * 컴포넌트에서 action만 필요할 때 사용 (구독 없음)
@@ -631,7 +757,9 @@ export const getRequestActions = () => {
     setDetectedSpots: state.setDetectedSpots,
     selectSpot: state.selectSpot,
     addSpot: state.addSpot,
+    moveSpot: state.moveSpot,
     removeSpot: state.removeSpot,
+    restoreSpot: state.restoreSpot,
     setSpotSolution: state.setSpotSolution,
     clearSpotSolution: state.clearSpotSolution,
     setDescription: state.setDescription,
@@ -648,5 +776,7 @@ export const getRequestActions = () => {
     setStep: state.setStep,
     resetRequestFlow: state.resetRequestFlow,
     setUserKnowsItems: state.setUserKnowsItems,
+    backToFork: state.backToFork,
+    backToUpload: state.backToUpload,
   };
 };

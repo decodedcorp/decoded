@@ -1,0 +1,20 @@
+[flake8]
+max-line-length = 120
+extend-ignore =
+    # whitespace before ':' — black & PEP 8 conflict
+    E203,
+    # line break before binary operator — black compatible
+    W503
+exclude =
+    .venv,
+    __pycache__,
+    src/grpc/proto,
+    src/generated,
+    build,
+    dist
+per-file-ignores =
+    # User-Agent strings cannot be broken without losing meaning
+    src/services/metadata/clients/web_scraper.py: E501
+    # LLM prompt templates — natural-language content inside f""" blocks
+    src/post_editorial/nodes/editorial.py: E501
+    src/post_editorial/nodes/news_research.py: E501

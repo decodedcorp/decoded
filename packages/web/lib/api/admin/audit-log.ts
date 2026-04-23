@@ -28,6 +28,10 @@ export async function writeAuditLog(entry: AuditLogEntry) {
     });
 
   if (error) {
+    // picks CRUD remains fire-and-forget in TS; admin reports/posts mutations
+    // now go through the Rust API which wraps UPDATE + audit in one transaction
+    // (see #237, `services/audit.rs`). Magazine status uses update_magazine_status()
+    // RPC for the same atomicity.
     console.error("[audit-log] Failed to write:", error.message);
   }
 }

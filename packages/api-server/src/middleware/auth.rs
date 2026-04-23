@@ -114,7 +114,22 @@ pub async fn optional_auth_middleware(
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
+    use axum::{
+        body::Body,
+        http::{Request as HttpRequest, StatusCode},
+        middleware, routing, Router,
+    };
+    use tower::ServiceExt;
+
     use crate::utils::jwt::Claims;
+
+    async fn ok_handler(request: HttpRequest<Body>) -> StatusCode {
+        if request.extensions().get::<User>().is_some() {
+            StatusCode::CREATED
+        } else {
+            StatusCode::OK
+        }
+    }
 
     #[test]
     fn test_user_from_claims_success() {
@@ -303,5 +318,83 @@ mod tests {
         let debug = format!("{:?}", user);
         assert!(debug.contains("test@example.com"));
         assert!(debug.contains("User"));
+    }
+
+    #[tokio::test]
+    async fn auth_middleware_rejects_missing_header() {
+        let app = Router::new()
+            .route("/protected", routing::get(ok_handler))
+            .with_state(crate::tests::helpers::test_config())
+            .layer(middleware::from_fn_with_state(
+                crate::tests::helpers::test_config(),
+                auth_middleware,
+            ));
+
+        let request = HttpRequest::builder()
+            .uri("/protected")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn auth_middleware_rejects_invalid_bearer_format() {
+        let app = Router::new()
+            .route("/protected", routing::get(ok_handler))
+            .with_state(crate::tests::helpers::test_config())
+            .layer(middleware::from_fn_with_state(
+                crate::tests::helpers::test_config(),
+                auth_middleware,
+            ));
+
+        let request = HttpRequest::builder()
+            .uri("/protected")
+            .header("Authorization", "Token not-a-bearer")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn optional_auth_middleware_allows_request_without_header() {
+        let app = Router::new()
+            .route("/optional", routing::get(ok_handler))
+            .with_state(crate::tests::helpers::test_config())
+            .layer(middleware::from_fn_with_state(
+                crate::tests::helpers::test_config(),
+                optional_auth_middleware,
+            ));
+
+        let request = HttpRequest::builder()
+            .uri("/optional")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn optional_auth_middleware_ignores_non_bearer_header() {
+        let app = Router::new()
+            .route("/optional", routing::get(ok_handler))
+            .with_state(crate::tests::helpers::test_config())
+            .layer(middleware::from_fn_with_state(
+                crate::tests::helpers::test_config(),
+                optional_auth_middleware,
+            ));
+
+        let request = HttpRequest::builder()
+            .uri("/optional")
+            .header("Authorization", "Basic abc123")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }

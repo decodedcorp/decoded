@@ -42,9 +42,7 @@ async def _download_image(url: str) -> tuple[bytes, str]:
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         resp = await client.get(url)
         resp.raise_for_status()
-        content_type = (
-            resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
-        )
+        content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
         return resp.content, content_type
 
 

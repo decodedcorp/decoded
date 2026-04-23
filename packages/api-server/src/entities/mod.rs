@@ -31,14 +31,18 @@ pub mod subcategories;
 pub mod synonyms;
 pub mod try_spot_tags;
 pub mod user_badges;
+pub mod user_events;
 pub mod user_social_accounts;
 pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;
 pub mod votes;
+pub mod warehouse_admin_audit_log;
 pub mod warehouse_artists;
 pub mod warehouse_brands;
 pub mod warehouse_groups;
+pub mod warehouse_raw_post_sources;
+pub mod warehouse_raw_posts;
 
 pub use categories::ActiveModel as CategoriesActiveModel;
 pub use categories::Entity as Categories;
@@ -100,6 +104,10 @@ pub use user_badges::ActiveModel as UserBadgesActiveModel;
 pub use user_badges::Entity as UserBadges;
 pub use user_badges::Model as UserBadgesModel;
 
+pub use user_events::ActiveModel as UserEventsActiveModel;
+pub use user_events::Entity as UserEvents;
+pub use user_events::Model as UserEventsModel;
+
 pub use click_logs::ActiveModel as ClickLogsActiveModel;
 pub use click_logs::Entity as ClickLogs;
 pub use click_logs::Model as ClickLogsModel;
@@ -152,6 +160,10 @@ pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
 pub use user_tryon_history::Entity as UserTryonHistory;
 pub use user_tryon_history::Model as UserTryonHistoryModel;
 
+pub use warehouse_admin_audit_log::ActiveModel as WarehouseAdminAuditLogActiveModel;
+pub use warehouse_admin_audit_log::Entity as WarehouseAdminAuditLog;
+pub use warehouse_admin_audit_log::Model as WarehouseAdminAuditLogModel;
+
 pub use warehouse_artists::Entity as WarehouseArtists;
 pub use warehouse_artists::Model as WarehouseArtistsModel;
 
@@ -160,3 +172,11 @@ pub use warehouse_brands::Model as WarehouseBrandsModel;
 
 pub use warehouse_groups::Entity as WarehouseGroups;
 pub use warehouse_groups::Model as WarehouseGroupsModel;
+
+pub use warehouse_raw_post_sources::ActiveModel as WarehouseRawPostSourcesActiveModel;
+pub use warehouse_raw_post_sources::Entity as WarehouseRawPostSources;
+pub use warehouse_raw_post_sources::Model as WarehouseRawPostSourcesModel;
+
+pub use warehouse_raw_posts::ActiveModel as WarehouseRawPostsActiveModel;
+pub use warehouse_raw_posts::Entity as WarehouseRawPosts;
+pub use warehouse_raw_posts::Model as WarehouseRawPostsModel;

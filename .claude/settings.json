@@ -12,12 +12,17 @@
       "Bash(cargo run:*)",
       "Bash(npx tsc:*)",
       "Bash(npx playwright:*)",
+      "Bash(yarn type-check)",
       "Read",
       "Edit",
       "Write",
       "Glob",
       "Grep",
-      "Agent"
+      "Agent",
+      "mcp__pencil__get_screenshot",
+      "mcp__pencil__batch_get",
+      "mcp__pencil__get_style_guide",
+      "mcp__pencil__get_guidelines"
     ],
     "deny": [
       "Bash(rm -rf packages/)",

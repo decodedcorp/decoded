@@ -19,6 +19,7 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
         .nest("/spots", domains::spots::router(config.clone()))
         .nest("/search", domains::search::router(config.clone()))
         .nest("/feed", domains::feed::router(config.clone()))
+        .nest("/events", domains::events::router(config.clone()))
         .nest("/rankings", domains::rankings::router(config.clone()))
         .nest("/badges", domains::badges::router(config.clone()))
         .nest("/earnings", domains::earnings::router(config.clone()))
@@ -27,6 +28,7 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
             "/admin",
             domains::admin::router(state.clone(), config.clone()),
         )
+        .nest("/raw-posts", domains::raw_posts::router(config.clone()))
         // Config가 필요 없는 라우터들
         .nest("/post-magazines", domains::post_magazines::router())
         .nest("/categories", domains::categories::router())

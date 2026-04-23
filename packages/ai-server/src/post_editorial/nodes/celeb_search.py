@@ -4,17 +4,44 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
+import asyncpg
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from supabase import AsyncClient, acreate_client
+
+from src.managers.database import DatabaseManager
 
 from ..state import PostEditorialState
 from ..config import get_settings
 from ..gemini_retry import call_gemini_with_fallback
 
 logger = logging.getLogger(__name__)
+
+
+def _get_database_manager(config: Any) -> DatabaseManager | None:
+    """Fetch DatabaseManager from LangGraph config or DI fallback."""
+    configurable: dict = {}
+    if config is not None:
+        configurable = (
+            getattr(config, "configurable", {})
+            if hasattr(config, "configurable")
+            else config.get("configurable", {})
+            if isinstance(config, dict)
+            else {}
+        )
+    svc = configurable.get("database_manager")
+    if svc is not None:
+        return svc
+    try:
+        from src.config._container import Application
+
+        app = Application()
+        return app.infrastructure().database_manager()
+    except Exception:
+        logger.debug("DatabaseManager unavailable — celeb search will skip")
+        return None
 
 
 class RankedCeleb(BaseModel):
@@ -30,43 +57,58 @@ class CelebRankingOutput(BaseModel):
     celebs: list[RankedCeleb] = []
 
 
-async def _get_supabase_client() -> AsyncClient:
-    settings = get_settings()
-    return await acreate_client(settings.supabase_url, settings.supabase_service_role_key)
+def _row_to_dict(row: asyncpg.Record | None) -> dict | None:
+    if row is None:
+        return None
+    out = dict(row)
+    # Cast UUIDs to str, parse jsonb-as-text if needed
+    if "id" in out:
+        out["id"] = str(out["id"])
+    meta = out.get("metadata")
+    if isinstance(meta, str):
+        try:
+            out["metadata"] = json.loads(meta)
+        except json.JSONDecodeError:
+            out["metadata"] = None
+    return out
 
 
 async def _get_artist_from_warehouse(
-    client: AsyncClient, artist_id: str | None, group_id: str | None
+    conn: asyncpg.Connection, artist_id: str | None, group_id: str | None
 ) -> dict:
     """Fetch canonical artist/group data from warehouse tables."""
     info: dict = {}
     if artist_id:
         try:
-            result = (
-                await client.schema("warehouse")
-                .table("artists")
-                .select("id, name_ko, name_en, profile_image_url, metadata")
-                .eq("id", artist_id)
-                .limit(1)
-                .execute()
+            row = await conn.fetchrow(
+                """
+                SELECT id, name_ko, name_en, profile_image_url, metadata
+                  FROM warehouse.artists
+                 WHERE id = $1::uuid
+                 LIMIT 1
+                """,
+                artist_id,
             )
-            if result.data:
-                info["artist"] = result.data[0]
+            converted = _row_to_dict(row)
+            if converted:
+                info["artist"] = converted
         except Exception:
             logger.debug("warehouse artist lookup failed for %s", artist_id, exc_info=True)
 
     if group_id:
         try:
-            result = (
-                await client.schema("warehouse")
-                .table("groups")
-                .select("id, name_ko, name_en, profile_image_url, metadata")
-                .eq("id", group_id)
-                .limit(1)
-                .execute()
+            row = await conn.fetchrow(
+                """
+                SELECT id, name_ko, name_en, profile_image_url, metadata
+                  FROM warehouse.groups
+                 WHERE id = $1::uuid
+                 LIMIT 1
+                """,
+                group_id,
             )
-            if result.data:
-                info["group"] = result.data[0]
+            converted = _row_to_dict(row)
+            if converted:
+                info["group"] = converted
         except Exception:
             logger.debug("warehouse group lookup failed for %s", group_id, exc_info=True)
 
@@ -74,7 +116,7 @@ async def _get_artist_from_warehouse(
 
 
 async def _query_similar_posts(
-    client: AsyncClient,
+    conn: asyncpg.Connection,
     post_id: str,
     artist_id: str | None,
     group_id: str | None,
@@ -84,47 +126,49 @@ async def _query_similar_posts(
     """Find similar posts — prefer FK-based matching, fallback to ilike."""
     # FK-based matching (preferred)
     if artist_id or group_id:
-        conditions = []
-        if artist_id:
-            conditions.append(f"artist_id.eq.{artist_id}")
-        if group_id:
-            conditions.append(f"group_id.eq.{group_id}")
-        or_filter = ",".join(conditions)
-        result = (
-            await client.table("posts")
-            .select("id, image_url, artist_name, group_name, title")
-            .or_(or_filter)
-            .neq("id", post_id)
-            .eq("status", "active")
-            .limit(20)
-            .execute()
+        rows = await conn.fetch(
+            """
+            SELECT id, image_url, artist_name, group_name, title
+              FROM public.posts
+             WHERE (($1::uuid IS NOT NULL AND artist_id = $1::uuid)
+                    OR ($2::uuid IS NOT NULL AND group_id = $2::uuid))
+               AND id <> $3::uuid
+               AND status = 'active'
+             LIMIT 20
+            """,
+            artist_id,
+            group_id,
+            post_id,
         )
-        if result.data:
-            return result.data
+        if rows:
+            return [{**r, "id": str(r["id"])} for r in (dict(row) for row in rows)]
 
     # Fallback: string-based matching
-    conditions = []
-    if artist_name:
-        conditions.append(f"artist_name.ilike.%{artist_name}%")
-    if group_name:
-        conditions.append(f"group_name.ilike.%{group_name}%")
-    if not conditions:
+    if not (artist_name or group_name):
         return []
-    or_filter = ",".join(conditions)
-    result = (
-        await client.table("posts")
-        .select("id, image_url, artist_name, group_name, title")
-        .or_(or_filter)
-        .neq("id", post_id)
-        .eq("status", "active")
-        .limit(20)
-        .execute()
+    rows = await conn.fetch(
+        """
+        SELECT id, image_url, artist_name, group_name, title
+          FROM public.posts
+         WHERE (($1::text IS NOT NULL AND artist_name ILIKE '%' || $1::text || '%')
+                OR ($2::text IS NOT NULL AND group_name ILIKE '%' || $2::text || '%'))
+           AND id <> $3::uuid
+           AND status = 'active'
+         LIMIT 20
+        """,
+        artist_name,
+        group_name,
+        post_id,
     )
-    return result.data or []
+    return [{**r, "id": str(r["id"])} for r in (dict(row) for row in rows)]
 
 
-def _build_celeb_ranking_prompt(post_summary: str, candidates_json: str, warehouse_context: str) -> str:
-    context_block = f"\n## 아티스트 프로필 (warehouse)\n{warehouse_context}\n" if warehouse_context else ""
+def _build_celeb_ranking_prompt(
+    post_summary: str, candidates_json: str, warehouse_context: str
+) -> str:
+    context_block = (
+        f"\n## 아티스트 프로필 (warehouse)\n{warehouse_context}\n" if warehouse_context else ""
+    )
     return f"""당신은 패션 매거진 에디터입니다.
 다음 포스트 정보와 셀럽 후보를 바탕으로 관련성을 랭킹해주세요.
 
@@ -153,29 +197,34 @@ async def _rank_celebs(client: genai.Client, prompt: str, model: str) -> CelebRa
     return CelebRankingOutput.model_validate_json(raw_text)
 
 
-async def celeb_search_node(state: PostEditorialState) -> dict:
+async def celeb_search_node(state: PostEditorialState, config: Any = None) -> dict:
     """Query DB for similar celebs and AI-rank them."""
     existing = state.get("celeb_list")
     if existing:
         return {}
 
+    database_manager = _get_database_manager(config)
+    if database_manager is None:
+        logger.warning("celeb_search_node: database_manager not available; skipping")
+        return {"celeb_list": []}
+
     try:
         post_data = state["post_data"]
-        sb_client = await _get_supabase_client()
 
-        # Fetch warehouse artist/group data
-        warehouse_info = await _get_artist_from_warehouse(
-            sb_client, post_data.artist_id, post_data.group_id
-        )
+        async with database_manager.acquire() as conn:
+            # Fetch warehouse artist/group data
+            warehouse_info = await _get_artist_from_warehouse(
+                conn, post_data.artist_id, post_data.group_id
+            )
 
-        similar_posts = await _query_similar_posts(
-            sb_client,
-            post_data.id,
-            post_data.artist_id,
-            post_data.group_id,
-            post_data.artist_name,
-            post_data.group_name,
-        )
+            similar_posts = await _query_similar_posts(
+                conn,
+                post_data.id,
+                post_data.artist_id,
+                post_data.group_id,
+                post_data.artist_name,
+                post_data.group_name,
+            )
 
         if not similar_posts:
             return {"celeb_list": []}
@@ -243,7 +292,9 @@ async def celeb_search_node(state: PostEditorialState) -> dict:
             celeb_dict = c.model_dump()
             if not celeb_dict.get("celeb_image_url"):
                 if "artist" in warehouse_info:
-                    celeb_dict["celeb_image_url"] = warehouse_info["artist"].get("profile_image_url")
+                    celeb_dict["celeb_image_url"] = warehouse_info["artist"].get(
+                        "profile_image_url"
+                    )
                 elif "group" in warehouse_info:
                     celeb_dict["celeb_image_url"] = warehouse_info["group"].get("profile_image_url")
             celeb_results.append(celeb_dict)

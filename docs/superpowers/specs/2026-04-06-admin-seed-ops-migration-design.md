@@ -1,3 +1,11 @@
+---
+title: Admin Seed-Ops Migration Design
+owner: human
+status: draft
+updated: 2026-04-06
+tags: [ops, db]
+---
+
 # Admin Seed-Ops Migration Design
 
 > **Issue**: decodedcorp/decoded-monorepo#101
@@ -12,16 +20,16 @@
 
 ### 마이그레이션 대상 (seed-ops 전체)
 
-| seed-ops 페이지 | 모노레포 라우트 | 설명 |
-|-----------------|----------------|------|
-| `/candidates` | `/admin/seed/candidates` | seed 후보 목록 (draft/approved/rejected 필터) |
-| `/candidates/[id]` | `/admin/seed/candidates/[id]` | 후보 상세 + source 확정 + 검수 |
-| `/review` | `/admin/review` | 통합 검수 큐 |
-| `/artists` | `/admin/entities/artists` | 아티스트 CRUD |
-| `/brands` | `/admin/entities/brands` | 브랜드 CRUD |
-| `/group-members` | `/admin/entities/group-members` | 그룹 멤버 관리 |
-| `/post-images` | `/admin/seed/post-images` | 포스트 이미지 대시보드 |
-| `/post-spots` | `/admin/seed/post-spots` | 스팟/솔루션 대시보드 |
+| seed-ops 페이지    | 모노레포 라우트                 | 설명                                          |
+| ------------------ | ------------------------------- | --------------------------------------------- |
+| `/candidates`      | `/admin/seed/candidates`        | seed 후보 목록 (draft/approved/rejected 필터) |
+| `/candidates/[id]` | `/admin/seed/candidates/[id]`   | 후보 상세 + source 확정 + 검수                |
+| `/review`          | `/admin/review`                 | 통합 검수 큐                                  |
+| `/artists`         | `/admin/entities/artists`       | 아티스트 CRUD                                 |
+| `/brands`          | `/admin/entities/brands`        | 브랜드 CRUD                                   |
+| `/group-members`   | `/admin/entities/group-members` | 그룹 멤버 관리                                |
+| `/post-images`     | `/admin/seed/post-images`       | 포스트 이미지 대시보드                        |
+| `/post-spots`      | `/admin/seed/post-spots`        | 스팟/솔루션 대시보드                          |
 
 ### 추가 기능 (신규)
 
@@ -59,11 +67,11 @@
 
 ### 데이터 접근 (하이브리드)
 
-| 작업 | 방식 | 이유 |
-|------|------|------|
-| 목록 조회, 필터, 검색 | Supabase 직접 (warehouse schema) | 빠른 읽기, 실시간 필터 |
-| 상태 변경, CRUD 쓰기 | Next.js API Routes → Supabase service_role | seed-ops 패턴 유지 |
-| Audit log 기록 | Next.js API Route 미들웨어 (자동) | 모든 변경 중앙 로깅 |
+| 작업                  | 방식                                       | 이유                   |
+| --------------------- | ------------------------------------------ | ---------------------- |
+| 목록 조회, 필터, 검색 | Supabase 직접 (warehouse schema)           | 빠른 읽기, 실시간 필터 |
+| 상태 변경, CRUD 쓰기  | Next.js API Routes → Supabase service_role | seed-ops 패턴 유지     |
+| Audit log 기록        | Next.js API Route 미들웨어 (자동)          | 모든 변경 중앙 로깅    |
 
 ### Admin Auth 변경
 
@@ -116,18 +124,19 @@ CREATE INDEX idx_audit_log_created ON warehouse.admin_audit_log(created_at DESC)
 
 ### 공통 컴포넌트
 
-| 컴포넌트 | 역할 |
-|----------|------|
-| `AdminDataTable` | 정렬/필터/페이지네이션/벌크 선택 테이블 |
-| `AdminStatusBadge` | draft/approved/rejected 상태 뱃지 |
+| 컴포넌트             | 역할                                          |
+| -------------------- | --------------------------------------------- |
+| `AdminDataTable`     | 정렬/필터/페이지네이션/벌크 선택 테이블       |
+| `AdminStatusBadge`   | draft/approved/rejected 상태 뱃지             |
 | `AdminBulkActionBar` | 벌크 액션 툴바 (선택된 항목에 대한 일괄 작업) |
-| `AdminDetailPanel` | 상세 보기 슬라이드 패널 |
-| `AdminImagePreview` | 이미지 프리뷰 (외부 URL 지원) |
-| `AuditLogEntry` | audit log 한 줄 표시 + diff 뷰어 |
+| `AdminDetailPanel`   | 상세 보기 슬라이드 패널                       |
+| `AdminImagePreview`  | 이미지 프리뷰 (외부 URL 지원)                 |
+| `AuditLogEntry`      | audit log 한 줄 표시 + diff 뷰어              |
 
 ## Implementation Phases
 
 ### Phase 0: Admin Auth + 공통 기반
+
 - Admin 로그인을 이메일/패스워드로 변경
 - `AdminDataTable`, `AdminStatusBadge`, `AdminBulkActionBar` 공통 컴포넌트
 - 사이드바에 Seed Pipeline, Entities 메뉴 그룹 추가
@@ -135,17 +144,20 @@ CREATE INDEX idx_audit_log_created ON warehouse.admin_audit_log(created_at DESC)
 - **순차 실행** (공통 패턴 확립)
 
 ### Phase 1: 엔티티 관리
+
 - `/admin/entities/artists` — 아티스트 목록/CRUD
 - `/admin/entities/brands` — 브랜드 목록/CRUD
 - `/admin/entities/group-members` — 그룹 멤버 관리
 - **순차 실행** (공통 테이블 패턴 검증)
 
 ### Phase 2: Seed 파이프라인 (병렬)
+
 - **Agent A**: `/admin/seed/candidates` + `/admin/seed/candidates/[id]`
 - **Agent B**: `/admin/seed/post-images` + `/admin/seed/post-spots`
 - **Agent C**: `/admin/review` — 통합 검수 큐
 
 ### Phase 3: 추가 기능 (병렬)
+
 - **Agent A**: 벌크 액션 (AdminBulkActionBar 연동)
 - **Agent B**: `/admin/audit-log` — 이력 조회/필터 UI
 - **Agent C**: 변경 이력 diff 뷰어 + 롤백 기능

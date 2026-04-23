@@ -1,11 +1,21 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import Image from "next/image";
 import type { PostMagazineNewsReference } from "@/lib/api/mutation-types";
+
+const isValidImageUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -23,6 +33,7 @@ export function MagazineNewsSection({
   isModal,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [imgErrorSet, setImgErrorSet] = useState<Set<string>>(new Set());
 
   useGSAP(() => {
     if (!sectionRef.current || isModal) return;
@@ -93,17 +104,29 @@ export function MagazineNewsSection({
                   rel="noopener noreferrer"
                   className="news-card group flex gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all hover:border-border hover:shadow-md"
                 >
-                  {ref.og_image && (
-                    <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                    {isValidImageUrl(ref.og_image) &&
+                    !imgErrorSet.has(`${ref.url}-${i}`) ? (
                       <Image
-                        src={ref.og_image}
+                        src={ref.og_image!}
                         alt={ref.title}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="80px"
+                        onError={() =>
+                          setImgErrorSet((prev) =>
+                            new Set(prev).add(`${ref.url}-${i}`)
+                          )
+                        }
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <span className="text-lg font-semibold uppercase text-muted-foreground/50">
+                          {(ref.source ?? ref.title).charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex min-w-0 flex-1 flex-col justify-between">
                     <div>

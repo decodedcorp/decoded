@@ -6,10 +6,11 @@
 use sea_orm::{DatabaseConnection, EntityTrait, QueryOrder, QuerySelect};
 
 use crate::entities::warehouse_artists::{Column as ArtistColumn, Entity as WarehouseArtists};
+use crate::entities::warehouse_brands::{Column as BrandColumn, Entity as WarehouseBrands};
 use crate::entities::warehouse_groups::{Column as GroupColumn, Entity as WarehouseGroups};
 use crate::error::{AppError, AppResult};
 
-use super::dto::{WarehouseProfile, WarehouseProfilesResponse};
+use super::dto::{WarehouseBrandProfile, WarehouseProfile, WarehouseProfilesResponse};
 
 /// 기본 limit
 pub const DEFAULT_LIMIT: u64 = 500;
@@ -54,5 +55,24 @@ pub async fn list_profiles(
         })
         .collect();
 
-    Ok(WarehouseProfilesResponse { artists, groups })
+    let brands = WarehouseBrands::find()
+        .order_by_desc(BrandColumn::CreatedAt)
+        .limit(limit)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?
+        .into_iter()
+        .map(|b| WarehouseBrandProfile {
+            id: b.id,
+            name_ko: b.name_ko,
+            name_en: b.name_en,
+            logo_image_url: b.logo_image_url,
+        })
+        .collect();
+
+    Ok(WarehouseProfilesResponse {
+        artists,
+        groups,
+        brands,
+    })
 }

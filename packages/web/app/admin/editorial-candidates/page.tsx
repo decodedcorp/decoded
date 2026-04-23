@@ -2,6 +2,7 @@
 
 import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import {
   useEditorialCandidates,
   useGenerateEditorial,
@@ -11,6 +12,7 @@ import {
   CandidateTableSkeleton,
 } from "@/lib/components/admin/editorial/CandidateTable";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
+import { AdminEmptyState } from "@/lib/components/admin/common";
 
 function EditorialCandidatesContent() {
   const searchParams = useSearchParams();
@@ -104,21 +106,31 @@ function EditorialCandidatesContent() {
       {candidatesQuery.isLoading || candidatesQuery.isError ? (
         <CandidateTableSkeleton />
       ) : candidatesQuery.data ? (
-        <>
-          <CandidateTable
-            data={candidatesQuery.data.data}
-            onGenerate={handleGenerate}
-            generatingId={generatingId}
-          />
-
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
+        candidatesQuery.data.data.length === 0 ? (
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <AdminEmptyState
+              icon={<Sparkles className="w-12 h-12" />}
+              title="No editorial candidates"
+              description="Posts with 4+ spots and at least 1 solution per spot will appear here as candidates for editorial promotion."
             />
-          )}
-        </>
+          </div>
+        ) : (
+          <>
+            <CandidateTable
+              data={candidatesQuery.data.data}
+              onGenerate={handleGenerate}
+              generatingId={generatingId}
+            />
+
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </>
+        )
       ) : (
         <CandidateTableSkeleton />
       )}

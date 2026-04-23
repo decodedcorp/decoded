@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useRef } from "react";
 import Image from "next/image";
 import {
   type UploadedImage,
@@ -15,9 +15,14 @@ interface DetectionViewProps {
   isRevealing?: boolean;
   selectedSpotId?: string | null;
   onSpotClick?: (spot: DetectedSpot) => void;
+  onSpotMove?: (spotId: string, x: number, y: number) => void; // normalized 0-1
   onImageClick?: (x: number, y: number) => void; // 이미지 클릭 시 normalized 좌표 전달
   layout?: "default" | "fullscreen";
 }
+
+// Pixel distance above which a pointer interaction is treated as a drag,
+// not a click. Below this threshold we keep the original click semantics.
+const DRAG_THRESHOLD_PX = 4;
 
 /**
  * DetectionView - AI 감지 결과를 보여주는 뷰
@@ -34,22 +39,93 @@ export const DetectionView = memo(
     isRevealing = false,
     selectedSpotId,
     onSpotClick,
+    onSpotMove,
     onImageClick,
     layout = "default",
   }: DetectionViewProps) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const dragStateRef = useRef<{
+      spotId: string | null;
+      startX: number;
+      startY: number;
+      moved: boolean;
+    }>({ spotId: null, startX: 0, startY: 0, moved: false });
+    // After a drag, suppress the synthetic click that would otherwise
+    // fire on pointer-up (from both the Hotspot button and the image
+    // overlay beneath it if the pointer ended outside the button).
+    const suppressNextClickRef = useRef(false);
+
+    const normalizedFromEvent = (
+      clientX: number,
+      clientY: number
+    ): { x: number; y: number } | null => {
+      if (!containerRef.current) return null;
+      const rect = containerRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      return {
+        x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+        y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+      };
+    };
+
+    const handleSpotPointerDown = (
+      e: React.PointerEvent<HTMLButtonElement>,
+      spot: DetectedSpot
+    ) => {
+      if (!onSpotMove) return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragStateRef.current = {
+        spotId: spot.id,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+      };
+    };
+
+    const handleSpotPointerMove = (
+      e: React.PointerEvent<HTMLButtonElement>
+    ) => {
+      const drag = dragStateRef.current;
+      if (!drag.spotId || !onSpotMove) return;
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      drag.moved = true;
+      const coords = normalizedFromEvent(e.clientX, e.clientY);
+      if (!coords) return;
+      onSpotMove(drag.spotId, coords.x, coords.y);
+    };
+
+    const handleSpotPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+      const drag = dragStateRef.current;
+      if (!drag.spotId) return;
+      if (drag.moved) {
+        // Finalize position (last move already committed coords) and
+        // suppress the synthetic click that follows pointer-up.
+        const coords = normalizedFromEvent(e.clientX, e.clientY);
+        if (coords && onSpotMove) onSpotMove(drag.spotId, coords.x, coords.y);
+        suppressNextClickRef.current = true;
+      }
+      dragStateRef.current = {
+        spotId: null,
+        startX: 0,
+        startY: 0,
+        moved: false,
+      };
+    };
+
     // 이미지 클릭 핸들러 - normalized 좌표로 변환
     const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!onImageClick || isDetecting) return;
+      if (suppressNextClickRef.current) {
+        // Ate the click that terminated a drag — do not create a new spot.
+        suppressNextClickRef.current = false;
+        return;
+      }
 
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-
-      // 클램프 0-1
-      const clampedX = Math.max(0, Math.min(1, x));
-      const clampedY = Math.max(0, Math.min(1, y));
-
-      onImageClick(clampedX, clampedY);
+      const coords = normalizedFromEvent(e.clientX, e.clientY);
+      if (!coords) return;
+      onImageClick(coords.x, coords.y);
     };
     const containerClasses =
       layout === "fullscreen"
@@ -57,7 +133,7 @@ export const DetectionView = memo(
         : "relative w-full aspect-[3/4] max-w-md mx-auto rounded-xl overflow-hidden bg-foreground/5";
 
     return (
-      <div className={containerClasses}>
+      <div ref={containerRef} className={containerClasses}>
         {/* 이미지 */}
         <Image
           src={image.previewUrl}
@@ -180,7 +256,19 @@ export const DetectionView = memo(
               revealDelay={spot.center.y * 1000}
               glow={true}
               label={`Spot ${spot.index}${spot.label ? `: ${spot.label}` : ""}`}
-              onClick={() => onSpotClick?.(spot)}
+              style={onSpotMove ? { touchAction: "none" } : undefined}
+              onPointerDown={(e) => handleSpotPointerDown(e, spot)}
+              onPointerMove={handleSpotPointerMove}
+              onPointerUp={handleSpotPointerUp}
+              onPointerCancel={handleSpotPointerUp}
+              onClick={(e) => {
+                if (suppressNextClickRef.current) {
+                  e.stopPropagation();
+                  suppressNextClickRef.current = false;
+                  return;
+                }
+                onSpotClick?.(spot);
+              }}
             />
           ))}
 

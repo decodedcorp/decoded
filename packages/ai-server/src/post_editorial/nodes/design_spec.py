@@ -71,9 +71,9 @@ async def design_spec_node(state: PostEditorialState) -> dict:
     """Generate design spec (colors, fonts) from post image and context."""
     try:
         post_data = state["post_data"]
-        artist_info = " / ".join(
-            filter(None, [post_data.artist_name, post_data.group_name])
-        ) or "Unknown"
+        artist_info = (
+            " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
+        )
         context = post_data.context or post_data.title or artist_info
 
         prompt = DESIGN_SPEC_PROMPT_TEMPLATE.format(

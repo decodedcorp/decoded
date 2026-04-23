@@ -7,11 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1";
-  };
   public: {
     Tables: {
       agent_sessions: {
@@ -869,14 +864,75 @@ export type Database = {
           },
         ];
       };
+      post_magazine_news_references: {
+        Row: {
+          created_at: string;
+          credibility_score: number;
+          id: string;
+          matched_item: string | null;
+          og_description: string | null;
+          og_image: string | null;
+          og_site_name: string | null;
+          og_title: string | null;
+          post_magazine_id: string;
+          relevance_score: number;
+          source: string;
+          summary: string | null;
+          title: string;
+          url: string;
+        };
+        Insert: {
+          created_at?: string;
+          credibility_score?: number;
+          id?: string;
+          matched_item?: string | null;
+          og_description?: string | null;
+          og_image?: string | null;
+          og_site_name?: string | null;
+          og_title?: string | null;
+          post_magazine_id: string;
+          relevance_score?: number;
+          source: string;
+          summary?: string | null;
+          title: string;
+          url: string;
+        };
+        Update: {
+          created_at?: string;
+          credibility_score?: number;
+          id?: string;
+          matched_item?: string | null;
+          og_description?: string | null;
+          og_image?: string | null;
+          og_site_name?: string | null;
+          og_title?: string | null;
+          post_magazine_id?: string;
+          relevance_score?: number;
+          source?: string;
+          summary?: string | null;
+          title?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_magazine_news_references_post_magazine_id_fkey";
+            columns: ["post_magazine_id"];
+            isOneToOne: false;
+            referencedRelation: "post_magazines";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       post_magazines: {
         Row: {
+          approved_by: string | null;
           created_at: string;
           error_log: Json | null;
           id: string;
           keyword: string | null;
           layout_json: Json | null;
           published_at: string | null;
+          rejection_reason: string | null;
           review_summary: string | null;
           status: string;
           subtitle: string | null;
@@ -884,12 +940,14 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          approved_by?: string | null;
           created_at?: string;
           error_log?: Json | null;
           id?: string;
           keyword?: string | null;
           layout_json?: Json | null;
           published_at?: string | null;
+          rejection_reason?: string | null;
           review_summary?: string | null;
           status?: string;
           subtitle?: string | null;
@@ -897,12 +955,14 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          approved_by?: string | null;
           created_at?: string;
           error_log?: Json | null;
           id?: string;
           keyword?: string | null;
           layout_json?: Json | null;
           published_at?: string | null;
+          rejection_reason?: string | null;
           review_summary?: string | null;
           status?: string;
           subtitle?: string | null;
@@ -1823,6 +1883,7 @@ export type Database = {
       };
     };
     Functions: {
+      is_admin: { Args: { user_id: string }; Returns: boolean };
       search_similar: {
         Args: {
           filter_type?: string;
@@ -1835,6 +1896,35 @@ export type Database = {
           entity_type: string;
           similarity: number;
         }[];
+      };
+      update_magazine_status: {
+        Args: {
+          p_admin_user_id: string;
+          p_magazine_id: string;
+          p_new_status: string;
+          p_rejection_reason?: string;
+        };
+        Returns: {
+          approved_by: string | null;
+          created_at: string;
+          error_log: Json | null;
+          id: string;
+          keyword: string | null;
+          layout_json: Json | null;
+          published_at: string | null;
+          rejection_reason: string | null;
+          review_summary: string | null;
+          status: string;
+          subtitle: string | null;
+          title: string;
+          updated_at: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "post_magazines";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
     };
     Enums: {

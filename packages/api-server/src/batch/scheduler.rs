@@ -82,6 +82,8 @@ pub async fn start_scheduler(state: Arc<AppState>) -> Result<(), Box<dyn std::er
         })?)
         .await?;
 
+    // #214 raw_posts dispatcher — scheduler now lives in ai-server (was #258).
+
     // 검색 인덱스 재색인 — 매일 04:00
     let reindex_state = state.clone();
     sched

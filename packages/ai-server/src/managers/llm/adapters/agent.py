@@ -20,7 +20,7 @@ class DefaultLLMAgent(BaseLLMClient):
             fallback=perplexity_client
         )
     """
-    
+
     def __init__(self, primary: BaseLLMClient, fallback: BaseLLMClient):
         """
         Initialize DefaultLLMAgent
@@ -32,7 +32,7 @@ class DefaultLLMAgent(BaseLLMClient):
         super().__init__(primary.config)
         self.primary = primary
         self.fallback = fallback
-        
+
     async def completion(
         self,
         messages: List[LLMMessage],
@@ -40,21 +40,23 @@ class DefaultLLMAgent(BaseLLMClient):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         response_schema: Optional[Type[BaseModel]] = None,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
         """
         Default LLM Agent completion that tries primary and fallback LLMs in sequence if primary fails
         """
         try:
             # Try primary LLM
-            logger.debug(f"Attempting primary LLM: {self.primary.get_provider()} ({self.primary.get_model()})")
+            logger.debug(
+                f"Attempting primary LLM: {self.primary.get_provider()} ({self.primary.get_model()})"
+            )
             return await self.primary.completion(
                 messages=messages,
                 content_type=content_type,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 response_schema=response_schema,
-                **kwargs
+                **kwargs,
             )
         except Exception as e:
             # Try fallback LLM if primary fails
@@ -70,17 +72,17 @@ class DefaultLLMAgent(BaseLLMClient):
                     max_tokens=max_tokens,
                     temperature=temperature,
                     response_schema=response_schema,
-                    **kwargs
+                    **kwargs,
                 )
             except Exception as fallback_error:
                 logger.error(f"Fallback LLM failed as well: {fallback_error}")
                 raise fallback_error
-    
+
     def health_check(self) -> bool:
         return self.primary.health_check() or self.fallback.health_check()
-    
+
     def get_provider(self) -> str:
         return f"fallback({self.primary.get_provider()}->{self.fallback.get_provider()})"
-    
+
     def get_model(self) -> str:
         return f"fallback({self.primary.get_model()}->{self.fallback.get_model()})"

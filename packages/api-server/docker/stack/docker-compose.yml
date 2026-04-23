@@ -1,6 +1,12 @@
 # Decoded backend: api + ai + Meilisearch + Redis + SearXNG (multi-container).
 # From repo root: bash scripts/deploy-backend.sh dev up --build
 # Requires .env.backend.dev (repo root, unified)
+#
+# NOTE (#282): Postgres 는 이 compose 에 더 이상 포함되지 않습니다.
+# 로컬 개발은 Supabase CLI (`just local-deps`) 가 제공하는 Postgres(port 54322)를 사용.
+# 컨테이너 내부에서는 alias `supabase-db:5432` 로 접근 (supabase_db_decoded-backend 와
+# 동일, `scripts/local-deps-up.sh` 가 네트워크 연결 처리).
+# 스테이징/프로덕션은 원격 Supabase DB URL 을 DATABASE_URL 로 지정.
 
 name: decoded-backend
 

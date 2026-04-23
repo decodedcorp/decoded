@@ -750,9 +750,18 @@
             }
           },
           {
+            "name": "q",
+            "in": "query",
+            "description": "통합 검색어 (artist_name/group_name/context 부분매칭 OR)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "artist_name",
             "in": "query",
-            "description": "아티스트명 필터",
+            "description": "아티스트명 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -761,7 +770,7 @@
           {
             "name": "group_name",
             "in": "query",
-            "description": "그룹명 필터",
+            "description": "그룹명 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -770,7 +779,7 @@
           {
             "name": "context",
             "in": "query",
-            "description": "상황 필터",
+            "description": "상황 필터 (정확매칭)",
             "required": false,
             "schema": {
               "type": "string"
@@ -1788,6 +1797,52 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "인증 필요"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "POST /api/v1/events — behavioral event batch ingest.",
+        "description": "인증된 유저만 허용 (middleware 가 401 처리).\nuser_id 는 서버 주입 (JWT 의 User.id) — client 가 지정한 값 무시.\n빈 배열은 200 OK + accepted=0.",
+        "operationId": "events_ingest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EventItem"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "수락된 이벤트 수",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "배치 크기 초과 등"
           },
           "401": {
             "description": "인증 필요"
@@ -2957,6 +3012,372 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/raw-posts/items": {
+      "get": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_list_items",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "플랫폼 필터",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parse_status",
+            "in": "query",
+            "description": "parse_status 필터 (pending/parsed/failed/skipped)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "query",
+            "description": "raw_post_source id 필터",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "raw_posts 목록",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPostsItemsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/raw-posts/items/{id}": {
+      "get": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_get_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "raw_post id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "단일 raw_post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPost"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/raw-posts/sources": {
+      "get": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_list_sources",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "플랫폼 필터",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "활성 여부",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "페이지 사이즈 (default 50, max 500)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "오프셋",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "raw_post_sources 목록",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPostSourcesPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_create_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRawPostSourceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPostSource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/raw-posts/sources/{id}": {
+      "delete": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_delete_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "raw_post_source id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "삭제 성공"
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_update_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "raw_post_source id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRawPostSourceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPostSource"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/raw-posts/stats": {
+      "get": {
+        "tags": [
+          "raw-posts"
+        ],
+        "operationId": "raw_posts_stats",
+        "responses": {
+          "200": {
+            "description": "플랫폼별 parse_status 카운트",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RawPostsStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
       }
     },
     "/api/v1/search": {
@@ -4244,6 +4665,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_UserActivityItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/liked": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "GET /api/v1/users/me/liked - 좋아요한 포스트 조회",
+        "operationId": "get_my_liked",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "페이지 번호 (기본 1)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "페이지당 개수 (기본 20, 최대 50)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "좋아요한 포스트 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LikedItem"
                 }
               }
             }
@@ -5799,6 +6273,48 @@
         ],
         "description": "Post 생성 (with-solutions) 응답 - spot/solution ID 포함"
       },
+      "CreateRawPostSourceDto": {
+        "type": "object",
+        "required": [
+          "platform",
+          "source_type",
+          "source_identifier"
+        ],
+        "properties": {
+          "fetch_interval_seconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          },
+          "platform": {
+            "type": "string"
+          },
+          "source_identifier": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string"
+          }
+        }
+      },
       "CreateSolutionDto": {
         "type": "object",
         "description": "Solution 생성 요청",
@@ -6400,6 +6916,49 @@
           }
         }
       },
+      "EventItem": {
+        "type": "object",
+        "description": "Client 가 보내는 단일 이벤트.\n`user_id` 는 서버가 JWT 에서 강제 주입하므로 client 가 지정할 수 없다.",
+        "required": [
+          "event_type",
+          "session_id",
+          "page_path",
+          "timestamp"
+        ],
+        "properties": {
+          "entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          },
+          "page_path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "클라이언트가 이벤트 발생 순간에 기록한 ISO timestamp.\n서버에서 보정할 수 있으나 기본은 client 값 유지."
+          }
+        }
+      },
       "ExtractMetadataDto": {
         "type": "object",
         "description": "링크 메타데이터 추출 요청",
@@ -6723,6 +7282,23 @@
           }
         }
       },
+      "IngestEventsResponse": {
+        "type": "object",
+        "description": "Ingest 응답 — sendBeacon 은 응답 body 를 읽지 않으므로 최소 형태.",
+        "required": [
+          "ok",
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
       "ItemWithCoordinates": {
         "type": "object",
         "description": "이미지 분석 결과의 아이템 (좌표 정보 포함)",
@@ -6752,6 +7328,41 @@
           "type": {
             "type": "string",
             "description": "아이템 타입 (예: \"hoodie\", \"tshirt\", \"sneakers\")"
+          }
+        }
+      },
+      "LikedItem": {
+        "type": "object",
+        "description": "좋아요한 포스트 아이템",
+        "required": [
+          "id",
+          "post_id",
+          "liked_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "liked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "post_thumbnail_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "post_title": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -7182,6 +7793,56 @@
                 },
                 "type": {
                   "$ref": "#/components/schemas/BadgeType"
+                }
+              }
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "PaginatedResponse_LikedItem": {
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "좋아요한 포스트 아이템",
+              "required": [
+                "id",
+                "post_id",
+                "liked_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "liked_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "post_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "post_thumbnail_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "post_title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -7995,6 +8656,11 @@
             ],
             "description": "포스트 타입 (post | try)"
           },
+          "save_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "저장 횟수"
+          },
           "spots": {
             "type": "array",
             "items": {
@@ -8051,12 +8717,6 @@
             "type": "integer",
             "format": "int32",
             "description": "조회수"
-          },
-          "save_count": {
-            "type": "integer",
-            "format": "int64",
-            "description": "저장 횟수",
-            "default": 0
           }
         }
       },
@@ -8537,6 +9197,282 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "RawPost": {
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "platform",
+          "external_id",
+          "external_url",
+          "image_url",
+          "parse_status",
+          "parse_attempts",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "author_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dispatch_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "external_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "image_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "parse_attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "parse_status": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "platform_metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          },
+          "r2_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "r2_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seed_post_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RawPostSource": {
+        "type": "object",
+        "required": [
+          "id",
+          "platform",
+          "source_type",
+          "source_identifier",
+          "is_active",
+          "fetch_interval_seconds",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fetch_interval_seconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_enqueued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_scraped_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          },
+          "platform": {
+            "type": "string"
+          },
+          "source_identifier": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RawPostSourcesPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RawPostSource"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "RawPostsItemsPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RawPost"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "RawPostsStatsEntry": {
+        "type": "object",
+        "required": [
+          "platform",
+          "parse_status",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "parse_status": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          }
+        }
+      },
+      "RawPostsStatsResponse": {
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RawPostsStatsEntry"
+            }
           }
         }
       },
@@ -10078,6 +11014,40 @@
           }
         }
       },
+      "UpdateRawPostSourceDto": {
+        "type": "object",
+        "properties": {
+          "fetch_interval_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "is_active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Value"
+              }
+            ]
+          }
+        }
+      },
       "UpdateSolutionDto": {
         "type": "object",
         "description": "Solution 수정 요청",
@@ -10545,6 +11515,7 @@
           }
         }
       },
+      "Value": {},
       "VoteResponse": {
         "type": "object",
         "description": "투표 응답",
@@ -10650,6 +11621,37 @@
           "different"
         ]
       },
+      "WarehouseBrandProfile": {
+        "type": "object",
+        "description": "단일 브랜드 프로필 (브랜드는 logo_image_url 사용)",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "logo_image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ko": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "WarehouseProfile": {
         "type": "object",
         "description": "단일 아티스트/그룹 프로필",
@@ -10686,13 +11688,20 @@
         "description": "`GET /api/v1/warehouse/profiles` 응답",
         "required": [
           "artists",
-          "groups"
+          "groups",
+          "brands"
         ],
         "properties": {
           "artists": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/WarehouseProfile"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarehouseBrandProfile"
             }
           },
           "groups": {
@@ -10792,12 +11801,20 @@
       "description": "Earnings and settlements"
     },
     {
+      "name": "events",
+      "description": "Behavioral events ingest"
+    },
+    {
       "name": "admin",
       "description": "Admin operations"
     },
     {
       "name": "warehouse",
       "description": "Warehouse entity profiles"
+    },
+    {
+      "name": "raw-posts",
+      "description": "Raw posts collection pipeline (#258)"
     }
   ]
 }

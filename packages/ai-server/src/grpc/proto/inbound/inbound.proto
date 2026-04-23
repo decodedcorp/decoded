@@ -23,6 +23,8 @@ service Queue {
   rpc ExtractPostContext (ExtractPostContextRequest) returns (ExtractPostContextResponse);
 }
 
+// #214 RawPostsWorker service removed — ai-server schedules itself.
+
 // Post Editorial messages (Asynchronous)
 message ProcessPostEditorialRequest {
   string post_magazine_id = 1;

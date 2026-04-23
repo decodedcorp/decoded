@@ -11,7 +11,7 @@
 
 import { memo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Compass,
@@ -23,7 +23,6 @@ import {
 import DecodedLogo from "./DecodedLogo";
 import { SidebarSearchPanel } from "./SidebarSearchPanel";
 import { SidebarFilterPanel } from "./SidebarFilterPanel";
-import { RequestModal } from "./request/RequestModal";
 
 interface NavItem {
   id: string;
@@ -149,9 +148,9 @@ export const Sidebar = memo(() => {
   }, []);
 
   const pathname = usePathname();
+  const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const handleSearchToggle = useCallback(() => {
     setIsSearchOpen((prev) => !prev);
@@ -171,16 +170,12 @@ export const Sidebar = memo(() => {
     setIsFilterOpen(false);
   }, []);
 
-  const handleRequestModalOpen = useCallback(() => {
-    setIsRequestModalOpen(true);
-    // Close other panels
+  const handleRequestNavigate = useCallback(() => {
+    // Close panels then defer to intercept route for modal vs full-page.
     setIsSearchOpen(false);
     setIsFilterOpen(false);
-  }, []);
-
-  const handleRequestModalClose = useCallback(() => {
-    setIsRequestModalOpen(false);
-  }, []);
+    router.push("/request/upload");
+  }, [router]);
 
   return (
     <>
@@ -236,7 +231,7 @@ export const Sidebar = memo(() => {
                 : item.id === "filter"
                   ? handleFilterToggle
                   : item.id === "request"
-                    ? handleRequestModalOpen
+                    ? handleRequestNavigate
                     : undefined;
 
             return (
@@ -269,12 +264,6 @@ export const Sidebar = memo(() => {
 
       {/* Filter Panel (Slide out) */}
       <SidebarFilterPanel isOpen={isFilterOpen} onClose={handleFilterClose} />
-
-      {/* Request Modal */}
-      <RequestModal
-        isOpen={isRequestModalOpen}
-        onClose={handleRequestModalClose}
-      />
     </>
   );
 });

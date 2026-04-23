@@ -5,14 +5,14 @@ package inbound;
 service Queue {
   // Existing batch processing
   rpc ProcessDataBatch (ProcessDataBatchRequest) returns (ProcessDataBatchResponse);
-  
+
   // New separated flow methods
   rpc ExtractOGData (ExtractOGDataRequest) returns (ExtractOGDataResponse);
   rpc AnalyzeLink (AnalyzeLinkRequest) returns (AnalyzeLinkResponse);
-  
+
   // Direct Analysis (Synchronous/No-Batch) for Testing/Immediate updates
   rpc AnalyzeLinkDirect (AnalyzeLinkRequest) returns (AnalyzeLinkDirectResponse);
-  
+
   // Image analysis - direct response (synchronous)
   rpc AnalyzeImage (AnalyzeImageRequest) returns (AnalyzeImageResponse);
 
@@ -22,6 +22,8 @@ service Queue {
   // Extract context and style tags from post image (synchronous, Ollama local inference)
   rpc ExtractPostContext (ExtractPostContextRequest) returns (ExtractPostContextResponse);
 }
+
+// #214 RawPostsWorker service removed — ai-server now schedules itself.
 
 // Post Editorial messages (Asynchronous)
 message ProcessPostEditorialRequest {

@@ -777,6 +777,7 @@ async fn load_entity_display_data(
 /// 독립적인 쿼리를 tokio::try_join!으로 병렬 실행하여 응답 시간을 최소화한다.
 /// Before: post → user → related_data → like_stats → saved → profile (직렬 ~6 RTT)
 /// After:  post → [user, related_data, like_count, user_liked, saved, profile] 병렬 (~2 RTT)
+#[allow(clippy::disallowed_methods)] // tokio::try_join! 매크로 전개 false positive
 pub async fn get_post_detail(
     db: &DatabaseConnection,
     post_id: Uuid,
@@ -804,7 +805,10 @@ pub async fn get_post_detail(
     };
     let saved_fut = async {
         match user_id {
-            Some(uid) => Ok(user_has_saved(db, post_id, uid).await.unwrap_or(false)),
+            Some(uid) => match user_has_saved(db, post_id, uid).await {
+                Ok(saved) => Ok(saved),
+                Err(_) => Ok(false),
+            },
             None => Ok::<bool, crate::error::AppError>(false),
         }
     };
@@ -838,7 +842,9 @@ pub async fn get_post_detail(
         } else {
             None
         };
-        let save_count = count_saves_by_post_id(db, post_id).await.unwrap_or(0);
+        let save_count: u64 = count_saves_by_post_id(db, post_id)
+            .await
+            .unwrap_or_default();
         let mut response = PostDetailResponse::from_post_model(
             post,
             user,
@@ -1333,6 +1339,19 @@ pub async fn admin_list_posts(
         select = select.filter(Column::Status.eq(status));
     }
 
+    // 통합 검색어 q 적용 — artist_name/group_name/context 부분매칭 OR (admin 자동완성 용도)
+    if let Some(ref q) = query.q {
+        let trimmed = q.trim();
+        if !trimmed.is_empty() {
+            let pattern = format!("%{trimmed}%");
+            let cond = sea_orm::Condition::any()
+                .add(Column::ArtistName.like(&pattern))
+                .add(Column::GroupName.like(&pattern))
+                .add(Column::Context.like(&pattern));
+            select = select.filter(cond);
+        }
+    }
+
     // 필터 적용
     if let Some(ref artist_name) = query.base_query.artist_name {
         select = select.filter(Column::ArtistName.eq(artist_name));
@@ -1512,28 +1531,51 @@ pub async fn admin_list_posts(
     Ok(PaginatedResponse::new(items, pagination, total))
 }
 
-/// Admin용 Post 상태 변경
+/// Admin용 Post 상태 변경 — UPDATE + audit log 원자 기록.
 #[allow(clippy::disallowed_methods)] // serde_json::json! 매크로 전개
 pub async fn admin_update_post_status(
     search_client: &std::sync::Arc<dyn crate::services::search::SearchClient>,
     db: &DatabaseConnection,
     post_id: Uuid,
     status: &str,
+    admin_id: Uuid,
 ) -> AppResult<PostResponse> {
-    // Post 존재 확인
-    let post = get_post_by_id(db, post_id).await?;
+    let txn = db.begin().await.map_err(AppError::DatabaseError)?;
 
-    // ActiveModel로 변환하여 상태만 업데이트
+    let post = Posts::find_by_id(post_id)
+        .one(&txn)
+        .await
+        .map_err(AppError::DatabaseError)?
+        .ok_or_else(|| AppError::NotFound(format!("Post not found: {}", post_id)))?;
+    let before_state = serde_json::to_value(&post).ok();
+
     let mut active_post: ActiveModel = post.into();
     active_post.status = Set(status.to_string());
 
-    // DB 업데이트
     let updated_post = active_post
-        .update(db)
+        .update(&txn)
         .await
         .map_err(AppError::DatabaseError)?;
+    let after_state = serde_json::to_value(&updated_post).ok();
 
-    // Meilisearch 동기화 (비동기, 실패해도 상태 변경은 성공)
+    crate::services::audit::write_audit_log(
+        &txn,
+        crate::services::audit::AuditLogEntry {
+            admin_user_id: admin_id,
+            action: "post.status.update".to_string(),
+            target_table: "posts".to_string(),
+            target_id: Some(post_id),
+            before_state,
+            after_state,
+            metadata: None,
+        },
+    )
+    .await
+    .map_err(AppError::DatabaseError)?;
+
+    txn.commit().await.map_err(AppError::DatabaseError)?;
+
+    // Meilisearch 동기화 — 커밋 이후 (트랜잭션 외부, 실패해도 상태 변경은 성공)
     match status {
         "hidden" | "deleted" => {
             if let Err(e) = search_client.delete("posts", &post_id.to_string()).await {
@@ -1558,13 +1600,21 @@ pub async fn admin_update_post_status(
     Ok(updated_post.into())
 }
 
-/// Admin용 Post 메타데이터 수정 (소유권 검사 없음)
+/// Admin용 Post 메타데이터 수정 (소유권 검사 없음) — UPDATE + audit log 원자 기록.
 pub async fn admin_update_post(
     state: &AppState,
     post_id: Uuid,
     dto: UpdatePostDto,
+    admin_id: Uuid,
 ) -> AppResult<PostResponse> {
-    let post = get_post_by_id(state.db.as_ref(), post_id).await?;
+    let txn = state.db.begin().await.map_err(AppError::DatabaseError)?;
+
+    let post = Posts::find_by_id(post_id)
+        .one(&txn)
+        .await
+        .map_err(AppError::DatabaseError)?
+        .ok_or_else(|| AppError::NotFound(format!("Post not found: {}", post_id)))?;
+    let before_state = serde_json::to_value(&post).ok();
 
     let mut active_post: ActiveModel = post.into();
 
@@ -1585,9 +1635,27 @@ pub async fn admin_update_post(
     }
 
     let updated_post = active_post
-        .update(state.db.as_ref())
+        .update(&txn)
         .await
         .map_err(AppError::DatabaseError)?;
+    let after_state = serde_json::to_value(&updated_post).ok();
+
+    crate::services::audit::write_audit_log(
+        &txn,
+        crate::services::audit::AuditLogEntry {
+            admin_user_id: admin_id,
+            action: "post.metadata.update".to_string(),
+            target_table: "posts".to_string(),
+            target_id: Some(post_id),
+            before_state,
+            after_state,
+            metadata: None,
+        },
+    )
+    .await
+    .map_err(AppError::DatabaseError)?;
+
+    txn.commit().await.map_err(AppError::DatabaseError)?;
 
     let updated_response: PostResponse = updated_post.into();
 
@@ -2896,12 +2964,20 @@ mod tests {
         updated_post.status = "hidden".to_string();
 
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[fixtures::post_model()]]) // find_by_id (txn)
             .append_query_results([[updated_post.clone()]]) // update returns model
+            .append_query_results([[fixtures::audit_log_model()]]) // audit insert RETURNING
             .into_connection();
 
         let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
-        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        let result = admin_update_post_status(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            "hidden",
+            fixtures::test_uuid(99),
+        )
+        .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().status, "hidden");
     }
@@ -2916,7 +2992,14 @@ mod tests {
             .into_connection();
 
         let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
-        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        let result = admin_update_post_status(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            "hidden",
+            fixtures::test_uuid(99),
+        )
+        .await;
         assert!(matches!(result, Err(crate::AppError::NotFound(_))));
     }
 
@@ -3092,7 +3175,8 @@ mod tests {
             context: None,
             status: None,
         };
-        let result = admin_update_post(&state, fixtures::test_uuid(1), dto).await;
+        let result =
+            admin_update_post(&state, fixtures::test_uuid(1), dto, fixtures::test_uuid(99)).await;
         assert!(matches!(result, Err(crate::AppError::NotFound(_))));
     }
 
@@ -3106,9 +3190,10 @@ mod tests {
         updated.artist_name = Some("New Artist".to_string());
 
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[fixtures::post_model()]]) // get_post_by_id
+            .append_query_results([[fixtures::post_model()]]) // find_by_id (txn)
             .append_query_results([[updated.clone()]]) // update returns model
-            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // load_post_related_data
+            .append_query_results([[fixtures::audit_log_model()]]) // audit insert RETURNING
+            .append_query_results([Vec::<crate::entities::spots::Model>::new()]) // load_post_related_data (post-commit)
             .into_connection();
         let state = test_app_state(db);
         let dto = UpdatePostDto {
@@ -3118,7 +3203,8 @@ mod tests {
             context: None,
             status: None,
         };
-        let result = admin_update_post(&state, fixtures::test_uuid(1), dto).await;
+        let result =
+            admin_update_post(&state, fixtures::test_uuid(1), dto, fixtures::test_uuid(99)).await;
         assert!(result.is_ok());
     }
 
@@ -3512,6 +3598,7 @@ mod tests {
             ]) // comments
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: Some("hidden".to_string()),
             base_query: PostListQuery {
                 artist_name: Some("X".to_string()),
@@ -3550,6 +3637,7 @@ mod tests {
             ])
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,
@@ -3587,6 +3675,7 @@ mod tests {
             ])
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,
@@ -3728,6 +3817,7 @@ mod tests {
             .append_query_results([vec![fixtures::count_row(0)]]) // 2c like count
             .append_query_results([vec![fixtures::count_row(2)]]) // 3a comment count
             .append_query_results([vec![fixtures::count_row(0)]]) // 3b count_tries
+            .append_query_results([vec![fixtures::count_row(0)]]) // 3c count_saves
             .into_connection();
         let result = get_post_detail(&db, fixtures::test_uuid(1), None).await;
         assert!(result.is_ok(), "unexpected err: {:?}", result.err());
@@ -3796,18 +3886,9 @@ mod tests {
         use sea_orm::{DatabaseBackend, MockDatabase};
 
         // has_solutions=false branch:
-        //   1) solution spot_ids → non-empty
-        //   2) spots with solutions → post_ids
-        //   3) spots all → post_ids (superset)
-        //   4) count → posts → users → spot_counts → comment_counts
+        //   count → posts → users → spot_counts → comment_counts
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![fixtures::uuid_row("spot_id", fixtures::test_uuid(2))]]) // solution.spot_ids
-            .append_query_results([vec![fixtures::uuid_row("post_id", fixtures::test_uuid(1))]]) // spots with solutions
-            .append_query_results([vec![
-                fixtures::uuid_row("post_id", fixtures::test_uuid(1)),
-                fixtures::uuid_row("post_id", fixtures::test_uuid(7)),
-            ]]) // all spot post_ids
-            .append_query_results([Vec::<posts::Model>::new()]) // count
+            .append_query_results([vec![fixtures::count_row(0)]]) // count
             .append_query_results([Vec::<posts::Model>::new()]) // posts
             .append_query_results([Vec::<crate::entities::users::Model>::new()]) // users
             .append_query_results([
@@ -3992,6 +4073,7 @@ mod tests {
             ]) // comment_counts
             .into_connection();
         let query = AdminPostListQuery {
+            q: None,
             status: None,
             base_query: PostListQuery {
                 artist_name: None,
@@ -4028,9 +4110,17 @@ mod tests {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]])
             .append_query_results([[updated.clone()]])
+            .append_query_results([[fixtures::audit_log_model()]])
             .into_connection();
         let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
-        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "hidden").await;
+        let result = admin_update_post_status(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            "hidden",
+            fixtures::test_uuid(99),
+        )
+        .await;
         assert!(result.is_ok());
     }
 
@@ -4045,9 +4135,17 @@ mod tests {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]])
             .append_query_results([[updated.clone()]])
+            .append_query_results([[fixtures::audit_log_model()]])
             .into_connection();
         let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
-        let result = admin_update_post_status(&client, &db, fixtures::test_uuid(1), "active").await;
+        let result = admin_update_post_status(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            "active",
+            fixtures::test_uuid(99),
+        )
+        .await;
         assert!(result.is_ok());
     }
 
@@ -4062,10 +4160,17 @@ mod tests {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[fixtures::post_model()]])
             .append_query_results([[updated.clone()]])
+            .append_query_results([[fixtures::audit_log_model()]])
             .into_connection();
         let client: Arc<dyn crate::services::SearchClient> = Arc::new(DummySearchClient);
-        let result =
-            admin_update_post_status(&client, &db, fixtures::test_uuid(1), "deleted").await;
+        let result = admin_update_post_status(
+            &client,
+            &db,
+            fixtures::test_uuid(1),
+            "deleted",
+            fixtures::test_uuid(99),
+        )
+        .await;
         assert!(result.is_ok());
     }
 

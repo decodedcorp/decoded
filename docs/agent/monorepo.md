@@ -1,4 +1,12 @@
-# Monorepo overview & commands
+---
+title: Monorepo — Agent Reference
+owner: human
+status: approved
+updated: 2026-04-17
+tags: [agent, architecture]
+---
+
+# Monorepo — Agent Reference
 
 Paths are relative to the repository root unless noted.
 
@@ -93,13 +101,20 @@ bun run lint            # ESLint (and package scripts where configured)
 bun run ci:local        # 로컬 CI (pre-push 와 동일: web + api-server; ai-server 는 RUN_AI_SERVER_CI=1 일 때만)
 # 훅: 저장소 루트에서 `just hook` → core.hooksPath=.githooks
 
-# Split local dev: Meilisearch·Redis·SearXNG = Docker first, then:
-bun run dev:local-deps       # Docker deps only (see scripts/local-deps-up.sh)
+# Split local dev: Supabase CLI + Meilisearch·Redis·SearXNG = Docker first, then:
+bun run dev:local-deps       # Supabase CLI + Docker deps (see scripts/local-deps-up.sh)
 bun run dev:local-fe         # Next only (same as dev:web)
 bun run dev:local-be         # API + AI together; logs -> .logs/local/api.log & ai.log (tail -f in other terminals)
+# Prereq: brew install supabase/tap/supabase  (#282: dev 는 Supabase self-hosted)
 # Local host env templates: packages/api-server/.env.dev.example , packages/ai-server/.dev.env.example
-# Port alignment (호스트 실행): MEILISEARCH_URL=http://localhost:7700 ; AI_SERVER_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
-#   API API_SERVER_GRPC_PORT must equal AI API_SERVER_GRPC_PORT ; 레거시 GRPC_PORT / GRPC_BACKEND_* 도 아직 지원. AI Redis localhost:6303 + SEARXNG localhost:4000 with local-deps
+# Port alignment (호스트 실행):
+#   DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres  (Supabase CLI Postgres)
+#   DATABASE_API_URL=http://127.0.0.1:54321                                (로컬 GoTrue)
+#   Studio UI: http://localhost:54323  |  Inbucket (email): http://localhost:54324
+#   MEILISEARCH_URL=http://localhost:7700 ; AI_SERVER_GRPC_URL=http://localhost:50052 (AI APP_ENV=dev)
+#   API API_SERVER_GRPC_PORT must equal AI API_SERVER_GRPC_PORT ; 레거시 GRPC_PORT / GRPC_BACKEND_* 도 아직 지원.
+#   AI Redis localhost:6303 + SEARXNG localhost:4000 with local-deps
+# `supabase status` 로 anon / service_role / JWT secret 조회 (최초 setup 시 .env 에 붙여넣기)
 # just local-help            # prints tail -f hints (root Justfile)
 
 # Web package only
@@ -131,4 +146,4 @@ uv run python -m src.main
 
 - Web: copy `packages/web/.env.local.example` → `.env.local` (gitignored).
 - Never commit secrets or full `.env` files.
-- Supabase required for data/auth in typical dev flows.
+- Supabase CLI required for local dev (#282): `brew install supabase/tap/supabase`. Postgres/Auth 모두 로컬에서 동작.

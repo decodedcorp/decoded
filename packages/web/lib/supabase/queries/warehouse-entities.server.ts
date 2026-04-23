@@ -1,81 +1,80 @@
 /**
- * Warehouse entity query functions for artists and groups.
+ * Warehouse profile lookup — served by api-server `/api/v1/warehouse/profiles`.
  *
- * These functions query the warehouse schema for proper entity data
- * (profile images, canonical names) to enrich main page sections.
- * All queries use createWarehouseServerClient and fail gracefully.
+ * Previously queried the warehouse schema directly via supabase-js; after the
+ * #265 refactor all warehouse reads go through api-server so web has no direct
+ * DB coupling. The same cached lookup-map interface is preserved so callers
+ * (`main-page.server.ts`, `app/page.tsx`) stay unchanged.
  */
 
 import { cache } from "react";
-import { createWarehouseServerClient } from "@/lib/supabase/warehouse";
-import type {
-  ArtistRow,
-  GroupRow,
-  BrandRow,
-} from "@/lib/supabase/warehouse-types";
+import { API_BASE_URL } from "@/lib/server-env";
 
-/**
- * Fetches artists from warehouse.artists with profile images.
- *
- * @param limit - Maximum number of artists to fetch (default: 50)
- * @returns Array of ArtistRow, empty on error
- */
-export async function fetchWarehouseArtists(limit = 500): Promise<ArtistRow[]> {
-  try {
-    const wh = await createWarehouseServerClient();
-    const { data, error } = await wh
-      .from("artists")
-      .select(
-        "id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error("[warehouse-entities] fetchWarehouseArtists error:", error);
-      return [];
-    }
-
-    return (data ?? []) as ArtistRow[];
-  } catch (err) {
-    console.error(
-      "[warehouse-entities] fetchWarehouseArtists unexpected error:",
-      err
-    );
-    return [];
-  }
+interface RawArtistOrGroup {
+  id: string;
+  name_ko?: string | null;
+  name_en?: string | null;
+  profile_image_url?: string | null;
 }
 
-/**
- * Fetches groups from warehouse.groups with profile images.
- *
- * @param limit - Maximum number of groups to fetch (default: 50)
- * @returns Array of GroupRow, empty on error
- */
-export async function fetchWarehouseGroups(limit = 500): Promise<GroupRow[]> {
-  try {
-    const wh = await createWarehouseServerClient();
-    const { data, error } = await wh
-      .from("groups")
-      .select(
-        "id, name_ko, name_en, profile_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
+interface RawBrand {
+  id: string;
+  name_ko?: string | null;
+  name_en?: string | null;
+  logo_image_url?: string | null;
+}
 
-    if (error) {
-      console.error("[warehouse-entities] fetchWarehouseGroups error:", error);
-      return [];
+interface WarehouseProfilesResponseShape {
+  artists: RawArtistOrGroup[];
+  groups: RawArtistOrGroup[];
+  brands: RawBrand[];
+}
+
+const PROFILES_LIMIT_DEFAULT = 500;
+
+const fetchProfiles = cache(
+  async (
+    limit = PROFILES_LIMIT_DEFAULT
+  ): Promise<WarehouseProfilesResponseShape> => {
+    const url = `${API_BASE_URL}/api/v1/warehouse/profiles?limit=${limit}`;
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        // Server-side fetch — cache per request; Next.js handles revalidation
+        next: { revalidate: 60 },
+      });
+      if (!res.ok) {
+        console.error(
+          "[warehouse-entities] profiles fetch failed:",
+          res.status
+        );
+        return { artists: [], groups: [], brands: [] };
+      }
+      return (await res.json()) as WarehouseProfilesResponseShape;
+    } catch (err) {
+      console.error("[warehouse-entities] profiles fetch error:", err);
+      return { artists: [], groups: [], brands: [] };
     }
-
-    return (data ?? []) as GroupRow[];
-  } catch (err) {
-    console.error(
-      "[warehouse-entities] fetchWarehouseGroups unexpected error:",
-      err
-    );
-    return [];
   }
+);
+
+/** Fetches artists via api-server. */
+export async function fetchWarehouseArtists(limit = PROFILES_LIMIT_DEFAULT) {
+  const { artists } = await fetchProfiles(limit);
+  return artists;
+}
+
+/** Fetches groups via api-server. */
+export async function fetchWarehouseGroups(limit = PROFILES_LIMIT_DEFAULT) {
+  const { groups } = await fetchProfiles(limit);
+  return groups;
+}
+
+/** Fetches brands via api-server. */
+export async function fetchWarehouseBrands(limit = PROFILES_LIMIT_DEFAULT) {
+  const { brands } = await fetchProfiles(limit);
+  return brands;
 }
 
 /** Entry type returned by buildArtistProfileMap */
@@ -87,99 +86,38 @@ export interface ArtistProfileEntry {
 /**
  * Builds a lookup map from lowercased artist/group names to profile data.
  *
- * Fetches both artists and groups in parallel and indexes each entity by
- * both name_ko and name_en (lowercased) so callers can look up by raw
- * text from public.posts regardless of language or casing.
- *
- * Example: { "karina" => { name: "Karina", profileImageUrl: "https://..." },
- *            "카리나" => { name: "카리나", profileImageUrl: "https://..." } }
- *
- * @returns Map keyed by lowercased name, empty Map on error
+ * Same behavior as before — indexes by both name_ko and name_en (lowercased).
  */
 export const buildArtistProfileMap = cache(
   async (): Promise<Map<string, ArtistProfileEntry>> => {
     const map = new Map<string, ArtistProfileEntry>();
+    const { artists, groups } = await fetchProfiles();
 
-    try {
-      const [artists, groups] = await Promise.all([
-        fetchWarehouseArtists(),
-        fetchWarehouseGroups(),
-      ]);
-
-      const addEntity = (
-        name_ko: string | null,
-        name_en: string | null,
-        profile_image_url: string | null
-      ) => {
-        // English-first display name: the product UI is English, so prefer
-        // name_en and fall back to name_ko when the English name is missing.
-        const displayName = name_en || name_ko || "";
-        if (!displayName) return;
-
-        const entry: ArtistProfileEntry = {
-          name: displayName,
-          profileImageUrl: profile_image_url,
-        };
-
-        // Key the same English-first display entry by both name_ko and name_en
-        // lookups so callers hitting the map with either language still get
-        // the English display name back.
-        if (name_ko) {
-          map.set(name_ko.toLowerCase(), entry);
-        }
-        if (name_en) {
-          map.set(name_en.toLowerCase(), entry);
-        }
+    const addEntity = (
+      name_ko: string | null | undefined,
+      name_en: string | null | undefined,
+      profile_image_url: string | null | undefined
+    ) => {
+      const displayName = name_en || name_ko || "";
+      if (!displayName) return;
+      const entry: ArtistProfileEntry = {
+        name: displayName,
+        profileImageUrl: profile_image_url ?? null,
       };
+      if (name_ko) map.set(name_ko.toLowerCase(), entry);
+      if (name_en) map.set(name_en.toLowerCase(), entry);
+    };
 
-      for (const artist of artists) {
-        addEntity(artist.name_ko, artist.name_en, artist.profile_image_url);
-      }
-      for (const group of groups) {
-        addEntity(group.name_ko, group.name_en, group.profile_image_url);
-      }
-    } catch (err) {
-      console.error(
-        "[warehouse-entities] buildArtistProfileMap unexpected error:",
-        err
-      );
+    for (const artist of artists) {
+      addEntity(artist.name_ko, artist.name_en, artist.profile_image_url);
+    }
+    for (const group of groups) {
+      addEntity(group.name_ko, group.name_en, group.profile_image_url);
     }
 
     return map;
   }
 );
-
-/**
- * Fetches brands from warehouse.brands with logo images.
- *
- * @param limit - Maximum number of brands to fetch (default: 100)
- * @returns Array of BrandRow, empty on error
- */
-export async function fetchWarehouseBrands(limit = 500): Promise<BrandRow[]> {
-  try {
-    const wh = await createWarehouseServerClient();
-    const { data, error } = await wh
-      .from("brands")
-      .select(
-        "id, name_ko, name_en, logo_image_url, primary_instagram_account_id, metadata, created_at, updated_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error("[warehouse-entities] fetchWarehouseBrands error:", error);
-      return [];
-    }
-
-    return (data ?? []) as BrandRow[];
-  } catch (err) {
-    console.error(
-      "[warehouse-entities] fetchWarehouseBrands unexpected error:",
-      err
-    );
-    return [];
-  }
-}
 
 /** Brand profile entry for lookup by brand name or ID */
 export interface BrandProfileEntry {
@@ -188,36 +126,23 @@ export interface BrandProfileEntry {
 }
 
 /**
- * Builds a lookup map from brand names (lowercased) to profile data.
- *
- * Fetches brands and indexes each by name_ko, name_en (lowercased),
- * and by ID so callers can look up by raw text or brand_id.
- *
- * @returns Map keyed by lowercased name or brand ID, empty Map on error
+ * Builds a lookup map from brand names (lowercased) and IDs to profile data.
  */
 export const buildBrandProfileMap = cache(
   async (): Promise<Map<string, BrandProfileEntry>> => {
     const map = new Map<string, BrandProfileEntry>();
+    const { brands } = await fetchProfiles();
 
-    try {
-      const brands = await fetchWarehouseBrands();
-
-      for (const brand of brands) {
-        const displayName = brand.name_en || brand.name_ko || "";
-        if (!displayName) continue;
-
-        const entry: BrandProfileEntry = {
-          name: displayName,
-          profileImageUrl: brand.logo_image_url,
-        };
-
-        if (brand.name_ko) map.set(brand.name_ko.toLowerCase(), entry);
-        if (brand.name_en) map.set(brand.name_en.toLowerCase(), entry);
-        // Also key by ID for brand_id lookup
-        if (brand.id) map.set(brand.id, entry);
-      }
-    } catch (err) {
-      console.error("[warehouse-entities] buildBrandProfileMap error:", err);
+    for (const brand of brands) {
+      const displayName = brand.name_en || brand.name_ko || "";
+      if (!displayName) continue;
+      const entry: BrandProfileEntry = {
+        name: displayName,
+        profileImageUrl: brand.logo_image_url ?? null,
+      };
+      if (brand.name_ko) map.set(brand.name_ko.toLowerCase(), entry);
+      if (brand.name_en) map.set(brand.name_en.toLowerCase(), entry);
+      if (brand.id) map.set(brand.id, entry);
     }
 
     return map;

@@ -4,6 +4,7 @@ from redis.exceptions import RedisError
 from src.config._logger import LoggerService
 from typing import Awaitable, Union
 
+
 class RedisManager:
     """Redis 연결 관리 클래스"""
 
@@ -63,12 +64,12 @@ class RedisManager:
         """Extract value from left side of list"""
         client = await self.get_client()
         return await client.lpop(key)
-    
+
     async def lpush(self, key: str, value: str):
         """Add value to left side of list"""
         client = await self.get_client()
         return await client.lpush(key, value)
-    
+
     async def rpop(self, key: str):
         """Extract value from right side of list"""
         client = await self.get_client()
@@ -100,7 +101,15 @@ class RedisManager:
         client = await self.get_client()
         return await client.zadd(key, mapping)
 
-    async def zrangebyscore(self, key: str, min_score: float, max_score: float, start: int = None, num: int = None, count: int = None):
+    async def zrangebyscore(
+        self,
+        key: str,
+        min_score: float,
+        max_score: float,
+        start: int = None,
+        num: int = None,
+        count: int = None,
+    ):
         """Return members within score range"""
         client = await self.get_client()
         # Handle start/num parameters (support for existing call style)

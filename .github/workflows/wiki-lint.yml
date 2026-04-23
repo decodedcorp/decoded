@@ -1,0 +1,28 @@
+name: wiki-lint
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'tools/wiki/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/wiki-lint.yml'
+  push:
+    branches: [dev, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Wiki lint
+        run: bun run wiki:lint
+      - name: Wiki unit tests
+        run: bun test tools/wiki/

@@ -1,4 +1,20 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "orval";
+
+const packageRoot = dirname(fileURLToPath(import.meta.url));
+const monorepoRoot = join(packageRoot, "..", "..");
+
+function prettierWriteHook(): string {
+  const local = join(packageRoot, "node_modules", ".bin", "prettier");
+  const hoisted = join(monorepoRoot, "node_modules", ".bin", "prettier");
+
+  if (existsSync(local)) return `${local} --write`;
+  if (existsSync(hoisted)) return `${hoisted} --write`;
+
+  return "bunx prettier --write";
+}
 
 export default defineConfig({
   decodedApi: {
@@ -56,7 +72,7 @@ export default defineConfig({
       },
     },
     hooks: {
-      afterAllFilesWrite: "./node_modules/.bin/prettier --write",
+      afterAllFilesWrite: prettierWriteHook(),
     },
   },
   decodedApiZod: {

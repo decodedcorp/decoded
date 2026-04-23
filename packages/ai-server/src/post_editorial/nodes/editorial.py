@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 
 from google import genai
@@ -57,9 +56,7 @@ def _build_research_section(state: PostEditorialState) -> tuple[str, str]:
 def _build_items_section(state: PostEditorialState) -> str:
     post_data = state["post_data"]
     research = state.get("item_research") or {}
-    item_stories = (
-        research.get("item_stories", {}) if isinstance(research, dict) else {}
-    )
+    item_stories = research.get("item_stories", {}) if isinstance(research, dict) else {}
     lines: list[str] = []
     for spot in post_data.spots:
         for sol in spot.solutions:
@@ -107,8 +104,7 @@ def _build_news_section(state: PostEditorialState) -> str:
 def _build_editorial_prompt(state: PostEditorialState) -> str:
     post_data = state["post_data"]
     artist_info = (
-        " / ".join(filter(None, [post_data.artist_name, post_data.group_name]))
-        or "Unknown"
+        " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
     )
     vision_section = _build_vision_section(state)
     artist_brand_ctx, raw_research = _build_research_section(state)
@@ -123,14 +119,10 @@ def _build_editorial_prompt(state: PostEditorialState) -> str:
             feedback_section += f"\n[Attempt {i}]\n"
             for criterion in fb.get("criteria", []):
                 if not criterion.get("passed"):
-                    feedback_section += (
-                        f"- {criterion['criterion']}: {criterion['reason']}\n"
-                    )
+                    feedback_section += f"- {criterion['criterion']}: {criterion['reason']}\n"
             suggestions = fb.get("suggestions", [])
             if suggestions:
-                feedback_section += (
-                    f"Improvement suggestions: {', '.join(suggestions)}\n"
-                )
+                feedback_section += f"Improvement suggestions: {', '.join(suggestions)}\n"
 
     research_block = ""
     if artist_brand_ctx:
@@ -170,9 +162,7 @@ def _get_genai_client() -> genai.Client:
     return genai.Client(api_key=settings.gemini_api_key)
 
 
-async def _generate_editorial(
-    client: genai.Client, prompt: str, model: str
-) -> EditorialOutput:
+async def _generate_editorial(client: genai.Client, prompt: str, model: str) -> EditorialOutput:
     response = await client.aio.models.generate_content(
         model=model,
         contents=prompt,
@@ -198,9 +188,7 @@ async def editorial_node(state: PostEditorialState) -> dict:
             settings.gemini_model,
             lambda model: _generate_editorial(client, prompt, model),
         )
-        item_editorial_dict = {
-            se.spot_id: se.paragraphs for se in output.item_editorials
-        }
+        item_editorial_dict = {se.spot_id: se.paragraphs for se in output.item_editorials}
 
         return {
             "title": output.title,

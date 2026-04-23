@@ -33,27 +33,21 @@ pub struct CreateSolutionInlineDto {
     /// 원본 상품 URL
     #[validate(length(min = 1))]
     pub original_url: String,
-
     /// og metadata title
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-
     /// 메타데이터 (가격, 브랜드 등)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
-
     /// og metadata description
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-
     /// solver comment
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
-
     /// og metadata image
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
-
     /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brand_id: Option<Uuid>,

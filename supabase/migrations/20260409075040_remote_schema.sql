@@ -1,3 +1,15 @@
+-- #282: extensions schema + vector extension (Supabase 관례)
+CREATE SCHEMA IF NOT EXISTS "extensions";
+
+CREATE EXTENSION IF NOT EXISTS "vector" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
 
 
 
@@ -13,6 +25,12 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE SCHEMA IF NOT EXISTS "public";
+
+
+ALTER SCHEMA "public" OWNER TO "pg_database_owner";
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -23,62 +41,6 @@ CREATE SCHEMA IF NOT EXISTS "warehouse";
 ALTER SCHEMA "warehouse" OWNER TO "postgres";
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "vector" WITH SCHEMA "extensions";
-
-
-
-
-
-
 CREATE TYPE "warehouse"."account_type" AS ENUM (
     'artist',
     'group',
@@ -86,7 +48,9 @@ CREATE TYPE "warehouse"."account_type" AS ENUM (
     'source',
     'influencer',
     'place',
-    'other'
+    'other',
+    'company',
+    'designer'
 );
 
 
@@ -101,6 +65,105 @@ CREATE TYPE "warehouse"."entity_ig_role" AS ENUM (
 
 
 ALTER TYPE "warehouse"."entity_ig_role" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_daily_metrics"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) RETURNS TABLE("day" "date", "clicks" integer, "searches" integer, "dau" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_from_ts IS NULL OR p_to_ts IS NULL
+     OR NOT isfinite(p_from_ts) OR NOT isfinite(p_to_ts)
+     OR p_to_ts <= p_from_ts THEN
+    RAISE EXCEPTION 'invalid_range' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF (p_to_ts - p_from_ts) > INTERVAL '366 days' THEN
+    RAISE EXCEPTION 'range_too_large' USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN QUERY
+  WITH
+    c AS (
+      SELECT date_trunc('day', created_at)::date AS d, COUNT(*)::int AS n
+      FROM public.click_logs
+      WHERE created_at >= p_from_ts AND created_at < p_to_ts
+      GROUP BY 1
+    ),
+    s AS (
+      SELECT date_trunc('day', created_at)::date AS d, COUNT(*)::int AS n
+      FROM public.search_logs
+      WHERE created_at >= p_from_ts AND created_at < p_to_ts
+      GROUP BY 1
+    ),
+    e AS (
+      SELECT date_trunc('day', created_at)::date AS d,
+             COUNT(DISTINCT user_id)::int AS n
+      FROM public.user_events
+      WHERE created_at >= p_from_ts AND created_at < p_to_ts
+      GROUP BY 1
+    ),
+    days AS (
+      SELECT generate_series(
+        date_trunc('day', p_from_ts)::date,
+        date_trunc('day', p_to_ts - INTERVAL '1 microsecond')::date,
+        INTERVAL '1 day'
+      )::date AS d
+    )
+  SELECT
+    days.d,
+    COALESCE(c.n, 0),
+    COALESCE(s.n, 0),
+    COALESCE(e.n, 0)
+  FROM days
+  LEFT JOIN c USING (d)
+  LEFT JOIN s USING (d)
+  LEFT JOIN e USING (d)
+  ORDER BY days.d;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."admin_daily_metrics"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_distinct_user_count"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_count INTEGER;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_from_ts IS NULL OR p_to_ts IS NULL
+     OR NOT isfinite(p_from_ts) OR NOT isfinite(p_to_ts)
+     OR p_to_ts <= p_from_ts THEN
+    RAISE EXCEPTION 'invalid_range' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF (p_to_ts - p_from_ts) > INTERVAL '366 days' THEN
+    RAISE EXCEPTION 'range_too_large' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT COUNT(DISTINCT user_id)::INTEGER
+  INTO v_count
+  FROM public.user_events
+  WHERE created_at >= p_from_ts
+    AND created_at <  p_to_ts;
+
+  RETURN COALESCE(v_count, 0);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."admin_distinct_user_count"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
@@ -127,6 +190,20 @@ COMMENT ON FUNCTION "public"."handle_new_user"() IS 'Supabase Auth에서 새 사
 
 
 
+CREATE OR REPLACE FUNCTION "public"."is_admin"("user_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  SELECT COALESCE(
+    (SELECT is_admin FROM public.users WHERE id = user_id),
+    false
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_admin"("user_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."search_similar"("query_embedding" "extensions"."vector", "match_count" integer DEFAULT 10, "filter_type" character varying DEFAULT NULL::character varying) RETURNS TABLE("entity_type" character varying, "entity_id" "uuid", "content_text" "text", "similarity" double precision)
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -145,6 +222,110 @@ $$;
 
 ALTER FUNCTION "public"."search_similar"("query_embedding" "extensions"."vector", "match_count" integer, "filter_type" character varying) OWNER TO "postgres";
 
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."post_magazines" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "title" character varying DEFAULT 'Untitled'::character varying NOT NULL,
+    "subtitle" "text",
+    "keyword" character varying,
+    "layout_json" "jsonb",
+    "status" character varying DEFAULT 'draft'::character varying NOT NULL,
+    "review_summary" "text",
+    "error_log" "jsonb" DEFAULT '[]'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "published_at" timestamp with time zone,
+    "approved_by" "uuid",
+    "rejection_reason" "text",
+    CONSTRAINT "post_magazines_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['draft'::character varying, 'pending'::character varying, 'published'::character varying, 'rejected'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."post_magazines" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_magazine_status"("p_magazine_id" "uuid", "p_new_status" character varying, "p_admin_user_id" "uuid", "p_rejection_reason" "text" DEFAULT NULL::"text") RETURNS SETOF "public"."post_magazines"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'warehouse', 'pg_temp'
+    AS $$
+DECLARE
+  v_before public.post_magazines;
+  v_after public.post_magazines;
+  v_action TEXT;
+  v_caller UUID := auth.uid();
+BEGIN
+  IF v_caller IS NOT NULL AND v_caller <> p_admin_user_id THEN
+    RAISE EXCEPTION 'caller_mismatch' USING ERRCODE = 'P0003';
+  END IF;
+
+  IF NOT public.is_admin(p_admin_user_id) THEN
+    RAISE EXCEPTION 'caller_not_admin' USING ERRCODE = 'P0003';
+  END IF;
+
+  IF p_rejection_reason IS NOT NULL AND length(p_rejection_reason) > 2000 THEN
+    RAISE EXCEPTION 'rejection_reason_too_long' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT * INTO v_before FROM public.post_magazines
+    WHERE id = p_magazine_id FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'magazine_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT (
+    (v_before.status = 'draft'     AND p_new_status = 'pending')   OR
+    (v_before.status = 'pending'   AND p_new_status = 'published') OR
+    (v_before.status = 'pending'   AND p_new_status = 'rejected')  OR
+    (v_before.status = 'rejected'  AND p_new_status = 'pending')   OR
+    (v_before.status = 'published' AND p_new_status = 'draft')
+  ) THEN
+    RAISE EXCEPTION 'invalid_transition: % -> %', v_before.status, p_new_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF p_new_status = 'rejected' AND (p_rejection_reason IS NULL OR length(trim(p_rejection_reason)) = 0) THEN
+    RAISE EXCEPTION 'rejection_reason_required' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.post_magazines
+  SET status = p_new_status,
+      approved_by = CASE WHEN p_new_status = 'published' THEN p_admin_user_id ELSE approved_by END,
+      published_at = CASE WHEN p_new_status = 'published' THEN now() ELSE published_at END,
+      rejection_reason = CASE WHEN p_new_status = 'rejected' THEN p_rejection_reason ELSE NULL END,
+      updated_at = now()
+  WHERE id = p_magazine_id
+  RETURNING * INTO v_after;
+
+  v_action := CASE p_new_status
+    WHEN 'published' THEN 'magazine_approve'
+    WHEN 'rejected'  THEN 'magazine_reject'
+    WHEN 'pending'   THEN 'magazine_submit'
+    WHEN 'draft'     THEN 'magazine_unpublish'
+    ELSE 'magazine_status_change'
+  END;
+
+  INSERT INTO warehouse.admin_audit_log (
+    admin_user_id, action, target_table, target_id,
+    before_state, after_state, metadata
+  ) VALUES (
+    p_admin_user_id, v_action, 'post_magazines', p_magazine_id,
+    row_to_json(v_before)::jsonb,
+    row_to_json(v_after)::jsonb,
+    jsonb_build_object('rejection_reason', p_rejection_reason)
+  );
+
+  RETURN NEXT v_after;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_magazine_status"("p_magazine_id" "uuid", "p_new_status" character varying, "p_admin_user_id" "uuid", "p_rejection_reason" "text") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -160,6 +341,19 @@ CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigge
 ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "warehouse"."set_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+            BEGIN
+              NEW.updated_at = now();
+              RETURN NEW;
+            END;
+            $$;
+
+
+ALTER FUNCTION "warehouse"."set_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "warehouse"."touch_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -172,10 +366,6 @@ $$;
 
 
 ALTER FUNCTION "warehouse"."touch_updated_at"() OWNER TO "postgres";
-
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
 
 
 CREATE TABLE IF NOT EXISTS "public"."agent_sessions" (
@@ -407,24 +597,6 @@ CREATE TABLE IF NOT EXISTS "public"."embeddings" (
 ALTER TABLE "public"."embeddings" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."post_magazines" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "title" character varying DEFAULT 'Untitled'::character varying NOT NULL,
-    "subtitle" "text",
-    "keyword" character varying,
-    "layout_json" "jsonb",
-    "status" character varying DEFAULT 'draft'::character varying NOT NULL,
-    "review_summary" "text",
-    "error_log" "jsonb" DEFAULT '[]'::"jsonb",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "published_at" timestamp with time zone
-);
-
-
-ALTER TABLE "public"."post_magazines" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."posts" (
     "id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -447,7 +619,9 @@ CREATE TABLE IF NOT EXISTS "public"."posts" (
     "group_id" "uuid",
     "style_tags" "jsonb",
     "image_width" integer,
-    "image_height" integer
+    "image_height" integer,
+    "parent_post_id" "uuid",
+    "post_type" character varying(20)
 );
 
 
@@ -760,6 +934,17 @@ CREATE TABLE IF NOT EXISTS "public"."synonyms" (
 ALTER TABLE "public"."synonyms" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."try_spot_tags" (
+    "id" "uuid" NOT NULL,
+    "try_post_id" "uuid" NOT NULL,
+    "spot_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE "public"."try_spot_tags" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_badges" (
     "user_id" "uuid" NOT NULL,
     "badge_id" "uuid" NOT NULL,
@@ -1011,6 +1196,7 @@ CREATE TABLE IF NOT EXISTS "warehouse"."instagram_accounts" (
     "artist_id" "uuid",
     "entity_ig_role" "warehouse"."entity_ig_role",
     "entity_region_code" "text",
+    "group_id" "uuid",
     CONSTRAINT "warehouse_instagram_accounts_brand_xor_artist" CHECK ((NOT (("brand_id" IS NOT NULL) AND ("artist_id" IS NOT NULL)))),
     CONSTRAINT "warehouse_instagram_accounts_entity_role_when_linked" CHECK (((("brand_id" IS NULL) AND ("artist_id" IS NULL)) OR ("entity_ig_role" IS NOT NULL))),
     CONSTRAINT "warehouse_instagram_accounts_wikidata_status_check" CHECK ((("wikidata_status" IS NULL) OR ("wikidata_status" = ANY (ARRAY['matched'::"text", 'not_found'::"text", 'ambiguous'::"text", 'error'::"text"]))))
@@ -1031,6 +1217,53 @@ CREATE TABLE IF NOT EXISTS "warehouse"."posts" (
 
 
 ALTER TABLE "warehouse"."posts" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "warehouse"."raw_post_sources" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "platform" "text" NOT NULL,
+    "source_type" "text" NOT NULL,
+    "source_identifier" "text" NOT NULL,
+    "label" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "fetch_interval_seconds" integer DEFAULT 3600 NOT NULL,
+    "last_enqueued_at" timestamp with time zone,
+    "last_scraped_at" timestamp with time zone,
+    "metadata" "jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "warehouse"."raw_post_sources" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "warehouse"."raw_posts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "source_id" "uuid" NOT NULL,
+    "platform" "text" NOT NULL,
+    "external_id" "text" NOT NULL,
+    "external_url" "text" NOT NULL,
+    "image_url" "text" NOT NULL,
+    "r2_key" "text",
+    "r2_url" "text",
+    "image_hash" "text",
+    "caption" "text",
+    "author_name" "text",
+    "parse_status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "parse_result" "jsonb",
+    "parse_error" "text",
+    "parse_attempts" integer DEFAULT 0 NOT NULL,
+    "seed_post_id" "uuid",
+    "platform_metadata" "jsonb",
+    "dispatch_id" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "raw_posts_parse_status_check" CHECK (("parse_status" = ANY (ARRAY['pending'::"text", 'parsing'::"text", 'parsed'::"text", 'failed'::"text", 'skipped'::"text"])))
+);
+
+
+ALTER TABLE "warehouse"."raw_posts" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "warehouse"."seed_asset" (
@@ -1055,40 +1288,18 @@ CREATE TABLE IF NOT EXISTS "warehouse"."seed_posts" (
     "source_image_id" "uuid",
     "image_url" "text" NOT NULL,
     "media_source" "jsonb",
-    "group_account_id" "uuid",
-    "artist_account_id" "uuid",
-    "context" "text",
+    "group_id" "uuid",
+    "artist_id" "uuid",
     "metadata" "jsonb",
     "status" "text" DEFAULT 'draft'::"text" NOT NULL,
-    "backend_post_id" "uuid",
     "publish_error" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "backend_post_id" "uuid"
 );
 
 
 ALTER TABLE "warehouse"."seed_posts" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "warehouse"."seed_solutions" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "seed_spot_id" "uuid",
-    "original_url" "text",
-    "product_name" "text",
-    "brand" "text",
-    "price_amount" numeric,
-    "price_currency" "text",
-    "description" "text",
-    "metadata" "jsonb",
-    "status" "text" DEFAULT 'draft'::"text" NOT NULL,
-    "backend_solution_id" "uuid",
-    "publish_error" "text",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "warehouse"."seed_solutions" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "warehouse"."seed_spots" (
@@ -1097,12 +1308,12 @@ CREATE TABLE IF NOT EXISTS "warehouse"."seed_spots" (
     "request_order" integer NOT NULL,
     "position_left" "text" NOT NULL,
     "position_top" "text" NOT NULL,
-    "subcategory_code" "text",
     "status" "text" DEFAULT 'draft'::"text" NOT NULL,
-    "backend_spot_id" "uuid",
     "publish_error" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "solutions" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "subcategory_id" "uuid"
 );
 
 
@@ -1294,6 +1505,11 @@ ALTER TABLE ONLY "public"."synonyms"
 
 
 
+ALTER TABLE ONLY "public"."try_spot_tags"
+    ADD CONSTRAINT "try_spot_tags_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_collections"
     ADD CONSTRAINT "user_collections_pkey" PRIMARY KEY ("id");
 
@@ -1389,18 +1605,38 @@ ALTER TABLE ONLY "warehouse"."posts"
 
 
 
+ALTER TABLE ONLY "warehouse"."raw_post_sources"
+    ADD CONSTRAINT "raw_post_sources_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "warehouse"."raw_post_sources"
+    ADD CONSTRAINT "raw_post_sources_unique_target" UNIQUE ("platform", "source_type", "source_identifier");
+
+
+
+ALTER TABLE ONLY "warehouse"."raw_posts"
+    ADD CONSTRAINT "raw_posts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "warehouse"."raw_posts"
+    ADD CONSTRAINT "raw_posts_unique_external" UNIQUE ("platform", "external_id");
+
+
+
 ALTER TABLE ONLY "warehouse"."seed_asset"
     ADD CONSTRAINT "seed_asset_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "warehouse"."seed_posts"
+    ADD CONSTRAINT "seed_posts_backend_post_id_key" UNIQUE ("backend_post_id");
+
+
+
+ALTER TABLE ONLY "warehouse"."seed_posts"
     ADD CONSTRAINT "seed_posts_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "warehouse"."seed_solutions"
-    ADD CONSTRAINT "seed_solutions_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1426,21 +1662,6 @@ ALTER TABLE ONLY "warehouse"."posts"
 
 ALTER TABLE ONLY "warehouse"."seed_asset"
     ADD CONSTRAINT "warehouse_seed_asset_image_hash_key" UNIQUE ("image_hash");
-
-
-
-ALTER TABLE ONLY "warehouse"."seed_posts"
-    ADD CONSTRAINT "warehouse_seed_posts_backend_post_id_key" UNIQUE ("backend_post_id");
-
-
-
-ALTER TABLE ONLY "warehouse"."seed_solutions"
-    ADD CONSTRAINT "warehouse_seed_solutions_backend_solution_id_key" UNIQUE ("backend_solution_id");
-
-
-
-ALTER TABLE ONLY "warehouse"."seed_spots"
-    ADD CONSTRAINT "warehouse_seed_spots_backend_spot_id_key" UNIQUE ("backend_spot_id");
 
 
 
@@ -1652,7 +1873,19 @@ CREATE INDEX "idx_posts_group_name_trgm" ON "public"."posts" USING "gin" ("group
 
 
 
+CREATE INDEX "idx_posts_parent_post_id" ON "public"."posts" USING "btree" ("parent_post_id");
+
+
+
+CREATE INDEX "idx_posts_post_type" ON "public"."posts" USING "btree" ("post_type");
+
+
+
 CREATE INDEX "idx_posts_status" ON "public"."posts" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_posts_trending_active" ON "public"."posts" USING "btree" ("trending_score" DESC NULLS LAST, "created_at" DESC) WHERE ((("status")::"text" = 'active'::"text") AND (("post_type" IS NULL) OR (("post_type")::"text" <> 'try'::"text")));
 
 
 
@@ -1701,6 +1934,10 @@ CREATE INDEX "idx_settlements_status" ON "public"."settlements" USING "btree" ("
 
 
 CREATE INDEX "idx_settlements_user_id" ON "public"."settlements" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_solutions_active_spot_id" ON "public"."solutions" USING "btree" ("spot_id") WHERE (("status")::"text" = 'active'::"text");
 
 
 
@@ -1765,6 +2002,14 @@ CREATE INDEX "idx_synonyms_is_active" ON "public"."synonyms" USING "btree" ("is_
 
 
 CREATE INDEX "idx_synonyms_type" ON "public"."synonyms" USING "btree" ("type");
+
+
+
+CREATE INDEX "idx_try_spot_tags_spot_id" ON "public"."try_spot_tags" USING "btree" ("spot_id");
+
+
+
+CREATE UNIQUE INDEX "idx_try_spot_tags_try_post_spot_unique" ON "public"."try_spot_tags" USING "btree" ("try_post_id", "spot_id");
 
 
 
@@ -1836,6 +2081,10 @@ CREATE INDEX "idx_users_username" ON "public"."users" USING "btree" ("username")
 
 
 
+CREATE INDEX "idx_view_logs_created_at" ON "public"."view_logs" USING "btree" ("created_at");
+
+
+
 CREATE INDEX "idx_view_logs_reference" ON "public"."view_logs" USING "btree" ("reference_type", "reference_id");
 
 
@@ -1857,6 +2106,10 @@ CREATE UNIQUE INDEX "idx_votes_solution_user_unique" ON "public"."votes" USING "
 
 
 CREATE INDEX "idx_votes_user_id" ON "public"."votes" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "post_magazines_status_idx" ON "public"."post_magazines" USING "btree" ("status") WHERE (("status")::"text" = ANY ((ARRAY['pending'::character varying, 'draft'::character varying])::"text"[]));
 
 
 
@@ -1900,6 +2153,10 @@ CREATE INDEX "idx_warehouse_instagram_accounts_brand_id" ON "warehouse"."instagr
 
 
 
+CREATE INDEX "idx_warehouse_instagram_accounts_group_id" ON "warehouse"."instagram_accounts" USING "btree" ("group_id");
+
+
+
 CREATE INDEX "idx_warehouse_instagram_accounts_type" ON "warehouse"."instagram_accounts" USING "btree" ("account_type");
 
 
@@ -1932,23 +2189,39 @@ CREATE INDEX "idx_warehouse_seed_posts_status" ON "warehouse"."seed_posts" USING
 
 
 
-CREATE INDEX "idx_warehouse_seed_solutions_original_url" ON "warehouse"."seed_solutions" USING "btree" ("original_url");
-
-
-
-CREATE INDEX "idx_warehouse_seed_solutions_seed_spot_id" ON "warehouse"."seed_solutions" USING "btree" ("seed_spot_id");
-
-
-
-CREATE INDEX "idx_warehouse_seed_solutions_status" ON "warehouse"."seed_solutions" USING "btree" ("status");
-
-
-
 CREATE INDEX "idx_warehouse_seed_spots_request_order" ON "warehouse"."seed_spots" USING "btree" ("request_order");
 
 
 
 CREATE INDEX "idx_warehouse_seed_spots_seed_post_id" ON "warehouse"."seed_spots" USING "btree" ("seed_post_id");
+
+
+
+CREATE INDEX "idx_warehouse_seed_spots_status" ON "warehouse"."seed_spots" USING "btree" ("status");
+
+
+
+CREATE INDEX "raw_post_sources_active_platform_idx" ON "warehouse"."raw_post_sources" USING "btree" ("is_active", "platform");
+
+
+
+CREATE INDEX "raw_post_sources_due_idx" ON "warehouse"."raw_post_sources" USING "btree" ("last_enqueued_at") WHERE ("is_active" = true);
+
+
+
+CREATE INDEX "raw_posts_parse_status_idx" ON "warehouse"."raw_posts" USING "btree" ("parse_status", "created_at");
+
+
+
+CREATE INDEX "raw_posts_platform_idx" ON "warehouse"."raw_posts" USING "btree" ("platform");
+
+
+
+CREATE INDEX "raw_posts_source_idx" ON "warehouse"."raw_posts" USING "btree" ("source_id");
+
+
+
+CREATE UNIQUE INDEX "uq_warehouse_seed_posts_source_post_image" ON "warehouse"."seed_posts" USING "btree" ("source_post_id", "source_image_id") WHERE (("source_post_id" IS NOT NULL) AND ("source_image_id" IS NOT NULL));
 
 
 
@@ -2016,6 +2289,14 @@ CREATE OR REPLACE TRIGGER "update_users_updated_at" BEFORE UPDATE ON "public"."u
 
 
 
+CREATE OR REPLACE TRIGGER "raw_post_sources_set_updated_at" BEFORE UPDATE ON "warehouse"."raw_post_sources" FOR EACH ROW EXECUTE FUNCTION "warehouse"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "raw_posts_set_updated_at" BEFORE UPDATE ON "warehouse"."raw_posts" FOR EACH ROW EXECUTE FUNCTION "warehouse"."set_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_artists_touch_updated_at" BEFORE UPDATE ON "warehouse"."artists" FOR EACH ROW EXECUTE FUNCTION "warehouse"."touch_updated_at"();
 
 
@@ -2041,10 +2322,6 @@ CREATE OR REPLACE TRIGGER "trg_seed_asset_touch_updated_at" BEFORE UPDATE ON "wa
 
 
 CREATE OR REPLACE TRIGGER "trg_seed_posts_touch_updated_at" BEFORE UPDATE ON "warehouse"."seed_posts" FOR EACH ROW EXECUTE FUNCTION "warehouse"."touch_updated_at"();
-
-
-
-CREATE OR REPLACE TRIGGER "trg_seed_solutions_touch_updated_at" BEFORE UPDATE ON "warehouse"."seed_solutions" FOR EACH ROW EXECUTE FUNCTION "warehouse"."touch_updated_at"();
 
 
 
@@ -2153,6 +2430,11 @@ ALTER TABLE ONLY "public"."posts"
 
 
 ALTER TABLE ONLY "public"."posts"
+    ADD CONSTRAINT "fk_posts_parent_post_id" FOREIGN KEY ("parent_post_id") REFERENCES "public"."posts"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."posts"
     ADD CONSTRAINT "fk_posts_post_magazine_id" FOREIGN KEY ("post_magazine_id") REFERENCES "public"."post_magazines"("id") ON DELETE SET NULL;
 
 
@@ -2217,6 +2499,16 @@ ALTER TABLE ONLY "public"."subcategories"
 
 
 
+ALTER TABLE ONLY "public"."try_spot_tags"
+    ADD CONSTRAINT "fk_try_spot_tags_spot_id" FOREIGN KEY ("spot_id") REFERENCES "public"."spots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."try_spot_tags"
+    ADD CONSTRAINT "fk_try_spot_tags_try_post_id" FOREIGN KEY ("try_post_id") REFERENCES "public"."posts"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."user_badges"
     ADD CONSTRAINT "fk_user_badges_badge_id" FOREIGN KEY ("badge_id") REFERENCES "public"."badges"("id") ON DELETE CASCADE;
 
@@ -2269,6 +2561,11 @@ ALTER TABLE ONLY "public"."magazines"
 
 ALTER TABLE ONLY "public"."post_magazine_news_references"
     ADD CONSTRAINT "post_magazine_news_references_post_magazine_id_fkey" FOREIGN KEY ("post_magazine_id") REFERENCES "public"."post_magazines"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."post_magazines"
+    ADD CONSTRAINT "post_magazines_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
 
 
 
@@ -2347,8 +2644,23 @@ ALTER TABLE ONLY "warehouse"."instagram_accounts"
 
 
 
+ALTER TABLE ONLY "warehouse"."raw_posts"
+    ADD CONSTRAINT "raw_posts_seed_post_id_fkey" FOREIGN KEY ("seed_post_id") REFERENCES "warehouse"."seed_posts"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "warehouse"."raw_posts"
+    ADD CONSTRAINT "raw_posts_source_id_fkey" FOREIGN KEY ("source_id") REFERENCES "warehouse"."raw_post_sources"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "warehouse"."images"
     ADD CONSTRAINT "warehouse_images_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "warehouse"."posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "warehouse"."instagram_accounts"
+    ADD CONSTRAINT "warehouse_instagram_accounts_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "warehouse"."groups"("id") ON DELETE SET NULL;
 
 
 
@@ -2363,12 +2675,12 @@ ALTER TABLE ONLY "warehouse"."seed_asset"
 
 
 ALTER TABLE ONLY "warehouse"."seed_posts"
-    ADD CONSTRAINT "warehouse_seed_posts_artist_account_id_fkey" FOREIGN KEY ("artist_account_id") REFERENCES "warehouse"."instagram_accounts"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "warehouse_seed_posts_artist_id_fkey" FOREIGN KEY ("artist_id") REFERENCES "warehouse"."artists"("id") ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY "warehouse"."seed_posts"
-    ADD CONSTRAINT "warehouse_seed_posts_group_account_id_fkey" FOREIGN KEY ("group_account_id") REFERENCES "warehouse"."instagram_accounts"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "warehouse_seed_posts_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "warehouse"."groups"("id") ON DELETE SET NULL;
 
 
 
@@ -2379,11 +2691,6 @@ ALTER TABLE ONLY "warehouse"."seed_posts"
 
 ALTER TABLE ONLY "warehouse"."seed_posts"
     ADD CONSTRAINT "warehouse_seed_posts_source_post_id_fkey" FOREIGN KEY ("source_post_id") REFERENCES "warehouse"."posts"("id") ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "warehouse"."seed_solutions"
-    ADD CONSTRAINT "warehouse_seed_solutions_seed_spot_id_fkey" FOREIGN KEY ("seed_spot_id") REFERENCES "warehouse"."seed_spots"("id") ON DELETE SET NULL;
 
 
 
@@ -2612,6 +2919,10 @@ CREATE POLICY "Users read own events" ON "public"."user_events" FOR SELECT USING
 
 
 
+CREATE POLICY "admin_can_update_magazines" ON "public"."post_magazines" FOR UPDATE USING ("public"."is_admin"("auth"."uid"())) WITH CHECK ("public"."is_admin"("auth"."uid"()));
+
+
+
 ALTER TABLE "public"."agent_sessions" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2683,6 +2994,9 @@ ALTER TABLE "public"."point_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."post_likes" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."post_magazine_news_references" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."post_magazines" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2714,6 +3028,9 @@ ALTER TABLE "public"."subcategories" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."synonyms" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."try_spot_tags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_badges" ENABLE ROW LEVEL SECURITY;
@@ -2790,10 +3107,6 @@ CREATE POLICY "Allow public read" ON "warehouse"."seed_posts" FOR SELECT USING (
 
 
 
-CREATE POLICY "Allow public read" ON "warehouse"."seed_solutions" FOR SELECT USING (true);
-
-
-
 CREATE POLICY "Allow public read" ON "warehouse"."seed_spots" FOR SELECT USING (true);
 
 
@@ -2819,29 +3132,27 @@ ALTER TABLE "warehouse"."instagram_accounts" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "warehouse"."posts" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "warehouse"."raw_post_sources" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "raw_post_sources_select_public" ON "warehouse"."raw_post_sources" FOR SELECT USING (true);
+
+
+
+ALTER TABLE "warehouse"."raw_posts" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "raw_posts_select_public" ON "warehouse"."raw_posts" FOR SELECT USING (true);
+
+
+
 ALTER TABLE "warehouse"."seed_asset" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "warehouse"."seed_posts" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "warehouse"."seed_solutions" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "warehouse"."seed_spots" ENABLE ROW LEVEL SECURITY;
-
-
-
-
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
-
-
-
-
-
-
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."agent_sessions";
-
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -2857,600 +3168,15 @@ GRANT USAGE ON SCHEMA "warehouse" TO "authenticated";
 
 
 
+REVOKE ALL ON FUNCTION "public"."admin_daily_metrics"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_daily_metrics"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_daily_metrics"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) TO "service_role";
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+REVOKE ALL ON FUNCTION "public"."admin_distinct_user_count"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_distinct_user_count"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_distinct_user_count"("p_from_ts" timestamp with time zone, "p_to_ts" timestamp with time zone) TO "service_role";
 
 
 
@@ -3460,39 +3186,32 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."is_admin"("user_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_admin"("user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_admin"("user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."search_similar"("query_embedding" "extensions"."vector", "match_count" integer, "filter_type" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."search_similar"("query_embedding" "extensions"."vector", "match_count" integer, "filter_type" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."search_similar"("query_embedding" "extensions"."vector", "match_count" integer, "filter_type" character varying) TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."post_magazines" TO "anon";
+GRANT ALL ON TABLE "public"."post_magazines" TO "authenticated";
+GRANT ALL ON TABLE "public"."post_magazines" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."update_magazine_status"("p_magazine_id" "uuid", "p_new_status" character varying, "p_admin_user_id" "uuid", "p_rejection_reason" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_magazine_status"("p_magazine_id" "uuid", "p_new_status" character varying, "p_admin_user_id" "uuid", "p_rejection_reason" "text") TO "service_role";
 
 
 
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3589,12 +3308,6 @@ GRANT ALL ON TABLE "public"."earnings" TO "service_role";
 GRANT ALL ON TABLE "public"."embeddings" TO "anon";
 GRANT ALL ON TABLE "public"."embeddings" TO "authenticated";
 GRANT ALL ON TABLE "public"."embeddings" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."post_magazines" TO "anon";
-GRANT ALL ON TABLE "public"."post_magazines" TO "authenticated";
-GRANT ALL ON TABLE "public"."post_magazines" TO "service_role";
 
 
 
@@ -3700,6 +3413,12 @@ GRANT ALL ON TABLE "public"."synonyms" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."try_spot_tags" TO "anon";
+GRANT ALL ON TABLE "public"."try_spot_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."try_spot_tags" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."user_badges" TO "anon";
 GRANT ALL ON TABLE "public"."user_badges" TO "authenticated";
 GRANT ALL ON TABLE "public"."user_badges" TO "service_role";
@@ -3760,12 +3479,6 @@ GRANT ALL ON TABLE "public"."votes" TO "service_role";
 
 
 
-
-
-
-
-
-
 GRANT SELECT ON TABLE "warehouse"."admin_audit_log" TO "anon";
 GRANT SELECT ON TABLE "warehouse"."admin_audit_log" TO "authenticated";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."admin_audit_log" TO "service_role";
@@ -3814,6 +3527,18 @@ GRANT SELECT ON TABLE "warehouse"."posts" TO "authenticated";
 
 
 
+GRANT SELECT ON TABLE "warehouse"."raw_post_sources" TO "anon";
+GRANT SELECT ON TABLE "warehouse"."raw_post_sources" TO "authenticated";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."raw_post_sources" TO "service_role";
+
+
+
+GRANT SELECT ON TABLE "warehouse"."raw_posts" TO "anon";
+GRANT SELECT ON TABLE "warehouse"."raw_posts" TO "authenticated";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."raw_posts" TO "service_role";
+
+
+
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."seed_asset" TO "service_role";
 GRANT SELECT ON TABLE "warehouse"."seed_asset" TO "anon";
 GRANT SELECT ON TABLE "warehouse"."seed_asset" TO "authenticated";
@@ -3823,12 +3548,6 @@ GRANT SELECT ON TABLE "warehouse"."seed_asset" TO "authenticated";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."seed_posts" TO "service_role";
 GRANT SELECT ON TABLE "warehouse"."seed_posts" TO "anon";
 GRANT SELECT ON TABLE "warehouse"."seed_posts" TO "authenticated";
-
-
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "warehouse"."seed_solutions" TO "service_role";
-GRANT SELECT ON TABLE "warehouse"."seed_solutions" TO "anon";
-GRANT SELECT ON TABLE "warehouse"."seed_solutions" TO "authenticated";
 
 
 
@@ -3873,34 +3592,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "warehouse" GRANT SELECT 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "warehouse" GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO "service_role";
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-drop extension if exists "pg_net";
-
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 

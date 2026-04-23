@@ -1,39 +1,31 @@
-# Database Migrations
+# SeaORM Migrations (공존 / 레거시)
 
-SeaORM 마이그레이션 및 Supabase 설정 가이드
+> ⚠️ **SOT 아님**: #282 이후 저장소의 DB 마이그레이션 단일 진실원천은 [`supabase/migrations/*.sql`](../../../supabase/migrations/) 입니다. 워크플로우는 [`docs/DATABASE-MIGRATIONS.md`](../../../docs/DATABASE-MIGRATIONS.md) 참조.
+>
+> 이 디렉토리는 SeaORM 마이그레이션을 유지하지만 dev 에서는 `SKIP_DB_MIGRATIONS=1` 로 꺼져 있습니다. 신규 스키마 변경은 `supabase/migrations/` 에 추가하세요. B.3 통합 PR 에서 이 디렉토리는 재작성 또는 제거 예정.
 
-## 마이그레이션 실행
+## 언제 이 디렉토리를 건드리는가
 
-### 1. Rust 마이그레이션 실행
+- SeaORM 마이그레이션 목록을 supabase/migrations 와 mirror 해 두고 싶을 때 (로컬 plain Postgres 호환 보조 용도)
+- prod 에서 `SKIP_DB_MIGRATIONS` 를 unset 유지하기 때문에, SQL 과 동등한 idempotent SeaORM 정의를 유지할 때
+- **신규 테이블/컬럼 스키마 자체**는 여기 추가하지 말 것 — supabase/migrations 에 추가
+
+## 마이그레이션 실행 (로컬 plain Postgres 에서만)
 
 ```bash
-# 마이그레이션 디렉토리로 이동
 cd migration
 
-# 마이그레이션 적용
-cargo run -- up
-
-# 마이그레이션 롤백
-cargo run -- down
-
-# 마이그레이션 상태 확인
-cargo run -- status
-
-# 마이그레이션 새로고침 (down → up)
-cargo run -- refresh
+cargo run -- up        # 적용
+cargo run -- down      # 롤백
+cargo run -- status    # 상태
+cargo run -- refresh   # down → up
 ```
 
-### 2. Supabase SQL 스크립트 실행
+> `just dev` 가 기본 로컬 경로이며 Supabase self-hosted + `supabase db reset` 으로 `supabase/migrations/` 를 적용합니다. 위 cargo 명령은 SeaORM 동기화 디버깅 용도로만 쓰세요.
 
-Rust 마이그레이션 후, Supabase Dashboard의 SQL Editor에서 다음 파일들을 순서대로 실행하세요:
+## `sql/` 레거시 스크립트 (historical reference)
 
-1. **Auth 트리거**: `sql/01_auth_trigger_handle_new_user.sql`
-   - Supabase Auth에서 새 사용자 생성 시 자동으로 users 테이블에 레코드 생성
-
-2. **RLS 정책**: `sql/02_rls_policy_users.sql`
-   - users 테이블에 Row Level Security 정책 적용
-   - 모든 사용자가 프로필 조회 가능
-   - 사용자는 자신의 프로필만 수정/삭제 가능
+`sql/01_auth_trigger_handle_new_user.sql`, `sql/02_rls_policy_users.sql`, `sql/03_rls_policy_posts.sql` 은 #202 이전의 수동 적용 스크립트입니다. 현재 이 내용은 `supabase/migrations/20260409075040_remote_schema.sql` 스냅샷에 흡수되어 dev/prod 양쪽에 이미 반영돼 있습니다. **새 마이그레이션은 여기 추가하지 말 것.**
 
 ## 마이그레이션 목록
 

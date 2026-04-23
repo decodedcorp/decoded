@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 from os import getcwd
 from os.path import join, exists
-from typing import Optional, Union
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
 from dotenv import load_dotenv, set_key
 from .model import RedisConfig
@@ -42,6 +42,11 @@ class Environment(BaseModel):
 
     QUEUE_BATCH_SIZE: int = 10
 
+    # Postgres 직접 연결 (asyncpg pool) — 로컬/prod 투명 전환 (DATABASE_URL 값만 교체)
+    DATABASE_URL: str = ""
+    DATABASE_POOL_MIN: int = 1
+    DATABASE_POOL_MAX: int = 5
+
     API_SERVER_HTTP_URL: str
     API_SERVER_ACCESS_TOKEN: str
 
@@ -68,7 +73,9 @@ class Environment(BaseModel):
     GEMINI_MODEL: str = "gemini-3-flash-preview"
     GEMINI_MAX_RETRIES: int = 3
     GEMINI_REQUEST_TIMEOUT: int = 30
-    GEMINI_EXCLUDED_DOMAINS: str = ""  # Comma-separated list of domains to exclude from Gemini extraction
+    GEMINI_EXCLUDED_DOMAINS: str = (
+        ""  # Comma-separated list of domains to exclude from Gemini extraction
+    )
 
     GROQ_API_KEY: str = ""
     GROQ_BASE_URL: str = ""
@@ -80,7 +87,7 @@ class Environment(BaseModel):
     SEARXNG_MAX_RETRIES: int = 3
     SEARXNG_REQUEST_TIMEOUT: int = 10
     SEARXNG_INCLUDED_DOMAINS: str = ""
-    
+
     # Processing Configuration
     BATCH_SIZE: int = 10
     MAX_CONCURRENT_REQUESTS: int = 5
@@ -93,11 +100,30 @@ class Environment(BaseModel):
     TELEGRAM_ENABLED: bool = True
 
     # Cost Optimization Configuration
-    COST_OPTIMIZATION_THRESHOLD: int = 500  # Character threshold for LocalLLM summarization (performance-optimized)
+    COST_OPTIMIZATION_THRESHOLD: int = (
+        500  # Character threshold for LocalLLM summarization (performance-optimized)
+    )
 
     # Batch Result Configuration
     BATCH_FLUSH_INTERVAL: int = 30  # 배치 전송 주기 (초)
     RESULT_BATCH_SIZE: int = 50  # 배치 크기
+
+    # Raw Posts — Cloudflare R2 (#258)
+    RAW_POSTS_R2_ACCOUNT_ID: str = ""
+    RAW_POSTS_R2_ACCESS_KEY_ID: str = ""
+    RAW_POSTS_R2_SECRET_ACCESS_KEY: str = ""
+    RAW_POSTS_R2_BUCKET: str = "raw"
+    RAW_POSTS_R2_PUBLIC_URL: str = ""  # e.g. https://<id>.r2.dev or custom domain
+    RAW_POSTS_FETCH_DEFAULT_LIMIT: int = 50
+    RAW_POSTS_DOWNLOAD_TIMEOUT: int = 30
+
+    # Raw Posts scheduler (#214)
+    RAW_POSTS_SCHEDULER_INTERVAL_SECONDS: int = 300  # scheduler polls every 5 min
+
+    # Pinterest adapter (#214)
+    PINTEREST_INITIAL_LIMIT: int = 500       # max pins on the first deep scrape of a board
+    PINTEREST_INCREMENTAL_LIMIT: int = 25    # pins per periodic polling cycle
+    PINTEREST_PAGE_DELAY_MS: int = 500       # polite delay between paginated feed requests
 
     @staticmethod
     def from_environ(*, env_file: Optional[str] = None):

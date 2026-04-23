@@ -40,16 +40,18 @@ def _assemble_draft(state: PostEditorialState) -> dict:
             brand = None
             if sol.metadata and isinstance(sol.metadata, dict):
                 brand = sol.metadata.get("brand")
-            items.append({
-                "spot_id": spot.id,
-                "solution_id": sol.id,
-                "title": sol.title,
-                "brand": brand,
-                "image_url": sol.thumbnail_url,
-                "original_url": sol.original_url,
-                "metadata": sol.metadata or {},
-                "editorial_paragraphs": item_editorial_texts.get(spot.id, []),
-            })
+            items.append(
+                {
+                    "spot_id": spot.id,
+                    "solution_id": sol.id,
+                    "title": sol.title,
+                    "brand": brand,
+                    "image_url": sol.thumbnail_url,
+                    "original_url": sol.original_url,
+                    "metadata": sol.metadata or {},
+                    "editorial_paragraphs": item_editorial_texts.get(spot.id, []),
+                }
+            )
 
     return {
         "schema_version": "1.0",
@@ -75,11 +77,15 @@ def validate_format(draft: dict) -> CriterionResult:
         )
 
     if not draft.get("title") or not str(draft.get("title", "")).strip():
-        return CriterionResult(criterion="format", passed=False, reason="Title is empty", severity="critical")
+        return CriterionResult(
+            criterion="format", passed=False, reason="Title is empty", severity="critical"
+        )
 
     editorial = draft.get("editorial") or {}
     if not editorial.get("paragraphs"):
-        return CriterionResult(criterion="format", passed=False, reason="No editorial paragraphs", severity="critical")
+        return CriterionResult(
+            criterion="format", passed=False, reason="No editorial paragraphs", severity="critical"
+        )
 
     return CriterionResult(criterion="format", passed=True, reason="Schema valid", severity="minor")
 
@@ -110,15 +116,25 @@ async def review_node(state: PostEditorialState) -> dict:
         update: dict = {
             "review_result": {"passed": False},
             "revision_count": new_revision_count,
-            "feedback_history": [{"criteria": [format_result.model_dump()], "summary": format_result.reason, "suggestions": [format_result.reason]}],
+            "feedback_history": [
+                {
+                    "criteria": [format_result.model_dump()],
+                    "summary": format_result.reason,
+                    "suggestions": [format_result.reason],
+                }
+            ],
         }
         if new_revision_count >= MAX_REVISIONS:
             update["pipeline_status"] = "failed"
-            update["error_log"] = [f"Review failed after {new_revision_count} attempts: {format_result.reason}"]
+            update["error_log"] = [
+                f"Review failed after {new_revision_count} attempts: {format_result.reason}"
+            ]
         return update
 
     post_data = state["post_data"]
-    artist_info = " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
+    artist_info = (
+        " / ".join(filter(None, [post_data.artist_name, post_data.group_name])) or "Unknown"
+    )
     items_summary = ", ".join(sol.title for spot in post_data.spots for sol in spot.solutions)
     post_summary = f"아티스트: {artist_info}, 아이템: {items_summary}"
 
@@ -134,7 +150,9 @@ async def review_node(state: PostEditorialState) -> dict:
                 client.aio.models.generate_content(
                     model=model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.0),
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json", temperature=0.0
+                    ),
                 ),
                 timeout=_REVIEW_TIMEOUT,
             )
@@ -160,7 +178,15 @@ async def review_node(state: PostEditorialState) -> dict:
         if result is None:
             result = ReviewResult(
                 passed=True,
-                criteria=[CriterionResult(criterion=c, passed=True, reason="Parse failed; lenient pass", severity="minor") for c in ("hallucination", "fact_accuracy", "content_completeness")],
+                criteria=[
+                    CriterionResult(
+                        criterion=c,
+                        passed=True,
+                        reason="Parse failed; lenient pass",
+                        severity="minor",
+                    )
+                    for c in ("hallucination", "fact_accuracy", "content_completeness")
+                ],
                 summary="Review response could not be parsed.",
                 suggestions=[],
             )
@@ -168,7 +194,10 @@ async def review_node(state: PostEditorialState) -> dict:
     except asyncio.TimeoutError:
         result = ReviewResult(
             passed=True,
-            criteria=[CriterionResult(criterion=c, passed=True, reason="LLM timeout", severity="minor") for c in ("hallucination", "fact_accuracy", "content_completeness")],
+            criteria=[
+                CriterionResult(criterion=c, passed=True, reason="LLM timeout", severity="minor")
+                for c in ("hallucination", "fact_accuracy", "content_completeness")
+            ],
             summary="Review timed out.",
             suggestions=[],
         )
@@ -184,7 +213,12 @@ async def review_node(state: PostEditorialState) -> dict:
 
     all_criteria = [format_result] + result.criteria
     overall_passed = all(c.passed for c in all_criteria)
-    result_dict = {"passed": overall_passed, "criteria": [c.model_dump() for c in all_criteria], "summary": result.summary, "suggestions": result.suggestions}
+    result_dict = {
+        "passed": overall_passed,
+        "criteria": [c.model_dump() for c in all_criteria],
+        "summary": result.summary,
+        "suggestions": result.suggestions,
+    }
 
     update = {"review_result": result_dict}
     if overall_passed:

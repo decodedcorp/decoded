@@ -2,7 +2,7 @@
  * Supabase Warehouse Schema Types
  *
  * Auto-generated from warehouse schema via `supabase gen types`.
- * Last updated: 2026-03-26
+ * Last updated: 2026-04-19
  *
  * Regenerate: npx supabase gen types typescript --project-id fvxchskblyhuswzlcmql --schema warehouse
  *
@@ -14,6 +14,8 @@
  * - instagram_accounts - Instagram account tracking (artist/group/brand/source)
  * - posts - Instagram posts collected via ETL
  * - images - Post images with hash deduplication
+ * - raw_post_sources - Platform-independent scrape targets (#258)
+ * - raw_posts - Scraped posts pending parsing (#258)
  * - seed_posts - Curated posts for publishing pipeline
  * - seed_spots - Item spot annotations on seed posts
  * - seed_solutions - Product matches for seed spots
@@ -397,6 +399,135 @@ export type WarehouseDatabase = {
         Relationships: [
           {
             foreignKeyName: "warehouse_seed_asset_seed_post_id_fkey";
+            columns: ["seed_post_id"];
+            isOneToOne: false;
+            referencedRelation: "seed_posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      raw_post_sources: {
+        Row: {
+          created_at: string;
+          fetch_interval_seconds: number;
+          id: string;
+          is_active: boolean;
+          label: string | null;
+          last_enqueued_at: string | null;
+          last_scraped_at: string | null;
+          metadata: Json | null;
+          platform: string;
+          source_identifier: string;
+          source_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          fetch_interval_seconds?: number;
+          id?: string;
+          is_active?: boolean;
+          label?: string | null;
+          last_enqueued_at?: string | null;
+          last_scraped_at?: string | null;
+          metadata?: Json | null;
+          platform: string;
+          source_identifier: string;
+          source_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          fetch_interval_seconds?: number;
+          id?: string;
+          is_active?: boolean;
+          label?: string | null;
+          last_enqueued_at?: string | null;
+          last_scraped_at?: string | null;
+          metadata?: Json | null;
+          platform?: string;
+          source_identifier?: string;
+          source_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      raw_posts: {
+        Row: {
+          author_name: string | null;
+          caption: string | null;
+          created_at: string;
+          dispatch_id: string | null;
+          external_id: string;
+          external_url: string;
+          id: string;
+          image_hash: string | null;
+          image_url: string;
+          parse_attempts: number;
+          parse_error: string | null;
+          parse_result: Json | null;
+          parse_status: string;
+          platform: string;
+          platform_metadata: Json | null;
+          r2_key: string | null;
+          r2_url: string | null;
+          seed_post_id: string | null;
+          source_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          caption?: string | null;
+          created_at?: string;
+          dispatch_id?: string | null;
+          external_id: string;
+          external_url: string;
+          id?: string;
+          image_hash?: string | null;
+          image_url: string;
+          parse_attempts?: number;
+          parse_error?: string | null;
+          parse_result?: Json | null;
+          parse_status?: string;
+          platform: string;
+          platform_metadata?: Json | null;
+          r2_key?: string | null;
+          r2_url?: string | null;
+          seed_post_id?: string | null;
+          source_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          caption?: string | null;
+          created_at?: string;
+          dispatch_id?: string | null;
+          external_id?: string;
+          external_url?: string;
+          id?: string;
+          image_hash?: string | null;
+          image_url?: string;
+          parse_attempts?: number;
+          parse_error?: string | null;
+          parse_result?: Json | null;
+          parse_status?: string;
+          platform?: string;
+          platform_metadata?: Json | null;
+          r2_key?: string | null;
+          r2_url?: string | null;
+          seed_post_id?: string | null;
+          source_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "raw_posts_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "raw_post_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "raw_posts_seed_post_id_fkey";
             columns: ["seed_post_id"];
             isOneToOne: false;
             referencedRelation: "seed_posts";

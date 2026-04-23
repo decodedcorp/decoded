@@ -89,7 +89,12 @@ impl MetricsData {
             self.sample_counter = 0;
         }
 
-        self.buckets.back_mut().unwrap()
+        if self.buckets.is_empty() {
+            self.buckets.push_back(TimeBucket::new(bucket_ts));
+        }
+
+        let last_index = self.buckets.len() - 1;
+        &mut self.buckets[last_index]
     }
 }
 

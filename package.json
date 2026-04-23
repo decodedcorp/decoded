@@ -27,11 +27,16 @@
     "test": "turbo run test",
     "ci:local": "bash scripts/git-pre-push.sh",
     "generate:api": "turbo run generate:api",
-    "deploy:backend": "bash scripts/deploy-backend.sh"
+    "deploy:backend": "bash scripts/deploy-backend.sh",
+    "wiki:lint": "bun tools/wiki/cli.ts lint",
+    "wiki:links": "bun tools/wiki/cli.ts links",
+    "wiki:ingest": "bun tools/wiki/cli.ts ingest"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "ajv": "^8.18.0",
+    "gray-matter": "^4.0.3",
     "turbo": "^2.9.3"
   },
   "overrides": {

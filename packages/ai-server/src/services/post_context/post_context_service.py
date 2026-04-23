@@ -77,9 +77,7 @@ class PostContextService:
             "OLLAMA_BASE_URL", "http://localhost:11434"
         )
         self.model = ollama_model or os.environ.get("OLLAMA_VISION_MODEL", "gemma4:e4b")
-        self.timeout = ollama_timeout or int(
-            os.environ.get("OLLAMA_VISION_TIMEOUT", "60")
-        )
+        self.timeout = ollama_timeout or int(os.environ.get("OLLAMA_VISION_TIMEOUT", "60"))
 
     async def extract_context(self, image_url: str) -> dict:
         """이미지 URL에서 context와 style_tags를 추출.
@@ -118,25 +116,26 @@ class PostContextService:
         return result
 
     async def extract_and_update(
-        self, post_id: str, image_url: str, supabase_url: str, supabase_key: str
+        self,
+        post_id: str,
+        image_url: str,
+        database_manager,
     ) -> dict:
-        """이미지 분석 후 Supabase posts 테이블 업데이트."""
-        from supabase import acreate_client
-
+        """이미지 분석 후 posts 테이블 업데이트 (asyncpg)."""
         result = await self.extract_context(image_url)
 
-        client = await acreate_client(supabase_url, supabase_key)
-        await (
-            client.table("posts")
-            .update(
-                {
-                    "context": result["context"],
-                    "style_tags": json.dumps(result["style_tags"]),
-                }
+        async with database_manager.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE public.posts
+                   SET context = $1,
+                       style_tags = $2::jsonb
+                 WHERE id = $3::uuid
+                """,
+                result["context"],
+                json.dumps(result["style_tags"]),
+                post_id,
             )
-            .eq("id", post_id)
-            .execute()
-        )
 
         logger.info(
             "Post %s context updated: %s, style_tags: %s",

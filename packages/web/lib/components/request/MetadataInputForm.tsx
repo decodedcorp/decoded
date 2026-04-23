@@ -6,6 +6,7 @@ import type {
   MediaSourceType,
   StructuredFieldsState,
 } from "@/lib/api/mutation-types";
+import { ContextSelector } from "@/lib/components/request/ContextSelector";
 
 const MEDIA_TYPES = [
   { value: "user_upload", label: "Direct upload" },
@@ -18,16 +19,29 @@ const MEDIA_TYPES = [
   { value: "other", label: "Other" },
 ] as const;
 
-const CONTEXT_OPTIONS: { value: ContextType; label: string }[] = [
-  { value: "airport", label: "Airport" },
-  { value: "stage", label: "Stage" },
-  { value: "drama", label: "TV Drama" },
-  { value: "variety", label: "Variety Show" },
-  { value: "daily", label: "Daily" },
-  { value: "photoshoot", label: "Editorial" },
-  { value: "event", label: "Event" },
-  { value: "other", label: "Other" },
-];
+// Helper text + dynamic placeholders ported verbatim from PR #230
+// (ArtistInput.tsx, MediaSourceInput.tsx).
+const MEDIA_TYPE_HELPER = "What kind of media is this image from?";
+const ARTIST_HELPER = "Actor, singer, model, or public figure in the image";
+const GROUP_HELPER =
+  "Group (e.g., BLACKPINK) or agency (e.g., YG Entertainment)";
+
+const DEFAULT_MEDIA_PLACEHOLDER =
+  "e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam";
+// PR #230 supplied verbatim placeholders for drama / music_video / variety /
+// other. user_upload + youtube were not in PR #230's scope (those types live
+// only in MetadataInputForm), so we add type-consistent fallbacks instead of
+// letting them inherit the drama-flavoured DEFAULT.
+const MEDIA_PLACEHOLDERS: Partial<Record<MediaSourceType, string>> = {
+  user_upload: "e.g., your own photo or gallery shot",
+  youtube: "e.g., BLACKPINK channel — dance practice",
+  drama: "e.g., The Glory, Squid Game",
+  movie: "e.g., Parasite (2019), Exhuma (2024)",
+  music_video: "e.g., BLACKPINK - How You Like That",
+  variety: "e.g., Running Man, Knowing Bros",
+  event: "e.g., 2024 Met Gala, Coachella",
+  other: "e.g., brand campaign, magazine cover",
+};
 
 const STRUCTURED_TYPES = new Set<MediaSourceType>([
   "drama",
@@ -37,21 +51,10 @@ const STRUCTURED_TYPES = new Set<MediaSourceType>([
   "event",
 ]);
 
+// 구조화 타입 Title 입력의 placeholder는 description의 MEDIA_PLACEHOLDERS와 같은
+// 문자열을 재사용한다 — PR #230/#145 문구가 이미 이 역할을 충족함.
 function titlePlaceholder(type: MediaSourceType): string {
-  switch (type) {
-    case "drama":
-      return "e.g., The Glory";
-    case "movie":
-      return "e.g., Parasite (2019)";
-    case "music_video":
-      return "e.g., How You Like That";
-    case "variety":
-      return "e.g., Running Man";
-    case "event":
-      return "e.g., Met Gala";
-    default:
-      return "";
-  }
+  return MEDIA_PLACEHOLDERS[type] ?? "";
 }
 
 function artistPlaceholder(type: MediaSourceType): string {
@@ -83,11 +86,18 @@ const inputClass =
 
 /**
  * MetadataInputForm — 솔루션을 모르는 유저용 메타데이터 입력
- * #305 Phase A: source type별 구조화 필드 (Title/Platform/Year/Episode/Location)
+ * #305 Phase A: source type별 구조화 필드 (Title/Platform/Year/Episode/Location).
+ *
+ * Helper text + dynamic media-type placeholders are sourced from PR #230,
+ * which originally targeted ArtistInput / MediaSourceInput in the deprecated
+ * Details step. PR #145 PR-4 ports those strings here so they ship with the
+ * unified upload flow.
  */
 export const MetadataInputForm = memo(
   ({ values, onChange }: MetadataInputFormProps) => {
     const showDescription = !STRUCTURED_TYPES.has(values.mediaType);
+    const descriptionPlaceholder =
+      MEDIA_PLACEHOLDERS[values.mediaType] ?? DEFAULT_MEDIA_PLACEHOLDER;
 
     const handleStructuredChange =
       (key: keyof StructuredFieldsState) =>
@@ -105,6 +115,9 @@ export const MetadataInputForm = memo(
         {/* Source type */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Source type</label>
+          <p className="text-[10px] text-muted-foreground/70">
+            {MEDIA_TYPE_HELPER}
+          </p>
           <select
             value={values.mediaType}
             onChange={(e) =>
@@ -124,7 +137,7 @@ export const MetadataInputForm = memo(
           </select>
         </div>
 
-        {/* Description (non-structured types only) */}
+        {/* Description (non-structured types only; dynamic placeholder from PR #230) */}
         {showDescription && (
           <label className="block space-y-1">
             <span className="text-xs text-muted-foreground">
@@ -135,14 +148,14 @@ export const MetadataInputForm = memo(
               onChange={(e) =>
                 onChange({ ...values, mediaDescription: e.target.value })
               }
-              placeholder="e.g., Netflix drama XYZ, Season 2 Ep 3; airport fancam"
+              placeholder={descriptionPlaceholder}
               rows={2}
               className={inputClass}
             />
           </label>
         )}
 
-        {/* Structured fields (structured types only) */}
+        {/* Structured fields (structured types only — #305 Phase A) */}
         {!showDescription && (
           <div className="space-y-3">
             <label className="block space-y-1">
@@ -249,6 +262,7 @@ export const MetadataInputForm = memo(
           <label className="text-xs text-muted-foreground">
             Group / team name
           </label>
+          <p className="text-[10px] text-muted-foreground/70">{GROUP_HELPER}</p>
           <input
             type="text"
             value={values.groupName}
@@ -263,6 +277,9 @@ export const MetadataInputForm = memo(
           <span className="text-xs text-muted-foreground">
             Artist / person name
           </span>
+          <p className="text-[10px] text-muted-foreground/70">
+            {ARTIST_HELPER}
+          </p>
           <input
             type="text"
             value={values.artistName}
@@ -274,28 +291,13 @@ export const MetadataInputForm = memo(
           />
         </label>
 
-        {/* Context */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Context</label>
-          <select
-            value={values.context ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...values,
-                context: (e.target.value || null) as ContextType | null,
-              })
-            }
-            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
-                       focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-          >
-            <option value="">Not specified</option>
-            {CONTEXT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Context — delegated to ContextSelector so the full 12-option
+            set stays in one place. Clicking the selected chip toggles back
+            to null, which preserves the "Not specified" empty state. */}
+        <ContextSelector
+          value={values.context}
+          onChange={(next) => onChange({ ...values, context: next })}
+        />
       </div>
     );
   }

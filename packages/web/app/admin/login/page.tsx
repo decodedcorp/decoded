@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AdminLoginPage() {
@@ -9,15 +8,22 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  // OAuth 후 돌아왔을 때: 세션이 있으면 /admin으로 이동
+  // 세션이 있으면 /admin 으로 이동.
+  // - SIGNED_IN: OAuth / password 로그인 직후
+  // - INITIAL_SESSION: 이미 localStorage 에 유효 세션이 있는 상태에서 로그인
+  //   페이지에 다시 들어온 경우 (proxy.ts 가 쿠키 부재로 리다이렉트시킨 케이스 포함)
   useEffect(() => {
     const {
       data: { subscription },
     } = supabaseBrowserClient.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        // Sync session to server-side cookies, then navigate
+      if (
+        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+        session?.access_token &&
+        session?.refresh_token
+      ) {
+        // Sync session to server-side cookies, then navigate via hard reload
+        // so proxy.ts sees the refreshed cookies.
         fetch("/api/auth/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -31,7 +37,7 @@ export default function AdminLoginPage() {
       }
     });
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, []);
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -51,6 +57,9 @@ export default function AdminLoginPage() {
     }
   };
 
+  // 비밀번호 로그인 성공 후 직접 네비게이션하지 않는다.
+  // SIGNED_IN 이벤트에서 쿠키 동기화가 끝난 뒤 window.location.href 로 이동해
+  // proxy.ts 가 최신 쿠키를 본 상태에서 /admin 을 렌더하도록 한다.
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -65,11 +74,8 @@ export default function AdminLoginPage() {
     if (authError) {
       setError(authError.message);
       setLoading(false);
-      return;
     }
-
-    router.replace("/admin");
-    router.refresh();
+    // 성공 시 loading 은 유지 — onAuthStateChange 가 네비게이션을 담당.
   };
 
   return (

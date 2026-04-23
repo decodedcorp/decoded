@@ -21,6 +21,7 @@ use utoipa::OpenApi;
         crate::domains::users::handlers::get_my_stats,
         crate::domains::users::handlers::get_my_tries,
         crate::domains::users::handlers::get_my_saved,
+        crate::domains::users::handlers::get_my_liked,
         crate::domains::users::handlers::get_my_spots,
         crate::domains::users::handlers::get_my_solutions,
         crate::domains::users::handlers::get_my_social_accounts,
@@ -91,6 +92,8 @@ use utoipa::OpenApi;
         crate::domains::earnings::handlers::get_settlements,
         crate::domains::earnings::handlers::create_withdraw,
         crate::domains::earnings::handlers::get_withdraw_status,
+        // Events 도메인 핸들러
+        crate::domains::events::handlers::ingest_events,
         // Admin 도메인 핸들러
         crate::domains::admin::curations::create_curation,
         crate::domains::admin::curations::update_curation,
@@ -119,6 +122,14 @@ use utoipa::OpenApi;
         crate::domains::admin::badges::update_badge,
         crate::domains::admin::badges::delete_badge,
         crate::domains::admin::badges::list_badges,
+        // #258 Raw posts
+        crate::domains::raw_posts::handlers::list_sources,
+        crate::domains::raw_posts::handlers::create_source,
+        crate::domains::raw_posts::handlers::update_source,
+        crate::domains::raw_posts::handlers::delete_source,
+        crate::domains::raw_posts::handlers::list_items,
+        crate::domains::raw_posts::handlers::get_item,
+        crate::domains::raw_posts::handlers::stats,
     ),
     tags(
         (name = "health", description = "Health check endpoints"),
@@ -135,8 +146,10 @@ use utoipa::OpenApi;
         (name = "rankings", description = "Rankings"),
         (name = "badges", description = "Badges"),
         (name = "earnings", description = "Earnings and settlements"),
+        (name = "events", description = "Behavioral events ingest"),
         (name = "admin", description = "Admin operations"),
         (name = "warehouse", description = "Warehouse entity profiles"),
+        (name = "raw-posts", description = "Raw posts collection pipeline (#258)"),
     ),
     components(
         schemas(
@@ -258,6 +271,9 @@ use utoipa::OpenApi;
                 crate::domains::earnings::dto::SettlementsResponse,
                 crate::domains::earnings::dto::SettlementItem,
                 crate::domains::earnings::dto::WithdrawRequest,
+                // Events 도메인 DTO
+                crate::domains::events::dto::EventItem,
+                crate::domains::events::dto::IngestEventsResponse,
                 // Admin 도메인 DTO
                 crate::domains::admin::curations::CurationResponse,
                 crate::domains::admin::curations::CreateCurationDto,
@@ -285,7 +301,17 @@ use utoipa::OpenApi;
                 crate::domains::admin::badges::CreateBadgeDto,
                 crate::domains::admin::badges::UpdateBadgeDto,
                 crate::domains::warehouse::dto::WarehouseProfile,
+                crate::domains::warehouse::dto::WarehouseBrandProfile,
                 crate::domains::warehouse::dto::WarehouseProfilesResponse,
+                // #258 Raw posts
+                crate::domains::raw_posts::dto::RawPostSource,
+                crate::domains::raw_posts::dto::CreateRawPostSourceDto,
+                crate::domains::raw_posts::dto::UpdateRawPostSourceDto,
+                crate::domains::raw_posts::dto::RawPost,
+                crate::domains::raw_posts::dto::RawPostSourcesPage,
+                crate::domains::raw_posts::dto::RawPostsItemsPage,
+                crate::domains::raw_posts::dto::RawPostsStatsEntry,
+                crate::domains::raw_posts::dto::RawPostsStatsResponse,
                 crate::domains::spots::dto::SpotsByPostItem,
                 crate::domains::spots::dto::SpotsByPostsResponse,
                 crate::domains::spots::dto::SpotsByPostSolution,
