@@ -186,3 +186,76 @@ describe("UploadFlowSteps — spot delete undo (#291)", () => {
     expect(afterUndo.find((s) => s.id === second.id)).toBeDefined();
   });
 });
+
+describe("UploadFlowSteps — Back button (#306)", () => {
+  beforeEach(() => {
+    cleanup();
+    useRequestStore.getState().resetRequestFlow();
+    useRequestStore.getState().setActiveInstance(null);
+    // jsdom doesn't implement HTMLDialogElement.showModal — polyfill for dialog tests
+    if (!HTMLDialogElement.prototype.showModal) {
+      HTMLDialogElement.prototype.showModal = function () {
+        this.setAttribute("open", "");
+      };
+      HTMLDialogElement.prototype.close = function () {
+        this.removeAttribute("open");
+      };
+    }
+  });
+
+  const uploadImage = () => {
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+  };
+
+  test("fork screen (hasImages && userKnowsItems === null) renders Back button", () => {
+    uploadImage();
+    render(<UploadFlowSteps />);
+    expect(screen.getByTestId("upload-flow-fork")).toBeInTheDocument();
+    expect(screen.getByLabelText("Go back")).toBeInTheDocument();
+  });
+
+  test("clicking Back on fork screen clears image (returns to DropZone)", () => {
+    uploadImage();
+    render(<UploadFlowSteps />);
+    fireEvent.click(screen.getByLabelText("Go back"));
+    const s = useRequestStore.getState();
+    expect(s.images).toEqual([]);
+    expect(s.userKnowsItems).toBeNull();
+  });
+
+  test("Back on Step 2 (spot marking, 0 spots) immediately returns to fork screen", () => {
+    uploadImage();
+    getRequestActions().setUserKnowsItems(false);
+    render(<UploadFlowSteps />);
+    fireEvent.click(screen.getByLabelText("Go back"));
+    const s = useRequestStore.getState();
+    // userKnowsItems cleared → fork 화면으로 가시적 전이
+    expect(s.userKnowsItems).toBeNull();
+    // 이미지는 보존
+    expect(s.images.length).toBe(1);
+  });
+
+  test("Back on Step 3 with spots shows Discard confirm, Confirm transitions to fork screen in one click", () => {
+    uploadImage();
+    getRequestActions().setUserKnowsItems(true);
+    getRequestActions().addSpot(0.5, 0.5);
+    render(<UploadFlowSteps />);
+
+    fireEvent.click(screen.getByLabelText("Go back"));
+    // Dialog가 뜸
+    expect(screen.getByText("Discard progress?")).toBeInTheDocument();
+    // 아직 상태는 변하지 않음
+    expect(useRequestStore.getState().detectedSpots.length).toBe(1);
+    expect(useRequestStore.getState().userKnowsItems).toBe(true);
+
+    // Confirm 클릭 한 번에 spots+userKnowsItems 모두 클리어되어 fork 화면으로 이동
+    fireEvent.click(screen.getByText("Discard and go back"));
+    const s = useRequestStore.getState();
+    expect(s.detectedSpots).toEqual([]);
+    expect(s.userKnowsItems).toBeNull();
+    expect(s.images.length).toBe(1);
+  });
+});

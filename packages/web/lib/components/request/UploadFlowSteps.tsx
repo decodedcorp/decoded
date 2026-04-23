@@ -114,26 +114,30 @@ export function UploadFlowSteps() {
 
   // Back button 노출/활성화
   const anyImageUploading = images.some((img) => img.status === "uploading");
-  const showBackButton = currentStep === 2 || currentStep === 3;
-  const backDisabled = anyImageUploading;
+  // fork 화면(이미지만 업로드, 분기 미선택)도 포함하기 위해 hasImages 기준으로 노출.
+  const showBackButton = hasImages;
+  const backDisabled = anyImageUploading || flow.isSubmitting;
 
   const performBack = useCallback(() => {
-    if (currentStep === 3) {
-      getRequestActions().backToFork();
-    } else if (currentStep === 2) {
+    // fork 화면(userKnowsItems === null) → DropZone
+    // 스팟 마킹/디테일 → fork 화면 (backToFork가 userKnowsItems까지 클리어)
+    if (userKnowsItems === null) {
       getRequestActions().backToUpload();
+    } else {
+      getRequestActions().backToFork();
     }
     // 어떤 경로든 draft는 의미 없어짐
     clearDraft();
-  }, [currentStep]);
+  }, [userKnowsItems]);
 
   const handleBackClick = useCallback(() => {
-    if (currentStep === 3 && hasInProgressWork) {
+    // 진행 중 작업이 있으면 Discard 확인. fork 화면은 hasInProgressWork=false라 바로 전이.
+    if (hasInProgressWork) {
       setShowDiscardDialog(true);
       return;
     }
     performBack();
-  }, [currentStep, hasInProgressWork, performBack]);
+  }, [hasInProgressWork, performBack]);
 
   const handleUserTypeSelect = useCallback((knows: boolean) => {
     getRequestActions().setUserKnowsItems(knows);
