@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import type { ContextType, MediaSourceType } from "@/lib/api/mutation-types";
+import { ContextSelector } from "@/lib/components/request/ContextSelector";
 
 const MEDIA_TYPES = [
   { value: "user_upload", label: "Direct upload" },
@@ -12,17 +13,6 @@ const MEDIA_TYPES = [
   { value: "event", label: "Event" },
   { value: "other", label: "Other" },
 ] as const;
-
-const CONTEXT_OPTIONS: { value: ContextType; label: string }[] = [
-  { value: "airport", label: "Airport" },
-  { value: "stage", label: "Stage" },
-  { value: "drama", label: "TV Drama" },
-  { value: "variety", label: "Variety Show" },
-  { value: "daily", label: "Daily" },
-  { value: "photoshoot", label: "Editorial" },
-  { value: "event", label: "Event" },
-  { value: "other", label: "Other" },
-];
 
 // Helper text + dynamic placeholders ported verbatim from PR #230
 // (ArtistInput.tsx, MediaSourceInput.tsx).
@@ -159,28 +149,13 @@ export const MetadataInputForm = memo(
           />
         </div>
 
-        {/* Context */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Context</label>
-          <select
-            value={values.context ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...values,
-                context: (e.target.value || null) as ContextType | null,
-              })
-            }
-            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg
-                       focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-          >
-            <option value="">Not specified</option>
-            {CONTEXT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Context — delegated to ContextSelector so the full 12-option
+            set stays in one place. Clicking the selected chip toggles back
+            to null, which preserves the "Not specified" empty state. */}
+        <ContextSelector
+          value={values.context}
+          onChange={(next) => onChange({ ...values, context: next })}
+        />
       </div>
     );
   }
