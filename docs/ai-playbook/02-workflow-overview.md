@@ -2,14 +2,16 @@
 title: AI Playbook — Workflow Overview
 owner: human
 status: approved
-updated: 2026-04-17
+updated: 2026-04-23
 tags: [agent, harness]
 ---
 
 # AI Playbook — Workflow Overview
 
-**최종 검증**: 2025-01-27
-**버전**: 1.0
+**최종 검증**: 2026-04-23
+**버전**: 1.1
+
+> 2026-04-23 (#232 Sub-4): Codex 기반 단계를 제거하고 현행 하네스 (Claude + gstack + GSD) 중심으로 재정비. 상세는 [`docs/ai-playbook/codex-profile.md`](codex-profile.md) deprecation 배너 참조.
 
 ## 기본 기능 워크플로우
 
@@ -18,7 +20,9 @@ tags: [agent, harness]
 ### 1. 정의
 
 - GitHub Issue를 생성하거나 다듬습니다.
-- Codex + `docs/prompts/codex/spec-from-issue.md`를 사용하여 `specs/feature/` 아래에 기능 스펙을 생성합니다.
+- `/gsd:discuss-phase N` → `/gsd:plan-phase N`으로 `.planning/phase-N/PLAN.md`를 생성합니다.
+  - 스펙이 GitHub Issue 단위라면 gstack `/plan-eng-review`가 보조 아키텍처 검토를 제공합니다.
+  - (이전에 사용하던 `Codex + docs/prompts/codex/spec-from-issue.md` 경로는 2026-04-23부로 폐기.)
 
 ### 2. 검토
 
@@ -28,10 +32,10 @@ tags: [agent, harness]
 
 ### 3. 구현
 
-- Cursor를 메인 코딩 어시스턴트로 사용:
+- Cursor 또는 Claude Code를 메인 코딩 어시스턴트로 사용:
   - 스펙을 읽습니다.
-  - `.cursor/rules/*` (base + frontend + ai-collab)를 적용합니다.
-  - 작은 커밋으로 변경사항을 구현합니다.
+  - `.cursor/rules/*` (base + frontend + ai-collab) 또는 `CLAUDE.md`를 적용합니다.
+  - 작은 커밋으로 변경사항을 구현합니다. 커밋 규약은 [`docs/wiki/wiki/harness/commit-protocol.md`](../wiki/wiki/harness/commit-protocol.md).
 
 ### 4. 문서화
 
@@ -54,16 +58,16 @@ tags: [agent, harness]
 ### 간단한 리팩토링
 
 1. **Claude**: 코드를 분석하고 리팩토링 계획을 제안
-2. **Cursor**: 계획에 따라 리팩토링 적용
+2. **Cursor / Claude Code**: 계획에 따라 리팩토링 적용
 
 ### 버그 수정
 
-1. **Codex**: 버그 수정 스펙 생성 (간단한 수정의 경우 선택사항)
-2. **Cursor**: 수정 구현
+1. **Claude / gstack `/investigate`**: 근본 원인 조사 (이전 "Codex 버그 수정 스펙 생성" 단계 대체)
+2. **Cursor / Claude Code**: 수정 구현
 3. **Gemini**: 수정 문서화 (선택사항)
 
 ## 통합 노트
 
 - **Harness Workflow**: gstack(기획/QA) + Superpowers(TDD) + GSD quick(유지보수). 상세: `CLAUDE.md`의 Harness Workflow 섹션 참조.
 - **Cursor Rules** (`.cursor/rules/`): Cursor 사용 시 자동 적용됩니다.
-- **템플릿**: Gemini와 Codex용 템플릿은 `docs/prompts/`에 있습니다.
+- **템플릿**: Gemini용 템플릿은 `docs/prompts/gemini/`에 있습니다. `docs/prompts/codex/`는 Codex 경로와 함께 deprecated — 새 작업에서 참조하지 않습니다.

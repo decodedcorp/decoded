@@ -1,14 +1,24 @@
 ---
-title: Codex Profile
+title: Codex Profile (DEPRECATED)
 owner: human
-status: stale
-updated: 2026-04-17
+status: deprecated
+updated: 2026-04-23
 tags: [agent, harness, deprecated]
 ---
 
-# Codex Profile
+# Codex Profile (DEPRECATED)
 
-**Last verified**: 2025-01-27  
+> **⚠ DEPRECATED (2026-04-23, #232 Sub-4)** — 이 repo에서 Codex 기반 워크플로우는 더 이상 사용하지 않는다. 사유: 구독 없음 (전역 `CLAUDE.md` "No Codex (미구독)" 정책). 아래 내용은 히스토리 참고용으로만 남겨 둔다.
+>
+> **대체 경로**:
+>
+> - 스펙 생성 (issue → spec): `/gsd:discuss-phase` / `/gsd:plan-phase` 또는 gstack `/plan-eng-review` → `.planning/` 아티팩트
+> - 체크리스트: gstack `/review`, `/qa` 스킬이 생성
+> - 런북: `docs/runbooks/` 직접 편집
+>
+> 현행 워크플로우: [`docs/ai-playbook/02-workflow-overview.md`](02-workflow-overview.md)
+
+**Last verified**: 2025-01-27 (as active profile — deprecated 2026-04-23)  
 **Version**: 1.0
 
 ## Primary Use
