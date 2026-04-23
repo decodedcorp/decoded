@@ -18,8 +18,11 @@ import {
 } from "@/lib/components/admin/magazines";
 import { Pagination } from "@/lib/components/admin/audit/Pagination";
 import { AdminEmptyState } from "@/lib/components/admin/common";
-import type { PostStatus } from "@/lib/api/admin/posts";
-import type { ReportStatus } from "@/lib/api/admin/reports";
+import { isValidPostStatus, type PostStatus } from "@/lib/api/admin/posts";
+import {
+  isValidReportStatus,
+  type ReportStatus,
+} from "@/lib/api/admin/reports";
 import {
   isValidMagazineStatus,
   type MagazineStatus,
@@ -142,13 +145,13 @@ function ContentManagementContent() {
   const statusParam = searchParams.get("status");
 
   const postStatus =
-    currentTab === "posts" && statusParam
-      ? (statusParam as PostStatus)
+    currentTab === "posts" && statusParam && isValidPostStatus(statusParam)
+      ? statusParam
       : undefined;
 
   const reportStatus =
-    currentTab === "reports" && statusParam
-      ? (statusParam as ReportStatus)
+    currentTab === "reports" && statusParam && isValidReportStatus(statusParam)
+      ? statusParam
       : undefined;
 
   const magazineStatus =
