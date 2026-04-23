@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardFooter } from "@/lib/components/ui/card";
 import { OAuthButton } from "./OAuthButton";
 import {
@@ -18,7 +18,6 @@ function getSafeRedirect(url: string | null): string {
 }
 
 export function LoginCard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirect(searchParams.get("redirect"));
   const signInWithOAuth = useAuthStore((s) => s.signInWithOAuth);
@@ -38,7 +37,11 @@ export function LoginCard() {
 
   const handleGuestLogin = () => {
     guestLogin();
-    router.push(redirectTo);
+    // Hard navigation: router.push는 @modal/(.)request/upload 같은 intercept 라우트를
+    // 통과시켜 login 페이지가 그대로 남음(#296). window.location.replace로 완전
+    // 재진입시켜 login layout을 언마운트하고 목적지 라우트를 소유권 있게 렌더.
+    // OAuth 콜백 경로와 동일한 패턴.
+    window.location.replace(redirectTo);
   };
 
   return (
