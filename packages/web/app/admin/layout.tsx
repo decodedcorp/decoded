@@ -15,6 +15,13 @@ import { AdminLayoutClient } from "@/lib/components/admin/AdminLayoutClient";
  * - No session → render children only (login page shows without admin chrome)
  * - Not admin → render children only
  * - Is admin → render AdminLayoutClient with sidebar + content
+ *
+ * Performance: uses `auth.getSession()` (cookie-cached, ~5–50ms) instead of
+ * `auth.getUser()` (Supabase Auth network call, ~100–500ms). proxy.ts already
+ * validated the cookie chain for every /admin/* request, and `checkIsAdmin`
+ * (DB) remains the source of truth for admin role — so dropping the extra
+ * auth-server roundtrip is safe and shaves perceptible latency off the
+ * post-login first paint.
  */
 export default async function AdminLayout({
   children,
@@ -24,15 +31,16 @@ export default async function AdminLayout({
   const supabase = await createSupabaseServerClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  // No user: render children directly (proxy.ts handles redirecting
+  // No session: render children directly (proxy.ts handles redirecting
   // non-login admin routes to /admin/login)
-  if (!user) {
+  if (!session) {
     return <>{children}</>;
   }
 
+  const user = session.user;
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
     return <>{children}</>;
