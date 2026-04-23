@@ -2,11 +2,13 @@
 title: Harness Boundaries
 owner: human
 status: draft
-updated: 2026-04-17
+updated: 2026-04-23
 tags: [harness, agent, gstack, superpowers, omc, gsd]
 related:
   - CLAUDE.md
   - docs/wiki/schema/conventions.md
+  - .claude/commands/ingest.md
+  - .claude/commands/wiki.md
 ---
 
 # Harness Boundaries
@@ -33,3 +35,15 @@ decoded-monorepo에서 사용하는 에이전트 하네스 도구의 역할과 �
 - 복잡한 작업은 워크트리 분리 (`.worktrees/<slug>` 패턴)
 - 이슈 시작은 `scripts/start-issue.sh <N> [type]` 통한 Draft PR 자동화
 - main/master 직접 push 금지
+
+## Custom slash commands (`.claude/commands/`)
+
+Sub-4 에서 Claude Code 프로젝트 스코프 커스텀 커맨드를 정의. Sub-3 CLI(`tools/wiki/`) 를 래핑해 세션 knowledge 를 `docs/wiki/wiki/**` 로 축적한다.
+
+| 커맨드 | 역할 | 래핑 대상 |
+| --- | --- | --- |
+| `/ingest <topic> <title>` | 새 노트 skeleton 생성 + 본문 LLM 채움 | `bun run wiki:ingest` |
+| `/wiki [lint\|links\|list\|search]` | 조회·검증·검색 (읽기 전용) | `bun run wiki:lint` / `wiki:links` |
+
+- 정의 위치: [.claude/commands/ingest.md](../../../.claude/commands/ingest.md) · [.claude/commands/wiki.md](../../../.claude/commands/wiki.md)
+- CI / pre-push 통합: `scripts/git-pre-push.sh`, `.github/workflows/wiki-lint.yml` (Sub-3 소관)
