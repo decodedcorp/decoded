@@ -535,6 +535,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   },
 
   backToFork: () => {
+    // Step 2/3에서 fork 화면(userKnowsItems === null)으로 가시적 전이.
+    // Confirm 후에도 "같은 화면에 머무는" 느낌을 주지 않기 위해 userKnowsItems까지 클리어한다.
     set({
       detectedSpots: [],
       selectedSpotId: null,
@@ -542,6 +544,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       groupName: "",
       artistName: "",
       context: null,
+      userKnowsItems: null,
     });
   },
 

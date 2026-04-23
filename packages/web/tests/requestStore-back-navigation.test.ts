@@ -15,7 +15,7 @@ describe("requestStore — back navigation", () => {
   });
 
   describe("backToFork", () => {
-    test("clears detectedSpots and metadata, preserves images and userKnowsItems", () => {
+    test("clears detectedSpots, metadata and userKnowsItems, preserves images", () => {
       // Arrange: Step 3 state (image + fork choice + spots + metadata)
       useRequestStore.setState({
         images: [
@@ -55,9 +55,10 @@ describe("requestStore — back navigation", () => {
       expect(s.groupName).toBe("");
       expect(s.artistName).toBe("");
       expect(s.context).toBeNull();
+      // userKnowsItems는 이제 클리어되어 fork 화면으로 돌아감
+      expect(s.userKnowsItems).toBeNull();
       // Preserved:
       expect(s.images.length).toBe(1);
-      expect(s.userKnowsItems).toBe(true);
     });
   });
 
