@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   useAuthStore,
-  selectIsLoggedIn,
+  selectIsAuthenticated,
   selectIsInitialized,
 } from "@/lib/stores/authStore";
 
@@ -14,16 +14,16 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
-  const isLoggedIn = useAuthStore(selectIsLoggedIn);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const isInitialized = useAuthStore(selectIsInitialized);
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && !isLoggedIn) {
+    if (isInitialized && !isAuthenticated) {
       const currentPath = window.location.pathname;
       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
     }
-  }, [isInitialized, isLoggedIn, router]);
+  }, [isInitialized, isAuthenticated, router]);
 
   if (!isInitialized) {
     return (
@@ -35,7 +35,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return null;
   }
 
