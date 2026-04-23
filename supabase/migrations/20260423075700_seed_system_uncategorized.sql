@@ -12,6 +12,15 @@
 --
 -- Idempotent: uses unique constraints `categories_code_key` and
 -- `idx_subcategories_category_code_unique (category_id, code)`.
+--
+-- `name` is `json` (not `jsonb`) per `remote_schema.sql:408, 911` — the
+-- SeaORM sibling uses `::jsonb` which PG coerces implicitly; this file
+-- matches the actual column type.
+--
+-- RLS note: `public.spots` has RLS enabled, but Supabase CLI migrations
+-- run as `postgres` (table owner) and bypass RLS, so the UPDATE below is
+-- allowed to backfill rows owned by any user. Only NULL rows are touched,
+-- so re-applies are no-ops.
 
 BEGIN;
 

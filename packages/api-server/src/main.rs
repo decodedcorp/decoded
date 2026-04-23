@@ -103,16 +103,22 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // #312: system/uncategorized 시드 존재 검증.
     // 부재 시 POST /api/v1/posts 가 500 으로 실패하므로 부팅 시 명확히 로깅.
     // 서버 기동은 계속한다 — 운영자가 로그를 보고 마이그레이션을 적용할 수 있게.
+    // dev 에서는 Supabase CLI 가 out-of-band 로 마이그레이션을 적용하므로,
+    // api-server 가 먼저 떠 있으면 false alarm 이 날 수 있음 — 메시지에 명시.
     match decoded_api::domains::subcategories::service::resolve_uncategorized_subcategory_id(
         &db_connection,
     )
     .await
     {
         Ok(_) => tracing::info!("system/uncategorized seed verified"),
+        Err(decoded_api::error::AppError::InternalError(_)) => tracing::error!(
+            hint = %decoded_api::domains::subcategories::service::MIGRATION_HINT,
+            "system/uncategorized seed missing — POST /api/v1/posts will 500 until applied. \
+             (dev: run `supabase db push` / `just dev-reset` then restart api-server)"
+        ),
         Err(e) => tracing::error!(
             error = %e,
-            "system/uncategorized seed missing — POST /api/v1/posts will fail until \
-             supabase/migrations/20260423075700_seed_system_uncategorized.sql is applied"
+            "seed validation failed to query DB — retry after DB is reachable"
         ),
     }
 
