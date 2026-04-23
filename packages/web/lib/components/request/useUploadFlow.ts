@@ -19,6 +19,10 @@ import {
 } from "@/lib/api/posts";
 import { compressImage } from "@/lib/utils/imageCompression";
 import {
+  toMediaMetadataItems,
+  mergeManualOverAi,
+} from "@/lib/utils/mediaMetadata";
+import {
   saveDraft,
   saveDraftThumbnail,
   loadDraft,
@@ -158,7 +162,16 @@ export function useUploadFlow(): UseUploadFlowReturn {
         artistName: artist,
         groupName: group,
         context: ctx,
+        structuredMetadata: structured,
+        extractedMetadata: aiExtracted,
       } = useRequestStore.getState();
+
+      // #305 Phase A: manual structured fields override AI extracted metadata.
+      // Both get serialized to MediaMetadataItem[] and merged before submit.
+      const mergedMediaMetadata = mergeManualOverAi(
+        toMediaMetadataItems(structured),
+        aiExtracted
+      );
 
       // 2. spots → API position payload (for non-solution path)
       const spotsPayload = spots.map((spot) => ({
@@ -199,6 +212,9 @@ export function useUploadFlow(): UseUploadFlowReturn {
                     }
                   : undefined,
               })),
+              ...(mergedMediaMetadata.length > 0 && {
+                media_metadata: mergedMediaMetadata,
+              }),
             })
           : await createPostWithFile({
               file: compressedFile,
@@ -207,6 +223,9 @@ export function useUploadFlow(): UseUploadFlowReturn {
               artist_name: artist?.trim() || undefined,
               group_name: group?.trim() || undefined,
               context: ctx ?? undefined,
+              ...(mergedMediaMetadata.length > 0 && {
+                media_metadata: mergedMediaMetadata,
+              }),
             });
       toast.dismiss("create");
 

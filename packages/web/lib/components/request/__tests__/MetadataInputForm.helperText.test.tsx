@@ -16,6 +16,7 @@ const baseValues: MetadataFormValues = {
   groupName: "",
   artistName: "",
   context: null,
+  structured: {},
 };
 
 const renderForm = (overrides: Partial<MetadataFormValues> = {}) =>

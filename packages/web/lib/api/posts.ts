@@ -19,6 +19,7 @@ import type {
   PostsListParams,
   PostMagazineResponse,
   CreateTryPostRequest,
+  MediaMetadataItem,
 } from "./mutation-types";
 import { ApiError } from "./mutation-types";
 
@@ -240,6 +241,7 @@ export interface CreatePostWithFileRequest {
   group_name?: string;
   context?: string;
   description?: string;
+  media_metadata?: MediaMetadataItem[];
 }
 
 export interface CreatePostWithFileAndSolutionsRequest {
@@ -263,6 +265,7 @@ export interface CreatePostWithFileAndSolutionsRequest {
   group_name?: string;
   context?: string;
   description?: string;
+  media_metadata?: MediaMetadataItem[];
 }
 
 export async function createPostWithFile(
@@ -287,6 +290,10 @@ export async function createPostWithFile(
     group_name: request.group_name,
     context: request.context,
     description: request.description,
+    ...(request.media_metadata &&
+      request.media_metadata.length > 0 && {
+        media_metadata: request.media_metadata,
+      }),
   };
   formData.append("data", JSON.stringify(data));
 
@@ -342,6 +349,10 @@ export async function createPostWithFileAndSolutions(
     group_name: request.group_name,
     context: request.context,
     description: request.description,
+    ...(request.media_metadata &&
+      request.media_metadata.length > 0 && {
+        media_metadata: request.media_metadata,
+      }),
   };
   formData.append("data", JSON.stringify(data));
 

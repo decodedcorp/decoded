@@ -86,6 +86,20 @@ jobs:
           bash scripts/deploy-backend.sh prod up
           echo "Rollback complete"
 
+      - name: Deploy Uptime Kuma
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep -q '^uptime-kuma$'; then
+            echo "Uptime Kuma already running, skipping"
+          else
+            docker run -d \
+              --name uptime-kuma \
+              --restart always \
+              -p 3001:3001 \
+              -v uptime-kuma:/app/data \
+              louislam/uptime-kuma:1
+            echo "Uptime Kuma deployed"
+          fi
+
       - name: Notify Telegram
         if: always()
         env:

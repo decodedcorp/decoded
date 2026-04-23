@@ -25,8 +25,13 @@ import {
   selectArtistName,
   selectGroupName,
   selectContext,
+  selectStructuredMetadata,
 } from "@/lib/stores/requestStore";
 import { useCategoryCodeMap } from "./useCategories";
+import {
+  toMediaMetadataItems,
+  mergeManualOverAi,
+} from "@/lib/utils/mediaMetadata";
 
 interface UseCreatePostOptions {
   onSuccess?: (response: CreatePostResponse) => void;
@@ -46,6 +51,7 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
   const artistName = useRequestStore(selectArtistName);
   const groupName = useRequestStore(selectGroupName);
   const context = useRequestStore(selectContext);
+  const structuredMetadata = useRequestStore(selectStructuredMetadata);
 
   // Store actions
   const setSubmitting = useRequestStore((s) => s.setSubmitting);
@@ -64,6 +70,12 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
       if (!mediaSource?.type || !mediaSource?.title) {
         throw new Error("Media source info is required.");
       }
+
+      const manualItems = toMediaMetadataItems(structuredMetadata);
+      const mergedMediaMetadata = mergeManualOverAi(
+        manualItems,
+        extractedMetadata
+      );
 
       // Solution이 있는 spot이 하나라도 있는지 확인
       const hasSolutions = detectedSpots.some((spot) => spot.solution);
@@ -104,8 +116,8 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
           media_source: mediaSource,
           spots: spotsWithSolution,
           ...(description && { description }),
-          ...(extractedMetadata.length > 0 && {
-            media_metadata: extractedMetadata,
+          ...(mergedMediaMetadata.length > 0 && {
+            media_metadata: mergedMediaMetadata,
           }),
           ...(artistName && { artist_name: artistName }),
           ...(groupName && { group_name: groupName }),
@@ -144,8 +156,8 @@ export function useCreatePost(options: UseCreatePostOptions = {}) {
           media_source: mediaSource,
           spots: spots.filter((s) => s.category_id),
           ...(description && { description }),
-          ...(extractedMetadata.length > 0 && {
-            media_metadata: extractedMetadata,
+          ...(mergedMediaMetadata.length > 0 && {
+            media_metadata: mergedMediaMetadata,
           }),
           ...(artistName && { artist_name: artistName }),
           ...(groupName && { group_name: groupName }),

@@ -101,6 +101,32 @@ export interface MediaMetadataItem {
   value: string; // e.g., "Netflix", "2", "3"
 }
 
+/**
+ * Wire-level whitelist: keys allowed in `media_metadata[]`.
+ *
+ * FE 구조화 입력은 submit 시 이 key들로만 직렬화된다. Phase C에서
+ * Meilisearch/structured column으로 이관될 때 이 whitelist 기준으로
+ * SELECT → INSERT 하면 된다. AI extract 결과 중 whitelist 외 key는 drop.
+ *
+ * #305 Phase A.
+ */
+export const MEDIA_METADATA_KEYS = [
+  "title",
+  "platform",
+  "year",
+  "episode",
+  "location",
+] as const;
+
+export type MediaMetadataKey = (typeof MEDIA_METADATA_KEYS)[number];
+
+/**
+ * 구조화 필드 FE viewmodel. MediaSource 타입은 변경하지 않고 이 별도
+ * 레코드를 requestStore.structuredMetadata에 보관한다. wire로 나갈 때
+ * `toMediaMetadataItems`가 MediaMetadataItem[]로 변환.
+ */
+export type StructuredFieldsState = Partial<Record<MediaMetadataKey, string>>;
+
 export interface CreatePostRequest {
   image_url: string;
   media_source: MediaSource;

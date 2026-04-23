@@ -17,7 +17,9 @@ import {
   type MediaSource,
   type MediaMetadataItem,
   type ContextType,
+  type MediaSourceType,
 } from "@/lib/api";
+import type { StructuredFieldsState } from "@/lib/api/mutation-types";
 
 export type UploadStatus = "pending" | "uploading" | "uploaded" | "error";
 export type RequestStep = 1 | 2 | 3;
@@ -105,6 +107,8 @@ interface RequestState {
   artistName: string;
   groupName: string;
   context: ContextType | null;
+  // Structured metadata (#305 Phase A)
+  structuredMetadata: StructuredFieldsState;
 
   // Step 4: Submit
   isSubmitting: boolean;
@@ -152,6 +156,8 @@ interface RequestState {
   setArtistName: (name: string) => void;
   setGroupName: (name: string) => void;
   setContext: (context: ContextType | null) => void;
+  setStructuredMetadata: (patch: Partial<StructuredFieldsState>) => void;
+  changeMediaType: (type: MediaSourceType) => void;
 
   // Actions - Submit (Step 4)
   setSubmitting: (submitting: boolean) => void;
@@ -203,6 +209,24 @@ function convertApiToSpot(item: DetectedItem, index: number): DetectedSpot {
   };
 }
 
+/**
+ * source type별 허용 structured field whitelist.
+ * #305 Phase A: 타입 전환 시 이 셋에 포함되지 않는 key는 drop한다.
+ */
+const STRUCTURED_KEYS_PER_TYPE: Record<
+  MediaSourceType,
+  ReadonlyArray<keyof StructuredFieldsState>
+> = {
+  user_upload: [],
+  youtube: [],
+  drama: ["title", "platform", "year"],
+  movie: ["title", "platform", "year"],
+  music_video: ["title", "year"],
+  variety: ["title", "episode"],
+  event: ["title", "year", "location"],
+  other: [],
+};
+
 const initialState = {
   images: [] as UploadedImage[],
   currentStep: 1 as RequestStep,
@@ -221,6 +245,7 @@ const initialState = {
   artistName: "",
   groupName: "",
   context: null as ContextType | null,
+  structuredMetadata: {} as StructuredFieldsState,
   // Step 4
   isSubmitting: false,
   submitError: null as string | null,
@@ -534,6 +559,43 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }
   },
 
+  setStructuredMetadata: (patch) => {
+    set((state) => {
+      const next: StructuredFieldsState = { ...state.structuredMetadata };
+      for (const [k, v] of Object.entries(patch) as Array<
+        [keyof StructuredFieldsState, string | undefined]
+      >) {
+        if (v === undefined) {
+          delete next[k];
+        } else {
+          next[k] = v;
+        }
+      }
+      return { structuredMetadata: next };
+    });
+  },
+
+  changeMediaType: (type) => {
+    set((state) => {
+      const allowed = new Set<keyof StructuredFieldsState>(
+        STRUCTURED_KEYS_PER_TYPE[type]
+      );
+      const filtered: StructuredFieldsState = {};
+      for (const [k, v] of Object.entries(state.structuredMetadata) as Array<
+        [keyof StructuredFieldsState, string | undefined]
+      >) {
+        if (allowed.has(k) && v !== undefined) filtered[k] = v;
+      }
+      return {
+        mediaSource: {
+          ...(state.mediaSource ?? { type, title: "" }),
+          type,
+        },
+        structuredMetadata: filtered,
+      };
+    });
+  },
+
   backToFork: () => {
     // Step 2/3에서 fork 화면(userKnowsItems === null)으로 가시적 전이.
     // Confirm 후에도 "같은 화면에 머무는" 느낌을 주지 않기 위해 userKnowsItems까지 클리어한다.
@@ -661,6 +723,8 @@ export const selectExtractedMetadata = (state: RequestState) =>
 export const selectIsExtractingMetadata = (state: RequestState) =>
   state.isExtractingMetadata;
 export const selectMediaSource = (state: RequestState) => state.mediaSource;
+export const selectStructuredMetadata = (state: RequestState) =>
+  state.structuredMetadata;
 export const selectArtistName = (state: RequestState) => state.artistName;
 export const selectGroupName = (state: RequestState) => state.groupName;
 export const selectContext = (state: RequestState) => state.context;
@@ -705,6 +769,8 @@ export const getRequestActions = () => {
     setArtistName: state.setArtistName,
     setGroupName: state.setGroupName,
     setContext: state.setContext,
+    setStructuredMetadata: state.setStructuredMetadata,
+    changeMediaType: state.changeMediaType,
     setSubmitting: state.setSubmitting,
     setSubmitError: state.setSubmitError,
     setStep: state.setStep,
