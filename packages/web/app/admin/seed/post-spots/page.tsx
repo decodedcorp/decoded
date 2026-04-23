@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { MapPin } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import { usePostSpotList, type PostSpot } from "@/lib/api/admin/seed";
 
@@ -16,7 +17,7 @@ function PostSpotsPageContent() {
 
   const currentPage = Number(searchParams.get("page") ?? 1);
 
-  const { data, isLoading } = usePostSpotList(currentPage, 20);
+  const { data, isLoading, isError } = usePostSpotList(currentPage, 20);
 
   const updateUrl = useCallback(
     (params: Record<string, string | undefined>) => {
@@ -32,6 +33,7 @@ function PostSpotsPageContent() {
 
   const spots = data?.data ?? [];
   const pagination = data?.pagination;
+  const isEmpty = !isLoading && !isError && spots.length === 0;
 
   const columns: Column<PostSpot>[] = [
     {
@@ -90,14 +92,36 @@ function PostSpotsPageContent() {
         </p>
       </div>
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load post spots. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<MapPin className="w-12 h-12" />}
+            title="No spots annotated yet"
+            description="Spots are created during the seed curation process and will appear here once available."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={spots}
-        rowKey={(row) => row.id}
-        isLoading={isLoading}
-        emptyMessage="No spots have been annotated yet. Spots are created during the seed curation process."
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={spots}
+          rowKey={(row) => row.id}
+          isLoading={isLoading}
+          emptyMessage="No spots have been annotated yet. Spots are created during the seed curation process."
+        />
+      )}
 
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (

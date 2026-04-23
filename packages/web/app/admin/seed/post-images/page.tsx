@@ -1,14 +1,15 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { ImageIcon } from "lucide-react";
 import {
   AdminDataTable,
   type Column,
   AdminStatusBadge,
   AdminImagePreview,
   AdminPagination,
+  AdminEmptyState,
 } from "@/lib/components/admin/common";
 import { usePostImageList, type PostImage } from "@/lib/api/admin/seed";
 
@@ -34,7 +35,7 @@ function PostImagesPageContent() {
   const currentStatus = searchParams.get("status") ?? "";
   const currentWithItems = searchParams.get("with_items") ?? "";
 
-  const { data, isLoading } = usePostImageList(
+  const { data, isLoading, isError } = usePostImageList(
     currentPage,
     20,
     currentStatus,
@@ -55,6 +56,8 @@ function PostImagesPageContent() {
 
   const images = data?.data ?? [];
   const pagination = data?.pagination;
+  const hasFilter = Boolean(currentStatus || currentWithItems);
+  const isEmpty = !isLoading && !isError && images.length === 0 && !hasFilter;
 
   const columns: Column<PostImage>[] = [
     {
@@ -166,14 +169,36 @@ function PostImagesPageContent() {
         </div>
       </div>
 
+      {/* Error state */}
+      {isError && (
+        <div className="rounded-xl border border-red-800/40 bg-red-900/10 py-12 text-center">
+          <p className="text-sm text-red-400">
+            Failed to load post images. Please try refreshing the page.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state: no data AND no active filter */}
+      {isEmpty && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <AdminEmptyState
+            icon={<ImageIcon className="w-12 h-12" />}
+            title="No post images yet"
+            description="ETL-collected images from artist posts will appear here once the pipeline runs."
+          />
+        </div>
+      )}
+
       {/* Table */}
-      <AdminDataTable
-        columns={columns}
-        data={images}
-        rowKey={(row) => row.id}
-        isLoading={isLoading}
-        emptyMessage="No images found"
-      />
+      {!isError && !isEmpty && (
+        <AdminDataTable
+          columns={columns}
+          data={images}
+          rowKey={(row) => row.id}
+          isLoading={isLoading}
+          emptyMessage="No images found"
+        />
+      )}
 
       {/* Pagination */}
       {pagination && (
