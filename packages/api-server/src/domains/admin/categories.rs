@@ -229,11 +229,15 @@ pub fn router(app_config: AppConfig) -> Router<AppState> {
         .route("/{id}", patch(update_category))
         .route("/order", put(update_category_order))
         .route("/{id}/status", patch(update_category_status))
+        // Layer order matters: last .layer() is outermost → runs first.
+        // admin_middleware needs the User extension set by auth_middleware, so
+        // auth must be OUTER (added last). Reversed order sent every admin
+        // request to 401 "Authentication required" — see #257.
+        .layer(axum::middleware::from_fn(
+            crate::middleware::admin_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             app_config.clone(),
             crate::middleware::auth_middleware,
-        ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
         ))
 }
