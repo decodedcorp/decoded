@@ -16,6 +16,7 @@ import {
   selectGroupName,
   selectContext,
   selectStructuredMetadata,
+  selectExtractedMetadata,
   type DetectedSpot,
   type SpotSolutionData,
 } from "@/lib/stores/requestStore";
@@ -24,6 +25,10 @@ import {
   createPostWithFile,
   createPostWithFileAndSolutions,
 } from "@/lib/api/posts";
+import {
+  toMediaMetadataItems,
+  mergeManualOverAi,
+} from "@/lib/utils/mediaMetadata";
 import { compressImage } from "@/lib/utils/imageCompression";
 import { RequestFlowHeader } from "@/lib/components/request/RequestFlowHeader";
 import { DropZone } from "@/lib/components/request/DropZone";
@@ -61,6 +66,7 @@ export default function RequestUploadPage() {
   const groupName = useRequestStore(selectGroupName);
   const context = useRequestStore(selectContext);
   const structuredMetadata = useRequestStore(selectStructuredMetadata);
+  const extractedMetadata = useRequestStore(selectExtractedMetadata);
 
   // autoUpload: false, autoAnalyze: false - 자동 업로드/분석 비활성화
   const { images, isMaxImages, handleFilesSelected, removeImage, retryUpload } =
@@ -218,6 +224,11 @@ export default function RequestUploadPage() {
           mediaSource?.title?.trim() ||
           (userKnowsItems ? "User Upload" : undefined),
       };
+      const manualItems = toMediaMetadataItems(structuredMetadata);
+      const mergedMediaMetadata = mergeManualOverAi(
+        manualItems,
+        extractedMetadata
+      );
       const response =
         userKnowsItems === true
           ? await createPostWithFileAndSolutions({
@@ -243,6 +254,9 @@ export default function RequestUploadPage() {
                     }
                   : undefined,
               })),
+              ...(mergedMediaMetadata.length > 0 && {
+                media_metadata: mergedMediaMetadata,
+              }),
             })
           : await createPostWithFile({
               file: compressedFile,
@@ -251,6 +265,9 @@ export default function RequestUploadPage() {
               artist_name: artistName?.trim() || undefined,
               group_name: groupName?.trim() || undefined,
               context: context ?? undefined,
+              ...(mergedMediaMetadata.length > 0 && {
+                media_metadata: mergedMediaMetadata,
+              }),
             });
       toast.dismiss("create");
 
