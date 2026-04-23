@@ -12,14 +12,15 @@ use uuid::Uuid;
 
 use crate::entities::{
     warehouse_raw_post_sources as src_entity, warehouse_raw_posts as post_entity,
-    WarehouseRawPostSources, WarehouseRawPosts,
+    warehouse_source_media_originals as orig_entity, WarehouseRawPostSources, WarehouseRawPosts,
+    WarehouseSourceMediaOriginals,
 };
 use crate::error::{AppError, AppResult};
 
 use super::dto::{
     CreateRawPostSourceDto, ListItemsQuery, ListSourcesQuery, RawPost, RawPostSource,
     RawPostSourcesPage, RawPostUpsertInput, RawPostsItemsPage, RawPostsStatsEntry,
-    UpdateRawPostSourceDto,
+    SourceMediaOriginal, UpdateRawPostSourceDto,
 };
 
 const DEFAULT_LIMIT: u64 = 50;
@@ -273,6 +274,7 @@ pub async fn upsert_raw_post(
         caption: Set(input.caption),
         author_name: Set(input.author_name),
         parse_status: Set("pending".to_string()),
+        original_status: Set("pending".to_string()),
         parse_result: Set(None),
         parse_error: Set(None),
         parse_attempts: Set(0),
@@ -377,11 +379,83 @@ fn post_model_to_dto(m: post_entity::Model) -> RawPost {
         caption: m.caption,
         author_name: m.author_name,
         parse_status: m.parse_status,
+        original_status: m.original_status,
         parse_attempts: m.parse_attempts,
+        parse_result: m.parse_result,
         seed_post_id: m.seed_post_id,
         platform_metadata: m.platform_metadata,
         dispatch_id: m.dispatch_id,
         created_at: m.created_at,
         updated_at: m.updated_at,
+    }
+}
+
+// ------------------------------------------------------------------
+// source_media_originals (#261) + admin actions (#289)
+// ------------------------------------------------------------------
+
+pub async fn list_originals(
+    db: &DatabaseConnection,
+    raw_post_id: Uuid,
+) -> AppResult<Vec<SourceMediaOriginal>> {
+    let rows = WarehouseSourceMediaOriginals::find()
+        .filter(orig_entity::Column::RawPostId.eq(raw_post_id))
+        .order_by_desc(orig_entity::Column::IsPrimary)
+        .order_by_desc(orig_entity::Column::CreatedAt)
+        .all(db)
+        .await
+        .map_err(AppError::DatabaseError)?;
+    Ok(rows.into_iter().map(original_model_to_dto).collect())
+}
+
+pub async fn update_seed_status(
+    db: &DatabaseConnection,
+    raw_post_id: Uuid,
+    status: &str,
+) -> AppResult<(Uuid, String)> {
+    // Look up the raw_post → seed_post_id linkage first.
+    let raw_post = WarehouseRawPosts::find_by_id(raw_post_id)
+        .one(db)
+        .await
+        .map_err(AppError::DatabaseError)?
+        .ok_or_else(|| AppError::NotFound(format!("raw_post {raw_post_id} not found")))?;
+    let seed_post_id = raw_post.seed_post_id.ok_or_else(|| {
+        AppError::BadRequest(format!(
+            "raw_post {raw_post_id} has no seed_post yet — reparse first"
+        ))
+    })?;
+    let stmt = Statement::from_sql_and_values(
+        sea_orm::DatabaseBackend::Postgres,
+        "UPDATE warehouse.seed_posts \
+           SET status = $2, updated_at = now() \
+         WHERE id = $1 \
+         RETURNING id",
+        [seed_post_id.into(), status.into()],
+    );
+    let rows = db.query_all(stmt).await.map_err(AppError::DatabaseError)?;
+    if rows.is_empty() {
+        return Err(AppError::NotFound(format!(
+            "seed_post {seed_post_id} not found"
+        )));
+    }
+    Ok((seed_post_id, status.to_string()))
+}
+
+fn original_model_to_dto(m: orig_entity::Model) -> SourceMediaOriginal {
+    SourceMediaOriginal {
+        id: m.id,
+        raw_post_id: m.raw_post_id,
+        origin_url: m.origin_url,
+        origin_domain: m.origin_domain,
+        r2_key: m.r2_key,
+        r2_url: m.r2_url,
+        width: m.width,
+        height: m.height,
+        byte_size: m.byte_size,
+        image_hash: m.image_hash,
+        search_provider: m.search_provider,
+        is_primary: m.is_primary,
+        metadata: m.metadata,
+        created_at: m.created_at,
     }
 }

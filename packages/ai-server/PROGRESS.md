@@ -1,5 +1,82 @@
 # Development Progress
 
+## Recent Refactoring (2026-04-22)
+
+### ✅ **원본 이미지 역검색 파이프라인 (#261 — composite → 고화질 원본)** (2026-04-22)
+
+- **목표**: Fashion Decode composite 의 좌측 셀럽 패널을 기준으로 GCP Cloud
+  Vision Web Detection 을 돌려 web 상 고화질 원본을 찾아 R2 에 아카이브.
+  `seed_posts.image_url` 이 composite 대신 진짜 원본을 가리키게 함.
+- **Architecture**:
+  - `services/media/original_search/` 신규 패키지: `cropper` / `searcher` /
+    `selector` / `archiver` / `repository` / `models`
+  - `MediaParseScheduler._resolve_original`: Vision 파싱 후 best-effort 실행.
+    예외는 파이프라인 중단 안 함 — 실패 시 composite fallback + `original_status='not_found'`
+  - 셀렉터 철학: **도메인 하드코딩 없음**. 구조적으로 배제해야 할 소스
+    (`pinimg.com`, `redditmedia.com`, `lookaside.fbsbx.com`, `twimg`, `tiktok`,
+    `ytimg`) 만 exclusion 리스트. 랭킹은 Vision API 신호(`full_match` >
+    `partial_match`) 와 다운로드 가능성으로만 결정. `visually_similar` 는 노이즈가
+    커서 드롭.
+  - CDN resize 파라미터(`?w=540`, `?type=w540` 등) 는 generic pattern 으로 strip —
+    도메인 무관, 고해상도 variant 먼저 시도
+- **스키마 (supabase/migrations/20260422000001_...)**:
+  - `raw_posts.original_status` (pending/searching/found/not_found/skipped)
+  - `warehouse.source_media_originals` 테이블 — raw_post 당 여러 원본 후보 +
+    `is_primary` partial unique index 로 활성 원본 1개 보장
+- **Env vars**: `ORIGINAL_SEARCH_ENABLED`, `ORIGINAL_SEARCH_MIN_WIDTH=500`,
+  `ORIGINAL_SEARCH_MIN_HEIGHT=500`, `ORIGINAL_SEARCH_MIN_BYTES=40000`,
+  `ORIGINAL_SEARCH_DOWNLOAD_TIMEOUT=15`, `GOOGLE_APPLICATION_CREDENTIALS`
+  (SDK 자동 인식)
+- **Tests**: 32 신규 unit (selector 16 / cropper 7 / searcher 4 / archiver 5) +
+  scheduler original_search 통합 4 = 67/67 통과
+- **E2E (dev Supabase + R2)**: 10 Pinterest 핀 → 10/10 `parsed`, 5/10 `found`
+  원본 확보(Vogue/Newsen/Future CDN), 5/10 `not_found` composite fallback 정상
+  동작. 파이프라인 예외 0. **도메인 하드코딩 없이 editorial 소스가 자연스럽게 선택됨** — selector 가 pinimg/reddit 만 배제하고 나머지는 Vision 신호 순위에 맡긴 결과.
+
+---
+
+## Recent Refactoring (2026-04-21)
+
+### ✅ **Vision 파싱 파이프라인 (#260 — raw_posts → seed_\*)** (2026-04-21)
+
+- **목표**: `warehouse.raw_posts` 의 `parse_status='pending'` 레코드를 Gemini Vision
+  으로 파싱해 `ParsedDecodeResult` 로 만든 뒤 `seed_posts / seed_spots /
+  seed_solutions / seed_asset` 에 적재. 플랫폼 무관 — raw_posts 가 곧
+  source_media 역할을 하므로 신규 테이블 없음.
+- **Architecture**:
+  - `services/media/` 신규 패키지: `models` / `repository` / `vision_parser` /
+    `seed_writer` / `scheduler` + `api/media_controller.py`
+  - `MediaParseScheduler` — APScheduler, 10 min interval, claim_pending
+    (`FOR UPDATE SKIP LOCKED` + attempts bump) → R2 GET → Gemini →
+    SeedWriter → mark_parsed / mark_skipped / mark_failed
+  - `MediaVisionParser` — `google-genai` + structured output
+    (`response_schema=ParsedDecodeResult`) + `call_gemini_with_fallback`
+    재사용 (transient 503/429 → fallback 모델)
+  - `SeedWriter` — 단일 트랜잭션으로 seed_posts → seed_asset(ON CONFLICT
+    image_hash) → spots+solutions. raw_posts.image_hash 가 비어있으면 sha256
+    으로 backfill
+  - `POST /media/items/{raw_post_id}/reparse` — admin 수동 재파싱. 동기 await
+- **Schema gotchas resolved**:
+  - `seed_spots.position_left/top` 이 `text NOT NULL` — int → str(clamp 0–100)
+  - `seed_posts.source_post_id/source_image_id` FK (`warehouse.posts/images`)
+    는 현재 대응 row 없음 → NULL 유지, 포인터는 `media_source` +
+    `metadata.source_raw_post_id` 에 보관
+  - `seed_asset.image_hash` UNIQUE → reparse 안전을 위해 `ON CONFLICT DO NOTHING`
+  - **SeaORM migration file vs 실제 Supabase dev/prod 스키마 drift 발견**:
+    실 스키마에는 `seed_solutions` 테이블 없음, `seed_posts.context` 없음,
+    `seed_spots.solutions JSONB` 컬럼이 솔루션 임베드용. SeedWriter 는 실
+    스키마(=프로덕션 진실) 기준으로 작성 — solutions 를 JSONB 배열로 임베드,
+    seed_solutions INSERT 제거, context → metadata JSON 으로 이전. migration
+    파일 자체의 동기화는 후속 작업.
+- **Env vars**: `MEDIA_PARSE_INTERVAL_SECONDS=600`, `MEDIA_PARSE_BATCH_SIZE=10`,
+  `MEDIA_PARSE_MAX_ATTEMPTS=3`, `GEMINI_VISION_MODEL=gemini-2.5-flash`,
+  `GEMINI_VISION_FALLBACK_MODEL=gemini-2.5-flash-lite`
+- **Tests**: 31 신규 unit tests (vision_parser 7 / seed_writer 6 / repository 10
+  / scheduler 8). 전체 ai-server unit 수트 66/66 통과.
+- **Admin UI**: 파싱 결과 표시 + reparse 버튼은 follow-up PR 로 이관.
+
+---
+
 ## Recent Refactoring (2026-04-12)
 
 ### ✅ **Prompts switched to English (Decoded editorial voice)** (2026-04-12)

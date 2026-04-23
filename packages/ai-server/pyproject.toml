@@ -47,6 +47,7 @@ dependencies = [
     "pillow>=11",
     "boto3>=1.35.0",
     "asyncpg>=0.29",
+    "google-cloud-vision>=3.7.0",
 ]
 
 [dependency-groups]

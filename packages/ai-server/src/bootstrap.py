@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from src.api.media_controller import router as media_router
 from src.api.metadata_controller import router as metadata_router
 from src.api.raw_posts_controller import router as raw_posts_router
 from src.config import Application
@@ -98,6 +99,9 @@ def configure_routes(app: FastAPI, application: Application) -> FastAPI:
 
     # #214 raw_posts 수동 trigger
     app.include_router(raw_posts_router)
+
+    # #260 vision parsing 수동 reparse
+    app.include_router(media_router)
 
     return app
 

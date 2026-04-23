@@ -43,6 +43,7 @@ pub mod warehouse_brands;
 pub mod warehouse_groups;
 pub mod warehouse_raw_post_sources;
 pub mod warehouse_raw_posts;
+pub mod warehouse_source_media_originals;
 
 pub use categories::ActiveModel as CategoriesActiveModel;
 pub use categories::Entity as Categories;
@@ -180,3 +181,7 @@ pub use warehouse_raw_post_sources::Model as WarehouseRawPostSourcesModel;
 pub use warehouse_raw_posts::ActiveModel as WarehouseRawPostsActiveModel;
 pub use warehouse_raw_posts::Entity as WarehouseRawPosts;
 pub use warehouse_raw_posts::Model as WarehouseRawPostsModel;
+
+pub use warehouse_source_media_originals::ActiveModel as WarehouseSourceMediaOriginalsActiveModel;
+pub use warehouse_source_media_originals::Entity as WarehouseSourceMediaOriginals;
+pub use warehouse_source_media_originals::Model as WarehouseSourceMediaOriginalsModel;
