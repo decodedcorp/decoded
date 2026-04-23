@@ -15,8 +15,10 @@ import {
   selectGroupName,
   selectContext,
   selectHasInProgressWork,
+  selectDisabledReason,
   type DetectedSpot,
   type SpotSolutionData,
+  type DisabledReason,
 } from "@/lib/stores/requestStore";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
 import { useUploadFlow } from "./useUploadFlow";
@@ -91,7 +93,24 @@ export function UploadFlowSteps() {
         : 1;
 
   const hasInProgressWork = useRequestStore(selectHasInProgressWork);
+  const disabledReason = useRequestStore(selectDisabledReason);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  const disabledReasonCopy = (r: DisabledReason): string | null => {
+    switch (r) {
+      case "need_image":
+        return "Upload an image";
+      case "need_fork_choice":
+        return "Choose how you'll add info";
+      case "need_spot":
+        return "Tap the image to add at least 1 spot";
+      case "need_solution":
+        return "Add a link and title for each spot";
+      case "submitting":
+      case null:
+        return null;
+    }
+  };
 
   // Back button 노출/활성화
   const anyImageUploading = images.some((img) => img.status === "uploading");
@@ -448,40 +467,68 @@ export function UploadFlowSteps() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border flex-shrink-0">
-              {flow.submitError && (
-                <div className="flex items-center gap-2 mr-auto">
-                  <p className="text-sm text-destructive">{flow.submitError}</p>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={flow.isSubmitting}
-                    className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry
-                  </button>
-                </div>
+            <div
+              className="flex flex-col gap-2 pt-4 border-t border-border flex-shrink-0"
+              style={{
+                paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+              }}
+            >
+              {disabledReasonCopy(disabledReason) && (
+                <p
+                  id="post-disabled-reason"
+                  className="text-xs text-muted-foreground"
+                >
+                  {disabledReasonCopy(disabledReason)}
+                </p>
               )}
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canProceed}
-                className={`
-                  px-6 py-2.5 rounded-lg font-medium transition-all
-                  flex items-center gap-2
-                  ${
-                    canProceed
-                      ? "bg-foreground text-background hover:bg-foreground/90"
-                      : "bg-foreground/20 text-foreground/40 cursor-not-allowed"
-                  }
-                `}
-              >
-                {flow.isSubmitting && (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex items-center justify-end gap-3">
+                {flow.submitError && (
+                  <div className="flex items-center gap-2 mr-auto">
+                    <p className="text-sm text-destructive">
+                      {flow.submitError}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={flow.isSubmitting}
+                      className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Retry
+                    </button>
+                  </div>
                 )}
-                {flow.isSubmitting ? "Posting..." : "Post"}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!canProceed}
+                  aria-describedby={
+                    disabledReason && disabledReason !== "submitting"
+                      ? "post-disabled-reason"
+                      : undefined
+                  }
+                  className={`
+                    px-6 py-2.5 rounded-lg font-medium transition-all
+                    flex items-center gap-2
+                    ${
+                      canProceed
+                        ? "bg-foreground text-background hover:bg-foreground/90"
+                        : "bg-foreground/20 text-foreground/40 cursor-not-allowed"
+                    }
+                  `}
+                >
+                  {flow.isSubmitting && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  {flow.isSubmitting ? "Posting..." : "Post"}
+                  {detectedSpots.length > 0 && !flow.isSubmitting && (
+                    <span className="ml-1 opacity-80">
+                      · {detectedSpots.length}{" "}
+                      {detectedSpots.length === 1 ? "spot" : "spots"}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
