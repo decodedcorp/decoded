@@ -2,7 +2,7 @@
 title: LLM Wiki — Index
 owner: llm
 status: draft
-updated: 2026-04-17
+updated: 2026-04-23
 tags: [agent, llm-write]
 related:
   - docs/wiki/schema/README.md
@@ -16,6 +16,9 @@ related:
 ## Harness
 
 - [harness/claude-code.md](harness/claude-code.md) — Claude Code 세션 규율·worktree·Draft PR·Auto Mode
+- [harness/session-discipline.md](harness/session-discipline.md) — 세션 분리·state 격리·cwd·브랜치
+- [harness/commit-protocol.md](harness/commit-protocol.md) — Conventional Commits·패키지 스코프·pre-commit
+- [harness/review-flow.md](harness/review-flow.md) — write/review 레인 분리·self-approve 금지·evidence
 
 ## (비어 있음)
 
