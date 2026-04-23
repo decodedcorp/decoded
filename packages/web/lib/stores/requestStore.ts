@@ -128,7 +128,9 @@ interface RequestState {
   setDetectedSpots: (spots: DetectedSpot[]) => void;
   selectSpot: (spotId: string | null) => void;
   addSpot: (x: number, y: number, categoryCode?: string) => void;
+  moveSpot: (spotId: string, x: number, y: number) => void;
   removeSpot: (spotId: string) => void;
+  restoreSpot: (spot: DetectedSpot, atIndex?: number) => void;
 
   // Actions - Solution
   setSpotSolution: (spotId: string, solution: SpotSolutionData) => void;
@@ -390,6 +392,18 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }));
   },
 
+  moveSpot: (spotId, x, y) => {
+    const clampedX = Math.max(0, Math.min(1, x));
+    const clampedY = Math.max(0, Math.min(1, y));
+    set((state) => ({
+      detectedSpots: state.detectedSpots.map((spot) =>
+        spot.id === spotId
+          ? { ...spot, center: { x: clampedX, y: clampedY } }
+          : spot
+      ),
+    }));
+  },
+
   removeSpot: (spotId) => {
     set((state) => {
       const filteredSpots = state.detectedSpots.filter((s) => s.id !== spotId);
@@ -404,6 +418,26 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         selectedSpotId:
           state.selectedSpotId === spotId ? null : state.selectedSpotId,
       };
+    });
+  },
+
+  restoreSpot: (spot, atIndex) => {
+    set((state) => {
+      // Reject duplicates (e.g., if the user already re-added the same id manually)
+      if (state.detectedSpots.some((s) => s.id === spot.id)) return {};
+      const insertAt =
+        atIndex !== undefined && atIndex >= 0
+          ? Math.min(atIndex, state.detectedSpots.length)
+          : state.detectedSpots.length;
+      const next = [...state.detectedSpots];
+      next.splice(insertAt, 0, spot);
+      // Re-index after insertion so numbering stays contiguous
+      const reindexed = next.map((s, idx) => ({
+        ...s,
+        index: idx + 1,
+        title: s.solution?.title || s.title || `Spot ${idx + 1}`,
+      }));
+      return { detectedSpots: reindexed };
     });
   },
 
@@ -587,7 +621,9 @@ export const getRequestActions = () => {
     setDetectedSpots: state.setDetectedSpots,
     selectSpot: state.selectSpot,
     addSpot: state.addSpot,
+    moveSpot: state.moveSpot,
     removeSpot: state.removeSpot,
+    restoreSpot: state.restoreSpot,
     setSpotSolution: state.setSpotSolution,
     clearSpotSolution: state.clearSpotSolution,
     setDescription: state.setDescription,

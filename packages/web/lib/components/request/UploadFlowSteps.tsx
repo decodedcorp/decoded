@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import {
   useRequestStore,
   getRequestActions,
@@ -119,9 +120,36 @@ export function UploadFlowSteps() {
     getRequestActions().selectSpot(spot.id);
   }, []);
 
-  const handleRemoveSpot = useCallback((spotId: string) => {
-    getRequestActions().removeSpot(spotId);
+  const handleSpotMove = useCallback((spotId: string, x: number, y: number) => {
+    getRequestActions().moveSpot(spotId, x, y);
   }, []);
+
+  const handleRemoveSpot = useCallback(
+    (spotId: string) => {
+      // Snapshot the spot (including solution + original index) so Undo
+      // can restore it intact after the store re-indexes remaining spots.
+      const snapshot = detectedSpots.find((s) => s.id === spotId);
+      const originalIndex = detectedSpots.findIndex((s) => s.id === spotId);
+      getRequestActions().removeSpot(spotId);
+      if (!snapshot) return;
+      const toastId = `spot-deleted-${spotId}`;
+      toast(`Spot ${snapshot.index} deleted`, {
+        id: toastId,
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            getRequestActions().restoreSpot(
+              snapshot,
+              originalIndex >= 0 ? originalIndex : undefined
+            );
+            toast.dismiss(toastId);
+          },
+        },
+      });
+    },
+    [detectedSpots]
+  );
 
   const handleSaveSolution = useCallback(
     (spotId: string, solution: SpotSolutionData) => {
@@ -232,6 +260,7 @@ export function UploadFlowSteps() {
                   isDetecting={false}
                   selectedSpotId={selectedSpotId}
                   onSpotClick={handleSpotClick}
+                  onSpotMove={handleSpotMove}
                   onImageClick={handleImageClick}
                   layout="default"
                 />
