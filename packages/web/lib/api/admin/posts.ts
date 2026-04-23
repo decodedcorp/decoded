@@ -2,7 +2,13 @@
  * Admin Posts types — matches Rust API response shapes.
  */
 
-export type PostStatus = "active" | "hidden" | "deleted";
+export const POST_STATUSES = ["active", "hidden", "deleted"] as const;
+
+export type PostStatus = (typeof POST_STATUSES)[number];
+
+export function isValidPostStatus(s: string): s is PostStatus {
+  return (POST_STATUSES as readonly string[]).includes(s);
+}
 
 export interface PostUserInfo {
   id: string;
