@@ -14,8 +14,11 @@ import {
   selectArtistName,
   selectGroupName,
   selectContext,
+  selectHasInProgressWork,
+  selectDisabledReason,
   type DetectedSpot,
   type SpotSolutionData,
+  type DisabledReason,
 } from "@/lib/stores/requestStore";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
 import { useUploadFlow } from "./useUploadFlow";
@@ -29,7 +32,17 @@ import {
   type MetadataFormValues,
 } from "@/lib/components/request/MetadataInputForm";
 import { ImageEditor } from "@/lib/components/request/ImageEditor";
-import { Trash2, Plus, Loader2, RefreshCw, Crop } from "lucide-react";
+import { DiscardProgressDialog } from "@/lib/components/request/DiscardProgressDialog";
+import { RECOMMENDED_SPOT_COUNT } from "@/lib/components/request/constants";
+import { clearDraft } from "@/lib/utils/offlineDraft";
+import {
+  Trash2,
+  Plus,
+  Loader2,
+  RefreshCw,
+  Crop,
+  ArrowLeft,
+} from "lucide-react";
 
 /**
  * Renders the full step-switch UI for the upload request flow.
@@ -78,6 +91,49 @@ export function UploadFlowSteps() {
       : hasImages && userKnowsItems !== null
         ? 2
         : 1;
+
+  const hasInProgressWork = useRequestStore(selectHasInProgressWork);
+  const disabledReason = useRequestStore(selectDisabledReason);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  const disabledReasonCopy = (r: DisabledReason): string | null => {
+    switch (r) {
+      case "need_image":
+        return "Upload an image";
+      case "need_fork_choice":
+        return "Choose how you'll add info";
+      case "need_spot":
+        return "Tap the image to add at least 1 spot";
+      case "need_solution":
+        return "Add a link and title for each spot";
+      case "submitting":
+      case null:
+        return null;
+    }
+  };
+
+  // Back button 노출/활성화
+  const anyImageUploading = images.some((img) => img.status === "uploading");
+  const showBackButton = currentStep === 2 || currentStep === 3;
+  const backDisabled = anyImageUploading;
+
+  const performBack = useCallback(() => {
+    if (currentStep === 3) {
+      getRequestActions().backToFork();
+    } else if (currentStep === 2) {
+      getRequestActions().backToUpload();
+    }
+    // 어떤 경로든 draft는 의미 없어짐
+    clearDraft();
+  }, [currentStep]);
+
+  const handleBackClick = useCallback(() => {
+    if (currentStep === 3 && hasInProgressWork) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    performBack();
+  }, [currentStep, hasInProgressWork, performBack]);
 
   const handleUserTypeSelect = useCallback((knows: boolean) => {
     getRequestActions().setUserKnowsItems(knows);
@@ -181,7 +237,18 @@ export function UploadFlowSteps() {
   const localImage = images[0];
 
   return (
-    <div data-testid="upload-flow-steps">
+    <div data-testid="upload-flow-steps" className="relative">
+      {showBackButton && (
+        <button
+          type="button"
+          onClick={handleBackClick}
+          disabled={backDisabled}
+          aria-label="Go back"
+          className="absolute top-4 left-4 z-20 rounded-full p-2 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      )}
       <main className="flex-1 min-h-0 flex flex-col px-4 py-4 md:py-6">
         <StepProgress currentStep={currentStep} className="py-4" />
 
@@ -283,18 +350,30 @@ export function UploadFlowSteps() {
               {/* Spot list + Metadata panel */}
               <div className="w-full md:w-80 flex-shrink-0 overflow-y-auto space-y-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium">
-                      Spots ({detectedSpots.length})
-                    </h3>
-                    {detectedSpots.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {userKnowsItems
-                          ? "Tap a spot to add a link"
-                          : "Curious locations marked"}
-                      </p>
-                    )}
-                  </div>
+                  {detectedSpots.length >= 1 && (
+                    <div className="flex flex-col gap-1">
+                      <div className="text-sm font-medium text-foreground">
+                        <span className="tabular-nums">
+                          Spots {detectedSpots.length}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / {RECOMMENDED_SPOT_COUNT}
+                        </span>
+                      </div>
+                      {detectedSpots.length < RECOMMENDED_SPOT_COUNT && (
+                        <p className="text-xs text-muted-foreground">
+                          Tap image to add more, or drag to reposition
+                        </p>
+                      )}
+                      {detectedSpots.length === RECOMMENDED_SPOT_COUNT && (
+                        <p className="text-xs text-muted-foreground">
+                          Nice. Add more if needed.
+                        </p>
+                      )}
+                      {/* count > RECOMMENDED_SPOT_COUNT: no subtext (intentional, per spec) */}
+                    </div>
+                  )}
 
                   {detectedSpots.length === 0 && (
                     <div className="py-8 text-center space-y-2">
@@ -388,40 +467,68 @@ export function UploadFlowSteps() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border flex-shrink-0">
-              {flow.submitError && (
-                <div className="flex items-center gap-2 mr-auto">
-                  <p className="text-sm text-destructive">{flow.submitError}</p>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={flow.isSubmitting}
-                    className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry
-                  </button>
-                </div>
+            <div
+              className="flex flex-col gap-2 pt-4 border-t border-border flex-shrink-0"
+              style={{
+                paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+              }}
+            >
+              {disabledReasonCopy(disabledReason) && (
+                <p
+                  id="post-disabled-reason"
+                  className="text-xs text-muted-foreground"
+                >
+                  {disabledReasonCopy(disabledReason)}
+                </p>
               )}
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canProceed}
-                className={`
-                  px-6 py-2.5 rounded-lg font-medium transition-all
-                  flex items-center gap-2
-                  ${
-                    canProceed
-                      ? "bg-foreground text-background hover:bg-foreground/90"
-                      : "bg-foreground/20 text-foreground/40 cursor-not-allowed"
-                  }
-                `}
-              >
-                {flow.isSubmitting && (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex items-center justify-end gap-3">
+                {flow.submitError && (
+                  <div className="flex items-center gap-2 mr-auto">
+                    <p className="text-sm text-destructive">
+                      {flow.submitError}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={flow.isSubmitting}
+                      className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Retry
+                    </button>
+                  </div>
                 )}
-                {flow.isSubmitting ? "Posting..." : "Post"}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!canProceed}
+                  aria-describedby={
+                    disabledReason && disabledReason !== "submitting"
+                      ? "post-disabled-reason"
+                      : undefined
+                  }
+                  className={`
+                    px-6 py-2.5 rounded-lg font-medium transition-all
+                    flex items-center gap-2
+                    ${
+                      canProceed
+                        ? "bg-foreground text-background hover:bg-foreground/90"
+                        : "bg-foreground/20 text-foreground/40 cursor-not-allowed"
+                    }
+                  `}
+                >
+                  {flow.isSubmitting && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  {flow.isSubmitting ? "Posting..." : "Post"}
+                  {detectedSpots.length > 0 && !flow.isSubmitting && (
+                    <span className="ml-1 opacity-80">
+                      · {detectedSpots.length}{" "}
+                      {detectedSpots.length === 1 ? "spot" : "spots"}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -435,6 +542,15 @@ export function UploadFlowSteps() {
           onCancel={() => setShowEditor(false)}
         />
       )}
+
+      <DiscardProgressDialog
+        open={showDiscardDialog}
+        onCancel={() => setShowDiscardDialog(false)}
+        onConfirm={() => {
+          setShowDiscardDialog(false);
+          performBack();
+        }}
+      />
     </div>
   );
 }

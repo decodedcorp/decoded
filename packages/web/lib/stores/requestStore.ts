@@ -22,6 +22,14 @@ import {
 export type UploadStatus = "pending" | "uploading" | "uploaded" | "error";
 export type RequestStep = 1 | 2 | 3;
 
+export type DisabledReason =
+  | "need_image"
+  | "need_fork_choice"
+  | "need_spot"
+  | "need_solution"
+  | "submitting"
+  | null;
+
 export interface UploadedImage {
   id: string;
   file: File;
@@ -152,6 +160,14 @@ interface RequestState {
   // Actions - Navigation
   setStep: (step: RequestStep) => void;
   canProceedToNextStep: () => boolean;
+
+  // Actions - Back navigation
+  backToFork: () => void;
+  backToUpload: () => void;
+
+  // Selectors
+  hasInProgressWork: () => boolean;
+  disabledReason: () => DisabledReason;
 
   // Actions - Reset
   resetRequestFlow: () => void;
@@ -518,6 +534,52 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }
   },
 
+  backToFork: () => {
+    set({
+      detectedSpots: [],
+      selectedSpotId: null,
+      mediaSource: { type: "user_upload", title: "" },
+      groupName: "",
+      artistName: "",
+      context: null,
+    });
+  },
+
+  backToUpload: () => {
+    const { images } = get();
+    images.forEach((img) => revokePreviewUrl(img.previewUrl));
+    set({
+      images: [],
+      userKnowsItems: null,
+    });
+  },
+
+  hasInProgressWork: () => {
+    const { detectedSpots, mediaSource, context, artistName } = get();
+    return (
+      detectedSpots.length > 0 ||
+      !!mediaSource?.title?.trim() ||
+      context !== null ||
+      !!artistName?.trim()
+    );
+  },
+
+  disabledReason: () => {
+    const { images, userKnowsItems, detectedSpots, isSubmitting } = get();
+    if (isSubmitting) return "submitting";
+    const hasUploaded = images.some((img) => img.status === "uploaded");
+    if (!hasUploaded) return "need_image";
+    if (userKnowsItems === null) return "need_fork_choice";
+    if (detectedSpots.length === 0) return "need_spot";
+    if (
+      userKnowsItems === true &&
+      !detectedSpots.every((s) => s.solution?.originalUrl && s.solution?.title)
+    ) {
+      return "need_solution";
+    }
+    return null;
+  },
+
   resetRequestFlow: () => {
     const { images } = get();
     images.forEach((img) => revokePreviewUrl(img.previewUrl));
@@ -604,6 +666,13 @@ export const selectContext = (state: RequestState) => state.context;
 export const selectIsSubmitting = (state: RequestState) => state.isSubmitting;
 export const selectSubmitError = (state: RequestState) => state.submitError;
 
+// Back navigation selectors
+export const selectHasInProgressWork = (state: RequestState): boolean =>
+  state.hasInProgressWork();
+
+export const selectDisabledReason = (state: RequestState): DisabledReason =>
+  state.disabledReason();
+
 /**
  * Action들을 렌더링 없이 직접 접근
  * 컴포넌트에서 action만 필요할 때 사용 (구독 없음)
@@ -638,5 +707,7 @@ export const getRequestActions = () => {
     setStep: state.setStep,
     resetRequestFlow: state.resetRequestFlow,
     setUserKnowsItems: state.setUserKnowsItems,
+    backToFork: state.backToFork,
+    backToUpload: state.backToUpload,
   };
 };
