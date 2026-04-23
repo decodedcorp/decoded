@@ -59,10 +59,11 @@ See: .planning/PROJECT.md
 | 260402-qhu | post 상세페이지 및 오른쪽 모달 패널 컴포넌트 크기 조정 | 2026-04-02 | 890374ce | [260402-qhu-post](./quick/260402-qhu-post/) |
 | 260403-kp5 | 헤더 ASCII 로고 오른쪽 밀림/잘림 수정 | 2026-04-03 | - | [260403-kp5](./quick/260403-kp5-fix-header-ascii-logo-shifting-right-and/) |
 | 260404-vco | Editorial+Trending 메인페이지 섹션 키우기 | 2026-04-04 | - | [260404-vco-editorial-trending](./quick/260404-vco-editorial-trending/) |
+| 260423-sfx | 관리자 페이지 로그아웃 레이아웃 버그 및 로그인 후 진입 속도 최적화 | 2026-04-23 | 9581ea46 | [260423-sfx](./quick/260423-sfx-admin-logout-and-speed/) |
 
 ---
 
-Last activity: 2026-04-04 - Completed quick task 260404-vco: Editorial+Trending 메인페이지 섹션 키우기
+Last activity: 2026-04-23 - Completed quick task 260423-sfx: 관리자 페이지 로그아웃 레이아웃 버그 및 로그인 후 진입 속도 최적화
 
 _Created: 2026-02-05_
 _Reset: 2026-04-02 (harness optimization — GSD lightweight mode)_
