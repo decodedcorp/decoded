@@ -1,0 +1,55 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    paths:
+      - 'packages/web/**'
+      - 'packages/api-server/**'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches: [dev]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: packages/web
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: packages/web
+        run: bunx playwright test
+
+      - name: Upload test-results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: packages/web/test-results/
+          retention-days: 7
