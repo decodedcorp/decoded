@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import {
   useRequestStore,
@@ -209,8 +210,21 @@ export function UploadFlowSteps() {
         {localImage && userKnowsItems === null && (
           <div
             data-testid="upload-flow-fork"
-            className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-8 py-12"
+            className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-6 py-8"
           >
+            <div
+              data-testid="upload-flow-fork-preview"
+              className="relative w-full aspect-[3/4] max-w-[220px] sm:max-w-xs rounded-xl overflow-hidden bg-foreground/5"
+            >
+              <Image
+                src={localImage.previewUrl}
+                alt={`Uploaded image preview: ${localImage.file.name}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 220px, 320px"
+                priority
+              />
+            </div>
             <p className="text-lg font-medium text-center">
               Do you know the items in this photo?
             </p>

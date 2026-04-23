@@ -62,6 +62,27 @@ describe("UploadFlowSteps — step branches", () => {
     render(<UploadFlowSteps />);
     expect(screen.getByTestId("upload-flow-fork")).toBeInTheDocument();
   });
+
+  test("fork screen shows an image preview so users can confirm the upload (#295)", () => {
+    const file = new File(["x"], "outfit.jpg", { type: "image/jpeg" });
+    getRequestActions().addImage(file);
+    const img = useRequestStore.getState().images[0];
+    getRequestActions().setImageUploadedUrl(img.id, "data:x");
+    render(<UploadFlowSteps />);
+
+    const preview = screen.getByTestId("upload-flow-fork-preview");
+    expect(preview).toBeInTheDocument();
+    const imgEl = preview.querySelector("img");
+    expect(imgEl).not.toBeNull();
+    // Screen readers should announce this as an uploaded preview, not
+    // just the raw (often cryptic) filename.
+    expect(imgEl?.getAttribute("alt")).toBe(
+      "Uploaded image preview: outfit.jpg"
+    );
+    // Loader may wrap the URL, but the mocked previewUrl token must be
+    // referenced so the rendered <img> reflects the uploaded file.
+    expect(imgEl?.getAttribute("src")).toContain(img.previewUrl);
+  });
 });
 
 describe("UploadFlowSteps — step indicator progression", () => {
