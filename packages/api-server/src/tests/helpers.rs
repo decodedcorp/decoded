@@ -35,9 +35,17 @@ pub fn test_config() -> AppConfig {
             log_format: "text".to_string(),
             allowed_origins: None,
             env: "test".to_string(),
+            app_env: crate::config::AppEnv::Local,
         },
         database: DatabaseConfig {
             url: "postgres://test:test@localhost:5432/test".to_string(),
+            max_connections: 5,
+            min_connections: 1,
+            connect_timeout: std::time::Duration::from_secs(5),
+            idle_timeout: std::time::Duration::from_secs(60),
+        },
+        assets_database: crate::config::AssetsDatabaseConfig {
+            url: "postgres://test:test@localhost:5432/test_assets".to_string(),
             max_connections: 5,
             min_connections: 1,
             connect_timeout: std::time::Duration::from_secs(5),
@@ -136,8 +144,14 @@ pub fn test_app_state_with_clients(
 ) -> AppState {
     let decoded_ai_client = DecodedAIGrpcClient::new("http://localhost:50051".to_string()).unwrap();
 
+    // 테스트에선 기본적으로 prod pool 을 assets pool 로 재사용 (MockDatabase 는 공유 가능).
+    // verify 플로우처럼 두 DB 분리 검증이 필요한 테스트는 자체적으로 assets_db 를 주입해 이 헬퍼를
+    // 호출하지 않고 AppState 를 직접 구성한다.
+    let assets_db = db.clone();
+
     AppState {
         db,
+        assets_db,
         config: test_config(),
         category_cache: Arc::new(CategoryCache::new()),
         post_list_cache: Arc::new(crate::domains::posts::cache::PostListCache::new()),
