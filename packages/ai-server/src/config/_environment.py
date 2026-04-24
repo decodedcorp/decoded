@@ -129,19 +129,30 @@ class Environment(BaseModel):
     def from_environ(*, env_file: Optional[str] = None):
         """Load env file(s). If `env_file` is set, only that path is used when it exists.
 
-        Default (로컬 dev): `.dev.env` 우선, 없으면 `.env`.
+        Default (로컬 dev) load order — later entries fill in gaps from earlier ones
+        (dotenv default: existing keys win, so package-level overrides repo-root):
+          1. repo-root `.env.backend.dev` — shared DATABASE_URL / R2 creds / Supabase keys,
+             populated by `scripts/local-env-sync.sh`. Acts as the single SOT for
+             values that api-server and ai-server both need.
+          2. package-level `.dev.env` — ai-server-specific (GEMINI_API_KEY, REDIS_*, gRPC).
+          3. package-level `.env` — final fallback.
         """
         cwd = getcwd()
         if env_file is not None:
             if exists(env_file):
                 load_dotenv(env_file)
         else:
+            # package-level first (wins on conflict via dotenv default override=False)
             dev = join(cwd, ".dev.env")
             dotenv_path = join(cwd, ".env")
             if exists(dev):
                 load_dotenv(dev)
             elif exists(dotenv_path):
                 load_dotenv(dotenv_path)
+            # repo-root shared backend env (two levels up from packages/ai-server)
+            repo_root_backend = Path(cwd).parents[1] / ".env.backend.dev"
+            if repo_root_backend.exists():
+                load_dotenv(repo_root_backend)
         _apply_legacy_env_aliases()
         return Environment(**os.environ)
 
