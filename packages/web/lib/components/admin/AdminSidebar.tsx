@@ -18,6 +18,7 @@ import {
   Image,
   MapPin,
   CheckCircle,
+  Inbox,
   Mic2,
   Tag,
   UsersRound,
@@ -52,6 +53,11 @@ const SIDEBAR_ENTRIES: SidebarEntry[] = [
   {
     label: "Seed Pipeline",
     items: [
+      {
+        href: "/admin/seed/raw-post-sources",
+        label: "Sources",
+        icon: Inbox,
+      },
       { href: "/admin/seed/candidates", label: "Candidates", icon: Users },
       { href: "/admin/seed/post-images", label: "Post Images", icon: Image },
       { href: "/admin/seed/post-spots", label: "Post Spots", icon: MapPin },
@@ -181,7 +187,7 @@ export function AdminSidebar({
           aria-label="Admin navigation"
         >
           <ul className="space-y-0.5 px-2">
-            {SIDEBAR_ENTRIES.map((entry, idx) => {
+            {SIDEBAR_ENTRIES.map((entry) => {
               if (isNavGroup(entry)) {
                 return (
                   <li key={entry.label} className="mt-4 first:mt-0">
