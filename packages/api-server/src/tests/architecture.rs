@@ -45,6 +45,10 @@ const DOMAIN_DEPS: &[(&str, &[&str])] = &[
             "admin",
             "views",
             "spots",
+            // #333 verify 플로우: posts::create_post_from_raw 가 raw_posts dto(VerifyRawPostDto)를
+            // 인자로 받아 prod.posts 를 생성한다. raw_posts → posts 단방향 쓰기를 위해 posts 쪽
+            // 에서 raw_posts 의 dto/entity 참조를 허용.
+            "raw_posts",
         ],
     ),
     ("spots", &["categories", "subcategories", "posts", "views"]),
@@ -58,6 +62,8 @@ const DOMAIN_DEPS: &[(&str, &[&str])] = &[
     ("rankings", &[]),
     ("post_likes", &[]),
     ("post_magazines", &[]),
+    // #333 verify 엔드포인트가 create_post_from_raw 를 호출해 prod.posts INSERT 를 위임.
+    ("raw_posts", &["posts"]),
     ("search", &[]),
     ("saved_posts", &[]),
     ("votes", &[]),
@@ -398,6 +404,8 @@ const DTO_NAME_EXCEPTIONS: &[&str] = &[
     "VoteStatsDto",
     // 액션명이 동사인 입력
     "AdoptSolutionDto",
+    // #333 admin verify 액션 입력
+    "VerifyRawPostDto",
 ];
 
 fn is_acceptable_input_dto_name(name: &str) -> bool {

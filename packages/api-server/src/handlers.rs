@@ -8,7 +8,7 @@ use sea_orm::ConnectionTrait;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::config::AppState;
+use crate::app_state::AppState;
 use crate::services::search::MeilisearchClient;
 
 /// 의존성 한 항목 상태
@@ -213,7 +213,7 @@ mod tests {
 
     #[tokio::test]
     async fn health_check_skipped_storage_when_account_id_empty() {
-        use crate::config::AppState;
+        use crate::app_state::AppState;
         use crate::tests::helpers::{test_app_state, test_config};
         use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 

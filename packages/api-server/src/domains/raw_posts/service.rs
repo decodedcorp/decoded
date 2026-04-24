@@ -390,3 +390,238 @@ fn post_model_to_dto(m: post_entity::Model) -> RawPost {
         updated_at: m.updated_at,
     }
 }
+
+// ------------------------------------------------------------------
+// verify (#333)
+// ------------------------------------------------------------------
+
+/// COMPLETED 상태의 raw_post 를 검증해 prod.public.posts 로 복사한다 (#333).
+///
+/// 순서:
+///   1. assets 에서 raw_post 로드 + status == COMPLETED 가드
+///   2. prod INSERT (`create_post_from_raw` 로 위임)
+///   3. `APP_ENV != Local` 이면 assets status 를 VERIFIED 로 갱신 + pipeline_events 기록
+///      · Local 에선 cloud assets 오염 방지를 위해 step 3 생략
+///
+/// 실패 시나리오: step 2 성공 + step 3 실패 → prod 에 이미 들어갔으므로 다음 클릭에서
+/// 중복 INSERT 가능. 이는 합의된 "admin 운영 책임" 정책(DB UNIQUE 없음)과 일치 —
+/// step 3 실패는 loud error 로 로깅된다.
+pub async fn verify_raw_post(
+    state: &crate::app_state::AppState,
+    id: Uuid,
+    admin_id: Uuid,
+    dto: super::dto::VerifyRawPostDto,
+) -> AppResult<crate::domains::posts::dto::PostResponse> {
+    use sea_orm::{Set, TransactionTrait};
+
+    // 1. assets 로드 + 상태 가드
+    let raw_post = AssetsRawPosts::find_by_id(id)
+        .one(state.assets_db.as_ref())
+        .await
+        .map_err(AppError::DatabaseError)?
+        .ok_or_else(|| AppError::NotFound(format!("raw_post {id} not found")))?;
+
+    if raw_post.status != crate::entities::PipelineStatus::Completed {
+        return Err(AppError::BadRequest(format!(
+            "raw_post {id} is not COMPLETED (status={:?}); only COMPLETED can be verified",
+            raw_post.status
+        )));
+    }
+
+    // 2. prod INSERT
+    let post = crate::domains::posts::service::create_post_from_raw(
+        state.db.as_ref(),
+        admin_id,
+        &raw_post,
+        dto,
+    )
+    .await?;
+
+    // 3. assets status 갱신 — Local 에선 스킵
+    if state.config.server.app_env == crate::config::AppEnv::Local {
+        tracing::warn!(
+            raw_post_id = %id,
+            post_id = %post.id,
+            "APP_ENV=local → skipping assets status write (cloud assets not polluted)"
+        );
+        return Ok(post);
+    }
+
+    let txn = state
+        .assets_db
+        .begin()
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let now = Utc::now().fixed_offset();
+    let mut active: post_entity::ActiveModel = raw_post.clone().into();
+    active.status = Set(crate::entities::PipelineStatus::Verified);
+    active.verified_at = Set(Some(now));
+    active.verified_by = Set(Some(admin_id));
+    active.updated_at = Set(now);
+    active.update(&txn).await.map_err(|e| {
+        tracing::error!(raw_post_id=%id, post_id=%post.id, error=%e,
+            "assets status=VERIFIED write FAILED after prod INSERT succeeded — \
+             admin may see duplicate on retry");
+        AppError::DatabaseError(e)
+    })?;
+
+    insert_pipeline_event(
+        &txn,
+        id,
+        Some(crate::entities::PipelineStatus::Completed),
+        crate::entities::PipelineStatus::Verified,
+        Some(admin_id),
+        None,
+    )
+    .await?;
+
+    txn.commit().await.map_err(AppError::DatabaseError)?;
+    Ok(post)
+}
+
+/// `pipeline_events` 에 상태 전환 기록 한 건을 INSERT.
+///
+/// assets 트랜잭션 안에서 호출되어야 한다.
+pub(crate) async fn insert_pipeline_event<C>(
+    txn: &C,
+    raw_post_id: Uuid,
+    from_status: Option<crate::entities::PipelineStatus>,
+    to_status: crate::entities::PipelineStatus,
+    actor: Option<Uuid>,
+    note: Option<String>,
+) -> AppResult<()>
+where
+    C: ConnectionTrait,
+{
+    let from_str = from_status.map(status_to_db_string);
+    let to_str = status_to_db_string(to_status);
+
+    let stmt = Statement::from_sql_and_values(
+        sea_orm::DatabaseBackend::Postgres,
+        "INSERT INTO public.pipeline_events \
+           (raw_post_id, from_status, to_status, actor, note) \
+         VALUES ($1, $2::public.pipeline_status, $3::public.pipeline_status, $4, $5)",
+        [
+            raw_post_id.into(),
+            from_str.into(),
+            to_str.into(),
+            actor.into(),
+            note.into(),
+        ],
+    );
+    txn.execute(stmt).await.map_err(AppError::DatabaseError)?;
+    Ok(())
+}
+
+fn status_to_db_string(s: crate::entities::PipelineStatus) -> String {
+    use crate::entities::PipelineStatus::*;
+    match s {
+        NotStarted => "NOT_STARTED",
+        InProgress => "IN_PROGRESS",
+        Completed => "COMPLETED",
+        Verified => "VERIFIED",
+        Error => "ERROR",
+    }
+    .to_string()
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use super::*;
+    use crate::entities::PipelineStatus;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    fn make_raw_post_model(status: PipelineStatus) -> post_entity::Model {
+        let now = Utc::now().fixed_offset();
+        post_entity::Model {
+            id: Uuid::nil(),
+            source_id: Uuid::nil(),
+            platform: "pinterest".into(),
+            external_id: "ext-1".into(),
+            external_url: Some("https://pin.example/abc".into()),
+            image_url: Some("https://cdn.example/img.jpg".into()),
+            r2_key: Some("pinterest/ab/ext-1.jpg".into()),
+            r2_url: Some("https://r2.example/pinterest/ab/ext-1.jpg".into()),
+            image_hash: None,
+            caption: Some("sample caption".into()),
+            author_name: Some("test_author".into()),
+            status,
+            parse_status: "parsed".into(),
+            parse_result: None,
+            parse_error: None,
+            parse_attempts: 1,
+            verified_at: None,
+            verified_by: None,
+            platform_metadata: None,
+            dispatch_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn verify_returns_not_found_on_missing_raw_post() {
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<post_entity::Model>::new()])
+            .into_connection();
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail with NotFound");
+        assert!(matches!(err, AppError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_non_completed() {
+        let raw = make_raw_post_model(PipelineStatus::InProgress);
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![raw]])
+            .into_connection();
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail with BadRequest for non-COMPLETED");
+        assert!(matches!(err, AppError::BadRequest(_)));
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_missing_image_url() {
+        // image_url 과 r2_url 모두 없으면 prod INSERT 전에 400 리턴.
+        let mut raw = make_raw_post_model(PipelineStatus::Completed);
+        raw.image_url = None;
+        raw.r2_url = None;
+
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![raw]])
+            .into_connection();
+        // prod db 에 append 없음 — INSERT 시도되면 테스트 실패
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail when image_url/r2_url are both None");
+        assert!(matches!(err, AppError::BadRequest(_)));
+    }
+}

@@ -4,7 +4,7 @@
 
 use axum::Router;
 
-use crate::config::AppState;
+use crate::app_state::AppState;
 use crate::domains;
 
 /// API v1 라우터 구성

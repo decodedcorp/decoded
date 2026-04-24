@@ -5,9 +5,9 @@
 //! (sources) or are driven by the ai-server gRPC callback (items).
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
-    routing::{get, patch},
+    routing::{get, patch, post},
     Json, Router,
 };
 use uuid::Uuid;
@@ -15,12 +15,14 @@ use uuid::Uuid;
 use crate::{
     config::{AppConfig, AppState},
     error::AppResult,
+    middleware::User,
 };
 
 use super::{
     dto::{
         CreateRawPostSourceDto, ListItemsQuery, ListSourcesQuery, RawPost, RawPostSource,
         RawPostSourcesPage, RawPostsItemsPage, RawPostsStatsResponse, UpdateRawPostSourceDto,
+        VerifyRawPostDto,
     },
     service,
 };
@@ -190,6 +192,36 @@ pub async fn get_item(
 }
 
 // --------------------
+// verify (#333)
+// --------------------
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/raw-posts/{id}/verify",
+    operation_id = "raw_posts_verify",
+    tag = "raw-posts",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "검증할 raw_post id")),
+    request_body = VerifyRawPostDto,
+    responses(
+        (status = 200, description = "검증 완료 → prod.posts INSERT", body = crate::domains::posts::dto::PostResponse),
+        (status = 400, description = "raw_post 가 COMPLETED 상태가 아님"),
+        (status = 404, description = "raw_post 없음"),
+        (status = 401),
+        (status = 403)
+    )
+)]
+pub async fn verify(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<VerifyRawPostDto>,
+) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
+    let resp = service::verify_raw_post(&state, id, user.id, dto).await?;
+    Ok(Json(resp))
+}
+
+// --------------------
 // stats
 // --------------------
 
@@ -220,6 +252,7 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
         .route("/sources/{id}", patch(update_source).delete(delete_source))
         .route("/items", get(list_items))
         .route("/items/{id}", get(get_item))
+        .route("/items/{id}/verify", post(verify))
         .route("/stats", get(stats))
         // Layer order matters: last .layer() is outermost → runs first.
         // admin_db_middleware reads the User extension that auth_middleware

@@ -1,6 +1,6 @@
-use crate::config::{AppConfig, AppState};
 use crate::error::AppResult;
 use crate::middleware::auth::User;
+use crate::{app_state::AppState, config::AppConfig};
 use axum::{
     extract::{Path, State},
     http::StatusCode,

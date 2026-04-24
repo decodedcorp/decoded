@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use axum::{extract::Request, middleware::Next, response::Response};
 
-use crate::config::AppState;
+use crate::app_state::AppState;
 
 /// 요청 메트릭 수집 미들웨어
 ///

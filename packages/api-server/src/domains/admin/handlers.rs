@@ -4,7 +4,7 @@
 
 use axum::Router;
 
-use crate::config::{AppConfig, AppState};
+use crate::{app_state::AppState, config::AppConfig};
 
 use super::{
     badges, categories, curations, dashboard, editorial_candidates, magazine_sessions, monitoring,

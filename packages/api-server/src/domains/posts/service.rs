@@ -2250,6 +2250,66 @@ pub async fn list_tries_by_spot(
     Ok(TryListResponse { tries, total })
 }
 
+/// 검증된 raw_post 로부터 prod `public.posts` 로우를 생성 (#333).
+///
+/// admin 이 검증(verify) 버튼을 누를 때 호출된다. raw_post 의 r2_url / image_url,
+/// caption, 플랫폼 메타와 `VerifyRawPostDto` override 를 합쳐 최소한의 post 를 만든다.
+/// 현 단계에선 spots/solutions 없이 post row 만 생성 — 세부 아이템 태깅은 검증 이후
+/// 관리자가 별도로 진행한다.
+pub async fn create_post_from_raw(
+    db: &DatabaseConnection,
+    admin_id: Uuid,
+    raw_post: &crate::entities::assets_raw_posts::Model,
+    dto: crate::domains::raw_posts::dto::VerifyRawPostDto,
+) -> AppResult<PostResponse> {
+    let now = chrono::Utc::now().fixed_offset();
+    let image_url = raw_post
+        .r2_url
+        .clone()
+        .or_else(|| raw_post.image_url.clone())
+        .ok_or_else(|| {
+            AppError::BadRequest(format!(
+                "raw_post {} has no image_url/r2_url — cannot create post",
+                raw_post.id
+            ))
+        })?;
+
+    let title = dto.title.or_else(|| raw_post.caption.clone());
+    let artist_name = dto.artist_name.or_else(|| raw_post.author_name.clone());
+    let group_name = dto.group_name;
+    let context = dto.context;
+
+    // 이름→warehouse FK 자동 lookup (기존 posts 플로우와 동일).
+    let (mut artist_id, mut group_id) = (None::<Uuid>, None::<Uuid>);
+    let (resolved_artist, resolved_group) =
+        resolve_warehouse_ids_from_names(db, artist_name.as_deref(), group_name.as_deref()).await;
+    artist_id = artist_id.or(resolved_artist);
+    group_id = group_id.or(resolved_group);
+
+    let post = ActiveModel {
+        id: Set(Uuid::new_v4()),
+        user_id: Set(admin_id),
+        image_url: Set(image_url),
+        media_type: Set("image".to_string()),
+        title: Set(title),
+        media_metadata: Set(None),
+        group_name: Set(group_name),
+        group_id: Set(group_id),
+        artist_name: Set(artist_name),
+        artist_id: Set(artist_id),
+        context: Set(context),
+        view_count: Set(0),
+        status: Set(crate::constants::post_status::ACTIVE.to_string()),
+        created_with_solutions: Set(Some(false)),
+        created_at: Set(now),
+        updated_at: Set(now),
+        ..Default::default()
+    };
+
+    let saved = post.insert(db).await.map_err(AppError::DatabaseError)?;
+    Ok(PostResponse::from(saved))
+}
+
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 mod tests {

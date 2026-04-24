@@ -122,6 +122,27 @@ where
     db.into_connection()
 }
 
+/// prod / assets 두 풀을 따로 주입하는 테스트용 AppState (#333 verify 플로우 검증용).
+pub fn test_app_state_with_assets(
+    prod_db: DatabaseConnection,
+    assets_db: DatabaseConnection,
+) -> AppState {
+    let decoded_ai_client = DecodedAIGrpcClient::new("http://localhost:50051".to_string()).unwrap();
+    AppState {
+        db: Arc::new(prod_db),
+        assets_db: Arc::new(assets_db),
+        config: test_config(),
+        category_cache: Arc::new(CategoryCache::new()),
+        post_list_cache: Arc::new(crate::domains::posts::cache::PostListCache::new()),
+        storage_client: Arc::new(DummyStorageClient::default()),
+        search_client: Arc::new(DummySearchClient),
+        affiliate_client: Arc::new(DummyAffiliateClient),
+        embedding_client: Arc::new(DummyEmbeddingClient),
+        decoded_ai_client: Arc::new(decoded_ai_client),
+        metrics: Arc::new(crate::metrics::MetricsStore::new()),
+    }
+}
+
 /// 테스트용 AppState (MockDatabase 또는 실 DB 연결 모두 가능)
 pub fn test_app_state(db: DatabaseConnection) -> AppState {
     let db = Arc::new(db);
