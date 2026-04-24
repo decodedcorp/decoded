@@ -28,7 +28,10 @@ pub fn build_api_router(state: AppState) -> Router<AppState> {
             "/admin",
             domains::admin::router(state.clone(), config.clone()),
         )
-        .nest("/raw-posts", domains::raw_posts::router(config.clone()))
+        .nest(
+            "/raw-posts",
+            domains::raw_posts::router(state.clone(), config.clone()),
+        )
         // Config가 필요 없는 라우터들
         .nest("/post-magazines", domains::post_magazines::router())
         .nest("/categories", domains::categories::router())

@@ -214,18 +214,30 @@ pub async fn stats(State(state): State<AppState>) -> AppResult<Json<RawPostsStat
 // router
 // --------------------
 
-pub fn router(app_config: AppConfig) -> Router<AppState> {
+pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
     Router::new()
         .route("/sources", get(list_sources).post(create_source))
         .route("/sources/{id}", patch(update_source).delete(delete_source))
         .route("/items", get(list_items))
         .route("/items/{id}", get(get_item))
         .route("/stats", get(stats))
+        // Layer order matters: last .layer() is outermost → runs first.
+        // admin_db_middleware reads the User extension that auth_middleware
+        // injects, so auth MUST be outer (added last). The previous order
+        // made every raw-posts admin request fail with 401
+        // "Authentication required" — same trap documented in #257.
+        //
+        // Use `admin_db_middleware` (DB `users.is_admin`), not the JWT-role
+        // variant: Supabase signs `role=authenticated` for normal sessions
+        // so the JWT check would always 403. Other admin routes (dashboard,
+        // editorial_candidates, magazine_sessions) use the `_db` variant
+        // for the same reason.
         .layer(axum::middleware::from_fn_with_state(
-            app_config.clone(),
-            crate::middleware::auth_middleware,
+            state,
+            crate::middleware::admin_db_middleware,
         ))
-        .layer(axum::middleware::from_fn(
-            crate::middleware::admin_middleware,
+        .layer(axum::middleware::from_fn_with_state(
+            app_config,
+            crate::middleware::auth_middleware,
         ))
 }
