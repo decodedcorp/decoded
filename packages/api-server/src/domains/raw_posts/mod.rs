@@ -3,7 +3,7 @@
 //! `/api/v1/raw-posts/*` — admin-gated CRUD + listing for the
 //! platform-independent raw post collection pipeline.
 //!
-//! Writes to `warehouse.raw_posts` are driven by the ai-server callback
+//! Writes to `public.raw_posts` are driven by the ai-server callback
 //! (`services::raw_posts_callback`), not these handlers.
 
 pub mod dto;

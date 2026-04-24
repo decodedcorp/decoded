@@ -36,7 +36,7 @@ struct SolutionInfo {
     site_name: String,
 }
 
-/// 이름 문자열로 warehouse.artists / warehouse.groups의 FK를 찾아 반환.
+/// 이름 문자열로 public.artists / public.groups의 FK를 찾아 반환.
 /// create_post 시점에 dto.artist_id / dto.group_id가 비어 있을 때 자동 lookup에
 /// 사용한다. 매칭은 case-insensitive + BTRIM — 레거시 post는 소문자 Instagram
 /// 핸들("jennie")을 저장하는 반면 warehouse는 정규 표기("Jennie")를 쓰므로
@@ -559,7 +559,7 @@ pub(crate) async fn load_post_related_data(
             .map_err(AppError::DatabaseError)?
     };
 
-    // 5. Brand logos 배치 조회 (solutions.brand_id → warehouse.brands.logo_image_url)
+    // 5. Brand logos 배치 조회 (solutions.brand_id → public.brands.logo_image_url)
     let brand_ids: Vec<Uuid> = solutions.iter().filter_map(|s| s.brand_id).collect();
     let brand_logos = if brand_ids.is_empty() {
         std::collections::HashMap::new()

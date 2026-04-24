@@ -258,7 +258,7 @@ pub fn click_log_model() -> crate::entities::click_logs::Model {
     }
 }
 
-/// warehouse.admin_audit_log row — default admin + post target.
+/// public.admin_audit_log row — default admin + post target.
 pub fn audit_log_model() -> crate::entities::admin_audit_log::Model {
     crate::entities::admin_audit_log::Model {
         id: test_uuid(130),
@@ -339,7 +339,7 @@ pub fn failed_batch_item_model() -> crate::entities::failed_batch_items::Model {
     }
 }
 
-/// warehouse.artists row — default: id=test_uuid(200), name_en="Danielle", name_ko="다니엘"
+/// public.artists row — default: id=test_uuid(200), name_en="Danielle", name_ko="다니엘"
 pub fn warehouse_artist_model() -> crate::entities::artists::Model {
     crate::entities::artists::Model {
         id: test_uuid(200),
@@ -353,7 +353,7 @@ pub fn warehouse_artist_model() -> crate::entities::artists::Model {
     }
 }
 
-/// warehouse.groups row — default: id=test_uuid(201), name_en="NewJeans", name_ko="뉴진스"
+/// public.groups row — default: id=test_uuid(201), name_en="NewJeans", name_ko="뉴진스"
 pub fn warehouse_group_model() -> crate::entities::groups::Model {
     crate::entities::groups::Model {
         id: test_uuid(201),

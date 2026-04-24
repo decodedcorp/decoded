@@ -74,7 +74,7 @@ pub struct CreateSolutionDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
 
-    /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    /// `public.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brand_id: Option<Uuid>,
 }

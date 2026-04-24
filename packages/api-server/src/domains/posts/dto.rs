@@ -48,7 +48,7 @@ pub struct CreateSolutionInlineDto {
     /// og metadata image
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
-    /// `warehouse.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    /// `public.brands.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brand_id: Option<Uuid>,
 }
@@ -92,7 +92,7 @@ pub struct CreatePostDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_name: Option<String>,
 
-    /// `warehouse.groups.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    /// `public.groups.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group_id: Option<Uuid>,
 
@@ -100,7 +100,7 @@ pub struct CreatePostDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_name: Option<String>,
 
-    /// `warehouse.artists.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
+    /// `public.artists.id` (옵션). 없으면 NULL — 스케줄러/대시보드에서 후속 백필 가능
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub artist_id: Option<Uuid>,
 
@@ -490,7 +490,7 @@ pub struct TopSolutionSummary {
     /// 채택 여부
     pub is_adopted: bool,
 
-    /// 브랜드 로고 URL (warehouse.brands)
+    /// 브랜드 로고 URL (public.brands)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub brand_logo_url: Option<String>,
 }
@@ -549,11 +549,11 @@ pub struct PostDetailResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_name: Option<String>,
 
-    /// 아티스트 프로필 이미지 URL (warehouse.artists)
+    /// 아티스트 프로필 이미지 URL (public.artists)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_profile_image_url: Option<String>,
 
-    /// 그룹 프로필 이미지 URL (warehouse.groups)
+    /// 그룹 프로필 이미지 URL (public.groups)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_profile_image_url: Option<String>,
 
