@@ -1,7 +1,7 @@
 //! Raw Posts handlers (#258)
 //!
 //! Admin-gated REST layer for managing scrape sources and browsing
-//! collected raw posts. All writes go to `warehouse.raw_post_sources`
+//! collected raw posts. All writes go to `public.raw_post_sources`
 //! (sources) or are driven by the ai-server gRPC callback (items).
 
 use axum::{
@@ -51,7 +51,7 @@ pub async fn list_sources(
     State(state): State<AppState>,
     Query(query): Query<ListSourcesQuery>,
 ) -> AppResult<Json<RawPostSourcesPage>> {
-    let page = service::list_sources(state.db.as_ref(), query).await?;
+    let page = service::list_sources(state.assets_db.as_ref(), query).await?;
     Ok(Json(page))
 }
 
@@ -86,7 +86,7 @@ pub async fn create_source(
             "fetch_interval_seconds must be >= 60".into(),
         ));
     }
-    let created = service::create_source(state.db.as_ref(), dto).await?;
+    let created = service::create_source(state.assets_db.as_ref(), dto).await?;
     Ok((StatusCode::CREATED, Json(created)))
 }
 
@@ -110,7 +110,7 @@ pub async fn update_source(
     Path(id): Path<Uuid>,
     Json(dto): Json<UpdateRawPostSourceDto>,
 ) -> AppResult<Json<RawPostSource>> {
-    let updated = service::update_source(state.db.as_ref(), id, dto).await?;
+    let updated = service::update_source(state.assets_db.as_ref(), id, dto).await?;
     Ok(Json(updated))
 }
 
@@ -132,7 +132,7 @@ pub async fn delete_source(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    service::delete_source(state.db.as_ref(), id).await?;
+    service::delete_source(state.assets_db.as_ref(), id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -163,7 +163,7 @@ pub async fn list_items(
     State(state): State<AppState>,
     Query(query): Query<ListItemsQuery>,
 ) -> AppResult<Json<RawPostsItemsPage>> {
-    let page = service::list_items(state.db.as_ref(), query).await?;
+    let page = service::list_items(state.assets_db.as_ref(), query).await?;
     Ok(Json(page))
 }
 
@@ -185,7 +185,7 @@ pub async fn get_item(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<RawPost>> {
-    let item = service::get_item(state.db.as_ref(), id).await?;
+    let item = service::get_item(state.assets_db.as_ref(), id).await?;
     Ok(Json(item))
 }
 
@@ -206,7 +206,7 @@ pub async fn get_item(
     )
 )]
 pub async fn stats(State(state): State<AppState>) -> AppResult<Json<RawPostsStatsResponse>> {
-    let entries = service::stats(state.db.as_ref()).await?;
+    let entries = service::stats(state.assets_db.as_ref()).await?;
     Ok(Json(RawPostsStatsResponse { entries }))
 }
 

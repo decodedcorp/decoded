@@ -157,7 +157,7 @@ pub async fn list_due_sources(
     db: &DatabaseConnection,
     limit: u64,
 ) -> AppResult<Vec<src_entity::Model>> {
-    let sql = "SELECT * FROM warehouse.raw_post_sources \
+    let sql = "SELECT * FROM public.raw_post_sources \
                WHERE is_active = true \
                  AND (last_enqueued_at IS NULL \
                       OR last_enqueued_at < now() - (fetch_interval_seconds || ' seconds')::interval) \
@@ -177,7 +177,7 @@ pub async fn list_due_sources(
 pub async fn mark_source_enqueued(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
     let stmt = Statement::from_sql_and_values(
         sea_orm::DatabaseBackend::Postgres,
-        "UPDATE warehouse.raw_post_sources \
+        "UPDATE public.raw_post_sources \
            SET last_enqueued_at = now(), updated_at = now() \
          WHERE id = $1",
         [id.into()],
@@ -189,7 +189,7 @@ pub async fn mark_source_enqueued(db: &DatabaseConnection, id: Uuid) -> AppResul
 pub async fn mark_source_scraped(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
     let stmt = Statement::from_sql_and_values(
         sea_orm::DatabaseBackend::Postgres,
-        "UPDATE warehouse.raw_post_sources \
+        "UPDATE public.raw_post_sources \
            SET last_scraped_at = now(), updated_at = now() \
          WHERE id = $1",
         [id.into()],
@@ -320,7 +320,7 @@ pub async fn stats(db: &DatabaseConnection) -> AppResult<Vec<RawPostsStatsEntry>
     let stmt = Statement::from_string(
         sea_orm::DatabaseBackend::Postgres,
         "SELECT platform, parse_status, COUNT(*)::bigint AS count \
-         FROM warehouse.raw_posts \
+         FROM public.raw_posts \
          GROUP BY platform, parse_status \
          ORDER BY platform, parse_status"
             .to_string(),
