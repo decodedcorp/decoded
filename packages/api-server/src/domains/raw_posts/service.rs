@@ -11,8 +11,8 @@ use sea_orm::{
 use uuid::Uuid;
 
 use crate::entities::{
-    warehouse_raw_post_sources as src_entity, warehouse_raw_posts as post_entity,
-    WarehouseRawPostSources, WarehouseRawPosts,
+    assets_raw_post_sources as src_entity, assets_raw_posts as post_entity, AssetsRawPostSources,
+    AssetsRawPosts,
 };
 use crate::error::{AppError, AppResult};
 
@@ -48,6 +48,7 @@ pub async fn create_source(
         fetch_interval_seconds: Set(dto.fetch_interval_seconds),
         last_enqueued_at: Set(None),
         last_scraped_at: Set(None),
+        initial_scraped_at: Set(None),
         metadata: Set(dto.metadata),
         created_at: Set(now),
         updated_at: Set(now),
@@ -64,7 +65,7 @@ pub async fn list_sources(
     let limit = clamp_limit(query.limit);
     let offset = query.offset.unwrap_or(0);
 
-    let mut find = WarehouseRawPostSources::find();
+    let mut find = AssetsRawPostSources::find();
     if let Some(platform) = query.platform.as_ref() {
         find = find.filter(src_entity::Column::Platform.eq(platform));
     }
@@ -101,7 +102,7 @@ pub async fn update_source(
     id: Uuid,
     dto: UpdateRawPostSourceDto,
 ) -> AppResult<RawPostSource> {
-    let existing = WarehouseRawPostSources::find_by_id(id)
+    let existing = AssetsRawPostSources::find_by_id(id)
         .one(db)
         .await
         .map_err(AppError::DatabaseError)?
@@ -133,7 +134,7 @@ pub async fn update_source(
 }
 
 pub async fn delete_source(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
-    let res = WarehouseRawPostSources::delete_by_id(id)
+    let res = AssetsRawPostSources::delete_by_id(id)
         .exec(db)
         .await
         .map_err(AppError::DatabaseError)?;
@@ -208,7 +209,7 @@ pub async fn list_items(
     let limit = clamp_limit(query.limit);
     let offset = query.offset.unwrap_or(0);
 
-    let mut find = WarehouseRawPosts::find();
+    let mut find = AssetsRawPosts::find();
     if let Some(platform) = query.platform.as_ref() {
         find = find.filter(post_entity::Column::Platform.eq(platform));
     }
@@ -243,7 +244,7 @@ pub async fn list_items(
 }
 
 pub async fn get_item(db: &DatabaseConnection, id: Uuid) -> AppResult<RawPost> {
-    let item = WarehouseRawPosts::find_by_id(id)
+    let item = AssetsRawPosts::find_by_id(id)
         .one(db)
         .await
         .map_err(AppError::DatabaseError)?
@@ -265,25 +266,27 @@ pub async fn upsert_raw_post(
         source_id: Set(source_id),
         platform: Set(input.platform),
         external_id: Set(input.external_id),
-        external_url: Set(input.external_url),
-        image_url: Set(input.image_url),
+        external_url: Set(Some(input.external_url)),
+        image_url: Set(Some(input.image_url)),
         r2_key: Set(input.r2_key),
         r2_url: Set(input.r2_url),
         image_hash: Set(None),
         caption: Set(input.caption),
         author_name: Set(input.author_name),
+        status: Set(crate::entities::PipelineStatus::NotStarted),
         parse_status: Set("pending".to_string()),
         parse_result: Set(None),
         parse_error: Set(None),
         parse_attempts: Set(0),
-        seed_post_id: Set(None),
+        verified_at: Set(None),
+        verified_by: Set(None),
         platform_metadata: Set(input.platform_metadata),
         dispatch_id: Set(dispatch_id),
         created_at: Set(now),
         updated_at: Set(now),
     };
 
-    WarehouseRawPosts::insert(model)
+    AssetsRawPosts::insert(model)
         .on_conflict(
             OnConflict::columns([
                 post_entity::Column::Platform,
@@ -369,16 +372,18 @@ fn post_model_to_dto(m: post_entity::Model) -> RawPost {
         source_id: m.source_id,
         platform: m.platform,
         external_id: m.external_id,
-        external_url: m.external_url,
-        image_url: m.image_url,
+        external_url: m.external_url.unwrap_or_default(),
+        image_url: m.image_url.unwrap_or_default(),
         r2_key: m.r2_key,
         r2_url: m.r2_url,
         image_hash: m.image_hash,
         caption: m.caption,
         author_name: m.author_name,
+        status: m.status,
         parse_status: m.parse_status,
         parse_attempts: m.parse_attempts,
-        seed_post_id: m.seed_post_id,
+        verified_at: m.verified_at,
+        verified_by: m.verified_by,
         platform_metadata: m.platform_metadata,
         dispatch_id: m.dispatch_id,
         created_at: m.created_at,

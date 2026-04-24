@@ -8,7 +8,7 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, DbErr, Set};
 use serde_json::Value as Json;
 use uuid::Uuid;
 
-use crate::entities::warehouse_admin_audit_log::ActiveModel as AuditLogActiveModel;
+use crate::entities::admin_audit_log::ActiveModel as AuditLogActiveModel;
 
 /// 기록할 감사 로그 엔트리.
 ///
@@ -56,7 +56,7 @@ where
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
-    use crate::entities::warehouse_admin_audit_log::Model as AuditLogModel;
+    use crate::entities::admin_audit_log::Model as AuditLogModel;
     use sea_orm::MockExecResult;
 
     fn sample_entry() -> AuditLogEntry {

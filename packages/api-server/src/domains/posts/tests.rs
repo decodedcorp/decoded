@@ -1472,8 +1472,8 @@ mod tests {
     ///             + background task(post find + update)
     fn build_get_post_mock_db_with_warehouse(
         post: crate::entities::posts::Model,
-        warehouse_artist: Option<crate::entities::warehouse_artists::Model>,
-        warehouse_group: Option<crate::entities::warehouse_groups::Model>,
+        warehouse_artist: Option<crate::entities::artists::Model>,
+        warehouse_group: Option<crate::entities::groups::Model>,
     ) -> sea_orm::DatabaseConnection {
         use sea_orm::{DatabaseBackend, MockDatabase};
 
@@ -1485,15 +1485,11 @@ mod tests {
 
         db = match warehouse_artist {
             Some(m) => db.append_query_results([vec![m]]),
-            None => {
-                db.append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
-            }
+            None => db.append_query_results([Vec::<crate::entities::artists::Model>::new()]),
         };
         db = match warehouse_group {
             Some(m) => db.append_query_results([vec![m]]),
-            None => {
-                db.append_query_results([Vec::<crate::entities::warehouse_groups::Model>::new()])
-            }
+            None => db.append_query_results([Vec::<crate::entities::groups::Model>::new()]),
         };
 
         db.append_query_results([vec![count_row(0)]]) // count_tries

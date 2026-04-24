@@ -50,8 +50,8 @@ async fn resolve_warehouse_ids_from_names<C>(
 where
     C: sea_orm::ConnectionTrait,
 {
-    use crate::entities::warehouse_artists::Entity as WarehouseArtists;
-    use crate::entities::warehouse_groups::Entity as WarehouseGroups;
+    use crate::entities::artists::Entity as WarehouseArtists;
+    use crate::entities::groups::Entity as WarehouseGroups;
     use sea_orm::sea_query::Expr;
 
     let artist_fut = async {
@@ -564,7 +564,7 @@ pub(crate) async fn load_post_related_data(
     let brand_logos = if brand_ids.is_empty() {
         std::collections::HashMap::new()
     } else {
-        use crate::entities::warehouse_brands::{Column as BrandCol, Entity as WBrands};
+        use crate::entities::brands::{Column as BrandCol, Entity as WBrands};
         let brands = WBrands::find()
             .filter(BrandCol::Id.is_in(brand_ids))
             .all(db)
@@ -660,8 +660,8 @@ async fn load_warehouse_display_maps(
     std::collections::HashMap<Uuid, EntityDisplay>,
     std::collections::HashMap<Uuid, EntityDisplay>,
 )> {
-    use crate::entities::warehouse_artists::{Column as ArtistCol, Entity as WarehouseArtists};
-    use crate::entities::warehouse_groups::{Column as GroupCol, Entity as WarehouseGroups};
+    use crate::entities::artists::{Column as ArtistCol, Entity as WarehouseArtists};
+    use crate::entities::groups::{Column as GroupCol, Entity as WarehouseGroups};
 
     let artist_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.artist_id).collect();
     let group_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.group_id).collect();
@@ -745,7 +745,7 @@ async fn load_entity_display_data(
 ) -> (EntityDisplay, EntityDisplay) {
     let artist_fut = async {
         match artist_id {
-            Some(aid) => crate::entities::WarehouseArtists::find_by_id(aid)
+            Some(aid) => crate::entities::Artists::find_by_id(aid)
                 .one(db)
                 .await
                 .ok()
@@ -758,7 +758,7 @@ async fn load_entity_display_data(
 
     let group_fut = async {
         match group_id {
-            Some(gid) => crate::entities::WarehouseGroups::find_by_id(gid)
+            Some(gid) => crate::entities::Groups::find_by_id(gid)
                 .one(db)
                 .await
                 .ok()
@@ -2731,10 +2731,10 @@ mod tests {
 
     #[tokio::test]
     async fn load_entity_display_data_artist_found() {
-        use crate::entities::warehouse_artists;
+        use crate::entities::artists;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([[warehouse_artists::Model {
+            .append_query_results([[artists::Model {
                 id: Uuid::nil(),
                 name_ko: Some("카리나".into()),
                 name_en: Some("Karina".into()),
@@ -2755,10 +2755,10 @@ mod tests {
 
     #[tokio::test]
     async fn load_entity_display_data_group_found() {
-        use crate::entities::warehouse_groups;
+        use crate::entities::groups;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([[warehouse_groups::Model {
+            .append_query_results([[groups::Model {
                 id: Uuid::nil(),
                 name_ko: Some("에스파".into()),
                 name_en: Some("aespa".into()),
@@ -2780,7 +2780,7 @@ mod tests {
     #[tokio::test]
     async fn load_entity_display_data_artist_not_found() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .append_query_results([Vec::<crate::entities::artists::Model>::new()])
             .into_connection();
         let ((a_en, a_ko, a_img), _) =
             load_entity_display_data(&db, Some(Uuid::new_v4()), None).await;
@@ -2807,9 +2807,9 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_warehouse_ids_case_insensitive_artist_match() {
-        use crate::entities::warehouse_artists;
+        use crate::entities::artists;
         let t = ts();
-        let artist_row = warehouse_artists::Model {
+        let artist_row = artists::Model {
             id: Uuid::nil(),
             name_ko: Some("제니".into()),
             name_en: Some("Jennie".into()),
@@ -2833,7 +2833,7 @@ mod tests {
     async fn resolve_warehouse_ids_unmatched_name_returns_none() {
         // Empty warehouse result → fallback to None, no error.
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .append_query_results([Vec::<crate::entities::artists::Model>::new()])
             .into_connection();
         let (artist, group) =
             resolve_warehouse_ids_from_names(&db, Some("unknown-artist"), None).await;
@@ -3095,7 +3095,7 @@ mod tests {
         let brand_id = Uuid::new_v4();
         sol.brand_id = Some(brand_id);
 
-        let wb = crate::entities::warehouse_brands::Model {
+        let wb = crate::entities::brands::Model {
             id: brand_id,
             name_ko: Some("나이키".into()),
             name_en: Some("Nike".into()),

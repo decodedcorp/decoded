@@ -1,9 +1,9 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// warehouse.groups entity — K-pop group profiles
+/// public.groups entity — K-pop group profiles (#333 moved from warehouse schema)
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(schema_name = "warehouse", table_name = "groups")]
+#[sea_orm(table_name = "groups")]
 pub struct Model {
     #[sea_orm(primary_key, column_type = "Uuid")]
     pub id: Uuid,

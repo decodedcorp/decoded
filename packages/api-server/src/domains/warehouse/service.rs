@@ -5,9 +5,9 @@
 
 use sea_orm::{DatabaseConnection, EntityTrait, QueryOrder, QuerySelect};
 
-use crate::entities::warehouse_artists::{Column as ArtistColumn, Entity as WarehouseArtists};
-use crate::entities::warehouse_brands::{Column as BrandColumn, Entity as WarehouseBrands};
-use crate::entities::warehouse_groups::{Column as GroupColumn, Entity as WarehouseGroups};
+use crate::entities::artists::{Column as ArtistColumn, Entity as WarehouseArtists};
+use crate::entities::brands::{Column as BrandColumn, Entity as WarehouseBrands};
+use crate::entities::groups::{Column as GroupColumn, Entity as WarehouseGroups};
 use crate::error::{AppError, AppResult};
 
 use super::dto::{WarehouseBrandProfile, WarehouseProfile, WarehouseProfilesResponse};

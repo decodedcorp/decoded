@@ -90,9 +90,12 @@ pub struct RawPost {
     pub image_hash: Option<String>,
     pub caption: Option<String>,
     pub author_name: Option<String>,
+    /// 파이프라인 상태머신 (#333). admin UI 에서 COMPLETED 만 검증 가능.
+    pub status: crate::entities::PipelineStatus,
     pub parse_status: String,
     pub parse_attempts: i32,
-    pub seed_post_id: Option<Uuid>,
+    pub verified_at: Option<DateTime<FixedOffset>>,
+    pub verified_by: Option<Uuid>,
     pub platform_metadata: Option<JsonValue>,
     pub dispatch_id: Option<String>,
     pub created_at: DateTime<FixedOffset>,
