@@ -6,17 +6,17 @@ use decoded_api::{AppConfig, AppState};
 
 /// Supabase 관련 변수 기본값 (미설정일 때만). `AppConfig::from_env()`가 `.env.dev` 후 `.env`를 로드합니다.
 pub fn ensure_integration_env() {
-    if std::env::var("SUPABASE_URL").is_err() {
-        std::env::set_var("SUPABASE_URL", "http://localhost:54321");
+    if std::env::var("DATABASE_API_URL").is_err() {
+        std::env::set_var("DATABASE_API_URL", "http://localhost:54321");
     }
-    if std::env::var("SUPABASE_ANON_KEY").is_err() {
-        std::env::set_var("SUPABASE_ANON_KEY", "test-anon-key");
+    if std::env::var("DATABASE_ANON_KEY").is_err() {
+        std::env::set_var("DATABASE_ANON_KEY", "test-anon-key");
     }
-    if std::env::var("SUPABASE_SERVICE_ROLE_KEY").is_err() {
-        std::env::set_var("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+    if std::env::var("DATABASE_SERVICE_ROLE_KEY").is_err() {
+        std::env::set_var("DATABASE_SERVICE_ROLE_KEY", "test-service-role-key");
     }
-    if std::env::var("SUPABASE_JWT_SECRET").is_err() {
-        std::env::set_var("SUPABASE_JWT_SECRET", "test-jwt-secret");
+    if std::env::var("DATABASE_JWT_SECRET").is_err() {
+        std::env::set_var("DATABASE_JWT_SECRET", "test-jwt-secret");
     }
 }
 
@@ -24,7 +24,7 @@ pub fn ensure_integration_env() {
 pub async fn create_integration_state() -> AppState {
     ensure_integration_env();
     let config = AppConfig::from_env().expect(
-        "통합 테스트: DATABASE_URL, SUPABASE_* 등이 필요합니다. scripts/run-integration-tests.sh 실행 또는 .env 설정",
+        "통합 테스트: DATABASE_URL, DATABASE_API_URL 등이 필요합니다. scripts/run-integration-tests.sh 실행 또는 .env 설정",
     );
     AppState::new(config)
         .await

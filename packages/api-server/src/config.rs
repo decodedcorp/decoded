@@ -242,19 +242,14 @@ impl AppConfig {
                 ),
             },
             auth: AuthConfig {
-                jwt_secret: env_primary_or_legacy("DATABASE_JWT_SECRET", "SUPABASE_JWT_SECRET")
-                    .expect("DATABASE_JWT_SECRET (or legacy SUPABASE_JWT_SECRET) must be set"),
-                supabase_url: env_primary_or_legacy("DATABASE_API_URL", "SUPABASE_URL")
-                    .expect("DATABASE_API_URL (or legacy SUPABASE_URL) must be set"),
-                supabase_anon_key: env_primary_or_legacy("DATABASE_ANON_KEY", "SUPABASE_ANON_KEY")
-                    .expect("DATABASE_ANON_KEY (or legacy SUPABASE_ANON_KEY) must be set"),
-                supabase_service_role_key: env_primary_or_legacy(
-                    "DATABASE_SERVICE_ROLE_KEY",
-                    "SUPABASE_SERVICE_ROLE_KEY",
-                )
-                .expect(
-                    "DATABASE_SERVICE_ROLE_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) must be set",
-                ),
+                jwt_secret: std::env::var("DATABASE_JWT_SECRET")
+                    .expect("DATABASE_JWT_SECRET must be set"),
+                supabase_url: std::env::var("DATABASE_API_URL")
+                    .expect("DATABASE_API_URL must be set"),
+                supabase_anon_key: std::env::var("DATABASE_ANON_KEY")
+                    .expect("DATABASE_ANON_KEY must be set"),
+                supabase_service_role_key: std::env::var("DATABASE_SERVICE_ROLE_KEY")
+                    .expect("DATABASE_SERVICE_ROLE_KEY must be set"),
             },
             storage: StorageConfig {
                 endpoint: std::env::var("R2_ACCOUNT_ID")
@@ -334,10 +329,10 @@ mod tests {
     /// Set all required env vars for AppConfig::from_env()
     fn set_required_env() {
         std::env::set_var("DATABASE_URL", "postgres://test:test@localhost/test");
-        std::env::set_var("SUPABASE_JWT_SECRET", "test-secret");
-        std::env::set_var("SUPABASE_URL", "https://test.supabase.co");
-        std::env::set_var("SUPABASE_ANON_KEY", "anon-key");
-        std::env::set_var("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+        std::env::set_var("DATABASE_JWT_SECRET", "test-secret");
+        std::env::set_var("DATABASE_API_URL", "https://test.supabase.co");
+        std::env::set_var("DATABASE_ANON_KEY", "anon-key");
+        std::env::set_var("DATABASE_SERVICE_ROLE_KEY", "service-key");
     }
 
     #[test]

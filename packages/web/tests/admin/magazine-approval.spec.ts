@@ -6,8 +6,8 @@
  * (status transitions + audit log rows).
  *
  * Env requirements (test is skipped if any are missing):
- * - NEXT_PUBLIC_SUPABASE_URL
- * - SUPABASE_SERVICE_ROLE_KEY
+ * - NEXT_PUBLIC_DATABASE_API_URL
+ * - DATABASE_SERVICE_ROLE_KEY
  *
  * The test user seeded by auth.setup.ts must have an admin row in
  * public.admin_users (or whichever table checkIsAdmin consults) — otherwise
@@ -16,13 +16,13 @@
 import { test, expect } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DATABASE_API_URL = process.env.NEXT_PUBLIC_DATABASE_API_URL;
+const SERVICE_ROLE_KEY = process.env.DATABASE_SERVICE_ROLE_KEY;
 
-const skipReason = !SUPABASE_URL
-  ? "NEXT_PUBLIC_SUPABASE_URL missing"
+const skipReason = !DATABASE_API_URL
+  ? "NEXT_PUBLIC_DATABASE_API_URL missing"
   : !SERVICE_ROLE_KEY
-    ? "SUPABASE_SERVICE_ROLE_KEY missing"
+    ? "DATABASE_SERVICE_ROLE_KEY missing"
     : null;
 
 test.describe("admin magazine approval", () => {
@@ -32,7 +32,7 @@ test.describe("admin magazine approval", () => {
   let magazineId: string;
 
   test.beforeAll(() => {
-    admin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
+    admin = createClient(DATABASE_API_URL!, SERVICE_ROLE_KEY!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   });

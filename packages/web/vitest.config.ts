@@ -18,8 +18,8 @@ export default defineConfig({
       "app/**/*.test.tsx",
     ],
     env: {
-      NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+      NEXT_PUBLIC_DATABASE_API_URL: "http://localhost:54321",
+      NEXT_PUBLIC_DATABASE_ANON_KEY: "test-anon-key",
     },
   },
   resolve: {

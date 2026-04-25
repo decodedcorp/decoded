@@ -19,14 +19,14 @@ const STORAGE_STATE_PATH = path.join(
 );
 
 setup("authenticate", async ({ page }) => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_DATABASE_API_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_DATABASE_ANON_KEY;
   const testEmail = process.env.TEST_USER_EMAIL;
   const testPassword = process.env.TEST_USER_PASSWORD;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      "Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required."
+      "Missing environment variables: NEXT_PUBLIC_DATABASE_API_URL and NEXT_PUBLIC_DATABASE_ANON_KEY are required."
     );
   }
 

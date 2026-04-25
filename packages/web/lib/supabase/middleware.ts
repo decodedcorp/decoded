@@ -1,10 +1,10 @@
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import type { NextRequest, NextResponse } from "next/server";
 import type { Database } from "./types";
-import { getEnvWithAlias } from "./env";
+import { getEnv } from "./env";
 
-const supabaseUrl = getEnvWithAlias("NEXT_PUBLIC_DATABASE_API_URL");
-const supabaseAnonKey = getEnvWithAlias("NEXT_PUBLIC_DATABASE_ANON_KEY");
+const supabaseUrl = getEnv("NEXT_PUBLIC_DATABASE_API_URL");
+const supabaseAnonKey = getEnv("NEXT_PUBLIC_DATABASE_ANON_KEY");
 
 /**
  * Creates a Supabase client for use in Next.js middleware.
