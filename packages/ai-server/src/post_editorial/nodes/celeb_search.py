@@ -83,7 +83,7 @@ async def _get_artist_from_warehouse(
             row = await conn.fetchrow(
                 """
                 SELECT id, name_ko, name_en, profile_image_url, metadata
-                  FROM warehouse.artists
+                  FROM public.artists
                  WHERE id = $1::uuid
                  LIMIT 1
                 """,
@@ -100,7 +100,7 @@ async def _get_artist_from_warehouse(
             row = await conn.fetchrow(
                 """
                 SELECT id, name_ko, name_en, profile_image_url, metadata
-                  FROM warehouse.groups
+                  FROM public.groups
                  WHERE id = $1::uuid
                  LIMIT 1
                 """,

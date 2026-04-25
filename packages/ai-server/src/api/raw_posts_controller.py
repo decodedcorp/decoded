@@ -1,6 +1,6 @@
 """Manual trigger endpoint for the raw_posts scheduler (#214).
 
-The scheduler polls `warehouse.raw_post_sources` every
+The scheduler polls `public.raw_post_sources` every
 `RAW_POSTS_SCHEDULER_INTERVAL_SECONDS`; this endpoint lets the admin dashboard
 force an immediate run against a single source (re-using the exact scheduler
 codepath, no duplication).

@@ -47,7 +47,7 @@ class FetchRequest:
 
     `mode` lets adapters distinguish the first "deep" scrape of a newly
     registered source (`initial`) from routine polling for new items
-    (`incremental`) — see `warehouse.raw_post_sources.initial_scraped_at`.
+    (`incremental`) — see `public.raw_post_sources.initial_scraped_at`.
     """
 
     source_id: str

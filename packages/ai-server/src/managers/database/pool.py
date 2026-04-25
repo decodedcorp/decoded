@@ -1,13 +1,19 @@
 """Async Postgres connection pool manager.
 
-Uses `asyncpg` for direct TCP access to the Postgres instance pointed to by
-`DATABASE_URL`. Works transparently against:
+Uses `asyncpg` for direct TCP access. ai-server is the primary writer for the
+raw_posts pipeline and targets the **assets** Supabase project (#333), so the
+pool is initialized from `ASSETS_DATABASE_URL`. Local dev falls back to
+`DATABASE_URL` with a warning so onboarding is not blocked by missing cloud
+assets credentials — in production (`APP_ENV=production`) the fallback is
+disallowed.
+
+Works transparently against:
 - 로컬 Supabase CLI Postgres (`postgresql://postgres:postgres@localhost:54322/postgres`) (#282)
 - 원격 Supabase pooler (`postgresql://postgres.<ref>:<pwd>@aws-...pooler.supabase.com:5432/postgres`)
+- 클라우드 assets Supabase pooler (#333)
 
 Pool is lazily initialized on first `pool()` call and reused for the process
-lifetime. Size is bounded by `DATABASE_POOL_MIN`/`DATABASE_POOL_MAX` to stay
-within Supabase pooler quota on prod.
+lifetime.
 """
 
 from __future__ import annotations
@@ -25,15 +31,47 @@ logger = logging.getLogger(__name__)
 class DatabaseManager:
     """Singleton asyncpg connection pool, injected via the DI container.
 
+    Targets the assets Supabase project (#333). Other modules (e.g. `post_editorial`)
+    that still need the legacy `DATABASE_URL` should open their own connection
+    rather than go through this manager.
+
     Usage:
         async with db_manager.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM posts WHERE id = $1", post_id)
+            row = await conn.fetchrow("SELECT * FROM public.raw_posts WHERE id = $1", pid)
     """
 
     def __init__(self, environment) -> None:
         self._env = environment
         self._pool: Optional[asyncpg.Pool] = None
         self._lock = asyncio.Lock()
+
+    def _resolve_dsn(self) -> str:
+        """Pick ASSETS_DATABASE_URL, or fall back to DATABASE_URL on non-production.
+
+        Production: missing ASSETS_DATABASE_URL is fatal (prevents accidental writes
+        to the prod DB by a misconfigured deployment).
+        Local/dev: fall back to DATABASE_URL with WARN, so devs onboarding without
+        cloud assets credentials can still boot.
+        """
+        dsn = getattr(self._env, "ASSETS_DATABASE_URL", "") or ""
+        if dsn:
+            return dsn
+        app_env = (getattr(self._env, "APP_ENV", "") or "").lower()
+        if app_env in ("production", "prod"):
+            raise RuntimeError(
+                "DatabaseManager: ASSETS_DATABASE_URL is required in production (#333)."
+            )
+        fallback = self._env.DATABASE_URL
+        if not fallback:
+            raise RuntimeError(
+                "DatabaseManager: neither ASSETS_DATABASE_URL nor DATABASE_URL set."
+            )
+        logger.warning(
+            "DatabaseManager: ASSETS_DATABASE_URL unset (APP_ENV=%s) — falling back to "
+            "DATABASE_URL. raw_posts pipeline will write to the prod DB instead of assets.",
+            app_env or "unset",
+        )
+        return fallback
 
     async def pool(self) -> asyncpg.Pool:
         """Return the shared pool, initializing it on first call."""
@@ -42,22 +80,20 @@ class DatabaseManager:
         async with self._lock:
             if self._pool is not None:
                 return self._pool
-            dsn = self._env.DATABASE_URL
-            if not dsn:
-                raise RuntimeError(
-                    "DatabaseManager: DATABASE_URL is not configured. Set it in your env file."
-                )
+            dsn = self._resolve_dsn()
+            min_size = getattr(self._env, "ASSETS_DATABASE_POOL_MIN", None) or self._env.DATABASE_POOL_MIN
+            max_size = getattr(self._env, "ASSETS_DATABASE_POOL_MAX", None) or self._env.DATABASE_POOL_MAX
             self._pool = await asyncpg.create_pool(
                 dsn=dsn,
-                min_size=self._env.DATABASE_POOL_MIN,
-                max_size=self._env.DATABASE_POOL_MAX,
+                min_size=min_size,
+                max_size=max_size,
                 # Keep queries short-lived; long transactions are not expected here.
                 command_timeout=30,
             )
             logger.info(
-                "DatabaseManager: pool initialized (min=%s, max=%s)",
-                self._env.DATABASE_POOL_MIN,
-                self._env.DATABASE_POOL_MAX,
+                "DatabaseManager: assets pool initialized (min=%s, max=%s)",
+                min_size,
+                max_size,
             )
             return self._pool
 

@@ -48,14 +48,14 @@ def _get_database_manager(config: Any) -> DatabaseManager | None:
 async def _fetch_warehouse_brands(
     conn: asyncpg.Connection, brand_ids: list[str]
 ) -> dict[str, dict]:
-    """Batch-fetch brand data from warehouse.brands by IDs."""
+    """Batch-fetch brand data from public.brands by IDs."""
     if not brand_ids:
         return {}
     try:
         rows = await conn.fetch(
             """
             SELECT id, name_ko, name_en, logo_image_url, metadata
-              FROM warehouse.brands
+              FROM public.brands
              WHERE id = ANY($1::uuid[])
             """,
             brand_ids,
