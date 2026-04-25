@@ -103,7 +103,24 @@ BACKEND_KEYS=(
   "SUPABASE_JWT_SECRET=$JWT"
   # B.3 완료 전까지 supabase/migrations 가 SOT
   "SKIP_DB_MIGRATIONS=1"
+  # #333 — APP_ENV=local 가드로 verify 시 cloud assets 쓰기 스킵
+  "APP_ENV=local"
 )
+# #333 — ASSETS_DATABASE_URL 은 cloud assets 프로젝트 시크릿이므로 자동 주입하지 않는다.
+# 이미 값이 있으면 보존, 없으면 빈 줄 추가만 (개발자가 1Password 등에서 받아 채움).
+# 비-production 에선 비어있어도 DATABASE_URL 로 fallback (api-server / ai-server WARN).
+ensure_assets_placeholder() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
+  if ! grep -q "^ASSETS_DATABASE_URL=" "$file" 2>/dev/null; then
+    {
+      printf '\n# #333 assets 프로젝트 (cloud) — 미설정 시 DATABASE_URL fallback + WARN.\n'
+      printf 'ASSETS_DATABASE_URL=\n'
+    } >> "$file"
+  fi
+}
+ensure_assets_placeholder "$ROOT/.env.backend.dev"
+ensure_assets_placeholder "$ROOT/packages/api-server/.env.dev"
 sync_supabase_keys "$ROOT/.env.backend.dev"             "${BACKEND_KEYS[@]}"
 sync_supabase_keys "$ROOT/packages/api-server/.env.dev" "${BACKEND_KEYS[@]}"
 
