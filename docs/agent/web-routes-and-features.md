@@ -41,6 +41,8 @@ App Router 기준 (`packages/web/app/`). 작업 시 이 표와 실제 `app/` 트
 | `/admin/entities/artists`       | 아티스트 관리 (CRUD, paginated, searchable)                                                                                 |
 | `/admin/entities/brands`        | 브랜드 관리 (CRUD)                                                                                                          |
 | `/admin/entities/group-members` | 그룹 멤버 관리                                                                                                              |
+| `/admin/raw-post-sources`       | 수집 소스 등록/관리 (Pinterest 등 — #327)                                                                                   |
+| `/admin/raw-posts`              | **검증 큐** (#333) — assets 의 raw_posts 를 status 탭(COMPLETED/IN_PROGRESS/ERROR/VERIFIED) 으로 필터링, "검증" 버튼으로 prod posts 반영 |
 | `/request/upload`               | Image upload with DropZone                                                                                                  |
 | `/request/detect`               | AI detection results with item spotting                                                                                     |
 | `/request/try`                  | Try 포스트 업로드 페이지                                                                                                    |

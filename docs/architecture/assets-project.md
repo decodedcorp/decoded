@@ -132,7 +132,7 @@ prod 에서 `warehouse` 스키마를 완전 드롭하고 살아남는 엔티티 
 
 ## 관련 파일
 
-- 스키마: `supabase-assets/migrations/20260424120000_initial.sql`
+- 스키마: `supabase-assets/migrations/20260424120000_initial.sql` (초기) + `20260426130000_drop_r2_columns.sql` (#347 r2_url/r2_key 드롭)
 - api-server: `packages/api-server/src/domains/raw_posts/{handlers,service,dto}.rs`
 - api-server entity: `packages/api-server/src/entities/{assets_raw_posts,assets_raw_post_sources}.rs`
 - api-server config: `packages/api-server/src/config.rs::AppEnv` / `AssetsDatabaseConfig`
@@ -142,3 +142,22 @@ prod 에서 `warehouse` 스키마를 완전 드롭하고 살아남는 엔티티 
 - web admin: `packages/web/app/admin/raw-posts/page.tsx`
 - web hook: `packages/web/lib/api/admin/raw-posts.ts`
 - 환경: [`docs/agent/environments.md`](../agent/environments.md)
+
+## 컬럼 의미 (raw_posts 본체)
+
+| 컬럼 | 의미 | 케이스별 |
+|---|---|---|
+| `external_url` | 외부 출처 페이지 URL (Pinterest 핀 페이지 등) | Pinterest/IG: 핀/포스트 URL — 합성: NULL |
+| `image_url` | **이미지 위치 URL — 실질적으로 R2 퍼블릭 URL**. ai-server 가 R2 업로드 후 채움 (#347) | 모든 케이스 동일 |
+| `caption` | 텍스트 (Pinterest description, IG caption 등) | 합성 케이스: NULL 또는 prompt |
+| `author_name` | 저자/소스 명 (Pinterest pinner 등) | — |
+| `platform_metadata` | 플랫폼별 자유 메타 (saves, board_id, hashtags 등) | 합성 케이스: 보통 NULL |
+| `parse_result` | 비전파싱 결과 (아이템 bbox, 브랜드 후보 등) | 모든 케이스 동일 — Vision 결과 |
+| `dispatch_id` | ai-server scheduler 의 1회 dispatch 추적 키 | — |
+
+> #347 이전: `image_url`(외부 CDN) + `r2_url`(R2 복사본) + `r2_key`(R2 path) 3개 컬럼이었으나 단일화. 외부 CDN URL 은 운영상 거의 미사용이라 드롭, R2 URL 은 `image_url` 한 컬럼으로 통합.
+
+## 변경 이력
+
+- 2026-04-26: r2_url/r2_key 컬럼 드롭, image_url 단일화 (#347)
+- 2026-04-25: 초기 작성 — 두 프로젝트 분리, 5-state 상태머신, verify 플로우 (#333)

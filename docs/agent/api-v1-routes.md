@@ -145,4 +145,27 @@ Params: `q`, `context`, `media_type`, `sort`, `page`, `limit`.
 | `/api/admin/post-spots`              | POST             | 포스트 스팟 관리                  |
 | `/api/admin/review`                  | GET/POST         | 콘텐츠 리뷰                       |
 
+### Raw posts admin (#333 — Rust api-server proxy)
+
+> assets Supabase 프로젝트의 raw_posts 도메인. Next.js 가 Bearer 위임으로 api-server `/api/v1/raw-posts/*` 에 프록시. 자세한 설계: [`docs/architecture/assets-project.md`](../architecture/assets-project.md)
+
+| Route (Next.js proxy)                                   | Methods | Backend (api-server)                          | Description                                |
+| ------------------------------------------------------- | ------- | --------------------------------------------- | ------------------------------------------ |
+| `/api/admin/raw-post-sources`                           | GET/POST | `/api/v1/raw-posts/sources`                  | 수집 소스 목록/생성                        |
+| `/api/admin/raw-post-sources/[id]`                      | PATCH/DELETE | `/api/v1/raw-posts/sources/{id}`         | 개별 소스                                  |
+| `/api/admin/raw-post-sources/[id]/trigger`              | POST    | `/api/v1/raw-posts/sources/{id}/trigger`     | 수동 트리거 (#327)                         |
+| `/api/admin/raw-posts/items`                            | GET     | `/api/v1/raw-posts/items`                    | raw_posts 큐 (status 필터링)               |
+| `/api/admin/raw-posts/items/[id]/verify`                | POST    | `/api/v1/raw-posts/items/{id}/verify`        | 검증 — assets COMPLETED → prod posts INSERT (#339) |
+
+api-server 직통 routes (web proxy 거치지 않는 경우 — 내부 호출/테스트용):
+
+| Route                                       | Methods | Description                                                                  |
+| ------------------------------------------- | ------- | ---------------------------------------------------------------------------- |
+| `/api/v1/raw-posts/sources`                 | GET/POST | 소스 CRUD (admin guard)                                                     |
+| `/api/v1/raw-posts/sources/{id}`            | PATCH/DELETE | 개별 소스                                                                |
+| `/api/v1/raw-posts/items`                   | GET     | raw_posts 페이지네이션 + 필터 (`status`, `platform`, `source_id`)            |
+| `/api/v1/raw-posts/items/{id}`              | GET     | 단일 raw_post                                                                |
+| `/api/v1/raw-posts/items/{id}/verify`       | POST    | 검증 → 로컬/prod posts INSERT. `APP_ENV=local` 시 assets status write skip |
+| `/api/v1/raw-posts/stats`                   | GET     | 플랫폼별 parse_status 카운트                                                 |
+
 Rust REST API와의 관계는 [`.planning/codebase/INTEGRATIONS.md`](../../.planning/codebase/INTEGRATIONS.md) 및 `packages/api-server` 문서를 참고합니다.

@@ -48,7 +48,7 @@ tags: [agent, qa, raw-posts, pipeline]
 
 - [ ] `/admin/raw-posts` 진입 → COMPLETED 탭이 기본
 - [ ] 위 2번에서 만들어진 raw_post 가 표에 보임
-- [ ] R2 썸네일이 정상 표시됨 (`r2_url` 우선, 없으면 `image_url`)
+- [ ] R2 썸네일이 정상 표시됨 (`image_url` 단일 컬럼; #347 에서 r2_url/r2_key 통합)
 - [ ] caption / author / created 컬럼 채워짐
 - [ ] 페이지네이션 / 플랫폼 필터 동작
 - [ ] querystring 동기화 — 새 탭으로 URL 복사 후 열어도 같은 화면
