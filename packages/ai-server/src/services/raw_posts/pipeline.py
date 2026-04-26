@@ -146,12 +146,12 @@ class RawPostsPipeline:
 
         put_result = await asyncio.to_thread(self._r2.put, key, body, content_type)
 
+        # #347: image_url 은 R2 업로드 결과(put_result.url). 외부 CDN URL(media.image_url)은
+        # external_url 로 핀 페이지 추적이 가능하므로 별도 보관 안 함.
         return RawPostResult(
             external_id=media.external_id,
             external_url=media.external_url,
-            image_url=media.image_url,
-            r2_key=put_result.key,
-            r2_url=put_result.url or "",
+            image_url=put_result.url or "",
             caption=media.caption,
             author_name=media.author_name,
             platform_metadata=media.platform_metadata,

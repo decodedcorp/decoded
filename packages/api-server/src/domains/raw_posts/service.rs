@@ -268,8 +268,6 @@ pub async fn upsert_raw_post(
         external_id: Set(input.external_id),
         external_url: Set(Some(input.external_url)),
         image_url: Set(Some(input.image_url)),
-        r2_key: Set(input.r2_key),
-        r2_url: Set(input.r2_url),
         image_hash: Set(None),
         caption: Set(input.caption),
         author_name: Set(input.author_name),
@@ -296,8 +294,6 @@ pub async fn upsert_raw_post(
                 post_entity::Column::SourceId,
                 post_entity::Column::ExternalUrl,
                 post_entity::Column::ImageUrl,
-                post_entity::Column::R2Key,
-                post_entity::Column::R2Url,
                 post_entity::Column::Caption,
                 post_entity::Column::AuthorName,
                 post_entity::Column::PlatformMetadata,
@@ -374,8 +370,6 @@ fn post_model_to_dto(m: post_entity::Model) -> RawPost {
         external_id: m.external_id,
         external_url: m.external_url.unwrap_or_default(),
         image_url: m.image_url.unwrap_or_default(),
-        r2_key: m.r2_key,
-        r2_url: m.r2_url,
         image_hash: m.image_hash,
         caption: m.caption,
         author_name: m.author_name,
@@ -541,9 +535,7 @@ mod tests {
             platform: "pinterest".into(),
             external_id: "ext-1".into(),
             external_url: Some("https://pin.example/abc".into()),
-            image_url: Some("https://cdn.example/img.jpg".into()),
-            r2_key: Some("pinterest/ab/ext-1.jpg".into()),
-            r2_url: Some("https://r2.example/pinterest/ab/ext-1.jpg".into()),
+            image_url: Some("https://r2.example/pinterest/ab/ext-1.jpg".into()),
             image_hash: None,
             caption: Some("sample caption".into()),
             author_name: Some("test_author".into()),
@@ -602,10 +594,9 @@ mod tests {
 
     #[tokio::test]
     async fn verify_rejects_missing_image_url() {
-        // image_url 과 r2_url 모두 없으면 prod INSERT 전에 400 리턴.
+        // image_url 이 없으면 prod INSERT 전에 400 리턴 (#347 — r2_url/r2_key 통합 후 단일 컬럼).
         let mut raw = make_raw_post_model(PipelineStatus::Completed);
         raw.image_url = None;
-        raw.r2_url = None;
 
         let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![raw]])
@@ -621,7 +612,7 @@ mod tests {
             super::super::dto::VerifyRawPostDto::default(),
         )
         .await
-        .expect_err("verify should fail when image_url/r2_url are both None");
+        .expect_err("verify should fail when image_url is None");
         assert!(matches!(err, AppError::BadRequest(_)));
     }
 }

@@ -127,10 +127,10 @@ export default function RawPostsAdminPage() {
       label: "Preview",
       className: "w-32",
       render: (row) =>
-        row.r2_url || row.image_url ? (
+        row.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={row.r2_url ?? row.image_url}
+            src={row.image_url}
             alt={row.caption ?? row.external_id}
             className="h-20 w-20 rounded object-cover bg-gray-100"
           />

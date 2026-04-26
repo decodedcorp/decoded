@@ -38,9 +38,8 @@ export interface RawPost {
   platform: string;
   external_id: string;
   external_url: string;
+  /** 이미지 위치 URL (실질적으로 R2). #347 에서 r2_url/r2_key 통합. */
   image_url: string;
-  r2_key: string | null;
-  r2_url: string | null;
   image_hash: string | null;
   caption: string | null;
   author_name: string | null;

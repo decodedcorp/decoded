@@ -84,9 +84,8 @@ pub struct RawPost {
     pub platform: String,
     pub external_id: String,
     pub external_url: String,
+    /// 이미지 위치 URL (실질적으로 R2). #347 에서 r2_url/r2_key 통합.
     pub image_url: String,
-    pub r2_key: Option<String>,
-    pub r2_url: Option<String>,
     pub image_hash: Option<String>,
     pub caption: Option<String>,
     pub author_name: Option<String>,
@@ -120,9 +119,8 @@ pub struct RawPostUpsertInput {
     pub platform: String,
     pub external_id: String,
     pub external_url: String,
+    /// 이미지 위치 URL (R2 업로드 결과). #347 단일화.
     pub image_url: String,
-    pub r2_key: Option<String>,
-    pub r2_url: Option<String>,
     pub caption: Option<String>,
     pub author_name: Option<String>,
     pub platform_metadata: Option<JsonValue>,

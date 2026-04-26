@@ -24,14 +24,10 @@ pub struct Model {
     #[sea_orm(nullable)]
     pub external_url: Option<String>,
 
+    /// 이미지 위치 URL — ai-server R2 업로드 결과 또는 합성 결과의 R2 퍼블릭 URL.
+    /// (#347: 기존 r2_url/r2_key 컬럼 드롭 후 단일화)
     #[sea_orm(nullable)]
     pub image_url: Option<String>,
-
-    #[sea_orm(nullable)]
-    pub r2_key: Option<String>,
-
-    #[sea_orm(nullable)]
-    pub r2_url: Option<String>,
 
     #[sea_orm(nullable)]
     pub image_hash: Option<String>,

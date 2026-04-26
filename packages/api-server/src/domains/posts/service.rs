@@ -2252,10 +2252,10 @@ pub async fn list_tries_by_spot(
 
 /// 검증된 raw_post 로부터 prod `public.posts` 로우를 생성 (#333).
 ///
-/// admin 이 검증(verify) 버튼을 누를 때 호출된다. raw_post 의 r2_url / image_url,
-/// caption, 플랫폼 메타와 `VerifyRawPostDto` override 를 합쳐 최소한의 post 를 만든다.
+/// admin 이 검증(verify) 버튼을 누를 때 호출된다. raw_post 의 image_url, caption,
+/// 플랫폼 메타와 `VerifyRawPostDto` override 를 합쳐 최소한의 post 를 만든다.
 /// 현 단계에선 spots/solutions 없이 post row 만 생성 — 세부 아이템 태깅은 검증 이후
-/// 관리자가 별도로 진행한다.
+/// 관리자가 별도로 진행한다 (#347 — image_url 단일화).
 pub async fn create_post_from_raw(
     db: &DatabaseConnection,
     admin_id: Uuid,
@@ -2263,16 +2263,12 @@ pub async fn create_post_from_raw(
     dto: crate::domains::raw_posts::dto::VerifyRawPostDto,
 ) -> AppResult<PostResponse> {
     let now = chrono::Utc::now().fixed_offset();
-    let image_url = raw_post
-        .r2_url
-        .clone()
-        .or_else(|| raw_post.image_url.clone())
-        .ok_or_else(|| {
-            AppError::BadRequest(format!(
-                "raw_post {} has no image_url/r2_url — cannot create post",
-                raw_post.id
-            ))
-        })?;
+    let image_url = raw_post.image_url.clone().ok_or_else(|| {
+        AppError::BadRequest(format!(
+            "raw_post {} has no image_url — cannot create post",
+            raw_post.id
+        ))
+    })?;
 
     let title = dto.title.or_else(|| raw_post.caption.clone());
     let artist_name = dto.artist_name.or_else(|| raw_post.author_name.clone());

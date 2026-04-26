@@ -163,8 +163,6 @@ class RawPostsRepository:
                 r.external_id,
                 r.external_url,
                 r.image_url,
-                r.r2_key,
-                r.r2_url,
                 r.caption,
                 r.author_name,
                 json.dumps(r.platform_metadata) if r.platform_metadata else None,
@@ -182,14 +180,13 @@ class RawPostsRepository:
                         """
                         INSERT INTO public.raw_posts (
                             source_id, platform, external_id, external_url, image_url,
-                            r2_key, r2_url, caption, author_name, platform_metadata,
+                            caption, author_name, platform_metadata,
                             dispatch_id, status
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11,
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9,
                                 'COMPLETED'::public.pipeline_status)
                         ON CONFLICT (platform, external_id) DO UPDATE SET
-                            r2_key = EXCLUDED.r2_key,
-                            r2_url = EXCLUDED.r2_url,
+                            image_url = EXCLUDED.image_url,
                             caption = EXCLUDED.caption,
                             author_name = EXCLUDED.author_name,
                             platform_metadata = EXCLUDED.platform_metadata,
