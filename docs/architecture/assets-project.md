@@ -3,7 +3,7 @@ title: Assets Supabase Project
 owner: human
 status: approved
 updated: 2026-04-25
-tags: [architecture, db, raw-posts, pipeline, agent]
+tags: [architecture, db, agent]
 ---
 
 # Assets Supabase Project (#333)

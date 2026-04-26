@@ -1,9 +1,9 @@
 ---
-title: Warehouse Schema — DEPRECATED
+title: Warehouse Schema — DEPRECATED (#333)
 owner: human
 status: deprecated
 updated: 2026-04-25
-tags: [agent, db, deprecated]
+tags: [agent, db]
 ---
 
 # Warehouse Schema — DEPRECATED (#333)

@@ -1,9 +1,9 @@
 ---
-title: Verify Flow — Manual QA Checklist
+title: Verify Flow — Manual QA Checklist (#333)
 owner: human
 status: approved
 updated: 2026-04-25
-tags: [agent, qa, raw-posts, pipeline]
+tags: [agent, testing, db]
 ---
 
 # Verify Flow — Manual QA Checklist (#333)
