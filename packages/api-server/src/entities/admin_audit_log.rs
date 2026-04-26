@@ -1,31 +1,32 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// warehouse.artists entity — K-pop artist profiles
+/// public.admin_audit_log entity — admin action audit trail (#333 moved from warehouse schema)
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(schema_name = "warehouse", table_name = "artists")]
+#[sea_orm(table_name = "admin_audit_log")]
 pub struct Model {
     #[sea_orm(primary_key, column_type = "Uuid")]
     pub id: Uuid,
 
-    #[sea_orm(nullable)]
-    pub name_ko: Option<String>,
+    pub admin_user_id: Uuid,
+
+    pub action: String,
+
+    pub target_table: String,
 
     #[sea_orm(nullable)]
-    pub name_en: Option<String>,
+    pub target_id: Option<Uuid>,
 
-    #[sea_orm(nullable)]
-    pub profile_image_url: Option<String>,
+    #[sea_orm(nullable, column_type = "JsonBinary")]
+    pub before_state: Option<Json>,
 
-    #[sea_orm(nullable)]
-    pub primary_instagram_account_id: Option<Uuid>,
+    #[sea_orm(nullable, column_type = "JsonBinary")]
+    pub after_state: Option<Json>,
 
     #[sea_orm(nullable, column_type = "JsonBinary")]
     pub metadata: Option<Json>,
 
     pub created_at: DateTimeWithTimeZone,
-
-    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

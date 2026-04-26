@@ -52,8 +52,9 @@ mod m20260406_000002_add_style_tags_to_posts;
 mod m20260407_000001_create_post_magazine_news_references;
 mod m20260409_add_image_dimensions;
 mod m20260412_000001_add_posts_performance_indexes;
-mod m20260419_000001_create_raw_posts_tables;
-mod m20260420_000001_add_initial_scraped_at_to_raw_post_sources;
+// #333 raw_posts tables moved to assets Supabase project.
+// Legacy SeaORM migrations (m20260419/m20260420) deleted — warehouse.raw_post*
+// tables are dropped by supabase/migrations/20260425000001_drop_warehouse_and_promote_entities.sql.
 mod m20260501_000001_decouple_auth_users_fk;
 mod m20260501_000002_auth_uid_stub;
 mod m20260502_000001_enable_extensions;
@@ -128,10 +129,11 @@ impl MigratorTrait for Migrator {
             Box::new(m20260407_000001_create_post_magazine_news_references::Migration),
             Box::new(m20260409_add_image_dimensions::Migration),
             Box::new(m20260412_000001_add_posts_performance_indexes::Migration),
-            // #258 raw_posts pipeline tables
-            Box::new(m20260419_000001_create_raw_posts_tables::Migration),
-            // #214 Pinterest adapter — initial vs incremental scrape tracking
-            Box::new(m20260420_000001_add_initial_scraped_at_to_raw_post_sources::Migration),
+            // #333 raw_posts pipeline moved to assets project.
+            // Prior SeaORM migrations (m20260419 create_raw_posts_tables,
+            // m20260420 add_initial_scraped_at_to_raw_post_sources) removed —
+            // raw_posts / raw_post_sources 는 supabase-assets/migrations 에서
+            // 관리되며, prod warehouse 스키마는 20260425000001_drop_warehouse_* 에서 드롭된다.
             // PR #273 — auth.uid() stub must run before RLS migrations that use it.
             Box::new(m20260501_000002_auth_uid_stub::Migration),
             Box::new(m20260501_000001_decouple_auth_users_fk::Migration),

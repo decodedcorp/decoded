@@ -11,8 +11,8 @@ use sea_orm::{
 use uuid::Uuid;
 
 use crate::entities::{
-    warehouse_raw_post_sources as src_entity, warehouse_raw_posts as post_entity,
-    WarehouseRawPostSources, WarehouseRawPosts,
+    assets_raw_post_sources as src_entity, assets_raw_posts as post_entity, AssetsRawPostSources,
+    AssetsRawPosts,
 };
 use crate::error::{AppError, AppResult};
 
@@ -48,6 +48,7 @@ pub async fn create_source(
         fetch_interval_seconds: Set(dto.fetch_interval_seconds),
         last_enqueued_at: Set(None),
         last_scraped_at: Set(None),
+        initial_scraped_at: Set(None),
         metadata: Set(dto.metadata),
         created_at: Set(now),
         updated_at: Set(now),
@@ -64,7 +65,7 @@ pub async fn list_sources(
     let limit = clamp_limit(query.limit);
     let offset = query.offset.unwrap_or(0);
 
-    let mut find = WarehouseRawPostSources::find();
+    let mut find = AssetsRawPostSources::find();
     if let Some(platform) = query.platform.as_ref() {
         find = find.filter(src_entity::Column::Platform.eq(platform));
     }
@@ -101,7 +102,7 @@ pub async fn update_source(
     id: Uuid,
     dto: UpdateRawPostSourceDto,
 ) -> AppResult<RawPostSource> {
-    let existing = WarehouseRawPostSources::find_by_id(id)
+    let existing = AssetsRawPostSources::find_by_id(id)
         .one(db)
         .await
         .map_err(AppError::DatabaseError)?
@@ -133,7 +134,7 @@ pub async fn update_source(
 }
 
 pub async fn delete_source(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
-    let res = WarehouseRawPostSources::delete_by_id(id)
+    let res = AssetsRawPostSources::delete_by_id(id)
         .exec(db)
         .await
         .map_err(AppError::DatabaseError)?;
@@ -156,7 +157,7 @@ pub async fn list_due_sources(
     db: &DatabaseConnection,
     limit: u64,
 ) -> AppResult<Vec<src_entity::Model>> {
-    let sql = "SELECT * FROM warehouse.raw_post_sources \
+    let sql = "SELECT * FROM public.raw_post_sources \
                WHERE is_active = true \
                  AND (last_enqueued_at IS NULL \
                       OR last_enqueued_at < now() - (fetch_interval_seconds || ' seconds')::interval) \
@@ -176,7 +177,7 @@ pub async fn list_due_sources(
 pub async fn mark_source_enqueued(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
     let stmt = Statement::from_sql_and_values(
         sea_orm::DatabaseBackend::Postgres,
-        "UPDATE warehouse.raw_post_sources \
+        "UPDATE public.raw_post_sources \
            SET last_enqueued_at = now(), updated_at = now() \
          WHERE id = $1",
         [id.into()],
@@ -188,7 +189,7 @@ pub async fn mark_source_enqueued(db: &DatabaseConnection, id: Uuid) -> AppResul
 pub async fn mark_source_scraped(db: &DatabaseConnection, id: Uuid) -> AppResult<()> {
     let stmt = Statement::from_sql_and_values(
         sea_orm::DatabaseBackend::Postgres,
-        "UPDATE warehouse.raw_post_sources \
+        "UPDATE public.raw_post_sources \
            SET last_scraped_at = now(), updated_at = now() \
          WHERE id = $1",
         [id.into()],
@@ -208,7 +209,7 @@ pub async fn list_items(
     let limit = clamp_limit(query.limit);
     let offset = query.offset.unwrap_or(0);
 
-    let mut find = WarehouseRawPosts::find();
+    let mut find = AssetsRawPosts::find();
     if let Some(platform) = query.platform.as_ref() {
         find = find.filter(post_entity::Column::Platform.eq(platform));
     }
@@ -243,7 +244,7 @@ pub async fn list_items(
 }
 
 pub async fn get_item(db: &DatabaseConnection, id: Uuid) -> AppResult<RawPost> {
-    let item = WarehouseRawPosts::find_by_id(id)
+    let item = AssetsRawPosts::find_by_id(id)
         .one(db)
         .await
         .map_err(AppError::DatabaseError)?
@@ -265,25 +266,25 @@ pub async fn upsert_raw_post(
         source_id: Set(source_id),
         platform: Set(input.platform),
         external_id: Set(input.external_id),
-        external_url: Set(input.external_url),
-        image_url: Set(input.image_url),
-        r2_key: Set(input.r2_key),
-        r2_url: Set(input.r2_url),
+        external_url: Set(Some(input.external_url)),
+        image_url: Set(Some(input.image_url)),
         image_hash: Set(None),
         caption: Set(input.caption),
         author_name: Set(input.author_name),
+        status: Set(crate::entities::PipelineStatus::NotStarted),
         parse_status: Set("pending".to_string()),
         parse_result: Set(None),
         parse_error: Set(None),
         parse_attempts: Set(0),
-        seed_post_id: Set(None),
+        verified_at: Set(None),
+        verified_by: Set(None),
         platform_metadata: Set(input.platform_metadata),
         dispatch_id: Set(dispatch_id),
         created_at: Set(now),
         updated_at: Set(now),
     };
 
-    WarehouseRawPosts::insert(model)
+    AssetsRawPosts::insert(model)
         .on_conflict(
             OnConflict::columns([
                 post_entity::Column::Platform,
@@ -293,8 +294,6 @@ pub async fn upsert_raw_post(
                 post_entity::Column::SourceId,
                 post_entity::Column::ExternalUrl,
                 post_entity::Column::ImageUrl,
-                post_entity::Column::R2Key,
-                post_entity::Column::R2Url,
                 post_entity::Column::Caption,
                 post_entity::Column::AuthorName,
                 post_entity::Column::PlatformMetadata,
@@ -317,7 +316,7 @@ pub async fn stats(db: &DatabaseConnection) -> AppResult<Vec<RawPostsStatsEntry>
     let stmt = Statement::from_string(
         sea_orm::DatabaseBackend::Postgres,
         "SELECT platform, parse_status, COUNT(*)::bigint AS count \
-         FROM warehouse.raw_posts \
+         FROM public.raw_posts \
          GROUP BY platform, parse_status \
          ORDER BY platform, parse_status"
             .to_string(),
@@ -369,19 +368,251 @@ fn post_model_to_dto(m: post_entity::Model) -> RawPost {
         source_id: m.source_id,
         platform: m.platform,
         external_id: m.external_id,
-        external_url: m.external_url,
-        image_url: m.image_url,
-        r2_key: m.r2_key,
-        r2_url: m.r2_url,
+        external_url: m.external_url.unwrap_or_default(),
+        image_url: m.image_url.unwrap_or_default(),
         image_hash: m.image_hash,
         caption: m.caption,
         author_name: m.author_name,
+        status: m.status,
         parse_status: m.parse_status,
         parse_attempts: m.parse_attempts,
-        seed_post_id: m.seed_post_id,
+        verified_at: m.verified_at,
+        verified_by: m.verified_by,
         platform_metadata: m.platform_metadata,
         dispatch_id: m.dispatch_id,
         created_at: m.created_at,
         updated_at: m.updated_at,
+    }
+}
+
+// ------------------------------------------------------------------
+// verify (#333)
+// ------------------------------------------------------------------
+
+/// COMPLETED 상태의 raw_post 를 검증해 prod.public.posts 로 복사한다 (#333).
+///
+/// 순서:
+///   1. assets 에서 raw_post 로드 + status == COMPLETED 가드
+///   2. prod INSERT (`create_post_from_raw` 로 위임)
+///   3. `APP_ENV != Local` 이면 assets status 를 VERIFIED 로 갱신 + pipeline_events 기록
+///      · Local 에선 cloud assets 오염 방지를 위해 step 3 생략
+///
+/// 실패 시나리오: step 2 성공 + step 3 실패 → prod 에 이미 들어갔으므로 다음 클릭에서
+/// 중복 INSERT 가능. 이는 합의된 "admin 운영 책임" 정책(DB UNIQUE 없음)과 일치 —
+/// step 3 실패는 loud error 로 로깅된다.
+pub async fn verify_raw_post(
+    state: &crate::app_state::AppState,
+    id: Uuid,
+    admin_id: Uuid,
+    dto: super::dto::VerifyRawPostDto,
+) -> AppResult<crate::domains::posts::dto::PostResponse> {
+    use sea_orm::{Set, TransactionTrait};
+
+    // 1. assets 로드 + 상태 가드
+    let raw_post = AssetsRawPosts::find_by_id(id)
+        .one(state.assets_db.as_ref())
+        .await
+        .map_err(AppError::DatabaseError)?
+        .ok_or_else(|| AppError::NotFound(format!("raw_post {id} not found")))?;
+
+    if raw_post.status != crate::entities::PipelineStatus::Completed {
+        return Err(AppError::BadRequest(format!(
+            "raw_post {id} is not COMPLETED (status={:?}); only COMPLETED can be verified",
+            raw_post.status
+        )));
+    }
+
+    // 2. prod INSERT
+    let post = crate::domains::posts::service::create_post_from_raw(
+        state.db.as_ref(),
+        admin_id,
+        &raw_post,
+        dto,
+    )
+    .await?;
+
+    // 3. assets status 갱신 — Local 에선 스킵
+    if state.config.server.app_env == crate::config::AppEnv::Local {
+        tracing::warn!(
+            raw_post_id = %id,
+            post_id = %post.id,
+            "APP_ENV=local → skipping assets status write (cloud assets not polluted)"
+        );
+        return Ok(post);
+    }
+
+    let txn = state
+        .assets_db
+        .begin()
+        .await
+        .map_err(AppError::DatabaseError)?;
+
+    let now = Utc::now().fixed_offset();
+    let mut active: post_entity::ActiveModel = raw_post.clone().into();
+    active.status = Set(crate::entities::PipelineStatus::Verified);
+    active.verified_at = Set(Some(now));
+    active.verified_by = Set(Some(admin_id));
+    active.updated_at = Set(now);
+    active.update(&txn).await.map_err(|e| {
+        tracing::error!(raw_post_id=%id, post_id=%post.id, error=%e,
+            "assets status=VERIFIED write FAILED after prod INSERT succeeded — \
+             admin may see duplicate on retry");
+        AppError::DatabaseError(e)
+    })?;
+
+    insert_pipeline_event(
+        &txn,
+        id,
+        Some(crate::entities::PipelineStatus::Completed),
+        crate::entities::PipelineStatus::Verified,
+        Some(admin_id),
+        None,
+    )
+    .await?;
+
+    txn.commit().await.map_err(AppError::DatabaseError)?;
+    Ok(post)
+}
+
+/// `pipeline_events` 에 상태 전환 기록 한 건을 INSERT.
+///
+/// assets 트랜잭션 안에서 호출되어야 한다.
+pub(crate) async fn insert_pipeline_event<C>(
+    txn: &C,
+    raw_post_id: Uuid,
+    from_status: Option<crate::entities::PipelineStatus>,
+    to_status: crate::entities::PipelineStatus,
+    actor: Option<Uuid>,
+    note: Option<String>,
+) -> AppResult<()>
+where
+    C: ConnectionTrait,
+{
+    let from_str = from_status.map(status_to_db_string);
+    let to_str = status_to_db_string(to_status);
+
+    let stmt = Statement::from_sql_and_values(
+        sea_orm::DatabaseBackend::Postgres,
+        "INSERT INTO public.pipeline_events \
+           (raw_post_id, from_status, to_status, actor, note) \
+         VALUES ($1, $2::public.pipeline_status, $3::public.pipeline_status, $4, $5)",
+        [
+            raw_post_id.into(),
+            from_str.into(),
+            to_str.into(),
+            actor.into(),
+            note.into(),
+        ],
+    );
+    txn.execute(stmt).await.map_err(AppError::DatabaseError)?;
+    Ok(())
+}
+
+fn status_to_db_string(s: crate::entities::PipelineStatus) -> String {
+    use crate::entities::PipelineStatus::*;
+    match s {
+        NotStarted => "NOT_STARTED",
+        InProgress => "IN_PROGRESS",
+        Completed => "COMPLETED",
+        Verified => "VERIFIED",
+        Error => "ERROR",
+    }
+    .to_string()
+}
+
+#[cfg(test)]
+#[allow(clippy::disallowed_methods)]
+mod tests {
+    use super::*;
+    use crate::entities::PipelineStatus;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    fn make_raw_post_model(status: PipelineStatus) -> post_entity::Model {
+        let now = Utc::now().fixed_offset();
+        post_entity::Model {
+            id: Uuid::nil(),
+            source_id: Uuid::nil(),
+            platform: "pinterest".into(),
+            external_id: "ext-1".into(),
+            external_url: Some("https://pin.example/abc".into()),
+            image_url: Some("https://r2.example/pinterest/ab/ext-1.jpg".into()),
+            image_hash: None,
+            caption: Some("sample caption".into()),
+            author_name: Some("test_author".into()),
+            status,
+            parse_status: "parsed".into(),
+            parse_result: None,
+            parse_error: None,
+            parse_attempts: 1,
+            verified_at: None,
+            verified_by: None,
+            platform_metadata: None,
+            dispatch_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn verify_returns_not_found_on_missing_raw_post() {
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<post_entity::Model>::new()])
+            .into_connection();
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail with NotFound");
+        assert!(matches!(err, AppError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_non_completed() {
+        let raw = make_raw_post_model(PipelineStatus::InProgress);
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![raw]])
+            .into_connection();
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail with BadRequest for non-COMPLETED");
+        assert!(matches!(err, AppError::BadRequest(_)));
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_missing_image_url() {
+        // image_url 이 없으면 prod INSERT 전에 400 리턴 (#347 — r2_url/r2_key 통합 후 단일 컬럼).
+        let mut raw = make_raw_post_model(PipelineStatus::Completed);
+        raw.image_url = None;
+
+        let assets_db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![raw]])
+            .into_connection();
+        // prod db 에 append 없음 — INSERT 시도되면 테스트 실패
+        let prod_db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let state = crate::tests::helpers::test_app_state_with_assets(prod_db, assets_db);
+
+        let err = verify_raw_post(
+            &state,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            super::super::dto::VerifyRawPostDto::default(),
+        )
+        .await
+        .expect_err("verify should fail when image_url is None");
+        assert!(matches!(err, AppError::BadRequest(_)));
     }
 }

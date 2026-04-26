@@ -23,22 +23,35 @@ env-sensitive 코드를 만지기 전:
 
 ## Env Matrix
 
+> #333 부터 prod / assets 두 Supabase 프로젝트가 공존합니다 — `DATABASE_*` 는 prod(검증본 posts/users/...), `ASSETS_DATABASE_*` 는 assets(파이프라인 스테이징 raw_posts/pipeline_events/...). 자세한 설계는 [`docs/architecture/assets-project.md`](../architecture/assets-project.md) 참조.
+
 | 항목 | **dev** (로컬) | **staging** | **prod** |
 |---|---|---|---|
-| Supabase 모드 | **Self-hosted** (Supabase CLI) | **TBD — 현재 없음** ([staging.md](staging.md)) | **Cloud Supabase** |
+| Supabase prod 모드 | **Self-hosted** (Supabase CLI) | **TBD — 현재 없음** ([staging.md](staging.md)) | **Cloud Supabase (prod 프로젝트)** |
+| Supabase assets 모드 | **Cloud assets 프로젝트 공유** (#333) — 비워두면 DATABASE_URL 로 fallback(WARN) | n/a | **Cloud Supabase (assets 프로젝트)** |
 | 기동 방법 | `just dev` (`supabase start` + app 서버) | n/a | 배포 플랫폼 (Vercel / Fly 등) |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | n/a | Cloud pooler URL (예: `postgresql://postgres.<ref>:<pw>@aws-...pooler.supabase.com:5432/postgres`) |
+| `APP_ENV` | `local` | n/a | `production` |
+| `DATABASE_URL` (prod 역할) | `postgresql://postgres:postgres@localhost:54322/postgres` | n/a | Cloud pooler URL (예: `postgresql://postgres.<ref>:<pw>@aws-...pooler.supabase.com:5432/postgres`) |
+| `ASSETS_DATABASE_URL` (assets 역할) | cloud assets pooler URL (팀 공유) 또는 비움 | n/a | **필수** — cloud assets pooler URL. 미설정 시 api-server 부팅 panic |
 | `DATABASE_API_URL` (GoTrue) | `http://127.0.0.1:54321` | n/a | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_DATABASE_API_URL` | `http://127.0.0.1:54321` | n/a | `https://<ref>.supabase.co` |
 | `DATABASE_ANON_KEY` / `DATABASE_SERVICE_ROLE_KEY` / `DATABASE_JWT_SECRET` | `supabase status -o env` 출력값 | n/a | Supabase Dashboard > Settings > API |
 | JWT 서명 알고리즘 | **ES256** (로컬 GoTrue JWKS) | n/a | Cloud GoTrue JWKS (ES256 또는 RS256) |
 | **`SKIP_DB_MIGRATIONS`** | **`1`** (supabase/migrations 가 SOT) | unset | unset (현 시점) |
 | Storage (이미지 등) | **Cloudflare R2** (`R2_BUCKET_NAME=dev`) | n/a | Cloudflare R2 (`R2_BUCKET_NAME=prod` 등) |
+| R2 raw 버킷 (#258) | 공유 — `RAW_POSTS_R2_*` (assets/prod 모두 동일 버킷) | n/a | 공유 |
 | Meilisearch | `http://localhost:7700` (Docker) | n/a | Managed Meilisearch 또는 self-hosted |
 | Redis | `localhost:6303` (Docker) | n/a | Managed Redis |
 | SearXNG | `http://localhost:4000` (Docker) | n/a | self-hosted SearXNG |
 | ai-server gRPC (api→ai) | `http://localhost:50052` | n/a | in-cluster 내부 endpoint |
 | api-server gRPC (ai→api) | `http://localhost:50053` | n/a | in-cluster 내부 endpoint |
+
+### `APP_ENV` 동작 차이 (#333)
+
+| `APP_ENV` | api-server `verify` 엔드포인트 | ai-server pipeline | assets URL fallback |
+|---|---|---|---|
+| `local` (dev 기본) | prod INSERT 만, **assets status write 스킵** (cloud 오염 방지) | `DATABASE_URL` 로 fallback 허용 + WARN | 허용 |
+| `production` | prod INSERT + assets status=VERIFIED + pipeline_events 기록 | `ASSETS_DATABASE_URL` 필수, fallback 시 panic | 미허용 |
 
 Legacy `SUPABASE_*` 이름(예: `SUPABASE_URL`, `SUPABASE_ANON_KEY`)은 `DATABASE_*` 로 rename 된 상태이며 (#268), fallback 으로 계속 읽힙니다. **신규 코드는 `DATABASE_*` 만 사용.**
 

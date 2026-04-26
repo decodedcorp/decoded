@@ -19,7 +19,7 @@ pub struct ProfilesQuery {
 
 /// GET /api/v1/warehouse/profiles
 ///
-/// warehouse.artists + warehouse.groups 프로필을 한 번에 반환한다.
+/// public.artists + public.groups 프로필을 한 번에 반환한다.
 /// 홈 페이지의 이름 → 프로필 매핑을 빌드하는 용도.
 #[utoipa::path(
     get,

@@ -89,30 +89,40 @@ ensure_from_example "$ROOT/packages/web/.env.local"        "$ROOT/packages/web/.
 echo ""
 echo "🔄 Supabase 관련 키 동기화 (supabase status -o env 기준)..."
 
-# Backend / API server 공통 키 세트
+# Backend / API server 공통 키 세트 (DATABASE_* 만 — #345 에서 SUPABASE_* legacy 제거)
 BACKEND_KEYS=(
   "DATABASE_URL=$DB_URL"
   "DATABASE_API_URL=$API_URL"
   "DATABASE_ANON_KEY=$ANON"
   "DATABASE_SERVICE_ROLE_KEY=$SERVICE"
   "DATABASE_JWT_SECRET=$JWT"
-  # legacy (#268 rollout fallback)
-  "SUPABASE_URL=$API_URL"
-  "SUPABASE_ANON_KEY=$ANON"
-  "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
-  "SUPABASE_JWT_SECRET=$JWT"
   # B.3 완료 전까지 supabase/migrations 가 SOT
   "SKIP_DB_MIGRATIONS=1"
+  # #333 — APP_ENV=local 가드로 verify 시 cloud assets 쓰기 스킵
+  "APP_ENV=local"
 )
+# #333 — ASSETS_DATABASE_URL 은 cloud assets 프로젝트 시크릿이므로 자동 주입하지 않는다.
+# 이미 값이 있으면 보존, 없으면 빈 줄 추가만 (개발자가 1Password 등에서 받아 채움).
+# 비-production 에선 비어있어도 DATABASE_URL 로 fallback (api-server / ai-server WARN).
+ensure_assets_placeholder() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
+  if ! grep -q "^ASSETS_DATABASE_URL=" "$file" 2>/dev/null; then
+    {
+      printf '\n# #333 assets 프로젝트 (cloud) — 미설정 시 DATABASE_URL fallback + WARN.\n'
+      printf 'ASSETS_DATABASE_URL=\n'
+    } >> "$file"
+  fi
+}
+ensure_assets_placeholder "$ROOT/.env.backend.dev"
+ensure_assets_placeholder "$ROOT/packages/api-server/.env.dev"
 sync_supabase_keys "$ROOT/.env.backend.dev"             "${BACKEND_KEYS[@]}"
 sync_supabase_keys "$ROOT/packages/api-server/.env.dev" "${BACKEND_KEYS[@]}"
 
-# Web 공개 키
+# Web 공개 키 (DATABASE_* 만 — #345 에서 SUPABASE_* legacy 제거)
 WEB_KEYS=(
   "NEXT_PUBLIC_DATABASE_API_URL=$API_URL"
   "NEXT_PUBLIC_DATABASE_ANON_KEY=$ANON"
-  "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON"
   "DATABASE_SERVICE_ROLE_KEY=$SERVICE"
   "API_BASE_URL=http://localhost:8000"
 )

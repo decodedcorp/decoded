@@ -1,0 +1,19 @@
+# decoded assets Supabase 프로젝트 (파이프라인 스테이징)
+#
+# 이 디렉토리는 **cloud assets 프로젝트 전용** 마이그레이션 관리용이다.
+# 로컬 Supabase 인스턴스는 띄우지 않는다 (로컬 개발은 `supabase/` = prod 역할만 사용).
+#
+# 사용법:
+#   cd supabase-assets
+#   supabase link --project-ref <assets-cloud-ref>   # 최초 1회
+#   supabase db push                                 # 마이그레이션 적용
+#
+# See: docs/architecture/assets-project.md
+project_id = "decoded-assets"
+
+[db]
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []

@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use axum::{extract::Request, middleware::Next, response::Response};
 
-use crate::config::AppState;
+use crate::app_state::AppState;
 
 /// 요청 메트릭 수집 미들웨어
 ///
@@ -66,9 +66,17 @@ mod tests {
                 log_format: "text".to_string(),
                 allowed_origins: None,
                 env: "test".to_string(),
+                app_env: crate::config::AppEnv::Local,
             },
             database: DatabaseConfig {
                 url: "postgres://localhost/test".to_string(),
+                max_connections: 1,
+                min_connections: 1,
+                connect_timeout: std::time::Duration::from_secs(1),
+                idle_timeout: std::time::Duration::from_secs(1),
+            },
+            assets_database: crate::config::AssetsDatabaseConfig {
+                url: "postgres://localhost/test_assets".to_string(),
                 max_connections: 1,
                 min_connections: 1,
                 connect_timeout: std::time::Duration::from_secs(1),
@@ -109,8 +117,11 @@ mod tests {
             },
         };
 
+        let prod_db = Arc::new(MockDatabase::new(DatabaseBackend::Postgres).into_connection());
+        let assets_db = Arc::new(MockDatabase::new(DatabaseBackend::Postgres).into_connection());
         AppState {
-            db: Arc::new(MockDatabase::new(DatabaseBackend::Postgres).into_connection()),
+            db: prod_db,
+            assets_db,
             config,
             category_cache: Arc::new(CategoryCache::new()),
             post_list_cache: Arc::new(PostListCache::new()),

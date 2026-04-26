@@ -81,7 +81,7 @@ mod tests {
             .layer(middleware::from_fn(super::admin_middleware))
     }
 
-    fn admin_db_app(state: crate::config::AppState) -> Router {
+    fn admin_db_app(state: crate::app_state::AppState) -> Router {
         Router::new()
             .route("/admin", routing::get(ok_handler))
             .with_state(state.clone())

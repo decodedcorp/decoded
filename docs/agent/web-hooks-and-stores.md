@@ -188,3 +188,6 @@ import type { PaginatedResponsePostListItem } from "@/lib/api/generated/models";
 - `useEditorialCandidates()` / `useGenerateEditorial()` - Posts eligible for editorial promotion + trigger generation
 - `useAdminPickList()` / `useCreatePick()` / `useUpdatePick()` / `useDeletePick()` - Decoded Pick CRUD (from `lib/hooks/admin/useAdminPicks.ts`)
 - `useMonitoringMetrics()` - Backend monitoring metrics (latency, throughput, endpoints)
+- `useRawPostSources()` / `useCreate/Update/Delete/TriggerRawPostSource()` — 수집 소스 관리 (#327, `lib/api/admin/raw-post-sources.ts`)
+- `useRawPostsList({status, platform, source_id, limit, offset})` — assets 의 raw_posts 큐 (#333, `lib/api/admin/raw-posts.ts`)
+- `useVerifyRawPost()` — 검증 → prod posts INSERT (#339). 성공 시 list 자동 invalidate

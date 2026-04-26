@@ -1,15 +1,8 @@
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use std::sync::Arc;
 use std::time::Duration;
 
-use crate::domains::categories::CategoryCache;
-use crate::domains::posts::cache::PostListCache;
-use crate::metrics::MetricsStore;
-use crate::services::{
-    AffiliateClient, CloudflareR2Client, DecodedAIGrpcClient, DummyEmbeddingClient,
-    EmbeddingClient, MeilisearchClient, OpenAIEmbeddingClient, RakutenAffiliateClient,
-    SearchClient, StorageClient,
-};
+// AppState 는 `crate::app_state` 로 이동 (#333) — 호환을 위해 re-export.
+pub use crate::app_state::AppState;
 
 /// Reads `primary` env, then legacy alias if unset (migration from older names).
 fn env_primary_or_legacy(primary: &str, legacy: &str) -> Option<String> {
@@ -18,11 +11,45 @@ fn env_primary_or_legacy(primary: &str, legacy: &str) -> Option<String> {
         .or_else(|| std::env::var(legacy).ok())
 }
 
+/// 런타임 환경 구분.
+///
+/// - `Local`: 개발자 로컬 머신 (self-hosted Supabase + cloud assets 공유).
+///   verify 엔드포인트에서 assets status write 를 스킵한다 (#333).
+/// - `Production`: 실운영.
+///
+/// `APP_ENV` env 에서 파싱. 미설정 / 미지원 값은 `Local` 로 fallback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppEnv {
+    Local,
+    Production,
+}
+
+impl AppEnv {
+    pub fn from_env() -> Self {
+        match std::env::var("APP_ENV")
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "production" | "prod" => Self::Production,
+            _ => Self::Local,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Local => "local",
+            Self::Production => "production",
+        }
+    }
+}
+
 /// 애플리케이션 설정
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
+    pub assets_database: AssetsDatabaseConfig,
     pub auth: AuthConfig,
     pub storage: StorageConfig,
     pub search: SearchConfig,
@@ -41,12 +68,27 @@ pub struct ServerConfig {
     pub rust_log: String,
     pub log_format: String, // "text" | "json"
     pub allowed_origins: Option<String>,
-    pub env: String, // "development" | "staging" | "production"
+    pub env: String, // 기존 필드 유지 (로깅 포맷 분기용). 신규 코드는 `app_env` 를 사용할 것.
+    pub app_env: AppEnv,
 }
 
-/// 데이터베이스 설정
+/// 데이터베이스 설정 (prod: public.posts / users / solutions 등)
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
+    pub url: String,
+    pub max_connections: u32,
+    pub min_connections: u32,
+    pub connect_timeout: Duration,
+    pub idle_timeout: Duration,
+}
+
+/// assets 프로젝트(파이프라인 스테이징) 데이터베이스 설정 (#333).
+///
+/// `ASSETS_DATABASE_URL` 을 읽는다. 비-production 환경에서 미설정 시 기본
+/// `DatabaseConfig` 의 URL 로 fallback + WARN — 로컬 `.env` 가 스테일일 때 onboarding
+/// 을 막지 않기 위한 편의 장치.
+#[derive(Debug, Clone)]
+pub struct AssetsDatabaseConfig {
     pub url: String,
     pub max_connections: u32,
     pub min_connections: u32,
@@ -114,6 +156,30 @@ impl AppConfig {
         let _ = dotenvy::from_filename(".env.dev");
         let _ = dotenvy::dotenv();
 
+        let app_env = AppEnv::from_env();
+
+        let database_url =
+            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in environment");
+
+        // assets 프로젝트 DB URL. production 에서는 필수, 로컬에선 미설정 시 prod DATABASE_URL
+        // 로 fallback — 온보딩이 막히지 않도록 WARN 만 띄운다 (#333).
+        let assets_database_url = match std::env::var("ASSETS_DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => {
+                if app_env == AppEnv::Production {
+                    panic!(
+                        "ASSETS_DATABASE_URL must be set in production (assets Supabase project)"
+                    );
+                }
+                tracing::warn!(
+                    "ASSETS_DATABASE_URL unset in {} — falling back to DATABASE_URL. \
+                     Local verify flow will write to prod pool instead of assets.",
+                    app_env.as_str()
+                );
+                database_url.clone()
+            }
+        };
+
         Ok(Self {
             server: ServerConfig {
                 host: std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
@@ -125,9 +191,8 @@ impl AppConfig {
                     .parse()?,
                 rust_log: std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
                 log_format: {
-                    let env = std::env::var("ENV").unwrap_or_else(|_| "development".to_string());
-                    // 프로덕션/스테이징은 기본적으로 JSON, 개발은 텍스트
-                    let default_format = if env == "production" || env == "staging" {
+                    // production 은 기본 JSON, 그 외는 text
+                    let default_format = if app_env == AppEnv::Production {
                         "json"
                     } else {
                         "text"
@@ -135,11 +200,11 @@ impl AppConfig {
                     std::env::var("LOG_FORMAT").unwrap_or_else(|_| default_format.to_string())
                 },
                 allowed_origins: std::env::var("ALLOWED_ORIGINS").ok(),
-                env: std::env::var("ENV").unwrap_or_else(|_| "development".to_string()),
+                env: std::env::var("ENV").unwrap_or_else(|_| app_env.as_str().to_string()),
+                app_env,
             },
             database: DatabaseConfig {
-                url: std::env::var("DATABASE_URL")
-                    .expect("DATABASE_URL must be set in environment"),
+                url: database_url,
                 max_connections: std::env::var("DB_MAX_CONNECTIONS")
                     .unwrap_or_else(|_| "100".to_string())
                     .parse()?,
@@ -157,20 +222,34 @@ impl AppConfig {
                         .parse()?,
                 ),
             },
-            auth: AuthConfig {
-                jwt_secret: env_primary_or_legacy("DATABASE_JWT_SECRET", "SUPABASE_JWT_SECRET")
-                    .expect("DATABASE_JWT_SECRET (or legacy SUPABASE_JWT_SECRET) must be set"),
-                supabase_url: env_primary_or_legacy("DATABASE_API_URL", "SUPABASE_URL")
-                    .expect("DATABASE_API_URL (or legacy SUPABASE_URL) must be set"),
-                supabase_anon_key: env_primary_or_legacy("DATABASE_ANON_KEY", "SUPABASE_ANON_KEY")
-                    .expect("DATABASE_ANON_KEY (or legacy SUPABASE_ANON_KEY) must be set"),
-                supabase_service_role_key: env_primary_or_legacy(
-                    "DATABASE_SERVICE_ROLE_KEY",
-                    "SUPABASE_SERVICE_ROLE_KEY",
-                )
-                .expect(
-                    "DATABASE_SERVICE_ROLE_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) must be set",
+            assets_database: AssetsDatabaseConfig {
+                url: assets_database_url,
+                max_connections: std::env::var("ASSETS_DB_MAX_CONNECTIONS")
+                    .unwrap_or_else(|_| "20".to_string())
+                    .parse()?,
+                min_connections: std::env::var("ASSETS_DB_MIN_CONNECTIONS")
+                    .unwrap_or_else(|_| "2".to_string())
+                    .parse()?,
+                connect_timeout: Duration::from_secs(
+                    std::env::var("ASSETS_DB_CONNECT_TIMEOUT")
+                        .unwrap_or_else(|_| "30".to_string())
+                        .parse()?,
                 ),
+                idle_timeout: Duration::from_secs(
+                    std::env::var("ASSETS_DB_IDLE_TIMEOUT")
+                        .unwrap_or_else(|_| "600".to_string())
+                        .parse()?,
+                ),
+            },
+            auth: AuthConfig {
+                jwt_secret: std::env::var("DATABASE_JWT_SECRET")
+                    .expect("DATABASE_JWT_SECRET must be set"),
+                supabase_url: std::env::var("DATABASE_API_URL")
+                    .expect("DATABASE_API_URL must be set"),
+                supabase_anon_key: std::env::var("DATABASE_ANON_KEY")
+                    .expect("DATABASE_ANON_KEY must be set"),
+                supabase_service_role_key: std::env::var("DATABASE_SERVICE_ROLE_KEY")
+                    .expect("DATABASE_SERVICE_ROLE_KEY must be set"),
             },
             storage: StorageConfig {
                 endpoint: std::env::var("R2_ACCOUNT_ID")
@@ -224,148 +303,17 @@ impl AppConfig {
 
         Database::connect(opt).await
     }
-}
 
-/// 애플리케이션 상태
-///
-/// Trait 기반으로 외부 서비스를 추상화하여 구현체에 종속되지 않도록 합니다.
-#[derive(Clone)]
-pub struct AppState {
-    pub db: Arc<DatabaseConnection>,
-    pub config: AppConfig,
+    /// assets 프로젝트 DB 커넥션 생성 (#333). prod pool 과 별개.
+    pub async fn create_assets_db_connection(&self) -> Result<DatabaseConnection, sea_orm::DbErr> {
+        let mut opt = ConnectOptions::new(&self.assets_database.url);
+        opt.max_connections(self.assets_database.max_connections)
+            .min_connections(self.assets_database.min_connections)
+            .connect_timeout(self.assets_database.connect_timeout)
+            .idle_timeout(self.assets_database.idle_timeout)
+            .sqlx_logging(false);
 
-    // Caches
-    pub category_cache: Arc<CategoryCache>,
-    pub post_list_cache: Arc<PostListCache>,
-
-    // Trait 기반 클라이언트
-    pub storage_client: Arc<dyn StorageClient>,
-    pub search_client: Arc<dyn SearchClient>,
-    pub affiliate_client: Arc<dyn AffiliateClient>,
-    pub embedding_client: Arc<dyn EmbeddingClient>,
-
-    // gRPC Client
-    pub decoded_ai_client: Arc<DecodedAIGrpcClient>,
-
-    // Metrics
-    pub metrics: Arc<MetricsStore>,
-}
-
-impl AppState {
-    /// 새로운 AppState 생성
-    pub async fn new(config: AppConfig) -> Result<Self, sea_orm::DbErr> {
-        Self::with_db_connection(config, None).await
-    }
-
-    /// DB 연결을 받아서 AppState 생성 (마이그레이션 후 재사용용)
-    pub async fn with_db_connection(
-        config: AppConfig,
-        db: Option<DatabaseConnection>,
-    ) -> Result<Self, sea_orm::DbErr> {
-        let db = Arc::new(match db {
-            Some(conn) => conn,
-            None => config.create_db_connection().await?,
-        });
-
-        let storage_client: Arc<dyn StorageClient> =
-            match CloudflareR2Client::new(&config.storage).await {
-                Ok(client) => {
-                    tracing::info!("CloudflareR2Client initialized successfully");
-                    Arc::new(client)
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        "Failed to initialize CloudflareR2Client: {}. Using DummyStorageClient",
-                        e
-                    );
-                    Arc::new(crate::services::DummyStorageClient::default())
-                }
-            };
-
-        let search_client: Arc<dyn SearchClient> = match MeilisearchClient::new(&config.search) {
-            Ok(client) => {
-                tracing::info!("MeilisearchClient initialized successfully");
-                Arc::new(client)
-            }
-            Err(e) => {
-                tracing::warn!(
-                    "Failed to initialize MeilisearchClient: {}. Using DummySearchClient",
-                    e
-                );
-                Arc::new(crate::services::DummySearchClient)
-            }
-        };
-
-        let affiliate_client: Arc<dyn AffiliateClient> =
-            match RakutenAffiliateClient::new(&config.affiliate) {
-                Ok(client) => {
-                    tracing::info!("RakutenAffiliateClient initialized successfully");
-                    Arc::new(client)
-                }
-                Err(e) => {
-                    tracing::warn!(
-                    "Failed to initialize RakutenAffiliateClient: {}. Using DummyAffiliateClient",
-                    e
-                );
-                    Arc::new(crate::services::DummyAffiliateClient)
-                }
-            };
-
-        let embedding_client: Arc<dyn EmbeddingClient> =
-            match OpenAIEmbeddingClient::new(&config.embedding) {
-                Ok(client) => {
-                    tracing::info!("OpenAIEmbeddingClient initialized successfully");
-                    Arc::new(client)
-                }
-                Err(e) => {
-                    tracing::warn!(
-                    "Failed to initialize OpenAIEmbeddingClient: {}. Using DummyEmbeddingClient",
-                    e
-                );
-                    Arc::new(DummyEmbeddingClient)
-                }
-            };
-
-        // Cache 초기화
-        let category_cache = Arc::new(CategoryCache::new());
-        let post_list_cache = Arc::new(PostListCache::new());
-        tracing::info!("CategoryCache, PostListCache initialized successfully");
-
-        // DecodedAIGrpcClient 초기화 (lazy connect - 실제 연결은 첫 RPC 시점에 수행)
-        let grpc_url = config.ai_service.url.trim().to_string();
-        let decoded_ai_client = match DecodedAIGrpcClient::new(grpc_url.clone()) {
-            Ok(client) => {
-                tracing::info!(
-                    "DecodedAIGrpcClient initialized successfully (url={})",
-                    grpc_url
-                );
-                Arc::new(client)
-            }
-            Err(e) => {
-                tracing::error!(
-                    "Failed to initialize DecodedAIGrpcClient (url={:?}): {}",
-                    grpc_url,
-                    e
-                );
-                return Err(sea_orm::DbErr::Custom(format!(
-                    "DecodedAIGrpcClient init failed: {}",
-                    e
-                )));
-            }
-        };
-
-        Ok(Self {
-            db,
-            config,
-            category_cache,
-            post_list_cache,
-            storage_client,
-            search_client,
-            affiliate_client,
-            embedding_client,
-            decoded_ai_client,
-            metrics: Arc::new(MetricsStore::new()),
-        })
+        Database::connect(opt).await
     }
 }
 
@@ -381,10 +329,10 @@ mod tests {
     /// Set all required env vars for AppConfig::from_env()
     fn set_required_env() {
         std::env::set_var("DATABASE_URL", "postgres://test:test@localhost/test");
-        std::env::set_var("SUPABASE_JWT_SECRET", "test-secret");
-        std::env::set_var("SUPABASE_URL", "https://test.supabase.co");
-        std::env::set_var("SUPABASE_ANON_KEY", "anon-key");
-        std::env::set_var("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+        std::env::set_var("DATABASE_JWT_SECRET", "test-secret");
+        std::env::set_var("DATABASE_API_URL", "https://test.supabase.co");
+        std::env::set_var("DATABASE_ANON_KEY", "anon-key");
+        std::env::set_var("DATABASE_SERVICE_ROLE_KEY", "service-key");
     }
 
     #[test]
@@ -415,24 +363,57 @@ mod tests {
     }
 
     #[test]
-    fn default_log_format_is_text_for_development() {
+    fn default_log_format_is_text_for_local() {
         let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_required_env();
+        std::env::remove_var("APP_ENV");
         std::env::remove_var("ENV");
         std::env::remove_var("LOG_FORMAT");
         let config = AppConfig::from_env().expect("config should parse");
         assert_eq!(config.server.log_format, "text");
+        assert_eq!(config.server.app_env, AppEnv::Local);
     }
 
     #[test]
-    fn log_format_json_for_production() {
+    fn app_env_production_is_recognized_by_config() {
+        // dotenvy 로드되는 `.env.dev` 가 LOG_FORMAT 을 오염시킬 수 있으므로 log_format 단정은 하지
+        // 않고 app_env 만 확인. default 분기 로직 자체는 log_format_json_for_* 시리즈 대신
+        // app_env 의 enum 값으로 검증한다.
         let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_required_env();
-        std::env::set_var("ENV", "production");
-        std::env::remove_var("LOG_FORMAT");
+        std::env::set_var("APP_ENV", "production");
+        std::env::set_var(
+            "ASSETS_DATABASE_URL",
+            "postgres://test:test@localhost/assets",
+        );
         let config = AppConfig::from_env().expect("config should parse");
-        assert_eq!(config.server.log_format, "json");
-        std::env::remove_var("ENV");
+        assert_eq!(config.server.app_env, AppEnv::Production);
+        std::env::remove_var("APP_ENV");
+        std::env::remove_var("ASSETS_DATABASE_URL");
+    }
+
+    #[test]
+    fn app_env_parses_production_variants() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        for v in ["production", "PRODUCTION", "prod", "Prod"] {
+            std::env::set_var("APP_ENV", v);
+            assert_eq!(AppEnv::from_env(), AppEnv::Production, "APP_ENV={}", v);
+        }
+        for v in ["", "local", "dev", "development", "garbage"] {
+            std::env::set_var("APP_ENV", v);
+            assert_eq!(AppEnv::from_env(), AppEnv::Local, "APP_ENV={}", v);
+        }
+        std::env::remove_var("APP_ENV");
+    }
+
+    #[test]
+    fn assets_database_falls_back_to_prod_url_in_local() {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_required_env();
+        std::env::remove_var("APP_ENV");
+        std::env::remove_var("ASSETS_DATABASE_URL");
+        let config = AppConfig::from_env().expect("config should parse in local");
+        assert_eq!(config.assets_database.url, config.database.url);
     }
 
     #[test]
@@ -494,26 +475,22 @@ mod tests {
         std::env::remove_var("TEST_LEGACY2_CFG");
     }
 
-    #[test]
-    fn log_format_json_for_staging() {
-        let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        set_required_env();
-        std::env::set_var("ENV", "staging");
-        std::env::remove_var("LOG_FORMAT");
-        let config = AppConfig::from_env().expect("config should parse");
-        assert_eq!(config.server.log_format, "json");
-        std::env::remove_var("ENV");
-    }
+    // #333 staging 제거 — log_format 은 production/그 외 로 단순화.
 
     #[test]
     fn log_format_explicit_override() {
         let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_required_env();
-        std::env::set_var("ENV", "production");
+        std::env::set_var("APP_ENV", "production");
+        std::env::set_var(
+            "ASSETS_DATABASE_URL",
+            "postgres://test:test@localhost/assets",
+        );
         std::env::set_var("LOG_FORMAT", "text");
         let config = AppConfig::from_env().expect("config should parse");
         assert_eq!(config.server.log_format, "text");
-        std::env::remove_var("ENV");
+        std::env::remove_var("APP_ENV");
+        std::env::remove_var("ASSETS_DATABASE_URL");
         std::env::remove_var("LOG_FORMAT");
     }
 

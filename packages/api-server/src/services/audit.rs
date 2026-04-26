@@ -1,6 +1,6 @@
 //! Admin audit log writer
 //!
-//! Rust API 핸들러가 admin 액션을 수행할 때 `warehouse.admin_audit_log`에
+//! Rust API 핸들러가 admin 액션을 수행할 때 `public.admin_audit_log`에
 //! 단일 row 기록. 트랜잭션 내에서 UPDATE와 원자적으로 묶어 사용한다.
 //! Next.js `packages/web/lib/api/admin/audit-log.ts`의 후속 구현.
 
@@ -8,7 +8,7 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, DbErr, Set};
 use serde_json::Value as Json;
 use uuid::Uuid;
 
-use crate::entities::warehouse_admin_audit_log::ActiveModel as AuditLogActiveModel;
+use crate::entities::admin_audit_log::ActiveModel as AuditLogActiveModel;
 
 /// 기록할 감사 로그 엔트리.
 ///
@@ -25,7 +25,7 @@ pub struct AuditLogEntry {
     pub metadata: Option<Json>,
 }
 
-/// `warehouse.admin_audit_log`에 단일 row INSERT.
+/// `public.admin_audit_log`에 단일 row INSERT.
 ///
 /// `ConnectionTrait` 경계로 `DatabaseConnection`·`DatabaseTransaction` 모두 수락.
 /// 트랜잭션 내에서 호출하면 mutation과 원자적으로 commit/rollback된다.
@@ -56,7 +56,7 @@ where
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
-    use crate::entities::warehouse_admin_audit_log::Model as AuditLogModel;
+    use crate::entities::admin_audit_log::Model as AuditLogModel;
     use sea_orm::MockExecResult;
 
     fn sample_entry() -> AuditLogEntry {

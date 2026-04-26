@@ -44,7 +44,9 @@ Topic 질의(아키텍처 / API / DB / 디자인 시스템 / AI playbook)는 **�
 | [`docs/agent/api-v1-routes.md`](docs/agent/api-v1-routes.md)                     | Next.js `/api/v1/*` 표                           |
 | [`docs/agent/web-hooks-and-stores.md`](docs/agent/web-hooks-and-stores.md)       | 훅·스토어·주요 경로                              |
 | [`docs/agent/design-system-llm.md`](docs/agent/design-system-llm.md)             | 디자인 시스템 import·컴포넌트 목록               |
-| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md)               | Warehouse 스키마 (ETL·Seed 파이프라인)           |
+| [`docs/architecture/assets-project.md`](docs/architecture/assets-project.md)     | **assets Supabase 프로젝트 (#333)** — 파이프라인 스테이징 + verify 플로우 |
+| [`docs/agent/verify-flow-qa.md`](docs/agent/verify-flow-qa.md)                   | verify 엔드포인트 수동 QA 체크리스트              |
+| [`docs/agent/warehouse-schema.md`](docs/agent/warehouse-schema.md)               | (DEPRECATED, #333) historical warehouse 스키마 reference |
 | [`packages/api-server/AGENT.md`](packages/api-server/AGENT.md)                   | Rust API 크레이트 전용                           |
 
 ### Harness knowledge (세션 규율)

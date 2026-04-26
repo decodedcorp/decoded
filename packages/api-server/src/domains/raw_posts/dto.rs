@@ -84,15 +84,17 @@ pub struct RawPost {
     pub platform: String,
     pub external_id: String,
     pub external_url: String,
+    /// 이미지 위치 URL (실질적으로 R2). #347 에서 r2_url/r2_key 통합.
     pub image_url: String,
-    pub r2_key: Option<String>,
-    pub r2_url: Option<String>,
     pub image_hash: Option<String>,
     pub caption: Option<String>,
     pub author_name: Option<String>,
+    /// 파이프라인 상태머신 (#333). admin UI 에서 COMPLETED 만 검증 가능.
+    pub status: crate::entities::PipelineStatus,
     pub parse_status: String,
     pub parse_attempts: i32,
-    pub seed_post_id: Option<Uuid>,
+    pub verified_at: Option<DateTime<FixedOffset>>,
+    pub verified_by: Option<Uuid>,
     pub platform_metadata: Option<JsonValue>,
     pub dispatch_id: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -117,12 +119,33 @@ pub struct RawPostUpsertInput {
     pub platform: String,
     pub external_id: String,
     pub external_url: String,
+    /// 이미지 위치 URL (R2 업로드 결과). #347 단일화.
     pub image_url: String,
-    pub r2_key: Option<String>,
-    pub r2_url: Option<String>,
     pub caption: Option<String>,
     pub author_name: Option<String>,
     pub platform_metadata: Option<JsonValue>,
+}
+
+// -----------------------
+// verify (#333)
+// -----------------------
+
+/// 검증(verify) 시 admin 이 재정의하는 필드 (#333).
+///
+/// 모두 optional — 비우면 raw_post 의 원본 값(caption → title, author_name → artist_name)을
+/// 그대로 사용한다. verify 는 COMPLETED 상태의 raw_post 에만 가능하며, 성공 시
+/// `prod.public.posts` 에 새 로우가 INSERT 되고 assets 쪽은 status=VERIFIED 로 전이된다
+/// (단, APP_ENV=Local 이면 assets write 생략).
+#[derive(Debug, Clone, Default, Deserialize, Serialize, ToSchema)]
+pub struct VerifyRawPostDto {
+    /// post.title override (기본: raw_post.caption)
+    pub title: Option<String>,
+    /// 아티스트 이름 (warehouse FK auto-resolve 에 사용)
+    pub artist_name: Option<String>,
+    /// 그룹명 (warehouse FK auto-resolve 에 사용)
+    pub group_name: Option<String>,
+    /// 상황/컨텍스트
+    pub context: Option<String>,
 }
 
 // -----------------------

@@ -1,17 +1,33 @@
 # Database Migrations
 
-**한 줄 요약**: `supabase/migrations/*.sql` 이 현재 SOT. SeaORM 마이그레이션은 공존하지만 dev 에서 `SKIP_DB_MIGRATIONS=1` 로 skip. B.3 (SeaORM 통합) 이 끝나면 이 문서 재작성.
+**한 줄 요약**: prod/assets 두 Supabase 프로젝트(#333) 각각 자체 마이그레이션 디렉토리. prod 는 `supabase/migrations/*.sql` SOT (SeaORM 은 dev 에서 skip), assets 는 `supabase-assets/migrations/*.sql` only (SeaORM 무관).
 
 ## 현재 상태
 
-두 시스템이 공존:
+| Supabase 프로젝트 | 마이그레이션 위치 | SeaORM 적용 여부 | 비고 |
+|---|---|---|---|
+| **prod** | `supabase/migrations/*.sql` (SOT) + SeaORM (`packages/api-server/migration/src/*.rs`) | dev: skip(`SKIP_DB_MIGRATIONS=1`), prod: 실행 | 두 시스템 공존, Supabase 측을 신뢰 (B.3 통합 전까지) |
+| **assets** (#333) | `supabase-assets/migrations/*.sql` only | **항상 skip** (api-server 의 SeaORM 마이그레이션은 prod pool 만 대상) | 별도 cloud 프로젝트. `supabase link --project-ref <assets-ref>` 후 `supabase db push` |
 
-| 시스템 | 위치 | 역할 |
-|---|---|---|
-| **Supabase 마이그레이션** ✅ SOT | `supabase/migrations/*.sql` | dev 스키마 + seed. `supabase db reset` 으로 적용 |
-| SeaORM 마이그레이션 | `packages/api-server/migration/src/*.rs` | api-server 기동 시 자동 실행 (dev 에서 `SKIP_DB_MIGRATIONS=1` 로 skip) |
+prod 의 두 시스템(Supabase + SeaORM)은 같은 테이블/제약을 만들려고 해서 객체 충돌이 발생합니다. **Supabase 측을 신뢰**하고 SeaORM 쪽은 dev 에서 꺼두는 전략.
 
-두 시스템이 같은 테이블/제약을 만들려고 해서 객체 충돌이 발생합니다. 현재는 **Supabase 측을 신뢰**하고 SeaORM 쪽은 dev 에서 꺼두는 전략.
+assets 는 SeaORM 을 일절 사용하지 않습니다. api-server 의 `Migrator::up` 은 prod `state.db` 에만 호출되고, assets 스키마는 SQL 파일이 단일 SOT 입니다.
+
+## assets 워크플로우 (#333)
+
+```bash
+# 최초 1회 — cloud assets 프로젝트와 로컬 디렉토리 link
+cd supabase-assets
+supabase link --project-ref <assets-cloud-ref>
+
+# 신규 마이그레이션 추가
+# supabase-assets/migrations/<timestamp>_<name>.sql 작성
+
+# cloud 적용
+supabase db push
+```
+
+assets 프로젝트는 로컬 인스턴스를 띄우지 않습니다 — 로컬 개발은 cloud assets 를 공유하거나 (`ASSETS_DATABASE_URL`), 비워두면 `DATABASE_URL` 로 fallback (`APP_ENV=local` 일 때만 허용).
 
 ## dev 워크플로우 (로컬 self-hosted)
 

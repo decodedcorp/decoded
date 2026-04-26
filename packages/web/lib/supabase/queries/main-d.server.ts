@@ -15,19 +15,11 @@ import type { Database } from "@decoded/shared";
 import type { MainDPost } from "@/lib/components/main-d/types";
 
 function getSharedClient() {
-  // Use Shared/Pipeline DB (has image, item, post, post_image tables)
-  // Falls back to PRD DB if shared env vars not set
-  const url =
-    process.env.SHARED_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_DATABASE_API_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.SHARED_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_DATABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_DATABASE_API_URL;
+  const key = process.env.NEXT_PUBLIC_DATABASE_ANON_KEY;
   if (!url || !key) {
     throw new Error(
-      "[main-d] Missing SHARED_SUPABASE_URL / NEXT_PUBLIC_DATABASE_API_URL / NEXT_PUBLIC_SUPABASE_URL"
+      "[main-d] Missing NEXT_PUBLIC_DATABASE_API_URL / NEXT_PUBLIC_DATABASE_ANON_KEY"
     );
   }
   return createClient<Database>(url, key);

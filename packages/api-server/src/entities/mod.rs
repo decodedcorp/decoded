@@ -37,12 +37,15 @@ pub mod user_tryon_history;
 pub mod users;
 pub mod view_logs;
 pub mod votes;
-pub mod warehouse_admin_audit_log;
-pub mod warehouse_artists;
-pub mod warehouse_brands;
-pub mod warehouse_groups;
-pub mod warehouse_raw_post_sources;
-pub mod warehouse_raw_posts;
+// #333 warehouse 스키마 드롭 + assets 프로젝트 분리.
+// 엔티티 테이블은 prod.public 으로 이관(artists/groups/brands/admin_audit_log),
+// raw_posts* 는 신규 assets 프로젝트의 public 스키마로 이동 (assets_* 접두).
+pub mod admin_audit_log;
+pub mod artists;
+pub mod assets_raw_post_sources;
+pub mod assets_raw_posts;
+pub mod brands;
+pub mod groups;
 
 pub use categories::ActiveModel as CategoriesActiveModel;
 pub use categories::Entity as Categories;
@@ -160,23 +163,26 @@ pub use user_tryon_history::ActiveModel as UserTryonHistoryActiveModel;
 pub use user_tryon_history::Entity as UserTryonHistory;
 pub use user_tryon_history::Model as UserTryonHistoryModel;
 
-pub use warehouse_admin_audit_log::ActiveModel as WarehouseAdminAuditLogActiveModel;
-pub use warehouse_admin_audit_log::Entity as WarehouseAdminAuditLog;
-pub use warehouse_admin_audit_log::Model as WarehouseAdminAuditLogModel;
+// prod.public entities (#333 — 이전 warehouse 스키마에서 이관됨)
+pub use admin_audit_log::ActiveModel as AdminAuditLogActiveModel;
+pub use admin_audit_log::Entity as AdminAuditLog;
+pub use admin_audit_log::Model as AdminAuditLogModel;
 
-pub use warehouse_artists::Entity as WarehouseArtists;
-pub use warehouse_artists::Model as WarehouseArtistsModel;
+pub use artists::Entity as Artists;
+pub use artists::Model as ArtistsModel;
 
-pub use warehouse_brands::Entity as WarehouseBrands;
-pub use warehouse_brands::Model as WarehouseBrandsModel;
+pub use brands::Entity as Brands;
+pub use brands::Model as BrandsModel;
 
-pub use warehouse_groups::Entity as WarehouseGroups;
-pub use warehouse_groups::Model as WarehouseGroupsModel;
+pub use groups::Entity as Groups;
+pub use groups::Model as GroupsModel;
 
-pub use warehouse_raw_post_sources::ActiveModel as WarehouseRawPostSourcesActiveModel;
-pub use warehouse_raw_post_sources::Entity as WarehouseRawPostSources;
-pub use warehouse_raw_post_sources::Model as WarehouseRawPostSourcesModel;
+// assets.public entities (#333 — 신규 assets Supabase 프로젝트. AppState.assets_db 로만 쿼리)
+pub use assets_raw_post_sources::ActiveModel as AssetsRawPostSourcesActiveModel;
+pub use assets_raw_post_sources::Entity as AssetsRawPostSources;
+pub use assets_raw_post_sources::Model as AssetsRawPostSourcesModel;
 
-pub use warehouse_raw_posts::ActiveModel as WarehouseRawPostsActiveModel;
-pub use warehouse_raw_posts::Entity as WarehouseRawPosts;
-pub use warehouse_raw_posts::Model as WarehouseRawPostsModel;
+pub use assets_raw_posts::ActiveModel as AssetsRawPostsActiveModel;
+pub use assets_raw_posts::Entity as AssetsRawPosts;
+pub use assets_raw_posts::Model as AssetsRawPostsModel;
+pub use assets_raw_posts::PipelineStatus;

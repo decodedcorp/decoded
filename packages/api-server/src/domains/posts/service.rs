@@ -36,7 +36,7 @@ struct SolutionInfo {
     site_name: String,
 }
 
-/// 이름 문자열로 warehouse.artists / warehouse.groups의 FK를 찾아 반환.
+/// 이름 문자열로 public.artists / public.groups의 FK를 찾아 반환.
 /// create_post 시점에 dto.artist_id / dto.group_id가 비어 있을 때 자동 lookup에
 /// 사용한다. 매칭은 case-insensitive + BTRIM — 레거시 post는 소문자 Instagram
 /// 핸들("jennie")을 저장하는 반면 warehouse는 정규 표기("Jennie")를 쓰므로
@@ -50,8 +50,8 @@ async fn resolve_warehouse_ids_from_names<C>(
 where
     C: sea_orm::ConnectionTrait,
 {
-    use crate::entities::warehouse_artists::Entity as WarehouseArtists;
-    use crate::entities::warehouse_groups::Entity as WarehouseGroups;
+    use crate::entities::artists::Entity as WarehouseArtists;
+    use crate::entities::groups::Entity as WarehouseGroups;
     use sea_orm::sea_query::Expr;
 
     let artist_fut = async {
@@ -559,12 +559,12 @@ pub(crate) async fn load_post_related_data(
             .map_err(AppError::DatabaseError)?
     };
 
-    // 5. Brand logos 배치 조회 (solutions.brand_id → warehouse.brands.logo_image_url)
+    // 5. Brand logos 배치 조회 (solutions.brand_id → public.brands.logo_image_url)
     let brand_ids: Vec<Uuid> = solutions.iter().filter_map(|s| s.brand_id).collect();
     let brand_logos = if brand_ids.is_empty() {
         std::collections::HashMap::new()
     } else {
-        use crate::entities::warehouse_brands::{Column as BrandCol, Entity as WBrands};
+        use crate::entities::brands::{Column as BrandCol, Entity as WBrands};
         let brands = WBrands::find()
             .filter(BrandCol::Id.is_in(brand_ids))
             .all(db)
@@ -660,8 +660,8 @@ async fn load_warehouse_display_maps(
     std::collections::HashMap<Uuid, EntityDisplay>,
     std::collections::HashMap<Uuid, EntityDisplay>,
 )> {
-    use crate::entities::warehouse_artists::{Column as ArtistCol, Entity as WarehouseArtists};
-    use crate::entities::warehouse_groups::{Column as GroupCol, Entity as WarehouseGroups};
+    use crate::entities::artists::{Column as ArtistCol, Entity as WarehouseArtists};
+    use crate::entities::groups::{Column as GroupCol, Entity as WarehouseGroups};
 
     let artist_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.artist_id).collect();
     let group_ids: Vec<Uuid> = posts.iter().filter_map(|p| p.group_id).collect();
@@ -745,7 +745,7 @@ async fn load_entity_display_data(
 ) -> (EntityDisplay, EntityDisplay) {
     let artist_fut = async {
         match artist_id {
-            Some(aid) => crate::entities::WarehouseArtists::find_by_id(aid)
+            Some(aid) => crate::entities::Artists::find_by_id(aid)
                 .one(db)
                 .await
                 .ok()
@@ -758,7 +758,7 @@ async fn load_entity_display_data(
 
     let group_fut = async {
         match group_id {
-            Some(gid) => crate::entities::WarehouseGroups::find_by_id(gid)
+            Some(gid) => crate::entities::Groups::find_by_id(gid)
                 .one(db)
                 .await
                 .ok()
@@ -2250,6 +2250,62 @@ pub async fn list_tries_by_spot(
     Ok(TryListResponse { tries, total })
 }
 
+/// 검증된 raw_post 로부터 prod `public.posts` 로우를 생성 (#333).
+///
+/// admin 이 검증(verify) 버튼을 누를 때 호출된다. raw_post 의 image_url, caption,
+/// 플랫폼 메타와 `VerifyRawPostDto` override 를 합쳐 최소한의 post 를 만든다.
+/// 현 단계에선 spots/solutions 없이 post row 만 생성 — 세부 아이템 태깅은 검증 이후
+/// 관리자가 별도로 진행한다 (#347 — image_url 단일화).
+pub async fn create_post_from_raw(
+    db: &DatabaseConnection,
+    admin_id: Uuid,
+    raw_post: &crate::entities::assets_raw_posts::Model,
+    dto: crate::domains::raw_posts::dto::VerifyRawPostDto,
+) -> AppResult<PostResponse> {
+    let now = chrono::Utc::now().fixed_offset();
+    let image_url = raw_post.image_url.clone().ok_or_else(|| {
+        AppError::BadRequest(format!(
+            "raw_post {} has no image_url — cannot create post",
+            raw_post.id
+        ))
+    })?;
+
+    let title = dto.title.or_else(|| raw_post.caption.clone());
+    let artist_name = dto.artist_name.or_else(|| raw_post.author_name.clone());
+    let group_name = dto.group_name;
+    let context = dto.context;
+
+    // 이름→warehouse FK 자동 lookup (기존 posts 플로우와 동일).
+    let (mut artist_id, mut group_id) = (None::<Uuid>, None::<Uuid>);
+    let (resolved_artist, resolved_group) =
+        resolve_warehouse_ids_from_names(db, artist_name.as_deref(), group_name.as_deref()).await;
+    artist_id = artist_id.or(resolved_artist);
+    group_id = group_id.or(resolved_group);
+
+    let post = ActiveModel {
+        id: Set(Uuid::new_v4()),
+        user_id: Set(admin_id),
+        image_url: Set(image_url),
+        media_type: Set("image".to_string()),
+        title: Set(title),
+        media_metadata: Set(None),
+        group_name: Set(group_name),
+        group_id: Set(group_id),
+        artist_name: Set(artist_name),
+        artist_id: Set(artist_id),
+        context: Set(context),
+        view_count: Set(0),
+        status: Set(crate::constants::post_status::ACTIVE.to_string()),
+        created_with_solutions: Set(Some(false)),
+        created_at: Set(now),
+        updated_at: Set(now),
+        ..Default::default()
+    };
+
+    let saved = post.insert(db).await.map_err(AppError::DatabaseError)?;
+    Ok(PostResponse::from(saved))
+}
+
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 mod tests {
@@ -2731,10 +2787,10 @@ mod tests {
 
     #[tokio::test]
     async fn load_entity_display_data_artist_found() {
-        use crate::entities::warehouse_artists;
+        use crate::entities::artists;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([[warehouse_artists::Model {
+            .append_query_results([[artists::Model {
                 id: Uuid::nil(),
                 name_ko: Some("카리나".into()),
                 name_en: Some("Karina".into()),
@@ -2755,10 +2811,10 @@ mod tests {
 
     #[tokio::test]
     async fn load_entity_display_data_group_found() {
-        use crate::entities::warehouse_groups;
+        use crate::entities::groups;
         let t = ts();
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([[warehouse_groups::Model {
+            .append_query_results([[groups::Model {
                 id: Uuid::nil(),
                 name_ko: Some("에스파".into()),
                 name_en: Some("aespa".into()),
@@ -2780,7 +2836,7 @@ mod tests {
     #[tokio::test]
     async fn load_entity_display_data_artist_not_found() {
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .append_query_results([Vec::<crate::entities::artists::Model>::new()])
             .into_connection();
         let ((a_en, a_ko, a_img), _) =
             load_entity_display_data(&db, Some(Uuid::new_v4()), None).await;
@@ -2807,9 +2863,9 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_warehouse_ids_case_insensitive_artist_match() {
-        use crate::entities::warehouse_artists;
+        use crate::entities::artists;
         let t = ts();
-        let artist_row = warehouse_artists::Model {
+        let artist_row = artists::Model {
             id: Uuid::nil(),
             name_ko: Some("제니".into()),
             name_en: Some("Jennie".into()),
@@ -2833,7 +2889,7 @@ mod tests {
     async fn resolve_warehouse_ids_unmatched_name_returns_none() {
         // Empty warehouse result → fallback to None, no error.
         let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .append_query_results([Vec::<crate::entities::warehouse_artists::Model>::new()])
+            .append_query_results([Vec::<crate::entities::artists::Model>::new()])
             .into_connection();
         let (artist, group) =
             resolve_warehouse_ids_from_names(&db, Some("unknown-artist"), None).await;
@@ -3095,7 +3151,7 @@ mod tests {
         let brand_id = Uuid::new_v4();
         sol.brand_id = Some(brand_id);
 
-        let wb = crate::entities::warehouse_brands::Model {
+        let wb = crate::entities::brands::Model {
             id: brand_id,
             name_ko: Some("나이키".into()),
             name_en: Some("Nike".into()),

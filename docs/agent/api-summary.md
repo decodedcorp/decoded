@@ -34,7 +34,9 @@ related:
 - Upload 엔드포인트 4개는 generation에서 제외된다 (multipart) — `orval.config.ts` transformer 참고.
 - Custom mutator: `packages/web/lib/api/mutator/custom-instance.ts`. 여기에만 behavior 확장.
 - API 추가 순서: Rust 백엔드 OpenAPI 업데이트 → `openapi.json` 복사 → `bun run generate:api`.
+- **raw_posts admin 엔드포인트 (#333)**: `/api/v1/raw-posts/{sources,items,items/:id/verify,stats}` — assets Supabase 프로젝트 풀(`AppState.assets_db`) 로 라우팅. verify 는 assets→prod cross-pool 작업이라 단일 트랜잭션 불가, `APP_ENV=local` 가드로 cloud assets write 스킵. 자세히는 [`docs/architecture/assets-project.md`](../architecture/assets-project.md).
 
 ## Recent changes
 
+- 2026-04-26: raw_posts admin 엔드포인트 + verify 추가 (#333). assets Supabase 풀 분리.
 - 2026-04-17: 초기 작성 (Phase 1)

@@ -129,6 +129,7 @@ use utoipa::OpenApi;
         crate::domains::raw_posts::handlers::delete_source,
         crate::domains::raw_posts::handlers::list_items,
         crate::domains::raw_posts::handlers::get_item,
+        crate::domains::raw_posts::handlers::verify,
         crate::domains::raw_posts::handlers::stats,
     ),
     tags(
@@ -312,6 +313,8 @@ use utoipa::OpenApi;
                 crate::domains::raw_posts::dto::RawPostsItemsPage,
                 crate::domains::raw_posts::dto::RawPostsStatsEntry,
                 crate::domains::raw_posts::dto::RawPostsStatsResponse,
+                crate::domains::raw_posts::dto::VerifyRawPostDto,
+                crate::entities::PipelineStatus,
                 crate::domains::spots::dto::SpotsByPostItem,
                 crate::domains::spots::dto::SpotsByPostsResponse,
                 crate::domains::spots::dto::SpotsByPostSolution,

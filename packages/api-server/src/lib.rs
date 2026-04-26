@@ -1,3 +1,4 @@
+pub mod app_state;
 pub mod batch;
 pub mod config;
 pub mod constants;
@@ -18,6 +19,7 @@ pub mod utils;
 #[allow(clippy::disallowed_methods)]
 pub mod tests;
 
-pub use config::{AppConfig, AppState};
+pub use app_state::AppState;
+pub use config::AppConfig;
 pub use error::{AppError, AppResult};
 pub use services::search::{IndexConfig, MeilisearchClient};

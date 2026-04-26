@@ -1,6 +1,6 @@
 //! Warehouse DTOs
 //!
-//! `warehouse.artists`, `warehouse.groups` 를 홈 페이지용으로 노출하는 응답
+//! `public.artists`, `public.groups` 를 홈 페이지용으로 노출하는 응답
 //! 구조. 네임/프로필 URL 이 주된 관심사라 metadata 는 일부러 제외한다.
 
 use serde::{Deserialize, Serialize};

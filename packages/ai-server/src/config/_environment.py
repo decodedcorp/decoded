@@ -43,9 +43,18 @@ class Environment(BaseModel):
     QUEUE_BATCH_SIZE: int = 10
 
     # Postgres 직접 연결 (asyncpg pool) — 로컬/prod 투명 전환 (DATABASE_URL 값만 교체)
+    # 레거시: post_editorial 등 기존 기능이 prod 로컬 Postgres 를 참조.
     DATABASE_URL: str = ""
     DATABASE_POOL_MIN: int = 1
     DATABASE_POOL_MAX: int = 5
+
+    # assets 프로젝트 (raw_posts 파이프라인 전용, #333)
+    # ai-server 는 raw_post_sources / raw_posts / pipeline_events 를 모두 assets 에 쓴다.
+    # - production: 필수 (cloud assets pooler URL)
+    # - local/dev: 미설정 시 DATABASE_URL 로 fallback (WARN), cloud assets 공유 시 값 지정
+    ASSETS_DATABASE_URL: str = ""
+    ASSETS_DATABASE_POOL_MIN: int = 1
+    ASSETS_DATABASE_POOL_MAX: int = 5
 
     API_SERVER_HTTP_URL: str
     API_SERVER_ACCESS_TOKEN: str

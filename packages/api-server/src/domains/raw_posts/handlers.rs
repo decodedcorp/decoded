@@ -1,13 +1,13 @@
 //! Raw Posts handlers (#258)
 //!
 //! Admin-gated REST layer for managing scrape sources and browsing
-//! collected raw posts. All writes go to `warehouse.raw_post_sources`
+//! collected raw posts. All writes go to `public.raw_post_sources`
 //! (sources) or are driven by the ai-server gRPC callback (items).
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
-    routing::{get, patch},
+    routing::{get, patch, post},
     Json, Router,
 };
 use uuid::Uuid;
@@ -15,12 +15,14 @@ use uuid::Uuid;
 use crate::{
     config::{AppConfig, AppState},
     error::AppResult,
+    middleware::User,
 };
 
 use super::{
     dto::{
         CreateRawPostSourceDto, ListItemsQuery, ListSourcesQuery, RawPost, RawPostSource,
         RawPostSourcesPage, RawPostsItemsPage, RawPostsStatsResponse, UpdateRawPostSourceDto,
+        VerifyRawPostDto,
     },
     service,
 };
@@ -51,7 +53,7 @@ pub async fn list_sources(
     State(state): State<AppState>,
     Query(query): Query<ListSourcesQuery>,
 ) -> AppResult<Json<RawPostSourcesPage>> {
-    let page = service::list_sources(state.db.as_ref(), query).await?;
+    let page = service::list_sources(state.assets_db.as_ref(), query).await?;
     Ok(Json(page))
 }
 
@@ -86,7 +88,7 @@ pub async fn create_source(
             "fetch_interval_seconds must be >= 60".into(),
         ));
     }
-    let created = service::create_source(state.db.as_ref(), dto).await?;
+    let created = service::create_source(state.assets_db.as_ref(), dto).await?;
     Ok((StatusCode::CREATED, Json(created)))
 }
 
@@ -110,7 +112,7 @@ pub async fn update_source(
     Path(id): Path<Uuid>,
     Json(dto): Json<UpdateRawPostSourceDto>,
 ) -> AppResult<Json<RawPostSource>> {
-    let updated = service::update_source(state.db.as_ref(), id, dto).await?;
+    let updated = service::update_source(state.assets_db.as_ref(), id, dto).await?;
     Ok(Json(updated))
 }
 
@@ -132,7 +134,7 @@ pub async fn delete_source(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    service::delete_source(state.db.as_ref(), id).await?;
+    service::delete_source(state.assets_db.as_ref(), id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -163,7 +165,7 @@ pub async fn list_items(
     State(state): State<AppState>,
     Query(query): Query<ListItemsQuery>,
 ) -> AppResult<Json<RawPostsItemsPage>> {
-    let page = service::list_items(state.db.as_ref(), query).await?;
+    let page = service::list_items(state.assets_db.as_ref(), query).await?;
     Ok(Json(page))
 }
 
@@ -185,8 +187,38 @@ pub async fn get_item(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<RawPost>> {
-    let item = service::get_item(state.db.as_ref(), id).await?;
+    let item = service::get_item(state.assets_db.as_ref(), id).await?;
     Ok(Json(item))
+}
+
+// --------------------
+// verify (#333)
+// --------------------
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/raw-posts/{id}/verify",
+    operation_id = "raw_posts_verify",
+    tag = "raw-posts",
+    security(("bearer_auth" = [])),
+    params(("id" = Uuid, Path, description = "검증할 raw_post id")),
+    request_body = VerifyRawPostDto,
+    responses(
+        (status = 200, description = "검증 완료 → prod.posts INSERT", body = crate::domains::posts::dto::PostResponse),
+        (status = 400, description = "raw_post 가 COMPLETED 상태가 아님"),
+        (status = 404, description = "raw_post 없음"),
+        (status = 401),
+        (status = 403)
+    )
+)]
+pub async fn verify(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<VerifyRawPostDto>,
+) -> AppResult<Json<crate::domains::posts::dto::PostResponse>> {
+    let resp = service::verify_raw_post(&state, id, user.id, dto).await?;
+    Ok(Json(resp))
 }
 
 // --------------------
@@ -206,7 +238,7 @@ pub async fn get_item(
     )
 )]
 pub async fn stats(State(state): State<AppState>) -> AppResult<Json<RawPostsStatsResponse>> {
-    let entries = service::stats(state.db.as_ref()).await?;
+    let entries = service::stats(state.assets_db.as_ref()).await?;
     Ok(Json(RawPostsStatsResponse { entries }))
 }
 
@@ -220,6 +252,7 @@ pub fn router(state: AppState, app_config: AppConfig) -> Router<AppState> {
         .route("/sources/{id}", patch(update_source).delete(delete_source))
         .route("/items", get(list_items))
         .route("/items/{id}", get(get_item))
+        .route("/items/{id}/verify", post(verify))
         .route("/stats", get(stats))
         // Layer order matters: last .layer() is outermost → runs first.
         // admin_db_middleware reads the User extension that auth_middleware

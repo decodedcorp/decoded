@@ -1,36 +1,30 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// warehouse.raw_post_sources entity (#258)
-///
-/// Platform-independent registry of scrape targets. api-server's batch
-/// scheduler reads this table to decide which sources are due for a fetch.
+/// public.artists entity — K-pop artist profiles (#333 moved from warehouse schema)
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(schema_name = "warehouse", table_name = "raw_post_sources")]
+#[sea_orm(table_name = "artists")]
 pub struct Model {
     #[sea_orm(primary_key, column_type = "Uuid")]
     pub id: Uuid,
 
-    pub platform: String,
-    pub source_type: String,
-    pub source_identifier: String,
+    #[sea_orm(nullable)]
+    pub name_ko: Option<String>,
 
     #[sea_orm(nullable)]
-    pub label: Option<String>,
-
-    pub is_active: bool,
-    pub fetch_interval_seconds: i32,
+    pub name_en: Option<String>,
 
     #[sea_orm(nullable)]
-    pub last_enqueued_at: Option<DateTimeWithTimeZone>,
+    pub profile_image_url: Option<String>,
 
     #[sea_orm(nullable)]
-    pub last_scraped_at: Option<DateTimeWithTimeZone>,
+    pub primary_instagram_account_id: Option<Uuid>,
 
     #[sea_orm(nullable, column_type = "JsonBinary")]
     pub metadata: Option<Json>,
 
     pub created_at: DateTimeWithTimeZone,
+
     pub updated_at: DateTimeWithTimeZone,
 }
 

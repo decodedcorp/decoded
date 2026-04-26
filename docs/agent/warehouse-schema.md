@@ -1,12 +1,29 @@
 ---
-title: Warehouse Schema — Agent Reference
+title: Warehouse Schema — DEPRECATED (#333)
 owner: human
-status: approved
-updated: 2026-04-17
+status: deprecated
+updated: 2026-04-25
 tags: [agent, db]
 ---
 
-# Warehouse Schema — Agent Reference
+# Warehouse Schema — DEPRECATED (#333)
+
+> ⚠️ **이 문서는 2026-04-25 이후 deprecated 입니다.**
+>
+> prod 의 `warehouse` 스키마는 #335 에서 완전 드롭됐습니다. 살아남는 엔티티 테이블
+> (`artists`, `groups`, `brands`, `group_members`, `admin_audit_log`, `instagram_accounts`)
+> 은 모두 `public.*` 로 SET SCHEMA 이관됐고, 파이프라인 테이블(`raw_post*`, `seed_*`)은
+> 신규 **assets** Supabase 프로젝트로 이동(또는 drop) 됐습니다.
+>
+> **새 진입점**:
+> - 두 프로젝트 구조: [`docs/agent/database-summary.md`](database-summary.md)
+> - assets 프로젝트 설계: [`docs/architecture/assets-project.md`](../architecture/assets-project.md)
+> - env 매트릭스: [`docs/agent/environments.md`](environments.md)
+>
+> 아래 본문은 #335 이전 상태의 historical reference 로만 유지되며, 새로운 코드/쿼리에서
+> `warehouse.*` 스키마를 참조해서는 안 됩니다.
+
+---
 
 > ETL 파이프라인 데이터를 저장하는 Supabase `warehouse` 스키마.  
 > Instagram 수집 → 엔티티 관리 → Seed 퍼블리싱 파이프라인 전체를 커버한다.

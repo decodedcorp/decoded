@@ -19,16 +19,19 @@ Architecture 영역 진입점. 에이전트가 설계 의도(human-owned)와 자
 ## Canonical sources
 
 - 설계 의도: [`docs/architecture/README.md`](../architecture/README.md)
+- **두 Supabase 프로젝트 분리 (#333)**: [`docs/architecture/assets-project.md`](../architecture/assets-project.md) — prod(검증본) + assets(파이프라인 스테이징)
 - 자동 분석 스냅샷: [`.planning/codebase/ARCHITECTURE.md`](../../.planning/codebase/ARCHITECTURE.md)
 - 구조 스냅샷: [`.planning/codebase/STRUCTURE.md`](../../.planning/codebase/STRUCTURE.md)
 
 ## Key files / concepts
 
 - `packages/web` — Next.js 16 프론트엔드 (메인)
-- `packages/api-server` — Rust/Axum API (`AGENT.md` 참고)
-- `packages/ai-server` — Python AI / gRPC
+- `packages/api-server` — Rust/Axum API (`AGENT.md` 참고). **두 DB 풀 보유**: prod (`db`) + assets (`assets_db`) (#333)
+- `packages/ai-server` — Python AI / gRPC. raw_posts 파이프라인은 assets 에 직접 write
 - `packages/shared` — 공용 TypeScript 타입·훅·Supabase 쿼리
 - `packages/mobile` — Expo 앱
+- `supabase/` — prod Supabase 마이그레이션 (검증본 데이터)
+- `supabase-assets/` — assets Supabase 마이그레이션 (raw_posts 파이프라인) (#333)
 
 ## Gotchas
 
@@ -37,4 +40,5 @@ Architecture 영역 진입점. 에이전트가 설계 의도(human-owned)와 자
 
 ## Recent changes
 
+- 2026-04-26: Supabase 프로젝트 분리 (#333) — prod / assets 두 프로젝트, 검증(verify) 플로우, warehouse 스키마 드롭 + entities public 이관 (#335)
 - 2026-04-17: 초기 작성 (Phase 1)

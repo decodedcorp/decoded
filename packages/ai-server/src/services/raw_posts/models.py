@@ -29,13 +29,15 @@ class RawMedia(BaseModel):
 
 
 class RawPostResult(BaseModel):
-    """A fully-processed raw post ready for DB upsert (post-R2)."""
+    """A fully-processed raw post ready for DB upsert (post-R2).
+
+    `image_url` 은 R2 업로드 결과 퍼블릭 URL — 외부 CDN URL 은 보관하지 않는다 (#347).
+    재다운로드가 필요하면 어댑터가 `external_url` 로 다시 메타 fetch.
+    """
 
     external_id: str
     external_url: str
-    image_url: str
-    r2_key: str
-    r2_url: str
+    image_url: str  # R2 퍼블릭 URL
     caption: Optional[str] = None
     author_name: Optional[str] = None
     platform_metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -47,7 +49,7 @@ class FetchRequest:
 
     `mode` lets adapters distinguish the first "deep" scrape of a newly
     registered source (`initial`) from routine polling for new items
-    (`incremental`) — see `warehouse.raw_post_sources.initial_scraped_at`.
+    (`incremental`) — see `public.raw_post_sources.initial_scraped_at`.
     """
 
     source_id: str
